@@ -12,7 +12,7 @@ Runs on http://localhost:8080. Requires Go 1.26+ with CGO, gcc, and libsqlite3-d
 
 **Frontend** (from `frontend/`):
 ```bash
-npm install
+npm ci
 npm start
 ```
 Runs on http://localhost:3000.
@@ -22,9 +22,9 @@ The frontend dev server proxies `/api` requests to the backend at `localhost:808
 The backend reads configuration from environment variables at startup, there is no auto-loaded `.env` file. Set any needed variables in your shell before running:
 
 ```bash
-export CORS_ALLOWED_ORIGINS=http://localhost:3000
-export FILES_BASE_PATH=./files   # default when unset
-export KUBENDT_DB_PATH=./kubendt.db  # default when unset: kubendt.db in cwd
+export CORS_ALLOWED_ORIGINS=http://localhost:3000 # default when unset
+export FILES_BASE_PATH=./files # default when unset
+export KUBENDT_DB_PATH=./kubendt.db # default when unset: kubendt.db in cwd
 go run .
 ```
 
@@ -63,7 +63,7 @@ File storage and the SQLite database are persisted in named Docker volumes (`kub
 - `KUBECONFIG`: kubeconfig path.
 - `KUBE_CONTEXT`: optional kube context override.
 - `PORT`: API port (default `8080`).
-- `CORS_ALLOWED_ORIGINS`: allowed origins list.
+- `CORS_ALLOWED_ORIGINS`: comma-separated list of allowed frontend origins (default: `http://localhost:3000`).
 - `FILES_BASE_PATH`: namespace files base folder (default: `files` relative to cwd).
 - `KUBENDT_DB_PATH`: SQLite database path (default: `kubendt.db` in cwd).
 - `KUBECTL_EXEC_TIMEOUT_SECONDS`: max wall-clock seconds for any single in-pod exec (kubectl exec, `ssh_qemu` into a QEMU guest, batched VyOS commits, etc.). Default `30`. Bump it if you run against a slow cluster or busy guests and start seeing "exec timeout" errors from network-configure or modify operations. The SSH layer detects dead sessions independently within ~11s, so this deadline only bounds genuinely-long commands.

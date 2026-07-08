@@ -143,7 +143,7 @@ Runs on http://localhost:8080.
 **Frontend** (new terminal):
 ```bash
 cd frontend
-npm install
+npm ci
 npm start
 ```
 Runs on http://localhost:3000.

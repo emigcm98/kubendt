@@ -18,10 +18,8 @@ Install the following tools locally before starting:
 | Node.js | 24 LTS | frontend; version pinned in `frontend/.nvmrc` |
 | npm | 11+ | bundled with Node |
 | kubectl | any recent | cluster access |
-| golangci-lint | 2.x | Go linting (backend); install with `go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest` |
-| Prettier | 3.x | frontend formatting; installed via `npm install` (devDependency) |
-
-> `go install` places binaries in `$(go env GOPATH)/bin`; make sure that directory is on your `PATH`.
+| golangci-lint | v2.12.2 | Go linting (backend); pinned to the CI version. Install with `GOTOOLCHAIN=go1.26.1 go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2` |
+| Prettier | 3.x | frontend formatting; installed with the frontend dependencies (devDependency) |
 
 **Backend** (from `backend/`):
 ```bash
@@ -35,9 +33,13 @@ go run github.com/swaggo/swag/cmd/swag@v1.16.6 init -g main.go
 **Frontend** (from `frontend/`):
 ```bash
 nvm use       # optional: selects the Node version from .nvmrc
-npm install
+npm ci        # install exactly what package-lock.json pins (same as CI)
 npm start
 ```
+
+> Use `npm ci` to reproduce the environment (fresh clone, or after a pull that
+> changed `package-lock.json`). Use `npm install <package>` only when adding or
+> changing dependencies: it updates `package-lock.json`, which you must commit.
 
 The API is authenticated by default. For local development you can either set
 `KUBENDT_ADMIN_PASSWORD` (and log in), or run the backend with
