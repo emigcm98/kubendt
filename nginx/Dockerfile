@@ -2,8 +2,8 @@ FROM node:24.13-alpine AS build
 
 WORKDIR /app
 
-COPY frontend/package.json frontend/package-lock.json* ./
-RUN npm install -g npm@11.8.0 && npm install
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm install -g npm@11.8.0 && npm ci
 
 COPY frontend/ .
 
