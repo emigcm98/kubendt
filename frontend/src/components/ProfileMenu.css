@@ -1,0 +1,127 @@
+.profile-menu {
+  position: relative;
+}
+
+.profile-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px 5px 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.profile-chip:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.profile-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #2b6cb0;
+  background: #fff;
+  border-radius: 50%;
+}
+
+.profile-caret {
+  font-size: 0.7rem;
+  transition: transform 0.15s ease;
+}
+
+.profile-caret.open {
+  transform: rotate(180deg);
+}
+
+.profile-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 1200;
+  min-width: 210px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+  padding: 8px;
+}
+
+.profile-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 10px;
+}
+
+.profile-avatar-lg {
+  width: 36px;
+  height: 36px;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+
+.profile-info-text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  line-height: 1.2;
+  min-width: 0;
+}
+
+.profile-info-name {
+  font-weight: 700;
+  color: #2d3748;
+}
+
+.profile-info-roles {
+  font-size: 0.75rem;
+  color: #a0aec0;
+}
+
+.profile-sep {
+  height: 1px;
+  background: #edf2f7;
+  margin: 4px 0;
+}
+
+.profile-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 9px 8px;
+  font-size: 0.88rem;
+  color: #2d3748;
+  background: none;
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.profile-item:hover {
+  background: #f7fafc;
+}
+
+.profile-item-danger {
+  color: #c53030;
+}
+
+.profile-item-danger:hover {
+  background: #fff5f5;
+}
+
+.profile-item-icon {
+  width: 18px;
+  text-align: center;
+}

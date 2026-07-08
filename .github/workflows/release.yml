@@ -1,0 +1,66 @@
+name: Release
+
+# Dormant until a version tag is pushed. Nothing runs on regular branch pushes
+# or PRs; only creating a tag like v1.0.0 triggers a build & publish.
+#   git tag v1.0.0 && git push origin v1.0.0
+on:
+  push:
+    tags: ["v*"]
+
+# GITHUB_TOKEN needs write access to GHCR packages; read access to the repo.
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  images:
+    name: Build & publish images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute version metadata
+        id: meta
+        run: |
+          # Git tags carry the leading "v" (v1.0.0); image tags and the app
+          # version string drop it so they read as plain semver (1.0.0).
+          echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          echo "commit=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          echo "build_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build & push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          # NOTE: :latest moves to whatever tag was pushed last, including
+          # pre-releases. Refine if you start tagging release candidates.
+          tags: |
+            ghcr.io/emigcm98/kubendt-backend:${{ steps.meta.outputs.version }}
+            ghcr.io/emigcm98/kubendt-backend:latest
+          build-args: |
+            KUBENDT_VERSION=${{ steps.meta.outputs.version }}
+            KUBENDT_COMMIT=${{ steps.meta.outputs.commit }}
+            KUBENDT_BUILD_DATE=${{ steps.meta.outputs.build_date }}
+
+      - name: Build & push frontend (React + nginx)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: nginx/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/emigcm98/kubendt-frontend:${{ steps.meta.outputs.version }}
+            ghcr.io/emigcm98/kubendt-frontend:latest
+          build-args: |
+            REACT_APP_API_BASE_URL=/api

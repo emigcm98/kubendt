@@ -1,0 +1,484 @@
+/* === Backdrop + drawer === */
+.kni-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 30, 60, 0.35);
+  z-index: 1000;
+  animation: kni-fade-in 0.18s ease-out;
+}
+
+.kni-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 520px;
+  max-width: 100vw;
+  background: #ffffff;
+  box-shadow: -8px 0 24px rgba(15, 30, 60, 0.18);
+  z-index: 1001;
+  display: flex;
+  flex-direction: column;
+  animation: kni-slide-in 0.22s ease-out;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+@keyframes kni-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes kni-slide-in {
+  from {
+    transform: translateX(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* === Header === */
+.kni-header {
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #1976d2 0%, #0d47a1 100%);
+  color: #ffffff;
+  padding: 18px 22px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.kni-header-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.kni-header-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.75);
+  margin-bottom: 4px;
+}
+
+.kni-header-title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  color: #ffffff;
+  word-break: break-all;
+}
+
+.kni-header-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+  align-items: center;
+}
+
+.kni-chip {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+.kni-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+
+.kni-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.kni-status-ready {
+  background: rgba(76, 175, 80, 0.18);
+  color: #b6f0bd;
+}
+
+.kni-status-notready {
+  background: rgba(229, 57, 53, 0.22);
+  color: #ffb1ae;
+}
+
+.kni-status-unknown {
+  background: rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.kni-close {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  transition: background 0.15s ease;
+  flex-shrink: 0;
+}
+
+.kni-close:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+/* === Body === */
+.kni-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 18px 24px 18px;
+}
+
+.kni-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.kni-body::-webkit-scrollbar-thumb {
+  background: #c5d0dd;
+  border-radius: 4px;
+}
+
+.kni-body::-webkit-scrollbar-thumb:hover {
+  background: #95a9c0;
+}
+
+.kni-loading,
+.kni-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 32px 14px;
+  color: #6b7a8c;
+  font-size: 0.92rem;
+}
+
+.kni-error {
+  color: #c62828;
+  background: #fdecea;
+  border: 1px solid #f0bcb4;
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+
+.kni-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #cfd8dc;
+  border-top-color: #1976d2;
+  border-radius: 50%;
+  animation: kni-spin 0.8s linear infinite;
+}
+
+@keyframes kni-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* === Sections === */
+.kni-section {
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: linear-gradient(180deg, #f7faff 0%, #eef3fa 100%);
+  border: 1px solid #d9e1ec;
+  border-radius: 10px;
+}
+
+.kni-section:first-child {
+  margin-top: 4px;
+}
+
+.kni-section-title {
+  margin: 0 0 8px 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #1a3a5c;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kni-section-count {
+  font-size: 0.65rem;
+  background: #1976d2;
+  color: #ffffff;
+  padding: 2px 7px;
+  border-radius: 999px;
+  letter-spacing: 0.3px;
+}
+
+.kni-section-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* === Key/value row === */
+.kni-kv {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 0;
+  border-bottom: 1px dashed rgba(149, 169, 192, 0.25);
+}
+
+.kni-kv:last-child {
+  border-bottom: none;
+}
+
+.kni-kv-key {
+  color: #5a6b7d;
+  font-size: 0.82rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.kni-kv-value {
+  color: #1f2a37;
+  font-size: 0.85rem;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 70%;
+}
+
+.kni-kv-multiline {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+}
+
+.kni-kv-multiline .kni-kv-value {
+  text-align: left;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-width: 100%;
+}
+
+.kni-mono {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.78rem;
+}
+
+.kni-pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.kni-na {
+  color: #b0b9c4;
+  font-style: italic;
+}
+
+/* === Live usage bars === */
+.kni-usage-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.kni-usage-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kni-usage-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  color: #5a6b7d;
+  font-weight: 600;
+}
+
+.kni-usage-bar {
+  height: 12px;
+  background: #e0e8f1;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.kni-usage-bar-fill {
+  height: 100%;
+  /* Width is fed by the JS-set --kni-fill custom property so we don't have
+       to inline `style={{ width: ... }}` in the JSX. */
+  width: var(--kni-fill, 0%);
+  border-radius: 6px;
+  transition: width 0.3s ease;
+}
+
+.kni-bar-cpu {
+  background: linear-gradient(90deg, #42a5f5 0%, #1976d2 100%);
+}
+
+.kni-bar-mem {
+  background: linear-gradient(90deg, #66bb6a 0%, #388e3c 100%);
+}
+
+/* === Capacity grid === */
+.kni-cap-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.kni-cap-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(149, 169, 192, 0.25);
+  border-radius: 6px;
+  padding: 6px 9px;
+}
+
+.kni-cap-label {
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #6b7a8c;
+}
+
+/* === Conditions === */
+.kni-conditions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.kni-condition {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  cursor: default;
+}
+
+.kni-condition-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.kni-condition-type {
+  font-weight: 600;
+}
+
+.kni-condition-status {
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 0.72rem;
+  opacity: 0.85;
+}
+
+.kni-condition-good {
+  background: #e6f4ea;
+  color: #1b5e20;
+  border-color: rgba(46, 125, 50, 0.25);
+}
+
+.kni-condition-bad {
+  background: #fdecea;
+  color: #b71c1c;
+  border-color: rgba(198, 40, 40, 0.25);
+}
+
+/* === Taints === */
+.kni-taint {
+  background: #fff4e0;
+  border: 1px solid #f0c36d;
+  color: #5a3a00;
+  padding: 4px 8px;
+  border-radius: 6px;
+  word-break: break-all;
+}
+
+.kni-taint-eq {
+  color: #8a6300;
+}
+
+.kni-taint-effect {
+  color: #c62828;
+  font-weight: 700;
+}
+
+/* === Tags (labels / annotations) === */
+.kni-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.kni-tag {
+  display: inline-flex;
+  background: #ffffff;
+  border: 1px solid #d9e1ec;
+  border-radius: 6px;
+  padding: 2px 7px;
+  font-size: 0.72rem;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kni-tag-key {
+  color: #0d47a1;
+  font-weight: 600;
+}
+
+.kni-tag-value {
+  color: #1f2a37;
+  margin-left: 1px;
+}
+
+.kni-collapse > summary {
+  cursor: pointer;
+  color: #1976d2;
+  font-size: 0.82rem;
+  font-weight: 600;
+  user-select: none;
+  margin-bottom: 6px;
+}
+
+.kni-collapse > summary:hover {
+  color: #0d47a1;
+}

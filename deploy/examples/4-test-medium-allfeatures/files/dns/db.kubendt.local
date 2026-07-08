@@ -1,0 +1,21 @@
+$TTL 60
+@   IN  SOA ns1.kubendt.local. admin.kubendt.local. (
+        2026020501 ; serial
+        3600       ; refresh
+        900        ; retry
+        604800     ; expire
+        60 )       ; minimum
+
+@    IN NS  ns1.kubendt.local.
+ns1  IN A   192.168.10.15
+
+dns-server   IN A 192.168.10.15
+web-internal IN A 192.168.10.20
+iperf-svc-1  IN A 192.168.10.10
+
+web-public   IN A 10.0.255.20
+iperf-dmz-0  IN A 10.0.255.10
+
+svc-router   IN A 192.168.10.1
+room-router0 IN A 192.168.0.1
+room-router1 IN A 192.168.1.1

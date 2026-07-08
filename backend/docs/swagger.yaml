@@ -1,0 +1,3050 @@
+basePath: /
+definitions:
+  types.APIToken:
+    properties:
+      created_at:
+        example: 1782905018
+        type: integer
+      expires_at:
+        example: 0
+        type: integer
+      id:
+        example: 1
+        type: integer
+      last_used_at:
+        example: 1782905090
+        type: integer
+      name:
+        example: ci-pipeline
+        type: string
+    type: object
+  types.APITokenList:
+    properties:
+      tokens:
+        items:
+          $ref: '#/definitions/types.APIToken'
+        type: array
+    type: object
+  types.ActionEntry:
+    type: object
+  types.ActionOptions:
+    properties:
+      capture_output:
+        description: CaptureOutput controls whether command output is returned in
+          the response.
+        example: true
+        type: boolean
+      persist_history:
+        description: PersistHistory controls whether the action is persisted in driver
+          history.
+        example: false
+        type: boolean
+    type: object
+  types.AuthStatus:
+    properties:
+      authenticated:
+        example: true
+        type: boolean
+      enabled:
+        example: true
+        type: boolean
+      identity:
+        example: admin
+        type: string
+      roles:
+        example:
+        - admin
+        items:
+          type: string
+        type: array
+    type: object
+  types.CapabilityEntry:
+    properties:
+      description:
+        example: Management of addressing and routes.
+        type: string
+      id:
+        example: L3Capable
+        type: string
+      label:
+        example: 'Level 3: IP addressing'
+        type: string
+      methods:
+        items:
+          $ref: '#/definitions/types.DriverMethodEntry'
+        type: array
+    type: object
+  types.ClearTimingResponse:
+    properties:
+      total:
+        example: 1.20s
+        type: string
+    type: object
+  types.ClearTopologyResponse:
+    properties:
+      message:
+        example: Topology resources cleared successfully
+        type: string
+      took_time:
+        $ref: '#/definitions/types.ClearTimingResponse'
+    type: object
+  types.ClusterNodeInfo:
+    properties:
+      cpu_capacity:
+        example: "8"
+        type: string
+      cpu_percentage:
+        example: 5.28
+        type: number
+      cpu_usage:
+        example: 423m
+        type: string
+      kubelet_version:
+        example: v1.31.0
+        type: string
+      memory_capacity:
+        example: 15.56Gi
+        type: string
+      memory_percentage:
+        example: 27.77
+        type: number
+      memory_usage:
+        example: 4.32Gi
+        type: string
+      name:
+        example: k8s-worker-1
+        type: string
+      roles:
+        example:
+        - worker
+        items:
+          type: string
+        type: array
+      status:
+        example: Ready
+        type: string
+    type: object
+  types.ClusterStatusResponse:
+    properties:
+      avg_cpu_percentage:
+        description: |-
+          Cluster-wide weighted averages computed as sum(usage)/sum(capacity)
+          across nodes that report metrics. Zero when metrics-server is
+          unavailable or no node reports metrics.
+        example: 5.28
+        type: number
+      avg_memory_percentage:
+        example: 27.77
+        type: number
+      nodes:
+        items:
+          $ref: '#/definitions/types.ClusterNodeInfo'
+        type: array
+      ready:
+        example: 1
+        type: integer
+      total:
+        example: 1
+        type: integer
+    type: object
+  types.ConfigureNetworkRequest:
+    type: object
+  types.ConfigureNetworkResponse:
+    properties:
+      failures:
+        example: 0
+        type: integer
+      skipped:
+        example: 0
+        type: integer
+      speedup:
+        example: 6.35
+        type: number
+      status:
+        example: success
+        type: string
+      successes:
+        example: 8
+        type: integer
+      took_time:
+        $ref: '#/definitions/types.ConfigureTimingResponse'
+    type: object
+  types.ConfigureTimingResponse:
+    properties:
+      sequential_equivalent:
+        example: 7.81s
+        type: string
+      total:
+        example: 1.23s
+        type: string
+    type: object
+  types.CreateFolderRequest:
+    properties:
+      path:
+        example: configs/routers
+        type: string
+    type: object
+  types.CreateNamespaceRequest:
+    properties:
+      namespace:
+        example: prueba
+        type: string
+    type: object
+  types.CreateTokenRequest:
+    properties:
+      expires_in_days:
+        description: Days until the token expires; 0 or omitted means it never expires.
+        example: 30
+        type: integer
+      name:
+        example: ci-pipeline
+        type: string
+    type: object
+  types.CreateTokenResponse:
+    properties:
+      name:
+        example: ci-pipeline
+        type: string
+      token:
+        example: kdt_9f3a....
+        type: string
+    type: object
+  types.DeleteDriverHistoryByIDResponseDoc:
+    properties:
+      id:
+        example: 42
+        type: integer
+      message:
+        example: operation deleted
+        type: string
+    type: object
+  types.DeleteNamespaceDriverHistoryResponseDoc:
+    properties:
+      message:
+        example: namespace history deleted
+        type: string
+      namespace:
+        example: test-small
+        type: string
+    type: object
+  types.DeletePodDriverHistoryResponseDoc:
+    properties:
+      message:
+        example: pod history deleted
+        type: string
+      namespace:
+        example: test-small
+        type: string
+      pod:
+        example: router1-0
+        type: string
+    type: object
+  types.DeployNetworkResponse:
+    properties:
+      message:
+        example: Network infrastructure deployed successfully
+        type: string
+      took_time:
+        $ref: '#/definitions/types.DeployTimingResponse'
+      warnings:
+        items:
+          $ref: '#/definitions/types.WarningDoc'
+        type: array
+    type: object
+  types.DeployRequest:
+    properties:
+      links:
+        items:
+          $ref: '#/definitions/types.LinkSpec'
+        type: array
+      nodes:
+        items:
+          $ref: '#/definitions/types.NodeSpec'
+        type: array
+    type: object
+  types.DeployTimingResponse:
+    properties:
+      node_running:
+        example: 45.01s
+        type: string
+      reconciliation:
+        example: 6.18s
+        type: string
+      resource_creation:
+        example: 0.24s
+        type: string
+      total:
+        example: 51.43s
+        type: string
+    type: object
+  types.DeviceSpec:
+    properties:
+      path:
+        description: absolute path on host
+        example: /dev/net/tun
+        type: string
+    type: object
+  types.DriverInfo:
+    properties:
+      capabilities:
+        items:
+          $ref: '#/definitions/types.CapabilityEntry'
+        type: array
+      executor:
+        example: kubectl
+        type: string
+      interfaceNameConstraints:
+        $ref: '#/definitions/types.InterfaceNameConstraintsDoc'
+      isDefault:
+        example: true
+        type: boolean
+      name:
+        example: frr-router
+        type: string
+      type:
+        example: router
+        type: string
+    type: object
+  types.DriverMethodEntry:
+    properties:
+      label:
+        example: LinkUp
+        type: string
+      name:
+        example: link_up
+        type: string
+      params:
+        items:
+          $ref: '#/definitions/types.DriverMethodParamEntry'
+        type: array
+    type: object
+  types.DriverMethodParamEntry:
+    properties:
+      name:
+        example: iface
+        type: string
+      type:
+        example: string
+        type: string
+    type: object
+  types.DriverOperationHistoryEntryDoc:
+    properties:
+      action:
+        $ref: '#/definitions/types.ActionEntry'
+      action_type:
+        example: add_static_route
+        type: string
+      commands:
+        example:
+        - ip route add 10.10.0.0/16 via 10.0.0.1 dev net1
+        items:
+          type: string
+        type: array
+      driver_type:
+        example: '*drivers.FRRRouterDriver'
+        type: string
+      executed_at:
+        example: "2026-03-22T11:25:44.113Z"
+        type: string
+      id:
+        example: 12
+        type: integer
+      pod_name:
+        example: router1-0
+        type: string
+    type: object
+  types.DriverReplayStatsDoc:
+    properties:
+      pruned:
+        example: 1
+        type: integer
+      replayed:
+        example: 2
+        type: integer
+      total:
+        example: 3
+        type: integer
+    type: object
+  types.DriversListResponse:
+    properties:
+      drivers:
+        items:
+          $ref: '#/definitions/types.DriverInfo'
+        type: array
+    type: object
+  types.ErrorResponse:
+    properties:
+      error:
+        example: descriptive error message
+        type: string
+    type: object
+  types.FileEntry:
+    properties:
+      modTime:
+        example: "2026-03-10 08:15:00"
+        type: string
+      name:
+        example: ospfd.conf
+        type: string
+      path:
+        example: /prueba/ospfd.conf
+        type: string
+      size:
+        example: 2048
+        type: integer
+      type:
+        example: file
+        type: string
+    type: object
+  types.FilesListResponse:
+    properties:
+      files:
+        items:
+          $ref: '#/definitions/types.FileEntry'
+        type: array
+    type: object
+  types.HealthResponse:
+    properties:
+      build_date:
+        example: "2026-04-28T12:00:00Z"
+        type: string
+      commit:
+        example: abc1234
+        type: string
+      server_time:
+        example: "2026-04-28T12:05:00Z"
+        type: string
+      service:
+        example: kubendt-backend
+        type: string
+      status:
+        example: ok
+        type: string
+      version:
+        example: 0.1.0-pre
+        type: string
+    type: object
+  types.InterfaceDetail:
+    properties:
+      ip:
+        example: 10.0.0.1/24
+        type: string
+      mac:
+        example: aa:bb:cc:dd:ee:ff
+        type: string
+    type: object
+  types.InterfaceNameConstraintsDoc:
+    properties:
+      pattern:
+        example: ^eth\d+$
+        type: string
+      patternHuman:
+        example: ^eth\d+$ (e.g. eth1, eth10, eth42)
+        type: string
+      reserved:
+        example:
+        - eth0
+        items:
+          type: string
+        type: array
+    type: object
+  types.KubeConfigInfo:
+    properties:
+      configured:
+        example: true
+        type: boolean
+      context_cluster_ids:
+        additionalProperties:
+          type: string
+        description: |-
+          ContextClusterIDs maps each context name to its cluster's canonical ID
+          (the kube-system namespace UID). Contexts whose cluster is currently
+          unreachable are omitted.
+        type: object
+      contexts:
+        example:
+        - '["my-cluster"'
+        - '"staging"]'
+        items:
+          type: string
+        type: array
+      current_context:
+        example: my-cluster
+        type: string
+      path:
+        example: /home/user/.kube/config
+        type: string
+    type: object
+  types.LinkSpec:
+    properties:
+      localIntf:
+        example: eth1
+        type: string
+      localIp:
+        example: 10.0.0.1/24
+        type: string
+      name:
+        example: N3
+        type: string
+      node:
+        example: router1
+        type: string
+      peerIntf:
+        example: eth1
+        type: string
+      peerIp:
+        example: 10.0.0.2/24
+        type: string
+      peerLabel:
+        example: router2-eth1
+        type: string
+      peerNode:
+        description: use "external" as reserved name for host uplinks
+        example: router2
+        type: string
+      uid:
+        example: 1
+        type: integer
+    type: object
+  types.LoginRequest:
+    properties:
+      password:
+        example: admin123
+        type: string
+    type: object
+  types.LoginResponse:
+    properties:
+      authenticated:
+        example: true
+        type: boolean
+      identity:
+        example: admin
+        type: string
+      roles:
+        example:
+        - admin
+        items:
+          type: string
+        type: array
+    type: object
+  types.MessageResponse:
+    properties:
+      message:
+        example: ok
+        type: string
+    type: object
+  types.ModifyNetworkResponse:
+    properties:
+      add_links_count:
+        example: 1
+        type: integer
+      add_nodes_count:
+        example: 1
+        type: integer
+      del_links_count:
+        example: 0
+        type: integer
+      del_nodes_count:
+        example: 0
+        type: integer
+      deleted_nodes:
+        items:
+          type: string
+        type: array
+      message:
+        example: network-modify applied successfully
+        type: string
+      restarted_pods:
+        items:
+          type: string
+        type: array
+      scale_count:
+        example: 1
+        type: integer
+      scaled_down_pods:
+        items:
+          type: string
+        type: array
+      scaled_up_pods:
+        items:
+          type: string
+        type: array
+      took_time:
+        $ref: '#/definitions/types.ModifyTimingResponse'
+      warnings:
+        items:
+          $ref: '#/definitions/types.WarningDoc'
+        type: array
+    type: object
+  types.ModifyTimingResponse:
+    properties:
+      modify_operations:
+        example: 3.12s
+        type: string
+      reconciliation:
+        example: 2.11s
+        type: string
+      total:
+        example: 5.23s
+        type: string
+    type: object
+  types.MountSpec:
+    properties:
+      file:
+        description: file name inside namespace directory
+        example: ospfd.conf
+        type: string
+      mountTo:
+        description: absolute path in container
+        example: /etc/frr/ospfd.conf
+        type: string
+      sensitive:
+        description: marks the file as sensitive (Secret-backed)
+        example: false
+        type: boolean
+    type: object
+  types.NATRule:
+    properties:
+      externalPort:
+        example: 8080
+        type: integer
+      internalIP:
+        example: 10.0.0.5
+        type: string
+      internalPort:
+        example: 80
+        type: integer
+      protocol:
+        example: tcp
+        type: string
+    type: object
+  types.NamespaceDriverHistoryResponseDoc:
+    properties:
+      namespace:
+        example: test-small
+        type: string
+      operations:
+        items:
+          $ref: '#/definitions/types.DriverOperationHistoryEntryDoc'
+        type: array
+    type: object
+  types.NamespaceInfo:
+    properties:
+      createdAt:
+        example: "2026-01-15 10:30:00"
+        type: string
+      has_topology:
+        description: |-
+          HasTopology reflects whether a KubeNDT topology is currently deployed
+          in this namespace (StatefulSets/Topology CRDs registered). Updated by
+          deploy / modify / clear flows and cheap to read (DB lookup).
+        example: true
+        type: boolean
+      name:
+        example: prueba
+        type: string
+      status:
+        example: Active
+        type: string
+      uptime:
+        example: 5 days, 2 hours, 10 minutes
+        type: string
+    type: object
+  types.NamespaceMetricsResponse:
+    properties:
+      available:
+        example: true
+        type: boolean
+      namespace:
+        example: modify-ospf
+        type: string
+      pod_count:
+        example: 6
+        type: integer
+      pods:
+        items:
+          $ref: '#/definitions/types.NamespacePodMetrics'
+        type: array
+      total_cpu_milli:
+        example: 870
+        type: integer
+      total_memory_bytes:
+        example: 314572800
+        type: integer
+      total_memory_mib:
+        example: 300
+        type: integer
+    type: object
+  types.NamespaceOperationConflictResponse:
+    properties:
+      current_operation:
+        example: modify-network
+        type: string
+      error:
+        example: Namespace 'prueba' already has an operation in progress
+        type: string
+      started_at:
+        example: "2026-03-17T16:40:12Z"
+        type: string
+    type: object
+  types.NamespaceOperationLockInfo:
+    properties:
+      namespace:
+        example: open5gs
+        type: string
+      operationType:
+        example: deploy-network
+        type: string
+      startedAt:
+        example: "2026-07-08T07:07:11Z"
+        type: string
+    type: object
+  types.NamespaceOperationResponse:
+    properties:
+      operation_lock:
+        $ref: '#/definitions/types.NamespaceOperationLockInfo'
+    type: object
+  types.NamespacePodMetrics:
+    properties:
+      cpu_milli:
+        example: 145
+        type: integer
+      memory_bytes:
+        example: 52428800
+        type: integer
+      memory_mib:
+        example: 50
+        type: integer
+      pod:
+        example: frr-router-0
+        type: string
+    type: object
+  types.NamespaceSummaryDriversSection:
+    properties:
+      by_driver:
+        additionalProperties:
+          type: integer
+        example:
+          BasicHostDriver: 5
+          FRRRouterDriver: 3
+          HostDriver: 4
+          LinuxSwitchDriver: 6
+        type: object
+    type: object
+  types.NamespaceSummaryNodesSection:
+    properties:
+      by_type:
+        additionalProperties:
+          type: integer
+        example:
+          host: 9
+          router: 3
+          switch: 6
+        type: object
+      total_replicas:
+        example: 18
+        type: integer
+    type: object
+  types.NamespaceSummaryOperationLockSection:
+    properties:
+      namespace:
+        example: demo
+        type: string
+      operationType:
+        example: modify-network
+        type: string
+      startedAt:
+        example: "2026-03-23T15:00:00Z"
+        type: string
+    type: object
+  types.NamespaceSummaryOperationsSection:
+    properties:
+      by_action:
+        additionalProperties:
+          type: integer
+        example:
+          add_dns_nameserver: 4
+          add_dns_search: 4
+          enable_dnat: 3
+          enable_snat: 1
+          remove_default_route: 2
+          replace_ip: 1
+          set_default_route: 9
+          setup_bridge: 6
+        type: object
+      by_driver:
+        additionalProperties:
+          type: integer
+        example:
+          '*drivers.BasicHostDriver': 5
+          '*drivers.FRRRouterDriver': 7
+          '*drivers.HostDriver': 12
+          '*drivers.LinuxSwitchDriver': 6
+        type: object
+      last_executed_at:
+        example: "2026-03-23T15:15:25.402889011Z"
+        type: string
+      pods_with_history:
+        example: 18
+        type: integer
+      total_persisted:
+        example: 30
+        type: integer
+    type: object
+  types.NamespaceSummaryPodsSection:
+    properties:
+      phase_counts:
+        additionalProperties:
+          type: integer
+        example:
+          Running: 18
+        type: object
+      ready:
+        example: 18
+        type: integer
+      restarting:
+        example: 0
+        type: integer
+      running:
+        example: 18
+        type: integer
+      total:
+        example: 18
+        type: integer
+    type: object
+  types.NamespaceSummaryResponse:
+    properties:
+      drivers:
+        $ref: '#/definitions/types.NamespaceSummaryDriversSection'
+      namespace:
+        $ref: '#/definitions/types.NamespaceSummarySection'
+      nodes:
+        $ref: '#/definitions/types.NamespaceSummaryNodesSection'
+      operation_lock:
+        $ref: '#/definitions/types.NamespaceSummaryOperationLockSection'
+      operations:
+        $ref: '#/definitions/types.NamespaceSummaryOperationsSection'
+      pods:
+        $ref: '#/definitions/types.NamespaceSummaryPodsSection'
+      runtime:
+        $ref: '#/definitions/types.NamespaceSummaryRuntimeSection'
+      took_seconds:
+        example: 0.037295681
+        type: number
+      took_time:
+        example: 37ms
+        type: string
+      topology:
+        $ref: '#/definitions/types.NamespaceSummaryTopologySection'
+    type: object
+  types.NamespaceSummaryRuntimeSection:
+    properties:
+      by_runtime:
+        additionalProperties:
+          type: integer
+        example:
+          k8s-linux: 18
+        type: object
+    type: object
+  types.NamespaceSummarySection:
+    properties:
+      age:
+        example: 34m58s
+        type: string
+      created_at:
+        example: "2026-03-23T16:14:08+01:00"
+        type: string
+      name:
+        example: demo
+        type: string
+      status:
+        example: Active
+        type: string
+    type: object
+  types.NamespaceSummaryTopologySection:
+    properties:
+      has_topology:
+        example: true
+        type: boolean
+      links_to_external:
+        example: 1
+        type: integer
+      logical_links:
+        example: 18
+        type: integer
+      statefulsets:
+        example: 13
+        type: integer
+      topology_crds:
+        example: 18
+        type: integer
+    type: object
+  types.NamespacesListResponse:
+    properties:
+      namespaces:
+        items:
+          $ref: '#/definitions/types.NamespaceInfo'
+        type: array
+    type: object
+  types.NetworkDeleteSpecDoc:
+    properties:
+      links:
+        items:
+          $ref: '#/definitions/types.LinkSpec'
+        type: array
+      nodes:
+        items:
+          type: string
+        type: array
+    type: object
+  types.NetworkModifyRequestDoc:
+    properties:
+      add:
+        $ref: '#/definitions/types.DeployRequest'
+      delete:
+        $ref: '#/definitions/types.NetworkDeleteSpecDoc'
+      scale:
+        description: |-
+          Scale changes the replica count of existing nodes. Each entry takes
+          the absolute number of replicas the node should end with. Replicas
+          must be >= 1 (to remove a node entirely use delete.nodes).
+        items:
+          $ref: '#/definitions/types.ScaleSpec'
+        type: array
+    type: object
+  types.NetworkTopologyResponse:
+    properties:
+      links:
+        items:
+          $ref: '#/definitions/types.LinkSpec'
+        type: array
+      nodes:
+        items:
+          $ref: '#/definitions/types.NodeSpec'
+        type: array
+    type: object
+  types.NodeAddressDoc:
+    properties:
+      address:
+        example: 10.0.0.5
+        type: string
+      type:
+        example: InternalIP
+        type: string
+    type: object
+  types.NodeConditionDoc:
+    properties:
+      last_transition:
+        example: "2026-04-28T12:05:00Z"
+        type: string
+      message:
+        example: kubelet is posting ready status
+        type: string
+      reason:
+        example: KubeletReady
+        type: string
+      status:
+        example: "True"
+        type: string
+      type:
+        example: Ready
+        type: string
+    type: object
+  types.NodeDetailResponse:
+    properties:
+      addresses:
+        items:
+          $ref: '#/definitions/types.NodeAddressDoc'
+        type: array
+      allocatable:
+        $ref: '#/definitions/types.NodeResourceQuantityDoc'
+      annotations:
+        additionalProperties:
+          type: string
+        type: object
+      capacity:
+        $ref: '#/definitions/types.NodeResourceQuantityDoc'
+      conditions:
+        items:
+          $ref: '#/definitions/types.NodeConditionDoc'
+        type: array
+      cpu_milli_usage:
+        example: 423
+        type: integer
+      cpu_percentage:
+        example: 5.28
+        type: number
+      creation_timestamp:
+        example: "2026-04-28T12:00:00Z"
+        type: string
+      labels:
+        additionalProperties:
+          type: string
+        type: object
+      memory_bytes_usage:
+        example: 4633038848
+        type: integer
+      memory_percentage:
+        example: 27.77
+        type: number
+      name:
+        example: k8s-worker-1
+        type: string
+      os_info:
+        $ref: '#/definitions/types.NodeOSInfoDoc'
+      pod_cidr:
+        example: 10.244.1.0/24
+        type: string
+      pod_cidrs:
+        example:
+        - 10.244.1.0/24
+        items:
+          type: string
+        type: array
+      roles:
+        example:
+        - worker
+        items:
+          type: string
+        type: array
+      status:
+        example: Ready
+        type: string
+      taints:
+        items:
+          $ref: '#/definitions/types.NodeTaintDoc'
+        type: array
+      versions:
+        $ref: '#/definitions/types.NodeVersionsInfoDoc'
+    type: object
+  types.NodeOSInfoDoc:
+    properties:
+      architecture:
+        example: amd64
+        type: string
+      kernel_version:
+        example: 5.15.0-105-generic
+        type: string
+      operating_system:
+        example: linux
+        type: string
+      os_image:
+        example: Ubuntu 22.04.4 LTS
+        type: string
+    type: object
+  types.NodePosition:
+    properties:
+      x:
+        example: 120.5
+        type: number
+      "y":
+        example: 340
+        type: number
+    type: object
+  types.NodePositionsRequest:
+    properties:
+      positions:
+        additionalProperties:
+          $ref: '#/definitions/types.NodePosition'
+        type: object
+    type: object
+  types.NodePositionsResponse:
+    properties:
+      positions:
+        additionalProperties:
+          $ref: '#/definitions/types.NodePosition'
+        type: object
+    type: object
+  types.NodeResourceQuantityDoc:
+    properties:
+      cpu_milli:
+        example: 6000
+        type: integer
+      memory_bytes:
+        example: 7290974208
+        type: integer
+      pods:
+        example: 110
+        type: integer
+      storage_ephemeral_bytes:
+        example: 42949672960
+        type: integer
+    type: object
+  types.NodeSpec:
+    properties:
+      commands:
+        items:
+          type: string
+        type: array
+      devices:
+        items:
+          $ref: '#/definitions/types.DeviceSpec'
+        type: array
+      driver:
+        example: frr-router
+        type: string
+      env:
+        additionalProperties:
+          type: string
+        type: object
+      image:
+        example: frrouting/frr:latest
+        type: string
+      mounts:
+        items:
+          $ref: '#/definitions/types.MountSpec'
+        type: array
+      name:
+        example: router1
+        type: string
+      privileged:
+        example: true
+        type: boolean
+      replicas:
+        example: 1
+        type: integer
+      shellMode:
+        example: sh
+        type: string
+      type:
+        example: router
+        type: string
+    type: object
+  types.NodeTaintDoc:
+    properties:
+      effect:
+        example: NoSchedule
+        type: string
+      key:
+        example: node-role.kubernetes.io/control-plane
+        type: string
+      time_added:
+        example: "2026-04-28T12:00:00Z"
+        type: string
+      value:
+        example: ""
+        type: string
+    type: object
+  types.NodeVersionsInfoDoc:
+    properties:
+      container_runtime_version:
+        example: containerd://1.7.20
+        type: string
+      kubelet_version:
+        example: v1.32.2
+        type: string
+    type: object
+  types.PodDriverHistoryResponseDoc:
+    properties:
+      namespace:
+        example: test-small
+        type: string
+      operations:
+        items:
+          $ref: '#/definitions/types.DriverOperationHistoryEntryDoc'
+        type: array
+      pod:
+        example: router1-0
+        type: string
+    type: object
+  types.PodInfo:
+    properties:
+      baseName:
+        example: router
+        type: string
+      createdAt:
+        example: "2026-01-15 10:30:00"
+        type: string
+      driver:
+        example: frr-router
+        type: string
+      image:
+        example: frrouting/frr:latest
+        type: string
+      name:
+        example: router1
+        type: string
+      namespace:
+        example: prueba
+        type: string
+      node:
+        example: k8s-worker-1
+        type: string
+      replicaCount:
+        example: 2
+        type: integer
+      replicaIndex:
+        example: 0
+        type: integer
+      runtime:
+        example: k8s-linux
+        type: string
+      status:
+        example: Running
+        type: string
+      type:
+        example: router
+        type: string
+      uptime:
+        example: 1 days, 4 hours, 5 minutes
+        type: string
+    type: object
+  types.PodInterfaceEntry:
+    properties:
+      interface:
+        example: eth1
+        type: string
+      ipv4:
+        example: 10.0.0.1/24
+        type: string
+      mac:
+        example: aa:bb:cc:dd:ee:ff
+        type: string
+    type: object
+  types.PodInterfaceInfo:
+    properties:
+      interfaces:
+        additionalProperties:
+          $ref: '#/definitions/types.InterfaceDetail'
+        type: object
+      nat:
+        items:
+          $ref: '#/definitions/types.NATRule'
+        type: array
+    type: object
+  types.PodInterfacesResponse:
+    properties:
+      interfaces:
+        items:
+          $ref: '#/definitions/types.PodInterfaceEntry'
+        type: array
+    type: object
+  types.PodMetricsResponse:
+    properties:
+      available:
+        example: true
+        type: boolean
+      cpu_milli:
+        example: 145
+        type: integer
+      memory_bytes:
+        example: 52428800
+        type: integer
+      memory_mib:
+        example: 50
+        type: integer
+      pod:
+        example: router1-0
+        type: string
+    type: object
+  types.PodMetricsUnavailableResponse:
+    properties:
+      available:
+        example: false
+        type: boolean
+      error:
+        example: metrics-server not available or not installed
+        type: string
+    type: object
+  types.PodsListResponse:
+    properties:
+      pods:
+        items:
+          $ref: '#/definitions/types.PodInfo'
+        type: array
+    type: object
+  types.QdiscResponse:
+    properties:
+      interface:
+        example: eth1
+        type: string
+      tcparams:
+        additionalProperties: true
+        type: object
+    type: object
+  types.ReadinessResponse:
+    properties:
+      checks:
+        additionalProperties:
+          type: string
+        example:
+          database: ok
+          kubernetes: ok
+        type: object
+      server_time:
+        example: "2026-04-28T12:05:00Z"
+        type: string
+      status:
+        example: ready
+        type: string
+    type: object
+  types.RenameFileRequest:
+    properties:
+      newPath:
+        example: configs/new.conf
+        type: string
+      oldPath:
+        example: configs/old.conf
+        type: string
+    type: object
+  types.RestartPodResponseDoc:
+    properties:
+      message:
+        example: Pod router1-0 restarted successfully
+        type: string
+      replay:
+        $ref: '#/definitions/types.DriverReplayStatsDoc'
+      replayed_operations:
+        example: 2
+        type: integer
+      took_time:
+        $ref: '#/definitions/types.RestartTimingResponse'
+    type: object
+  types.RestartTimingResponse:
+    properties:
+      pod_restart:
+        example: 40.30s
+        type: string
+      replay:
+        example: 0.95s
+        type: string
+      total:
+        example: 42.50s
+        type: string
+    type: object
+  types.ScaleSpec:
+    properties:
+      name:
+        example: host
+        type: string
+      replicas:
+        example: 4
+        type: integer
+    type: object
+  types.SetContextRequest:
+    properties:
+      context:
+        example: my-cluster
+        type: string
+    type: object
+  types.SetKubeContextResponse:
+    properties:
+      current_context:
+        example: my-cluster
+        type: string
+    type: object
+  types.TCParamEntry:
+    properties:
+      burst:
+        description: optional (tbf)
+        example: 32kbit
+        type: string
+      corrupt:
+        description: optional (netem)
+        example: 0.1%
+        type: string
+      delay:
+        description: optional (netem)
+        example: 100ms
+        type: string
+      duplicate:
+        description: optional (netem)
+        example: 0.5%
+        type: string
+      jitter:
+        description: optional (netem)
+        example: 10ms
+        type: string
+      latency:
+        description: optional (tbf)
+        example: 50ms
+        type: string
+      limit:
+        description: optional (netem)
+        example: 1000
+        type: integer
+      loss:
+        description: optional (netem)
+        example: 1%
+        type: string
+      qdisc:
+        description: netem or tbf
+        example: netem
+        type: string
+      rate:
+        description: optional (tbf)
+        example: 10mbit
+        type: string
+    type: object
+  types.UpdateFileContentRequest:
+    properties:
+      content:
+        example: hostname router1
+        type: string
+    type: object
+  types.VersionResponse:
+    properties:
+      build_date:
+        example: "2026-04-28T12:00:00Z"
+        type: string
+      commit:
+        example: abc1234
+        type: string
+      service:
+        example: kubendt-backend
+        type: string
+      version:
+        example: 0.1.0-pre
+        type: string
+    type: object
+  types.WarningDoc:
+    properties:
+      detail:
+        example: File "web-server/index.html" not found in namespace file manager.
+          Mount skipped, the pod will start without it.
+        type: string
+      file:
+        example: web-server/index.html
+        type: string
+      kind:
+        example: mount_file_missing
+        type: string
+      node:
+        example: web-server
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: REST API for KubeNDT (Kubernetes Network Digital Twin).
+  title: KubeNDT API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Exchanges the admin password for an HttpOnly session cookie.
+      parameters:
+      - description: Admin password
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/types.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.LoginResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Log in
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      description: Revokes the current session and clears the cookie.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.AuthStatus'
+      summary: Log out
+      tags:
+      - auth
+  /auth/me:
+    get:
+      description: Reports whether auth is enabled and whether the caller is authenticated.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.AuthStatus'
+      summary: Current auth state
+      tags:
+      - auth
+  /auth/tokens:
+    get:
+      description: Lists API token metadata (never the secrets). Requires a session
+        or the admin password.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.APITokenList'
+      summary: List API tokens
+      tags:
+      - auth
+    post:
+      consumes:
+      - application/json
+      description: Mints a long-lived bearer token (returned only once). Requires
+        a session or the admin password (not another token).
+      parameters:
+      - description: Token name
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/types.CreateTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/types.CreateTokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Create an API token
+      tags:
+      - auth
+  /auth/tokens/{id}:
+    delete:
+      description: Revokes an API token by id. Requires a session or the admin password.
+      parameters:
+      - description: Token id
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Revoke an API token
+      tags:
+      - auth
+  /capture/clear/{namespace}/{podName}/{container}:
+    post:
+      description: Empties a stopped capture's pcap so a later export starts fresh.
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: Pod name
+        in: path
+        name: podName
+        required: true
+        type: string
+      - description: Capture container id
+        in: path
+        name: container
+        required: true
+        type: string
+      - description: Capture run id
+        in: query
+        name: pcap
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Clear capture pcap
+      tags:
+      - capture
+  /capture/packet/{namespace}/{podName}/{container}/{num}:
+    get:
+      description: Re-dissects a single packet from a capture's pcap into a full JSON
+        protocol tree (Wireshark's own dissection via tshark -T json).
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: Pod name
+        in: path
+        name: podName
+        required: true
+        type: string
+      - description: Capture container id
+        in: path
+        name: container
+        required: true
+        type: string
+      - description: Frame number
+        in: path
+        name: num
+        required: true
+        type: integer
+      - description: Capture run id
+        in: query
+        name: pcap
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Wireshark JSON dissection
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Packet dissection
+      tags:
+      - capture
+  /capture/pcap/{namespace}/{podName}/{container}:
+    get:
+      description: Streams the pcap a capture run wrote, as a file download. Without
+        `frames` it returns the whole capture; with `frames` (a comma list of numbers/ranges,
+        e.g. 1-5,9,12-20) it returns only those packets (used to export the current
+        display filter).
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: Pod name
+        in: path
+        name: podName
+        required: true
+        type: string
+      - description: Capture container id
+        in: path
+        name: container
+        required: true
+        type: string
+      - description: Capture run id
+        in: query
+        name: pcap
+        required: true
+        type: string
+      - description: Frame numbers/ranges to export (e.g. 1-5,9,12-20)
+        in: query
+        name: frames
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Download capture pcap
+      tags:
+      - capture
+  /capture/ws/{namespace}/{podName}/{interface}:
+    get:
+      description: Injects an ephemeral tshark container into the pod (sharing its
+        network namespace) and streams a live capture of one interface. Control frames
+        are JSON ({type:"meta"|"status"|"error"}); every other text frame is one packet
+        row as tab-separated Wireshark columns (No, Time, Source, Destination, Protocol,
+        Length, Info). Closing the socket stops the capture. Optional `filter` is
+        a BPF capture filter; optional `container` reuses an existing capture container
+        on reconnect.
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: Pod name
+        in: path
+        name: podName
+        required: true
+        type: string
+      - description: Interface to capture (e.g. eth1)
+        in: path
+        name: interface
+        required: true
+        type: string
+      - description: BPF capture filter
+        in: query
+        name: filter
+        type: string
+      - description: Existing capture container to reuse
+        in: query
+        name: container
+        type: string
+      responses: {}
+      summary: Live packet capture (WebSocket)
+      tags:
+      - capture
+  /cluster/nodes/{name}:
+    get:
+      description: 'Returns the full kubectl-derivable view of a single node: pod
+        CIDR, addresses, OS info, kubelet/runtime versions, capacity vs allocatable,
+        conditions, taints, labels and annotations. Live usage is included when metrics-server
+        is reachable.'
+      parameters:
+      - description: Node name
+        in: path
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.NodeDetailResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Get a node's detailed info
+      tags:
+      - cluster
+  /cluster/status:
+    get:
+      description: Returns connection status and node info for the Kubernetes cluster.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.ClusterStatusResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Get cluster status
+      tags:
+      - cluster
+  /drivers/:
+    get:
+      description: Returns all registered KubeNDT drivers (e.g. linux-switch, ovs-switch,
+        frr-router).
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.DriversListResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: List available drivers
+      tags:
+      - drivers
+  /drivers/{driver}:
+    get:
+      description: Returns the full info (type, executor, capabilities and interface-name
+        constraints) for one registered driver. Same per-item shape used by `GET /drivers/`.
+      parameters:
+      - description: Driver name
+        in: path
+        name: driver
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.DriverInfo'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Get a single driver
+      tags:
+      - drivers
+  /drivers/history/{id}:
+    delete:
+      description: Removes a single persisted driver operation from history using
+        its unique operation ID.
+      parameters:
+      - description: Operation ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.DeleteDriverHistoryByIDResponseDoc'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Delete one persisted driver operation by ID
+      tags:
+      - drivers
+  /drivers/history/{namespace}:
+    get:
+      description: Returns all persisted driver operations for the namespace across
+        all pods in execution order (oldest first). Each entry includes action payload,
+        execution timestamp, pod name, and equivalent shell commands reconstructed
+        from current driver capabilities when available.
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.NamespaceDriverHistoryResponseDoc'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: List persisted driver history by namespace
+      tags:
+      - drivers
+  /drivers/history/{namespace}/{podName}:
+    get:
+      description: Returns persisted driver operations for a resolved pod in a namespace
+        (supports base name and indexed pod name). Entries are ordered by insertion
+        time and include action payload, timestamp, and reconstructed equivalent shell
+        commands.
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: Pod reference (e.g. router1 or router1-0)
+        in: path
+        name: podName
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.PodDriverHistoryResponseDoc'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: List persisted driver history by pod
+      tags:
+      - drivers
+  /drivers/history/namespace/{namespace}:
+    delete:
+      description: Deletes all persisted driver operations across all pods in the
+        namespace.
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.DeleteNamespaceDriverHistoryResponseDoc'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Delete persisted driver history for a namespace
+      tags:
+      - drivers
+  /drivers/history/namespace/{namespace}/pod/{podName}:
+    delete:
+      description: Deletes all persisted driver operations for one resolved pod in
+        a namespace (supports base name and indexed pod name).
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: Pod reference (e.g. router1 or router1-0)
+        in: path
+        name: podName
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.DeletePodDriverHistoryResponseDoc'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Delete persisted driver history for one pod
+      tags:
+      - drivers
+  /file-ops/{namespace}/export:
+    get:
+      description: Downloads all files for a namespace as a .zip archive.
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      produces:
+      - application/zip
+      responses:
+        "200":
+          description: ZIP archive
+          schema:
+            type: file
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Export as ZIP
+      tags:
+      - files
+  /file-ops/{namespace}/folder:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new directory inside namespace file storage.
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: Folder path to create
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/types.CreateFolderRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Create folder
+      tags:
+      - files
+  /file-ops/{namespace}/import:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Imports a .zip or .tar.gz archive into namespace file storage.
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: Archive file (.zip or .tar.gz)
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: Target extraction sub-path
+        in: formData
+        name: path
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Import archive
+      tags:
+      - files
+  /file-ops/{namespace}/rename:
+    post:
+      consumes:
+      - application/json
+      description: Renames or moves a file within namespace storage.
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: Old and new paths
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/types.RenameFileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Rename / move file
+      tags:
+      - files
+  /files/{namespace}:
+    delete:
+      description: Permanently removes every file and folder inside the namespace
+        file-manager directory, then recreates the empty directory.
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.MessageResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Delete all namespace files
+      tags:
+      - files
+    get:
+      description: Lists files and directories in the namespace's file storage.
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: 'Sub-path to list (default: root)'
+        in: query
+        name: path
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.FilesListResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: List files
+      tags:
+      - files
+  /files/{namespace}/:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Uploads a file to the namespace's file storage (multipart/form-data).
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: File to upload
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: Target sub-path
+        in: formData
+        name: path
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Upload file
+      tags:
+      - files
+  /files/{namespace}/{filename}:
+    delete:
+      description: Deletes a file from namespace storage.
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: File path
+        in: path
+        name: filename
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.MessageResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Delete file
+      tags:
+      - files
+    get:
+      description: Returns the raw content of a file stored for the namespace.
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: File path (relative to namespace root)
+        in: path
+        name: filename
+        required: true
+        type: string
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: File content
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Get file content
+      tags:
+      - files
+    put:
+      consumes:
+      - application/json
+      description: Overwrites the content of an existing file.
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: File path
+        in: path
+        name: filename
+        required: true
+        type: string
+      - description: New file content payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/types.UpdateFileContentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Update file content
+      tags:
+      - files
+  /healthz:
+    get:
+      description: Returns basic service/process health and build metadata.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.HealthResponse'
+      summary: Liveness check
+      tags:
+      - system
+  /kube/config:
+    get:
+      description: Returns information about the currently loaded kubeconfig (contexts,
+        current context, server URLs).
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.KubeConfigInfo'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Get kubeconfig info
+      tags:
+      - kubeconfig
+    post:
+      consumes:
+      - multipart/form-data
+      description: Loads kubeconfig from an uploaded file.
+      parameters:
+      - description: Kubeconfig file
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.KubeConfigInfo'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Load kubeconfig file
+      tags:
+      - kubeconfig
+  /kube/context:
+    post:
+      consumes:
+      - application/json
+      description: Switches the active Kubernetes context.
+      parameters:
+      - description: Context name to activate
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/types.SetContextRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.SetKubeContextResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Set kubeconfig context
+      tags:
+      - kubeconfig
+  /namespaces/:
+    get:
+      description: Returns all Kubernetes namespaces labelled kubendt/enabled=true.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.NamespacesListResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: List namespaces
+      tags:
+      - namespaces
+    post:
+      consumes:
+      - application/json
+      description: Creates a new Kubernetes namespace and labels it for KubeNDT.
+      parameters:
+      - description: Namespace to create
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/types.CreateNamespaceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "409":
+          description: Namespace name already exists (empty or with resources)
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Create namespace
+      tags:
+      - namespaces
+  /namespaces/{namespace}:
+    delete:
+      description: Deletes a KubeNDT namespace and all resources inside it.
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.MessageResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Delete namespace
+      tags:
+      - namespaces
+  /namespaces/ips/{namespace}:
+    get:
+      description: Returns IP, MAC, and NAT configuration for every pod in the namespace.
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/types.PodInterfaceInfo'
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Get interfaces for all pods in a namespace
+      tags:
+      - namespaces
+  /namespaces/metrics/{namespace}:
+    get:
+      description: 'Returns real-time CPU (millicores) and memory (bytes/MiB) usage
+        for every pod in a namespace, both per-pod and aggregated over the namespace,
+        via the Kubernetes metrics-server API. Returns HTTP 503 with {"available":
+        false} when metrics-server is not installed or not yet ready.'
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.NamespaceMetricsResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/types.PodMetricsUnavailableResponse'
+      summary: Get namespace CPU/RAM metrics
+      tags:
+      - namespaces
+  /namespaces/operation/{namespace}:
+    get:
+      description: Returns the active operation lock (deploy/modify/clear) for the
+        namespace, or null when idle. Cheap DB read; polled by the UI to reflect a
+        running operation after a reload or navigation.
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.NamespaceOperationResponse'
+      summary: Get in-progress operation
+      tags:
+      - namespaces
+  /namespaces/summary/{namespace}:
+    get:
+      description: 'Returns an aggregated operational summary of the namespace: topology
+        status, node/pod counts, type and driver distribution, persisted operation
+        stats, and active namespace lock (if any).'
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.NamespaceSummaryResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Get namespace summary
+      tags:
+      - namespaces
+  /network/clear-topology/{namespace}:
+    delete:
+      description: Deletes all topology resources in a namespace without deleting
+        the namespace itself.
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.ClearTopologyResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/types.NamespaceOperationConflictResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Clear namespace topology
+      tags:
+      - network
+  /network/configure/{namespace}:
+    post:
+      consumes:
+      - application/json
+      description: 'Applies driver-based configuration actions (routes, bridges, NAT,
+        TC, etc.) to pods concurrently. Each action can include options: {"persist_history":
+        false, "capture_output": true}. The response includes a sequential_equivalent
+        time (sum of per-pod durations) and a speedup factor vs the concurrent wall
+        time.'
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: Configuration request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/types.ConfigureNetworkRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.ConfigureNetworkResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Configure network (drivers)
+      tags:
+      - network
+  /network/deploy-network/{namespace}:
+    post:
+      consumes:
+      - application/json
+      description: Deploys a full network topology (nodes + links) into a namespace.
+        In links, use the reserved name "external" for either node or peerNode to
+        create a host uplink (external network connection). Both ends of a link cannot
+        be "external" simultaneously.
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: Topology definition
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/types.DeployRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.DeployNetworkResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/types.NamespaceOperationConflictResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Deploy network topology
+      tags:
+      - network
+  /network/get-network/{namespace}:
+    get:
+      description: Returns the current network topology deployed in a namespace.
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.NetworkTopologyResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Get network topology
+      tags:
+      - network
+  /network/modify-network/{namespace}:
+    post:
+      consumes:
+      - application/json
+      description: Adds or removes nodes/links from an existing topology.
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: Delta topology (add/delete)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/types.NetworkModifyRequestDoc'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.ModifyNetworkResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/types.NamespaceOperationConflictResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Modify network topology
+      tags:
+      - network
+  /network/positions/{namespace}:
+    get:
+      description: Returns the saved visual positions for nodes in a namespace.
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.NodePositionsResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Get node positions
+      tags:
+      - network
+    post:
+      consumes:
+      - application/json
+      description: Persists visual positions of nodes in the topology graph.
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: Map of node name to {x, y} position
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/types.NodePositionsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Save node positions
+      tags:
+      - network
+  /pods/{namespace}:
+    get:
+      description: Lists all KubeNDT-managed pods (StatefulSets) in a namespace.
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.PodsListResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: List pods
+      tags:
+      - pods
+  /pods/ips/{namespace}/{podName}:
+    get:
+      description: |-
+        Returns interface list (name, MAC, IPv4) for a single pod. By
+        default the result is scoped to the interfaces declared in the
+        pod's topology (its link endpoints), excluding the reserved CNI
+        management interface, loopback and kernel pseudo-interfaces. Use
+        scope=all for the full set including the management interface.
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: Pod name
+        in: path
+        name: podName
+        required: true
+        type: string
+      - description: Return only this interface
+        in: query
+        name: intf
+        type: string
+      - description: 'Interface scope: topology (default) or all'
+        enum:
+        - topology
+        - all
+        in: query
+        name: scope
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.PodInterfacesResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Get interfaces from a pod
+      tags:
+      - pods
+  /pods/metrics/{namespace}/{podName}:
+    get:
+      description: 'Returns real-time CPU (millicores) and memory (bytes/MiB) usage
+        for a single pod via the Kubernetes metrics-server API. Returns HTTP 503 with
+        {"available": false} when metrics-server is not installed or not yet ready.'
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: Pod name
+        in: path
+        name: podName
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.PodMetricsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/types.PodMetricsUnavailableResponse'
+      summary: Get pod CPU/RAM metrics
+      tags:
+      - pods
+  /pods/restart/{namespace}/{podName}:
+    patch:
+      description: |-
+        Restarts a pod by deleting it (the StatefulSet controller recreates it),
+        waits for it to reach Running state, then replays all persisted driver
+        operations from its history. The response includes a took_time breakdown
+        separating pod_restart (time until Running) from replay (re-execution of
+        persisted actions).
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: Pod name
+        in: path
+        name: podName
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.RestartPodResponseDoc'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Restart pod
+      tags:
+      - pods
+  /pods/tc/{namespace}/{podName}/{interface}:
+    get:
+      description: Returns Traffic Control qdisc information for a pod interface.
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: Pod name
+        in: path
+        name: podName
+        required: true
+        type: string
+      - description: Interface name (e.g. eth1)
+        in: path
+        name: interface
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.QdiscResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Show Qdisc (TC) info
+      tags:
+      - pods
+  /readyz:
+    get:
+      description: Returns readiness state for backend dependencies such as database
+        and Kubernetes clients.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.ReadinessResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/types.ReadinessResponse'
+      summary: Readiness check
+      tags:
+      - system
+  /shell/ws/{namespace}/{podName}:
+    get:
+      description: 'Opens a WebSocket connection providing an interactive shell inside
+        a pod. Query parameter `mode` controls shell type: `auto` (default), `sh`,
+        or `serial`.'
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: Pod name
+        in: path
+        name: podName
+        required: true
+        type: string
+      - default: auto
+        description: 'Shell mode: auto|sh|serial'
+        enum:
+        - auto
+        - sh
+        - serial
+        in: query
+        name: mode
+        type: string
+      responses: {}
+      summary: Interactive shell (WebSocket)
+      tags:
+      - shell
+  /version:
+    get:
+      description: Returns service name and build metadata.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.VersionResponse'
+      summary: Service version
+      tags:
+      - system
+schemes:
+- http
+swagger: "2.0"

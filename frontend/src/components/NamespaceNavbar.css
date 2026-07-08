@@ -1,0 +1,322 @@
+.navbar-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: #3397df;
+  border-bottom: 3px solid #047ed5;
+  padding: 0.7rem 1rem;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  min-height: 60px;
+}
+
+.navbar-left,
+.navbar-right {
+  display: flex;
+  gap: 0.8rem;
+  z-index: 1;
+}
+
+.navbar-left {
+  flex: 0 0 auto;
+}
+
+.navbar-right {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.navbar-brand {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.8);
+  padding: 0.25rem 0.55rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
+  cursor: pointer;
+}
+
+a.navbar-brand:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.15);
+  text-decoration: none;
+}
+
+a.navbar-brand:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.7);
+  outline-offset: 2px;
+}
+
+.navbar-center {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  z-index: 0;
+  background: rgba(255, 255, 255, 0.12);
+  padding: 0.5rem 1.8rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  max-width: 400px;
+}
+
+.navbar-label {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.85);
+  margin-bottom: 0.1rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 500;
+}
+
+.navbar-namespace {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: white;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.navbar-namespace-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+}
+
+.navbar-refresh-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 999px;
+  width: 30px;
+  height: 30px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.navbar-refresh-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.32);
+  transform: translateY(-1px);
+}
+
+.navbar-refresh-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.navbar-button {
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+/* Home button - Blanco/Neutro */
+.navbar-left button:nth-child(1) {
+  background: #fafafa;
+  color: #424242;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.navbar-left button:nth-child(1):hover:not(:disabled) {
+  background: #eeeeee;
+  border-bottom-color: #bdbdbd;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* Delete button - Rojo */
+.navbar-left button:nth-child(2) {
+  background: #e53935;
+  border-bottom: 2px solid #c62828;
+}
+
+.navbar-left button:nth-child(2):hover:not(:disabled) {
+  background: #d32f2f;
+  border-bottom-color: #b71c1c;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(229, 57, 53, 0.3);
+}
+
+.navbar-button-namespace-history {
+  background: #c89a1b;
+  color: #2f2410;
+  border-bottom: 2px solid #9b7410;
+}
+
+.navbar-button-namespace-history:hover:not(:disabled) {
+  background: #b88913;
+  border-bottom-color: #7f5f0b;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(200, 154, 27, 0.35);
+}
+
+/* Files button - Amarillo suave */
+.navbar-right button:nth-child(1) {
+  background: #fdd835;
+  color: #424242;
+  border-bottom: 2px solid #f9a825;
+}
+
+.navbar-right button:nth-child(1):hover:not(:disabled) {
+  background: #fbc02d;
+  border-bottom-color: #f57f17;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(253, 216, 53, 0.3);
+}
+
+.navbar-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.navbar-button:disabled {
+  background: rgba(255, 255, 255, 0.08);
+  cursor: not-allowed;
+  opacity: 0.4;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Deletion confirmation modal */
+.delete-confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.delete-confirm-modal {
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  width: 90%;
+  max-width: 450px;
+  padding: 0;
+  outline: none;
+}
+
+.delete-confirm-modal .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid #eee;
+}
+
+.delete-confirm-modal .modal-header h2 {
+  margin: 0;
+  color: #333;
+  font-size: 1.4rem;
+}
+
+.delete-confirm-modal .modal-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #999;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.delete-confirm-modal .modal-close-btn:hover {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+.delete-confirm-modal .modal-body {
+  padding: 2rem 1.5rem;
+}
+
+.delete-confirm-modal .modal-body p {
+  margin: 0;
+  font-size: 1.05rem;
+  color: #333;
+  line-height: 1.5;
+}
+
+.delete-confirm-modal .modal-footer {
+  display: flex;
+  gap: 0.8rem;
+  padding: 1.5rem;
+  border-top: 1px solid #eee;
+  justify-content: flex-end;
+}
+
+.delete-confirm-modal .modal-btn {
+  padding: 0.6rem 1.2rem;
+  font-size: 0.95rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.delete-confirm-modal .modal-btn-cancel {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+.delete-confirm-modal .modal-btn-cancel:hover {
+  background-color: #e0e0e0;
+}
+
+.delete-confirm-modal .modal-btn-danger {
+  background-color: #f44336;
+  color: white;
+}
+
+.delete-confirm-modal .modal-btn-danger:hover {
+  background-color: #da190b;
+}
+
+@media (max-width: 900px) {
+  .navbar-container {
+    flex-wrap: wrap;
+    gap: 0.8rem;
+  }
+
+  .navbar-center {
+    position: static;
+    left: auto;
+    transform: none;
+    order: 3;
+    width: 100%;
+    max-width: none;
+  }
+
+  .navbar-left,
+  .navbar-right {
+    flex-wrap: wrap;
+  }
+}

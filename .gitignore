@@ -1,0 +1,36 @@
+# backend
+backend/files/*
+!backend/files/info.md
+backend/tmp/
+backend/kubendt-backend
+backend/kubendt
+backend/kubendt.db
+
+# frontend
+/frontend/node_modules
+/frontend/.pnp
+/frontend/.pnp.js
+/frontend/coverage
+/frontend/build
+/frontend/.env.local
+/frontend/.env.development.local
+/frontend/.env.test.local
+/frontend/.env.production.local
+/frontend/npm-debug.log*
+/frontend/yarn-debug.log*
+/frontend/yarn-error.log*
+
+# Local env overrides
+.env.prod.local
+.env.local
+
+# misc
+.DS_Store
+/docs/
+
+# deploy
+*.tar
+*.tgz
+*.qcow2
+deploy/examples/7-test-xrd/
+deploy/custom_images/ios/

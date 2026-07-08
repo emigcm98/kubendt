@@ -1,0 +1,190 @@
+.custom-node {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: grab;
+}
+
+.react-flow__node.dragging .custom-node,
+.custom-node:active {
+  cursor: grabbing;
+}
+
+/* Idle hover: subtle blue-gray halo. Only applies when no other state owns the visual. */
+.custom-node:not(.node-selected):not(.node-deleting):not(.node-creating):not(.node-restarting):hover
+  .node-icon {
+  filter: drop-shadow(0 0 3px rgba(90, 110, 140, 0.45))
+    drop-shadow(0 0 8px rgba(90, 110, 140, 0.25));
+  transition: filter 0.15s ease;
+}
+
+.custom-node.node-selected .node-icon {
+  filter: drop-shadow(0 0 6px #1976d2) drop-shadow(0 0 12px rgba(25, 118, 210, 0.55));
+}
+
+.custom-node.node-selected .label {
+  background: rgba(187, 222, 251, 0.95);
+  border-color: #1976d2;
+  box-shadow: 0 0 6px rgba(25, 118, 210, 0.45);
+}
+
+.node-icon {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  font-weight: bold;
+  background: rgba(184, 208, 223, 0.8);
+  border-radius: 5px;
+  border: 1px solid #4695c9;
+  z-index: 20;
+  white-space: nowrap;
+}
+
+/* .label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-weight: bold;
+    background: rgba(184, 208, 223, 0.8);
+    border-radius: 5px;
+    border: 1px solid #4695c9;
+    z-index: 20;
+  } */
+
+.status-dot {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid #fff;
+  z-index: 30;
+}
+
+.status-running {
+  background-color: #4caf50; /* green */
+}
+
+.status-pending {
+  background-color: #ffeb3b; /* yellow */
+}
+
+.status-notready {
+  background-color: #ff9800; /* orange, running but not yet ready */
+}
+
+.status-error {
+  background-color: #f44336; /* red */
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.restart-spinner {
+  position: absolute;
+  border-radius: 50%;
+  border: 2.5px solid rgba(245, 158, 11, 0.3);
+  border-top-color: #f59e0b;
+  animation: spin 0.75s linear infinite;
+  z-index: 50;
+  pointer-events: none;
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.55);
+}
+
+/* Restart state: amber pulsing glow, NO transparency, the node is being reloaded,
+     not appearing or disappearing. */
+.custom-node.node-restarting .node-icon {
+  animation: node-restarting-glow 1.4s ease-in-out infinite;
+}
+
+@keyframes node-restarting-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.6))
+      drop-shadow(0 0 10px rgba(245, 158, 11, 0.4));
+  }
+  50% {
+    filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.9))
+      drop-shadow(0 0 18px rgba(245, 158, 11, 0.7));
+  }
+}
+
+.custom-node.node-restarting .label {
+  background: rgba(245, 158, 11, 0.16);
+  border-color: #f59e0b;
+  color: #92400e;
+}
+
+/* Restart success: brief green flash when the pod returns to Running */
+.custom-node.node-restart-success .node-icon {
+  animation: node-restart-success-flash 0.65s ease-out;
+}
+
+@keyframes node-restart-success-flash {
+  0% {
+    filter: drop-shadow(0 0 8px #4caf50) drop-shadow(0 0 16px rgba(76, 175, 80, 0.85));
+  }
+  100% {
+    filter: none;
+  }
+}
+
+/* Delete state: translucent icon + pulsing red glow (no emoji, no spinner) */
+.custom-node.node-deleting .node-icon {
+  opacity: 0.5;
+  animation: node-deleting-glow 1.3s ease-in-out infinite;
+}
+
+@keyframes node-deleting-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 4px rgba(244, 67, 54, 0.55))
+      drop-shadow(0 0 10px rgba(244, 67, 54, 0.35));
+  }
+  50% {
+    filter: drop-shadow(0 0 8px rgba(244, 67, 54, 0.85))
+      drop-shadow(0 0 18px rgba(244, 67, 54, 0.65));
+  }
+}
+
+.custom-node.node-deleting .label {
+  background: rgba(244, 67, 54, 0.16);
+  border-color: #f44336;
+  color: #b71c1c;
+}
+
+/* Create state: translucent icon + pulsing green glow (no emoji, no spinner) */
+.custom-node.node-creating .node-icon {
+  opacity: 0.55;
+  animation: node-creating-glow 1.6s ease-in-out infinite;
+}
+
+@keyframes node-creating-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 4px rgba(76, 175, 80, 0.55))
+      drop-shadow(0 0 10px rgba(76, 175, 80, 0.35));
+  }
+  50% {
+    filter: drop-shadow(0 0 8px rgba(76, 175, 80, 0.85))
+      drop-shadow(0 0 18px rgba(76, 175, 80, 0.65));
+  }
+}
+
+.custom-node.node-creating .label {
+  background: rgba(76, 175, 80, 0.16);
+  border-color: #4caf50;
+  color: #1b5e20;
+}

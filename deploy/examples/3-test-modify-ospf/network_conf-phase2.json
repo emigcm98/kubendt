@@ -1,0 +1,23 @@
+{
+  "targets": [
+    {
+      "pod": "switch-1",
+      "actions": [
+        { "type": "add_interface_to_bridge", "bridge": "br0", "iface": "eth3" },
+        { "type": "add_interface_to_bridge", "bridge": "br0", "iface": "eth4" }
+      ]
+    },
+    {
+      "pod": "alpine-host-1",
+      "actions": [
+        { "type": "set_default_route", "gateway": "10.0.2.1" }
+      ]
+    },
+    {
+      "pod": "alpine-host-2",
+      "actions": [
+        { "type": "set_default_route", "gateway": "10.0.2.1" }
+      ]
+    }
+  ]
+}

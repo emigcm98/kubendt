@@ -1,0 +1,25 @@
+{
+  "scale": [
+    { "name": "alpine-host", "replicas": 3 }
+  ],
+  "add": {
+    "links": [
+      {
+        "localIntf": "eth1",
+        "node": "alpine-host-1",
+        "peerNode": "switch-1",
+        "peerIntf": "eth3",
+        "localIp": "10.0.2.12/24",
+        "peerIp": ""
+      },
+      {
+        "localIntf": "eth1",
+        "node": "alpine-host-2",
+        "peerNode": "switch-1",
+        "peerIntf": "eth4",
+        "localIp": "10.0.2.13/24",
+        "peerIp": ""
+      }
+    ]
+  }
+}

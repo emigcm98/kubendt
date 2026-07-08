@@ -1,0 +1,12 @@
+# Compiled binaries (rebuilt inside the image)
+kubendt
+kubendt-backend
+
+# Local runtime data — must never be baked into the image
+*.db
+files/
+tmp/
+
+# Dev-only tooling
+.air.toml
+.golangci.yml

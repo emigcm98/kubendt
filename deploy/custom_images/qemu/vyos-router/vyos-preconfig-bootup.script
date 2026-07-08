@@ -1,0 +1,34 @@
+#!/bin/sh
+set -e
+
+MNT="/run/vyos-cidata"
+SRC_DEV=""
+
+mkdir -p "$MNT"
+
+for dev in /dev/sr0 /dev/sr1; do
+  [ -b "$dev" ] || continue
+
+  if blkid "$dev" 2>/dev/null | grep -q 'LABEL="cidata"'; then
+    SRC_DEV="$dev"
+    break
+  fi
+done
+
+if [ -z "$SRC_DEV" ]; then
+  echo "[preconfig] No cidata device found"
+  exit 0
+fi
+
+mount -o ro "$SRC_DEV" "$MNT" || exit 0
+
+if [ -f "$MNT/config.boot" ]; then
+  cp "$MNT/config.boot" /opt/vyatta/etc/config/config.boot
+  chmod 660 /opt/vyatta/etc/config/config.boot
+  echo "[preconfig] Applied /opt/vyatta/etc/config/config.boot (/config/config.boot) from $SRC_DEV"
+else
+  echo "[preconfig] No config.boot found on $SRC_DEV"
+fi
+
+umount "$MNT" || true
+exit 0

@@ -1,0 +1,45 @@
+# golangci-lint configuration for the KubeNDT backend (golangci-lint v2).
+# Run from the backend/ directory: golangci-lint run
+version: "2"
+
+linters:
+  # The default set (errcheck, govet, ineffassign, staticcheck, unused) stays
+  # enabled; we add a couple of extra checks on top.
+  enable:
+    - misspell # common spelling mistakes in comments/strings
+  settings:
+    errcheck:
+      # Best-effort cleanup calls (resource close / rollback / env teardown)
+      # where a returned error carries no actionable information. Ignoring them
+      # is intentional; this keeps the intent in one documented place instead
+      # of scattering "_ =" across every deferred Close.
+      exclude-functions:
+        - (*os.File).Close
+        - (*database/sql.Rows).Close
+        - (*database/sql.Stmt).Close
+        - (*database/sql.Tx).Rollback
+        - (*compress/gzip.Reader).Close
+        - (io.ReadCloser).Close
+        - (*io.PipeReader).Close
+        - (*io.PipeWriter).Close
+        - (*io.PipeWriter).Write
+        - (mime/multipart.File).Close
+        - (*github.com/gorilla/websocket.Conn).Close
+        - os.Unsetenv
+        - os.Remove
+        - os.Chmod
+  exclusions:
+    rules:
+      # swagger_annotations.go holds intentionally empty stub functions that
+      # exist only to carry Swagger doc annotations; they are never called.
+      - path: swagger_annotations.go
+        linters:
+          - unused
+
+formatters:
+  enable:
+    - gofmt # enforce gofmt formatting
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

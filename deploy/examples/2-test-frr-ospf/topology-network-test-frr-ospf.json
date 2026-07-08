@@ -1,0 +1,127 @@
+{
+  "nodes": [
+    {
+      "name": "host",
+      "image": "alpine",
+      "type": "host",
+      "replicas": 4,
+      "commands": [
+        "sh",
+        "-c",
+        "sleep infinity"
+      ]
+    },
+    {
+      "name": "web",
+      "image": "nginxdemos/hello",
+      "type": "host"
+    },
+    {
+      "name": "router1",
+      "image": "frrouting/frr",
+      "type": "router",
+      "driver": "FRRRouterDriver",
+      "commands": [
+        "sh",
+        "-c",
+        "echo hostname router1 > /etc/frr/vtysh.conf && chown frr:frr /etc/frr/vtysh.conf && /usr/lib/frr/zebra -d && /usr/lib/frr/ospfd -d && sleep infinity"
+      ]
+    },
+    {
+      "name": "router2",
+      "image": "frrouting/frr",
+      "type": "router",
+      "driver": "FRRRouterDriver",
+      "commands": [
+        "sh",
+        "-c",
+        "echo hostname router2 > /etc/frr/vtysh.conf && chown frr:frr /etc/frr/vtysh.conf && /usr/lib/frr/zebra -d && /usr/lib/frr/ospfd -d && sleep infinity"
+      ]
+    },
+    {
+      "name": "switch",
+      "image": "ubuntu",
+      "type": "switch",
+      "replicas": 3,
+      "commands": [
+        "sh",
+        "-c",
+        "apt update && apt install -y iproute2 bridge-utils iputils-ping && sleep infinity"
+      ]
+    }
+  ],
+  "links": [
+    {
+      "localIntf": "eth1",
+      "node": "host-0",
+      "peerNode": "switch-0",
+      "peerIntf": "eth1",
+      "localIp": "192.168.1.101/24",
+      "peerIp": ""
+    },
+    {
+      "localIntf": "eth1",
+      "node": "host-1",
+      "peerNode": "switch-0",
+      "peerIntf": "eth2",
+      "localIp": "192.168.1.102/24",
+      "peerIp": ""
+    },
+    {
+      "localIntf": "eth1",
+      "node": "host-2",
+      "peerNode": "switch-1",
+      "peerIntf": "eth1",
+      "localIp": "192.168.2.101/24",
+      "peerIp": ""
+    },
+    {
+      "localIntf": "eth1",
+      "node": "host-3",
+      "peerNode": "switch-1",
+      "peerIntf": "eth2",
+      "localIp": "192.168.2.102/24",
+      "peerIp": ""
+    },
+    {
+      "localIntf": "eth1",
+      "node": "router1",
+      "peerNode": "switch-0",
+      "peerIntf": "eth3",
+      "localIp": "192.168.1.1/24",
+      "peerIp": ""
+    },
+    {
+      "localIntf": "eth2",
+      "node": "router1",
+      "peerNode": "router2",
+      "peerIntf": "eth2",
+      "localIp": "10.0.0.1/30",
+      "peerIp": "10.0.0.2/30"
+    },
+    {
+      "localIntf": "eth1",
+      "node": "router2",
+      "peerNode": "switch-1",
+      "peerIntf": "eth3",
+      "localIp": "192.168.2.1/24",
+      "peerIp": ""
+    },
+    {
+      "localIntf": "eth3",
+      "node": "router2",
+      "peerNode": "switch-2",
+      "peerIntf": "eth2",
+      "localIp": "192.168.3.1/24",
+      "peerIp": ""
+    },
+    {
+      "localIntf": "eth1",
+      "node": "web",
+      "peerNode": "switch-2",
+      "peerIntf": "eth1",
+      "localIp": "192.168.3.10/24",
+      "peerIp": ""
+    }
+  ]
+}

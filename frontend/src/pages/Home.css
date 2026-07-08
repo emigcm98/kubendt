@@ -1,0 +1,1709 @@
+.home-wrapper {
+  text-align: center;
+  padding: 0;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* === HEADER ===
+     Matches the dashboard navbar style (same blue + bottom border) so the
+     two pages feel consistent. GitHub on the left, brand centred, Open API
+     on the right. */
+.home-header {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 22px;
+  background: #3397df;
+  border-bottom: 3px solid #047ed5;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  color: #ffffff;
+  min-height: 110px;
+}
+
+.home-header-left {
+  display: flex;
+  align-items: center;
+  justify-self: start;
+}
+
+.home-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-self: end;
+}
+
+.home-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  justify-self: center;
+}
+
+.home-header-logo {
+  width: 90px;
+  height: 90px;
+  border-radius: 14px;
+  background: #ffffff;
+  padding: 8px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+  object-fit: contain;
+}
+
+.home-header-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  line-height: 1.2;
+}
+
+.home-header-title {
+  margin: 0;
+  font-size: 1.85rem;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.home-header-subtitle {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.home-header-subtitle a {
+  color: #ffffff;
+  font-weight: 700;
+  text-decoration: none;
+  border-bottom: 1px dotted rgba(255, 255, 255, 0.55);
+}
+
+.home-header-subtitle a:hover {
+  border-bottom-color: #ffffff;
+}
+
+/* Solid white pills on the blue header, high contrast, look like real
+     CTAs rather than translucent overlays. */
+.home-header-icon-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0.45rem 0.95rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #1a3a5c;
+  background: #ffffff;
+  border: 1px solid #ffffff;
+  border-radius: 7px;
+  text-decoration: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.05s ease;
+}
+
+.home-header-icon-link:hover {
+  background: #1a3a5c;
+  color: #ffffff;
+  border-color: #1a3a5c;
+  text-decoration: none;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+.home-header-icon-link:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.7);
+  outline-offset: 2px;
+}
+
+.open-api-btn {
+  border: 1px solid #ffffff;
+  background: #ffffff;
+  color: #1a3a5c;
+  border-radius: 7px;
+  padding: 0.45rem 1rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  transition:
+    background 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.05s ease;
+}
+
+.open-api-btn:hover {
+  background: #1a3a5c;
+  color: #ffffff;
+  border-color: #1a3a5c;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+.open-api-btn:active {
+  transform: scale(0.97);
+}
+/* === MAIN LAYOUT ===
+     Switched from flex to CSS grid: grid keeps both columns at exactly the
+     same height (cross-axis alignment is rock solid), and rounding is
+     deterministic, which fixes the small misalignment we used to see when
+     navigating away and back to Home. */
+.main-layout {
+  flex: 1;
+  display: grid;
+  /* Fixed widths on both columns so the cluster card stays compact and the
+       node cards inside don't get stretched horizontally. */
+  grid-template-columns: 640px 480px;
+  gap: 20px;
+  padding: 20px;
+  min-height: 0;
+  justify-content: center;
+  width: 100%;
+}
+
+.layout-column {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* (right-column width is now driven by the grid template) */
+
+/* === NAMESPACE CONTROLS === */
+.namespace-controls-wrapper {
+  flex: 1;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  align-items: center;
+  justify-content: flex-start;
+  overflow-y: auto;
+}
+
+.kubeconfig-card {
+  background: linear-gradient(135deg, #e8eef5 0%, #dce5f0 100%);
+  border: 1px solid #c5d0dd;
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 4px 16px rgba(25, 118, 210, 0.12);
+}
+
+.kubeconfig-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.kubeconfig-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.kubeconfig-refresh {
+  border: none;
+  background: #1976d2;
+  color: #fff;
+  border-radius: 6px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  flex-shrink: 0;
+}
+
+.kubeconfig-refresh:hover:not(:disabled) {
+  background: #1565c0;
+}
+
+.kubeconfig-refresh:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.kubeconfig-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.9rem;
+  margin-bottom: 6px;
+}
+
+.kubeconfig-label {
+  color: #5a6b7d;
+  font-weight: 600;
+  flex: 0 0 130px;
+  text-align: left;
+}
+
+.kubeconfig-value {
+  flex: 1;
+  text-align: left;
+  color: #1f2a37;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kubeconfig-controls {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.kubeconfig-select {
+  flex: 1;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #c7d2e0;
+  font-size: 0.9rem;
+}
+
+.kubeconfig-apply {
+  border: none;
+  background: #1976d2;
+  color: #fff;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.kubeconfig-apply:hover:not(:disabled) {
+  background: #1565c0;
+}
+
+.kubeconfig-apply:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.kubeconfig-loading {
+  font-size: 0.95rem;
+  color: #5f6b7a;
+}
+
+.kubeconfig-error {
+  margin-top: 8px;
+  color: #c62828;
+  font-size: 0.85rem;
+}
+
+.kubeconfig-file-section {
+  margin-top: 12px;
+  display: flex;
+  align-items: baseline;
+}
+
+.kubeconfig-file-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #555555;
+  margin-bottom: 6px;
+  margin-right: 1em;
+}
+
+.kubeconfig-file-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #c5d0dd;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  background: #ffffff;
+  color: #333333;
+  transition: border-color 0.2s ease;
+}
+
+.kubeconfig-file-input:hover:not(:disabled) {
+  border-color: #1976d2;
+}
+
+.kubeconfig-file-input:focus {
+  outline: none;
+  border-color: #1976d2;
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+}
+
+.kubeconfig-file-input:disabled {
+  background: #f5f5f5;
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* === CLUSTER STATUS PANEL === */
+.cluster-status-card {
+  background: linear-gradient(135deg, #e8eef5 0%, #dce5f0 100%);
+  border: 1px solid #c5d0dd;
+  border-radius: 16px;
+  padding: 18px 22px;
+  box-shadow: 0 4px 16px rgba(25, 118, 210, 0.12);
+  min-height: 480px;
+  /* Fill the column height so the right column (Kubectl + Namespaces)
+       lines up with the bottom of this card. */
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.cluster-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.cluster-card-title {
+  font-size: 1.35rem;
+  color: #1a1a1a;
+  margin: 0;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cluster-refresh-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.refresh-timer {
+  font-size: 1rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.refresh-btn {
+  background: #1976d2;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 6px rgba(25, 118, 210, 0.2);
+  flex-shrink: 0;
+}
+
+.refresh-btn:hover:not(:disabled) {
+  background: #1565c0;
+  box-shadow: 0 4px 10px rgba(25, 118, 210, 0.3);
+  transform: translateY(-1px);
+}
+
+.refresh-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cluster-status-badge {
+  font-size: 0.8rem;
+  background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 14px;
+  font-weight: 600;
+}
+
+.cluster-loading {
+  text-align: center;
+  padding: 38px;
+  color: #666;
+  font-size: 1.35rem;
+}
+
+.cluster-error {
+  text-align: center;
+  padding: 38px;
+  color: #c62828;
+  font-size: 1.35rem;
+}
+
+.nodes-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 8px;
+  align-content: start;
+}
+
+.nodes-grid::-webkit-scrollbar {
+  width: 8px;
+}
+
+.nodes-grid::-webkit-scrollbar-track {
+  background: #e8eef5;
+  border-radius: 4px;
+}
+
+.nodes-grid::-webkit-scrollbar-thumb {
+  background: #1976d2;
+  border-radius: 4px;
+}
+
+.nodes-grid::-webkit-scrollbar-thumb:hover {
+  background: #1565c0;
+}
+
+.node-card {
+  background: #ffffff;
+  border: 1px solid #e0e8f5;
+  border-radius: 10px;
+  padding: 12px 13px 13px 13px;
+  transition: all 0.2s;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+}
+
+.node-card:hover {
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.15);
+  transform: translateY(-2px);
+}
+
+.node-card.notready {
+  border-left: 5px solid #e53935;
+}
+
+.node-card.ready {
+  border-left: 5px solid #4caf50;
+}
+
+.node-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 7px;
+  gap: 8px;
+}
+
+.node-name {
+  font-weight: 700;
+  color: #1a1a1a;
+  font-size: 0.95rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.node-status-indicator {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  flex-shrink: 0;
+}
+
+.node-status-indicator.ready {
+  background: #c8e6c9;
+  color: #2e7d32;
+}
+
+.node-status-indicator.notready {
+  background: #ffcdd2;
+  color: #c62828;
+}
+
+.node-roles {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 9px;
+  flex-wrap: wrap;
+}
+
+.role-badge {
+  font-size: 0.7rem;
+  background: #e3f2fd;
+  color: #1976d2;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.node-metrics {
+  margin-bottom: 6px;
+}
+
+.metric-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.metric-row:last-child {
+  margin-bottom: 0;
+}
+
+.metric-label {
+  font-size: 0.78rem;
+  color: #555;
+  font-weight: 600;
+  min-width: 36px;
+}
+
+.metric-bar-container {
+  flex: 1;
+  position: relative;
+  height: 17px;
+  background: #e0e0e0;
+  border-radius: 9px;
+  overflow: hidden;
+}
+
+.metric-bar {
+  height: 100%;
+  border-radius: 9px;
+  transition: width 0.3s ease;
+}
+
+.metric-bar.cpu {
+  background: linear-gradient(90deg, #42a5f5 0%, #1976d2 100%);
+}
+
+.metric-bar.memory {
+  background: linear-gradient(90deg, #66bb6a 0%, #388e3c 100%);
+}
+
+.metric-value {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  font-feature-settings: 'tnum';
+}
+
+.node-capacity {
+  font-size: 0.72rem;
+  color: #666;
+  margin-top: 6px;
+}
+
+.node-version {
+  font-size: 0.7rem;
+  color: #999;
+  margin-top: auto;
+  padding-top: 8px;
+  text-align: right;
+  font-feature-settings: 'tnum';
+}
+
+.namespace-card {
+  background: linear-gradient(135deg, #e8eef5 0%, #dce5f0 100%);
+  border: 1px solid #c5d0dd;
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 4px 16px rgba(25, 118, 210, 0.12);
+  /* Fill the remaining vertical space of the right column so the bottom of
+       this card aligns with the bottom of the Cluster status panel. */
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.namespace-card-title {
+  font-size: 1.15rem;
+  color: #1a1a1a;
+  margin: 0 0 10px 0;
+  font-weight: 700;
+  text-align: left;
+}
+
+.namespace-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  justify-content: center;
+}
+
+.namespace-controls label {
+  display: none;
+}
+
+.namespace-or {
+  font-size: 0.95rem;
+  color: #666666;
+  font-weight: 500;
+}
+
+.namespace-select {
+  padding: 0.65rem 0.9rem;
+  font-size: 0.95rem;
+  border-radius: 8px;
+  border: 2px solid #1976d2;
+  background-color: #fff;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+  min-width: 240px;
+  font-weight: 500;
+  box-shadow: 0 2px 6px rgba(25, 118, 210, 0.15);
+}
+
+.namespace-dropdown {
+  width: 100%;
+  min-width: 240px;
+  position: relative;
+}
+
+.namespace-select-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-align: left;
+}
+
+.namespace-select-caret {
+  margin-left: 10px;
+  font-size: 0.85rem;
+  color: #145ea8;
+}
+
+.namespace-select-button.open .namespace-select-caret {
+  transform: rotate(180deg);
+}
+
+.namespace-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  background: #fff;
+  border: 1px solid #c5d0dd;
+  border-radius: 8px;
+  box-shadow: 0 8px 18px rgba(16, 24, 40, 0.12);
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.namespace-dropdown-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.92rem;
+  color: #333;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.namespace-dropdown-item:hover:not(.disabled) {
+  background: #eef5ff;
+}
+
+.namespace-dropdown-item.disabled {
+  color: #777;
+  cursor: default;
+}
+
+.namespace-dropdown-item.terminating {
+  color: #ff9800;
+  font-weight: 600;
+}
+
+.namespace-select:hover {
+  border-color: #145ea8;
+  box-shadow: 0 4px 10px rgba(25, 118, 210, 0.25);
+  transform: translateY(-1px);
+}
+
+.namespace-select:focus {
+  outline: none;
+  border-color: #145ea8;
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.15);
+}
+
+.namespace-option {
+  padding: 0.5rem;
+  color: #333;
+}
+
+.namespace-option.terminating {
+  color: #ff9800;
+}
+
+.create-ns-btn {
+  padding: 0.65rem 1.2rem;
+  font-size: 0.95rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+  color: white;
+  font-weight: 600;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.25);
+  width: 100%;
+}
+
+.create-ns-btn:hover {
+  background: linear-gradient(135deg, #1a7dd2 0%, #145aa8 100%);
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.35);
+  transform: translateY(-1px);
+}
+
+.create-ns-btn:active {
+  transform: translateY(0);
+}
+
+.create-ns-btn:disabled {
+  background: #aaa;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Modal styles */
+.create-namespace-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.create-namespace-modal {
+  background: linear-gradient(to bottom, #ffffff, #f9fafb);
+  border-radius: 12px;
+  border: 1px solid #e0e8f5;
+  box-shadow: 0 8px 32px rgba(25, 118, 210, 0.15);
+  width: 90%;
+  max-width: 520px;
+  padding: 0;
+  outline: none;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e0e8f5;
+  background: linear-gradient(to bottom, #e3eaf3, #d8e2ee);
+}
+
+.modal-header h2 {
+  margin: 0;
+  color: #1a1a1a;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.modal-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #999;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.modal-close-btn:hover:not(:disabled) {
+  background-color: rgba(25, 118, 210, 0.1);
+  color: #1976d2;
+}
+
+.modal-close-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.modal-body label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: #333;
+  text-align: left;
+}
+
+.modal-body input {
+  width: 100%;
+  padding: 0.7rem;
+  font-size: 1rem;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  box-sizing: border-box;
+  transition: all 0.2s;
+}
+
+.modal-body input:focus {
+  outline: none;
+  border-color: #1976d2;
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+}
+
+.modal-body input:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+}
+
+.modal-body input[aria-invalid='true'] {
+  border-color: #d32f2f;
+}
+
+.modal-body input[aria-invalid='true']:focus {
+  border-color: #d32f2f;
+  box-shadow: 0 0 0 3px rgba(211, 47, 47, 0.15);
+}
+
+.ns-modal-intro {
+  margin: 0 0 1rem 0;
+  font-size: 0.88rem;
+  color: #555;
+  line-height: 1.5;
+}
+
+.ns-input-label {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-weight: 600;
+  color: #333;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.ns-input-wrapper {
+  position: relative;
+}
+
+.ns-input-wrapper input {
+  /* The character counter sits inside the input area, so leave room for it. */
+  padding-right: 3.5rem !important;
+}
+
+.ns-input-counter {
+  position: absolute;
+  right: 0.6rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.75rem;
+  color: #888;
+  font-family: 'Monaco', 'Menlo', monospace;
+  background: #fafafa;
+  padding: 2px 6px;
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+.ns-input-counter-over {
+  color: #d32f2f;
+  background: #fdecea;
+  font-weight: 700;
+}
+
+/* Live rule list, fixed slot so the modal doesn't grow/shrink as items
+     transition between pending/ok/fail. */
+.ns-rules {
+  list-style: none;
+  margin: 0.9rem 0 0 0;
+  padding: 0.7rem 0.9rem;
+  background: #f6f8fc;
+  border: 1px solid #dfe7f1;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.ns-rule {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.83rem;
+  text-align: left;
+  line-height: 1.3;
+  transition: color 0.15s ease;
+}
+
+.ns-rule-icon {
+  width: 1.15em;
+  height: 1.15em;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.ns-rule-pending {
+  color: #888;
+}
+.ns-rule-pending .ns-rule-icon {
+  background: #e0e0e0;
+  color: #888;
+}
+
+.ns-rule-ok {
+  color: #2e7d32;
+}
+.ns-rule-ok .ns-rule-icon {
+  background: #c8e6c9;
+  color: #1b5e20;
+}
+
+.ns-rule-fail {
+  color: #c62828;
+}
+.ns-rule-fail .ns-rule-icon {
+  background: #ffcdd2;
+  color: #b71c1c;
+}
+
+.ns-dup-warning {
+  margin: 0.75rem 0 0;
+  padding: 0.6rem 0.75rem;
+  border-radius: 6px;
+  background: #fff4e5;
+  border: 1px solid #ffcc80;
+  color: #b26a00;
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 0.8rem;
+  padding: 1.5rem;
+  border-top: 1px solid #e0e8f5;
+  justify-content: flex-end;
+}
+
+.modal-btn {
+  padding: 0.6rem 1.2rem;
+  font-size: 0.95rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.modal-btn-cancel {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+.modal-btn-cancel:hover:not(:disabled) {
+  background-color: #e0e0e0;
+}
+
+.modal-btn-confirm {
+  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.25);
+}
+
+.modal-btn-confirm:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1a7dd2 0%, #145aa8 100%);
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.35);
+  transform: translateY(-1px);
+}
+
+.modal-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 900px) {
+  .hero-logo {
+    width: 138px;
+    height: 142px;
+    border-radius: 14px;
+    padding: 12px;
+  }
+
+  .hero-subtitle {
+    font-size: 1.45rem;
+    margin-bottom: 10px;
+  }
+
+  .hero-capabilities {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}
+/* === CLUSTER SUMMARY STRIP === */
+.cluster-summary-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 8px;
+  padding: 6px 12px;
+  margin-bottom: 10px;
+  background: linear-gradient(180deg, #ffffff 0%, #f4f7fc 100%);
+  border: 1px solid #d9e1ec;
+  border-radius: 8px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  flex-shrink: 0;
+}
+
+.cluster-summary-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.cluster-summary-label {
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #6b7a8c;
+}
+
+.cluster-summary-value {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0d47a1;
+  font-feature-settings: 'tnum';
+}
+
+.cluster-summary-divider {
+  width: 1px;
+  height: 22px;
+  background: #d9e1ec;
+  flex-shrink: 0;
+}
+
+/* === NAMESPACE PANEL === */
+.namespace-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.namespace-card-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.namespace-card-count {
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: #e3eaf3;
+  color: #1565c0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.3px;
+}
+
+.namespace-refresh {
+  border: none;
+  background: #1976d2;
+  color: #fff;
+  border-radius: 6px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  flex-shrink: 0;
+}
+
+.namespace-refresh:hover:not(:disabled) {
+  background: #1565c0;
+}
+
+.namespace-refresh:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Vertical list: namespaces flow top→bottom and scroll inside the card
+     when there are too many. The Create button below stays pinned. */
+.namespace-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 2px;
+}
+
+.namespace-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.namespace-list::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 4px;
+}
+
+.namespace-list::-webkit-scrollbar-thumb {
+  background: #c5d0dd;
+  border-radius: 4px;
+}
+
+.namespace-list::-webkit-scrollbar-thumb:hover {
+  background: #95a9c0;
+}
+
+.namespace-empty {
+  text-align: center;
+  color: #7c8a9c;
+  font-size: 0.88rem;
+  padding: 18px 6px;
+  background: #f4f7fc;
+  border: 1px dashed #c5d0dd;
+  border-radius: 8px;
+}
+
+.namespace-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #ffffff;
+  border: 1px solid #d9e1ec;
+  border-radius: 8px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.05s ease,
+    background 0.15s ease;
+  font-family: inherit;
+  text-align: left;
+  min-height: 44px;
+  color: #1a3a5c;
+}
+
+.namespace-item:hover {
+  border-color: #1976d2;
+  box-shadow: 0 3px 10px rgba(25, 118, 210, 0.12);
+  background: #f7fbff;
+}
+
+.namespace-item:active {
+  transform: scale(0.99);
+}
+
+.namespace-item-name {
+  font-weight: 600;
+  font-size: 0.92rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.namespace-item-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.namespace-item-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.namespace-item-status-active {
+  color: #1b5e20;
+  background: #e6f4ea;
+}
+
+.namespace-item-status-terminating {
+  color: #b76e00;
+  background: #fff4e0;
+  animation: ns-terminating-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes ns-terminating-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.namespace-item-terminating {
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
+.namespace-item-terminating:hover {
+  border-color: #f0c36d;
+  background: #fffbe6;
+  box-shadow: 0 3px 10px rgba(240, 195, 109, 0.18);
+}
+
+/* Sticky "Create KubeNDT namespace" button at the bottom of the card.
+     Sits outside .namespace-list so it stays visible even when the list
+     overflows and scrolls. */
+.namespace-create-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.05s ease;
+  flex-shrink: 0;
+  font-family: inherit;
+}
+
+.namespace-create-btn:hover {
+  background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
+  box-shadow: 0 4px 14px rgba(13, 71, 161, 0.28);
+}
+
+.namespace-create-btn:active {
+  transform: scale(0.99);
+}
+
+.namespace-create-icon {
+  font-size: 1.2rem;
+  font-weight: 700;
+  line-height: 1;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* === KUBECONFIG DROP-ZONE === */
+.kubeconfig-drop-zone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 12px;
+  margin-top: 10px;
+  border: 2px dashed #c5d0dd;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.6);
+  color: #4a5a6b;
+  font-size: 0.86rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.kubeconfig-drop-zone:hover,
+.kubeconfig-drop-zone:focus-visible {
+  border-color: #1976d2;
+  background: #ffffff;
+  color: #1a3a5c;
+  outline: none;
+}
+
+.kubeconfig-drop-zone.is-dragging {
+  border-color: #1976d2;
+  background: #e3f2fd;
+  color: #0d47a1;
+}
+
+.kubeconfig-drop-zone.is-busy {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+.kubeconfig-drop-icon {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+/* === NAMESPACE SEARCH === */
+.namespace-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  background: #ffffff;
+  border: 1px solid #c5d0dd;
+  border-radius: 8px;
+  padding: 0 10px;
+  height: 34px;
+}
+
+.namespace-search-icon {
+  font-size: 0.85rem;
+  color: #6b7a8c;
+  flex-shrink: 0;
+}
+
+.namespace-search input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 0.88rem;
+  color: #1a3a5c;
+  height: 100%;
+  min-width: 0;
+}
+
+.namespace-search-clear {
+  background: transparent;
+  border: none;
+  color: #888;
+  font-size: 0.78rem;
+  padding: 0 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.namespace-search-clear:hover {
+  color: #d32f2f;
+  background: #ffeaea;
+}
+
+/* === NAMESPACE ITEM (revised layout: main button + trash) === */
+.namespace-item {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  background: #ffffff;
+  border: 1px solid #d9e1ec;
+  border-radius: 8px;
+  overflow: hidden;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.05s ease,
+    background 0.15s ease;
+}
+
+.namespace-item:hover {
+  border-color: #1976d2;
+  box-shadow: 0 3px 10px rgba(25, 118, 210, 0.12);
+  background: #f7fbff;
+}
+
+.namespace-item-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 14px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  color: #1a3a5c;
+  font-size: 0.92rem;
+}
+
+.namespace-item-main:active {
+  transform: scale(0.99);
+}
+
+.namespace-item-delete {
+  flex: 0 0 auto;
+  border: none;
+  border-left: 1px solid #e5ecf5;
+  background: transparent;
+  color: #c62828;
+  padding: 0 12px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  opacity: 0.4;
+  transition:
+    opacity 0.15s ease,
+    background 0.15s ease;
+}
+
+.namespace-item:hover .namespace-item-delete {
+  opacity: 0.85;
+}
+
+.namespace-item-delete:hover:not(:disabled) {
+  opacity: 1 !important;
+  background: rgba(229, 57, 53, 0.1);
+}
+
+.namespace-item-delete:disabled {
+  cursor: not-allowed;
+  opacity: 0.2 !important;
+}
+
+.namespace-item-terminating {
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
+.namespace-item-terminating:hover {
+  border-color: #f0c36d;
+  background: #fffbe6;
+  box-shadow: 0 3px 10px rgba(240, 195, 109, 0.18);
+}
+
+/* Stack the status badge and the topology badge vertically on the right
+     side of each namespace card. Both badges share a fixed width so they
+     read as a clean two-row tag column. */
+.namespace-item-badges {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 3px;
+  flex-shrink: 0;
+  width: 96px;
+}
+
+/* Both pills (status + topology) use the same shape and width so they
+     align cleanly under each other. */
+.namespace-item-status,
+.namespace-item-topology {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.namespace-item-topology-yes {
+  color: #1b5e20;
+  background: #e6f4ea;
+}
+
+.namespace-item-topology-no {
+  color: #b71c1c;
+  background: #fdecea;
+}
+
+/* Stack name + small creation date on the left side of the namespace card.
+     The badges column on the right already takes 2 rows (status + topology)
+     and is roughly the same height, so the card height stays the same. */
+.namespace-item-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+
+.namespace-item-created {
+  font-size: 0.7rem;
+  color: #6b7a8c;
+  font-weight: 400;
+  font-feature-settings: 'tnum';
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.cluster-summary-warning {
+  flex: 1;
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #b76e00;
+  cursor: help;
+}
+
+/* Sort toggles for the namespace list, two segmented buttons that share
+     the same visual language as the refresh button next to them. Clicking
+     the active one flips its direction; clicking the inactive one becomes
+     active with the field's default direction. */
+.namespace-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.namespace-sort {
+  display: inline-flex;
+  background: #ffffff;
+  border: 1px solid #c5d0dd;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.namespace-sort-btn {
+  background: transparent;
+  border: none;
+  color: #5a6b7d;
+  padding: 4px 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 30px;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+  font-family: inherit;
+}
+
+.namespace-sort-btn + .namespace-sort-btn {
+  border-left: 1px solid #e3e9f2;
+}
+
+.namespace-sort-btn:hover:not(.active) {
+  background: #eef3fa;
+  color: #1a3a5c;
+}
+
+.namespace-sort-btn.active {
+  background: #1976d2;
+  color: #ffffff;
+}
+
+.namespace-sort-glyph {
+  font-size: 0.86rem;
+  line-height: 1;
+}
+
+.namespace-sort-arrow {
+  font-size: 0.72rem;
+  opacity: 0.9;
+}
+
+/* Banner shown on the Home page when the backend has no kubeconfig loaded. */
+.kubeconfig-gate-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  border: 1px solid #f0c36d;
+  border-left: 4px solid #e0a800;
+  border-radius: 8px;
+  background: #fff8e6;
+  color: #6b5300;
+}
+
+.kubeconfig-gate-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.kubeconfig-gate-text {
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+/* Disabled state for action buttons (e.g. while no kubeconfig is loaded). */
+.refresh-btn:disabled,
+.namespace-refresh:disabled,
+.kubeconfig-refresh:disabled,
+.namespace-create-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(35%);
+}

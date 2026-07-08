@@ -1,0 +1,56 @@
+/* Portal-based tooltip. Rendered as a fixed-position div on document.body
+   so it escapes any ancestor overflow/stacking-context that would clip a
+   pseudo-element. Coordinates come from JS via getBoundingClientRect.
+   Color matches the kubendt navbar (Material blue) so it reads as part
+   of the same design system. */
+
+.kbn-tooltip {
+  position: fixed;
+  background-color: #1976d2;
+  color: #ffffff;
+  padding: 5px 9px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.3;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 3px 12px rgba(25, 118, 210, 0.35);
+  z-index: 10000;
+  transform: translateX(-50%);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  animation: kbn-tooltip-fade 0.12s ease-out;
+}
+
+.kbn-tooltip-top {
+  transform: translate(-50%, -100%);
+}
+
+.kbn-tooltip-bottom::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-bottom-color: #1976d2;
+}
+
+.kbn-tooltip-top::before {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #1976d2;
+}
+
+@keyframes kbn-tooltip-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

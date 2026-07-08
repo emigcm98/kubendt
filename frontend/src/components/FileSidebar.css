@@ -1,0 +1,242 @@
+.sidebar {
+  width: 220px;
+  min-width: 220px;
+  background-color: #f2f2f2;
+  border-right: 1px solid #ccc;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  /* Overflow lives on .file-list so the header/search/quick-actions
+     stay anchored at the top and tooltips can extend freely. */
+}
+
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.sidebar-title {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.actions button {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 4px 5px;
+  line-height: 1;
+  border-radius: 4px;
+  transition: background-color 0.15s ease;
+}
+
+.actions button:hover {
+  background-color: rgba(25, 118, 210, 0.12);
+}
+
+/* Quick-actions toolbar: sits BELOW the header on its own row, holds
+   the "create" + "refresh" group. Left-aligned, tight spacing. */
+.actions-quick {
+  margin-bottom: 0.6rem;
+}
+
+/* Soft divider that separates the controls from the file tree. */
+.sidebar-divider {
+  height: 1px;
+  background-color: #d0d7de;
+  margin: 0 0 0.55rem;
+  flex-shrink: 0;
+}
+
+.file-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex-grow: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.nested-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.file-list li,
+.nested-list li {
+  padding: 0.4rem 0.6rem;
+  margin-bottom: 0.3rem;
+  background-color: #e6eaf0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.file-list li:hover,
+.nested-list li:hover {
+  background-color: #d4e1ed;
+}
+
+.file-list .selected,
+.nested-list .selected {
+  background-color: #1976d2;
+  color: white;
+  font-weight: bold;
+}
+
+.file-list .drag-over,
+.nested-list .drag-over {
+  background-color: #b3d9ff !important;
+  border: 2px dashed #1976d2;
+  box-shadow: inset 0 0 4px rgba(25, 118, 210, 0.3);
+}
+
+.expand-btn {
+  background: none;
+  border: none;
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 0;
+  width: 16px;
+  min-width: 16px;
+  color: inherit;
+  transition: transform 0.1s ease;
+}
+
+.expand-btn:hover {
+  transform: scale(1.2);
+}
+
+.folder-icon,
+.file-icon {
+  flex-shrink: 0;
+  font-size: 1rem;
+}
+
+.folder-name,
+.file-name {
+  flex-grow: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dirty-dot {
+  font-size: 18px;
+  line-height: 1;
+  color: #ff6b6b;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.file-list li.selected .dirty-dot,
+.nested-list li.selected .dirty-dot {
+  color: #ffb3b3 !important;
+}
+
+.sensitive-lock {
+  font-size: 0.85em;
+  line-height: 1;
+  user-select: none;
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.15));
+}
+
+/* Danger action button (delete all files) */
+.actions .action-btn-danger {
+  opacity: 0.55;
+  transition:
+    opacity 0.15s ease,
+    background-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.actions .action-btn-danger:hover {
+  opacity: 1;
+  background-color: rgba(211, 47, 47, 0.12);
+}
+
+/* Search / filter input above the file tree */
+.sidebar-search {
+  position: relative;
+  margin-bottom: 0.6rem;
+}
+
+.sidebar-search input {
+  width: 100%;
+  padding: 0.4rem 1.8rem 0.4rem 0.55rem;
+  border: 1px solid #c5cdd6;
+  border-radius: 6px;
+  background-color: #ffffff;
+  font-size: 0.85rem;
+  box-sizing: border-box;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.sidebar-search input:focus {
+  outline: none;
+  border-color: #1976d2;
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.15);
+}
+
+.sidebar-search-clear {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  font-size: 0.8rem;
+  color: #888;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1;
+}
+
+.sidebar-search-clear:hover {
+  color: #d32f2f;
+  background-color: #ffeaea;
+}
+
+.file-search-hit {
+  background-color: #fff3a3;
+  color: inherit;
+  padding: 0 1px;
+  border-radius: 2px;
+}
+
+.file-search-empty {
+  list-style: none;
+  padding: 0.6rem 0.4rem;
+  color: #888;
+  font-style: italic;
+  font-size: 0.85rem;
+  background: transparent !important;
+  cursor: default !important;
+}
+
+/* Tooltips are now provided by the portal-based <Tooltip> component
+   (see Tooltip.js / Tooltip.css). The old CSS-pseudo approach was
+   replaced because pseudo-elements are clipped by ancestor overflow
+   and trapped inside parent stacking contexts. */

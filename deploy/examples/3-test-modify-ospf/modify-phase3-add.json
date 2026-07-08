@@ -1,0 +1,27 @@
+{
+  "add": {
+    "nodes": [
+      {
+        "name": "debian-host",
+        "image": "debian:12-slim",
+        "type": "host",
+        "driver": "HostDriver",
+        "commands": [
+          "sh",
+          "-c",
+          "apt-get update && apt-get install -y iproute2 iputils-ping && sleep infinity"
+        ]
+      }
+    ],
+    "links": [
+      {
+        "localIntf": "eth1",
+        "node": "debian-host",
+        "peerNode": "switch-0",
+        "peerIntf": "eth3",
+        "localIp": "10.0.1.12/24",
+        "peerIp": ""
+      }
+    ]
+  }
+}

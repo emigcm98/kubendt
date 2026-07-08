@@ -1,0 +1,118 @@
+.namespace-page {
+  padding: 1rem;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.namespace-page h2 {
+  text-align: center;
+  color: #333;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+}
+
+/* Deletion result modal */
+.delete-result-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.delete-result-modal {
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  width: 90%;
+  max-width: 400px;
+  padding: 0;
+  outline: none;
+}
+
+.delete-result-modal .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid #eee;
+}
+
+.delete-result-modal .modal-header h2 {
+  margin: 0;
+  color: #333;
+  font-size: 1.4rem;
+}
+
+.delete-result-modal .modal-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #999;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.delete-result-modal .modal-close-btn:hover {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+.delete-result-modal .modal-body {
+  padding: 2rem 1.5rem;
+  text-align: center;
+}
+
+.delete-result-modal .modal-body p {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #333;
+  line-height: 1.5;
+}
+
+.delete-result-modal .modal-footer {
+  display: flex;
+  gap: 0.8rem;
+  padding: 1.5rem;
+  border-top: 1px solid #eee;
+  justify-content: center;
+}
+
+.delete-result-modal .modal-btn {
+  padding: 0.6rem 2rem;
+  font-size: 1rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.delete-result-modal .modal-btn.success {
+  background-color: #4caf50;
+  color: white;
+}
+
+.delete-result-modal .modal-btn.success:hover {
+  background-color: #45a049;
+}
+
+.delete-result-modal .modal-btn.error {
+  background-color: #f44336;
+  color: white;
+}
+
+.delete-result-modal .modal-btn.error:hover {
+  background-color: #da190b;
+}

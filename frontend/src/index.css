@@ -1,0 +1,111 @@
+body {
+  margin: 0;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell',
+    'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+}
+
+/* ---------------------------------------------------------------------------
+   CodeMirror search / replace panel (Ctrl+F)
+   The default styling from @codemirror/search is plain and wraps awkwardly
+   inside narrow modal widths. Scoped to .cm-panel.cm-search so it cannot
+   leak into anything else.
+   --------------------------------------------------------------------------- */
+
+.cm-panels .cm-panel.cm-search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 36px 8px 10px; /* room on the right for the close button */
+  background: #f5f7fa;
+  border-top: 1px solid #d0dae8;
+  font-size: 0.85rem;
+  color: #1a3a5c;
+  position: relative;
+}
+
+.cm-panels .cm-panel.cm-search input.cm-textfield {
+  padding: 4px 8px;
+  border: 1px solid #c8d3e0;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  background: #ffffff;
+  color: #1a3a5c;
+  min-width: 160px;
+  outline: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.cm-panels .cm-panel.cm-search input.cm-textfield:focus {
+  border-color: #1976d2;
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.15);
+}
+
+.cm-panels .cm-panel.cm-search button.cm-button {
+  padding: 4px 10px;
+  border: 1px solid #c8d3e0;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #1a3a5c;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.cm-panels .cm-panel.cm-search button.cm-button:hover {
+  background-color: #e3eaf3;
+  border-color: #95a9c0;
+}
+
+.cm-panels .cm-panel.cm-search label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  font-size: 0.82rem;
+  color: #1a3a5c;
+  cursor: pointer;
+}
+
+.cm-panels .cm-panel.cm-search label input[type='checkbox'] {
+  margin: 0;
+  cursor: pointer;
+}
+
+/* CodeMirror inserts <br> between the find and replace rows. In a flex
+   container <br> is normally ignored, force it to act as a hard wrap. */
+.cm-panels .cm-panel.cm-search br {
+  flex-basis: 100%;
+  height: 0;
+  margin: 0;
+}
+
+.cm-panels .cm-panel.cm-search button[name='close'] {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  background: transparent;
+  border: none;
+  font-size: 1.15rem;
+  line-height: 1;
+  color: #777;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.cm-panels .cm-panel.cm-search button[name='close']:hover {
+  background-color: rgba(0, 0, 0, 0.06);
+  color: #1a3a5c;
+}

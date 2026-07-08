@@ -1,0 +1,103 @@
+.graph-context-menu {
+  background: linear-gradient(135deg, #1e1e2e 0%, #2a2a3e 100%);
+  border: 1px solid rgba(88, 166, 255, 0.3);
+  border-radius: 8px;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.5),
+    0 0 16px rgba(88, 166, 255, 0.15);
+  z-index: 10000;
+  min-width: 240px;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+  animation: slideIn 0.15s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.graph-context-menu-header {
+  padding: 10px 16px;
+  background: rgba(88, 166, 255, 0.1);
+  border-bottom: 1px solid rgba(88, 166, 255, 0.2);
+}
+
+.graph-context-menu-title {
+  color: #58a6ff;
+  font-weight: 600;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.graph-context-menu-divider {
+  height: 1px;
+  background: rgba(88, 166, 255, 0.15);
+  margin: 4px 0;
+}
+
+.graph-context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  color: #e0e0e0;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.15s ease;
+  user-select: none;
+  min-height: 36px;
+  white-space: nowrap;
+}
+
+.graph-context-menu-item:hover {
+  background: rgba(88, 166, 255, 0.15);
+  color: #58a6ff;
+  padding-left: 18px;
+}
+
+.graph-context-menu-icon {
+  width: 18px;
+  min-width: 18px;
+  max-width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Wide icons (e.g. the PCAP tag) must escape the fixed 18px square, otherwise
+   they get squashed to a sliver. */
+.graph-context-menu-icon-pcap {
+  width: auto;
+  min-width: auto;
+  max-width: none;
+}
+
+.graph-context-menu-label {
+  flex: 1;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.graph-context-menu-item-danger {
+  color: #ff6b6b;
+}
+
+.graph-context-menu-item-danger:hover {
+  background: rgba(255, 107, 107, 0.2);
+  color: #ff8787;
+}

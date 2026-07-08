@@ -1,0 +1,5 @@
+{
+  "delete": {
+    "nodes": ["debian-host"]
+  }
+}

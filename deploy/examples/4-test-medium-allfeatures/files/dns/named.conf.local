@@ -1,0 +1,4 @@
+zone "kubendt.local" {
+  type master;
+  file "/etc/bind/db.kubendt.local";
+};

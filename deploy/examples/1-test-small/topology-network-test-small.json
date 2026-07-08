@@ -1,0 +1,152 @@
+{
+  "nodes": [
+    {
+      "name": "pc",
+      "image": "alpine",
+      "type": "host",
+      "replicas": 4,
+      "commands": [
+        "sh",
+        "-c",
+        "apk update && apk add iproute2 && sleep infinity"
+      ],
+      "env": {
+        "ENV1": "I don't know why",
+        "ENV2": "to cry"
+      },
+      "mounts": [
+        {
+          "file": "test.sh",
+          "mountTo": "/mnt/test.sh"
+        }
+      ]
+    },
+    {
+      "name": "server",
+      "image": "alpine",
+      "type": "host",
+      "driver": "BasicHostDriver",
+      "replicas": 1,
+      "commands": [
+        "sh",
+        "-c",
+        "apk update && apk add iproute2 && sleep infinity"
+      ],
+      "mounts": [
+        {
+          "file": "secret.env",
+          "mountTo": "/etc/kubendt/secret.env",
+          "sensitive": true
+        }
+      ]
+    },
+    {
+      "name": "r1",
+      "image": "frrouting/frr",
+      "type": "router",
+      "driver": "FRRRouterDriver",
+      "commands": [
+        "sh",
+        "-c",
+        "echo hostname r1 > /etc/frr/vtysh.conf && chown frr:frr /etc/frr/vtysh.conf && /usr/lib/frr/zebra -d && /usr/lib/frr/ospfd -d && sleep infinity"
+      ]
+    },
+    {
+      "name": "sw",
+      "image": "ubuntu",
+      "type": "switch",
+      "replicas": 2,
+      "commands": [
+        "sh",
+        "-c",
+        "apt update && apt install -y iproute2 bridge-utils iputils-ping && sleep infinity"
+      ]
+    },
+    {
+      "name": "ovs",
+      "image": "globocom/openvswitch",
+      "driver" : "OpenVSwitchDriver",
+      "type": "switch",
+      "replicas": 1,
+      "commands": [
+        "sh",
+        "-c",
+        "apk update && apk add --no-cache iproute2 iputils && ovsdb-server --remote=punix:/var/run/openvswitch/db.sock --remote=db:Open_vSwitch,Open_vSwitch,manager_options --pidfile --detach && ovs-vswitchd --pidfile --detach && tail -f /dev/null"
+      ]
+    }
+  ],
+  "links": [
+    {
+      "localIntf": "eth1",
+      "node": "pc-0",
+      "peerNode": "sw-0",
+      "peerIntf": "eth1",
+      "uid": 3188142,
+      "localIp": "10.0.1.11/24",
+      "peerIp": ""
+    },
+    {
+      "localIntf": "eth1",
+      "node": "pc-1",
+      "peerNode": "sw-0",
+      "peerIntf": "eth2",
+      "uid": 3368541,
+      "localIp": "10.0.1.12/24",
+      "peerIp": ""
+    },
+    {
+      "localIntf": "eth1",
+      "node": "pc-2",
+      "peerNode": "sw-1",
+      "peerIntf": "eth1",
+      "uid": 9439373,
+      "localIp": "10.0.2.11/24",
+      "peerIp": ""
+    },
+    {
+      "localIntf": "eth1",
+      "node": "pc-3",
+      "peerNode": "sw-1",
+      "peerIntf": "eth2",
+      "uid": 3066811,
+      "localIp": "10.0.2.12/24",
+      "peerIp": ""
+    },
+    {
+      "localIntf": "eth1",
+      "node": "r1",
+      "peerNode": "sw-0",
+      "peerIntf": "eth3",
+      "uid": 5618375,
+      "localIp": "10.0.1.1/24",
+      "peerIp": ""
+    },
+    {
+      "localIntf": "eth2",
+      "node": "r1",
+      "peerNode": "sw-1",
+      "peerIntf": "eth3",
+      "uid": 3025778,
+      "localIp": "10.0.2.1/24",
+      "peerIp": ""
+    },
+    {
+      "localIntf": "eth3",
+      "node": "r1",
+      "peerNode": "ovs",
+      "peerIntf": "eth1",
+      "uid": 6025779,
+      "localIp": "10.0.3.1/24",
+      "peerIp": ""
+    },
+    {
+      "localIntf": "eth1",
+      "node": "server",
+      "peerNode": "ovs",
+      "peerIntf": "eth2",
+      "uid": 3458117,
+      "localIp": "10.0.3.11/24",
+      "peerIp": ""
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+# Production deployment: pulls the published images from GHCR instead of
+# building from source. Nothing to compile.
+#
+# Usage:
+#   1. Make sure your kubeconfig is at ~/.kube/config (it is mounted read-only).
+#   2. docker compose -f docker-compose.prod.yml up -d
+#   3. Open http://localhost
+#
+# Pin a specific release with KUBENDT_TAG (defaults to the latest published).
+# Image tags are plain semver without the leading "v" (the git tag v1.0.0
+# publishes images tagged 1.0.0):
+#   KUBENDT_TAG=1.0.0 docker compose -f docker-compose.prod.yml up -d
+#
+# Images are published starting from the first tagged release (v1.0.0).
+services:
+  backend:
+    image: ghcr.io/emigcm98/kubendt-backend:${KUBENDT_TAG:-latest}
+    environment:
+      - GIN_MODE=release
+      # Persistent kubeconfig; entrypoint seeds it from the mount on first run.
+      - KUBECONFIG=/data/.kube/config
+      - FILES_BASE_PATH=/app/files
+      - KUBENDT_DB_PATH=/data/kubendt.db
+      # Admin password for login. CHANGE THIS before any real deployment.
+      - KUBENDT_ADMIN_PASSWORD=admin123
+    volumes:
+      - kubendt-files:/app/files
+      - backend-db:/data
+      - ~/.kube/config:/kube/config:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  frontend:
+    image: ghcr.io/emigcm98/kubendt-frontend:${KUBENDT_TAG:-latest}
+    ports:
+      - "80:8080"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  backend-db:
+  kubendt-files:

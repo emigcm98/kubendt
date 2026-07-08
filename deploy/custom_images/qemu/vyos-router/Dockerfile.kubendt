@@ -1,0 +1,67 @@
+# syntax=docker/dockerfile:1.6
+
+# ---------- Stage 1: customise the unmodified VyOS qcow2 -------------------
+# Expects the qcow2 produced by Phase 1 of README-vyos.md (i.e. straight out
+# of `install image`, no manual edits) to be in the build context as
+# "vyos.qcow2".
+#
+# Why guestfish and not virt-customize: libguestfs' inspect-os can't recognise
+# VyOS' SquashFS+overlayfs layout, so virt-customize aborts with
+# "no operating systems were found in the guest image". guestfish doesn't
+# inspect, we just tell it which partition to mount. customize-qcow2.sh
+# wraps the version-dir detection + the three uploads.
+#
+# Build notes:
+#   - libguestfs runs an internal microVM. In environments without /dev/kvm
+#     (most container build hosts) we force LIBGUESTFS_BACKEND=direct so it
+#     falls back to TCG. It's slower but doesn't need a privileged build.
+#   - The /boot/vmlinuz read permission is the most common silent failure;
+#     fixing it up here covers Debian's default of 0600 on the kernel image.
+FROM debian:bookworm-slim AS customizer
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libguestfs-tools \
+        linux-image-amd64 \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && chmod 0644 /boot/vmlinuz-* || true
+
+ENV LIBGUESTFS_BACKEND=direct
+
+WORKDIR /work
+COPY vyos.qcow2                      /work/vyos.qcow2
+COPY 64-kubendt-net.rules            /work/64-kubendt-net.rules
+COPY kubendt-net-name                /work/kubendt-net-name
+COPY vyos-preconfig-bootup.script    /work/vyos-preconfig-bootup.script
+COPY customize-qcow2.sh              /work/customize-qcow2.sh
+
+RUN chmod +x /work/customize-qcow2.sh \
+    && /work/customize-qcow2.sh /work/vyos.qcow2 \
+    && qemu-img info /work/vyos.qcow2
+
+# ---------- Stage 2: runtime image ----------------------------------------
+FROM ubuntu:22.04
+
+# Dependencies for running QEMU and preparing the VyOS image
+RUN apt update && apt install -y \
+    qemu-system-x86 \
+    qemu-utils \
+    iproute2 \
+    iputils-ping \
+    iptables \
+    sed \
+    gawk \
+    coreutils \
+    genisoimage \
+    openssh-client \
+    whois \
+    && rm -rf /var/lib/apt/lists/*
+
+# Customised VyOS qcow2 from stage 1 + launch script + boot config template
+COPY --from=customizer /work/vyos.qcow2 /vyos.qcow2
+COPY entrypoint.sh                     /entrypoint.sh
+COPY startup.cfg.tpl                   /startup.cfg.tpl
+
+RUN chmod +x /entrypoint.sh
+
+CMD ["/entrypoint.sh"]

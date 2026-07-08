@@ -1,0 +1,180 @@
+{
+    "targets": [
+        {
+            "pod": "host-0",
+            "actions": [
+                {
+                    "type": "set_default_route",
+                    "gateway": "10.0.0.1"
+                },
+                {
+                    "type": "add_dns_nameserver",
+                    "dns_server": "8.8.8.8"
+                }
+            ]
+        },
+        {
+            "pod": "host-1",
+            "actions": [
+                {
+                    "type": "set_default_route",
+                    "gateway": "10.0.1.1"
+                },
+                {
+                    "type": "add_dns_nameserver",
+                    "dns_server": "8.8.8.8"
+                }
+            ]
+        },
+        {
+            "pod": "host-2",
+            "actions": [
+                {
+                    "type": "set_default_route",
+                    "gateway": "10.0.2.1"
+                },
+                {
+                    "type": "add_dns_nameserver",
+                    "dns_server": "8.8.8.8"
+                }
+            ]
+        },
+        {
+            "pod": "host-3",
+            "actions": [
+                {
+                    "type": "set_default_route",
+                    "gateway": "10.0.3.1"
+                },
+                {
+                    "type": "add_dns_nameserver",
+                    "dns_server": "8.8.8.8"
+                }
+            ]
+        },
+        {
+            "pod": "web-server",
+            "actions": [
+                {
+                    "type": "set_default_route",
+                    "gateway": "10.0.4.1"
+                }
+            ]
+        },
+        {
+            "pod": "router-0",
+            "actions": [
+                {
+                    "type": "replace_ip",
+                    "iface": "eth4",
+                    "cidr": "10.208.11.114/16"
+                },
+                {
+                    "type": "remove_default_route"
+                },
+                {
+                    "type": "set_default_route",
+                    "gateway": "10.208.0.1"
+                },
+                {
+                    "type": "add_dns_nameserver",
+                    "dns_server": "155.54.210.4"
+                },
+                {
+                    "type": "add_dns_search",
+                    "dns_domain": "inf.um.es"
+                },
+                {
+                    "type": "enable_snat",
+                    "iface": "eth4"
+                },
+                {
+                    "type": "add_static_route",
+                    "dst_cidr": "10.0.4.0/24",
+                    "gateway": "10.0.10.2",
+                    "device": "eth1"
+                },
+                {
+                    "type": "ospf_set_router_id",
+                    "router_id": "10.0.10.1"
+                },
+                {
+                    "type": "ospf_add_network",
+                    "cidr": "10.0.0.0/24",
+                    "ospf_area": "0"
+                },
+                {
+                    "type": "ospf_add_network",
+                    "cidr": "10.0.1.0/24",
+                    "ospf_area": "0"
+                },
+                {
+                    "type": "ospf_add_network",
+                    "cidr": "10.0.10.0/30",
+                    "ospf_area": "0"
+                },
+                {
+                    "type": "ospf_passive_default"
+                },
+                {
+                    "type": "ospf_no_passive",
+                    "iface": "eth1"
+                },
+                {
+                    "type": "ospf_mtu_ignore",
+                    "iface": "eth1"
+                },
+                {
+                    "type": "enable_dnat",
+                    "iface": "eth4",
+                    "externalPort": 80,
+                    "internalIP": "10.0.4.10",
+                    "internalPort": 80,
+                    "protocol": "tcp"
+                }
+            ]
+        },
+        {
+            "pod": "router-1",
+            "actions": [
+                {
+                    "type": "remove_default_route"
+                },
+                {
+                    "type": "set_default_route",
+                    "gateway": "10.0.10.1"
+                },
+                {
+                    "type": "ospf_set_router_id",
+                    "router_id": "10.0.10.2"
+                },
+                {
+                    "type": "ospf_add_network",
+                    "cidr": "10.0.2.0/24",
+                    "ospf_area": "0"
+                },
+                {
+                    "type": "ospf_add_network",
+                    "cidr": "10.0.3.0/24",
+                    "ospf_area": "0"
+                },
+                {
+                    "type": "ospf_add_network",
+                    "cidr": "10.0.10.0/30",
+                    "ospf_area": "0"
+                },
+                {
+                    "type": "ospf_passive_default"
+                },
+                {
+                    "type": "ospf_no_passive",
+                    "iface": "eth1"
+                },
+                {
+                    "type": "ospf_mtu_ignore",
+                    "iface": "eth1"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,253 @@
+{
+  "targets": [
+    {
+      "pod": "switch-0",
+      "actions": [
+        {
+          "type": "setup_bridge",
+          "bridge": "br0",
+          "ifaces": [
+            "eth1",
+            "eth2",
+            "eth3",
+            "eth4",
+            "eth5",
+            "eth6",
+            "eth7",
+            "eth8",
+            "eth9",
+            "eth10"
+          ]
+        }
+      ]
+    },
+    {
+      "pod": "switch-1",
+      "actions": [
+        {
+          "type": "setup_bridge",
+          "bridge": "br0",
+          "ifaces": [
+            "eth1",
+            "eth2"
+          ]
+        }
+      ]
+    },
+    {
+      "pod": "switch-2",
+      "actions": [
+        {
+          "type": "setup_bridge",
+          "bridge": "br0",
+          "ifaces": [
+            "eth1",
+            "eth2"
+          ]
+        }
+      ]
+    },
+    {
+      "pod": "switch-3",
+      "actions": [
+        {
+          "type": "setup_bridge",
+          "bridge": "br0",
+          "ifaces": [
+            "eth1",
+            "eth2"
+          ]
+        }
+      ]
+    },
+    {
+      "pod": "router-0",
+      "actions": [
+        {
+          "type": "replace_ip",
+          "iface": "eth1",
+          "cidr": "10.208.11.101/16"
+        },
+        {
+          "type": "enable_dnat",
+          "iface": "eth1",
+          "externalPort": 9999,
+          "internalIP": "10.5.3.10",
+          "internalPort": 9999,
+          "protocol": "tcp"
+        },
+        {
+          "type": "set_default_route",
+          "gateway": "10.5.254.2"
+        }
+      ]
+    },
+    {
+      "pod": "router-1",
+      "actions": [
+        {
+          "type": "enable_snat",
+          "iface": "eth0"
+        },
+        {
+          "type": "add_static_route",
+          "dst_cidr": "10.5.0.0/24",
+          "gateway" : "10.5.254.1"
+        },
+        {
+          "type": "add_static_route",
+          "dst_cidr": "10.5.1.0/24",
+          "gateway" : "10.5.254.1"
+        },
+        {
+          "type": "add_static_route",
+          "dst_cidr": "10.5.3.0/24",
+          "gateway" : "10.5.254.1"
+        },
+        {
+          "type": "add_static_route",
+          "dst_cidr": "10.6.0.0/24",
+          "gateway" : "10.5.254.1"
+        },
+        {
+          "type": "add_static_route",
+          "dst_cidr": "10.208.0.0/16",
+          "gateway" : "10.5.254.1"
+        },
+        {
+          "type": "add_static_route",
+          "dst_cidr": "192.168.10.0/24",
+          "gateway" : "10.5.2.10"
+        }
+      ]
+    },
+    {
+      "pod": "gnb-0",
+      "actions": [
+        {
+          "type": "replace_ip",
+          "iface": "eth1",
+          "cidr": "10.208.11.103/16"
+        },
+        {
+          "type": "set_default_route",
+          "gateway": "10.208.11.101"
+        }
+      ]
+    },
+    {
+      "pod": "amf-0",
+      "actions": [
+        {
+          "type": "set_default_route",
+          "gateway": "10.5.0.1"
+        }
+      ]
+    },
+    {
+      "pod": "smf-0",
+      "actions": [
+        {
+          "type": "set_default_route",
+          "gateway": "10.5.0.1"
+        }
+      ]
+    },
+    {
+      "pod": "nrf-0",
+      "actions": [
+        {
+          "type": "set_default_route",
+          "gateway": "10.5.0.1"
+        }
+      ]
+    },
+    {
+      "pod": "scp-0",
+      "actions": [
+        {
+          "type": "set_default_route",
+          "gateway": "10.5.0.1"
+        }
+      ]
+    },
+    {
+      "pod": "ausf-0",
+      "actions": [
+        {
+          "type": "set_default_route",
+          "gateway": "10.5.0.1"
+        }
+      ]
+    },
+    {
+      "pod": "udm-0",
+      "actions": [
+        {
+          "type": "set_default_route",
+          "gateway": "10.5.0.1"
+        }
+      ]
+    },
+    {
+      "pod": "udr-0",
+      "actions": [
+        {
+          "type": "set_default_route",
+          "gateway": "10.5.0.1"
+        }
+      ]
+    },
+    {
+      "pod": "pcf-0",
+      "actions": [
+        {
+          "type": "set_default_route",
+          "gateway": "10.5.0.1"
+        }
+      ]
+    },
+    {
+      "pod": "udsf-0",
+      "actions": [
+        {
+          "type": "set_default_route",
+          "gateway": "10.5.0.1"
+        }
+      ]
+    },
+    {
+      "pod": "upf-0",
+      "actions": [
+        {
+          "type": "set_default_route",
+          "gateway": "10.5.2.1"
+        },
+        {
+          "type": "add_static_route",
+          "dst_cidr": "10.5.0.0/24",
+          "gateway": "10.5.1.1"
+        },
+        {
+          "type": "add_static_route",
+          "dst_cidr": "10.5.3.0/24",
+          "gateway": "10.5.1.1"
+        },
+        {
+          "type": "add_static_route",
+          "dst_cidr": "10.5.254.0/30",
+          "gateway": "10.5.1.1"
+        }
+      ]
+    },
+    {
+      "pod": "webui-0",
+      "actions": [
+        {
+          "type": "set_default_route",
+          "gateway": "10.5.3.1"
+        }
+      ]
+    }
+  ]
+}

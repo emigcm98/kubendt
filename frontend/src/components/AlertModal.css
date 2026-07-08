@@ -1,0 +1,279 @@
+.alert-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1500;
+}
+
+.alert-modal-container {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  width: 90%;
+  max-width: 420px;
+  padding: 0;
+  outline: none;
+  overflow: hidden;
+}
+
+.alert-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid #eeeeee;
+  background-color: #f9fafb;
+}
+
+.alert-modal-icon {
+  font-size: 32px;
+  min-width: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.alert-modal-icon-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #eeeeee;
+  border-top-color: #1976d2;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.alert-modal-content {
+  flex: 1;
+}
+
+.alert-modal-title {
+  color: #000000;
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.alert-modal-message {
+  color: #666666;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.alert-modal-message + .alert-modal-message {
+  margin-top: 10px;
+}
+
+.alert-modal-message-secondary {
+  background: #f6f8fb;
+  border: 1px solid #e3e8ef;
+  border-radius: 8px;
+  color: #344054;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 8px 10px;
+}
+
+.alert-modal-body {
+  padding: 16px;
+}
+
+.alert-modal-extra {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #eeeeee;
+}
+
+.alert-modal-extra label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  color: #444;
+  cursor: pointer;
+  user-select: none;
+}
+
+.alert-modal-extra input[type='checkbox'] {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+  accent-color: #d32f2f;
+  flex-shrink: 0;
+}
+
+.alert-modal-actions {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid #eeeeee;
+  background-color: #fafafa;
+  justify-content: flex-end;
+}
+
+.alert-modal-btn {
+  padding: 6px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.alert-modal-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.alert-modal-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.alert-modal-btn-primary,
+.alert-modal-btn-confirm {
+  background-color: #4caf50;
+  color: white;
+}
+
+.alert-modal-btn-primary:hover,
+.alert-modal-btn-confirm:hover {
+  background-color: #45a049;
+}
+
+.alert-modal-btn-cancel {
+  background-color: #f0f0f0;
+  color: #333333;
+}
+
+.alert-modal-btn-cancel:hover {
+  background-color: #e0e0e0;
+}
+
+/* ── Timing widget (shown inside alert-modal-extra) ─────────────────────── */
+
+.am-timing {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.am-timing-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: #eef4ff;
+  border-radius: 8px;
+  border-left: 3px solid #4c8bf5;
+}
+
+.am-timing-total-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #4c8bf5;
+}
+
+.am-timing-total-value {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1a1a2e;
+  font-variant-numeric: tabular-nums;
+}
+
+.am-timing-phases {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.am-timing-phase {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 10px 4px 13px;
+  background: #f6f8fb;
+  border-radius: 6px;
+  border-left: 2px solid #d0d8e8;
+}
+
+.am-timing-phase-label {
+  font-size: 0.82rem;
+  color: #667080;
+  text-transform: capitalize;
+}
+
+.am-timing-phase-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #2c3e50;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Warnings list (shown inside alert-modal-extra, below timings) ─────── */
+
+.am-warnings {
+  margin-top: 10px;
+  padding: 8px 10px;
+  background: #fffbe6;
+  border-radius: 8px;
+  border-left: 3px solid #f0c36d;
+}
+
+.am-warnings-header {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #7a5a00;
+  margin-bottom: 6px;
+}
+
+.am-warnings-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.am-warnings-item {
+  font-size: 0.85rem;
+  color: #523a00;
+  line-height: 1.35;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.am-warnings-node {
+  font-weight: 700;
+  color: #1a3a5c;
+  flex-shrink: 0;
+}
+
+.am-warnings-detail {
+  flex: 1;
+}

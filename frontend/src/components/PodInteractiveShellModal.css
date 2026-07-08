@@ -1,0 +1,344 @@
+.shell-modal-container {
+  position: fixed;
+  width: 900px;
+  height: 550px;
+  background-color: #1e1e1e;
+  color: #e0e0e0;
+  border: 1px solid #444;
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  user-select: none;
+  overflow: hidden;
+}
+
+/* Hide the floating window without unmounting it; the WS + xterm session stay alive,
+   and a chip in the taskbar restores it. */
+.shell-modal-minimized {
+  display: none !important;
+}
+
+.shell-modal-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 1rem;
+  background: linear-gradient(135deg, #2d2d2d 0%, #1e1e1e 100%);
+  border-bottom: 1px solid #444;
+  border-radius: 8px 8px 0 0;
+  cursor: grab;
+  user-select: none;
+  z-index: 1;
+}
+
+.shell-modal-header:active {
+  cursor: grabbing;
+}
+
+.shell-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  color: #ccc;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.shell-pod-name {
+  font-weight: 700;
+  color: #00ff99;
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 0.9rem;
+}
+
+.shell-pod-status {
+  color: #999;
+  font-size: 0.85rem;
+}
+
+.shell-modal-buttons {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.shell-modal-close-btn,
+.shell-modal-minimize-btn,
+.shell-modal-clear-btn,
+.shell-modal-reconnect-btn {
+  background: transparent;
+  color: #999;
+  border: none;
+  font-size: 1.05rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0.3rem 0.55rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+/* "Clear" is a text label, not a glyph, use a smaller weighted font so it
+   sits visually balanced next to the icon buttons. */
+.shell-modal-clear-btn {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid #444;
+}
+
+.shell-modal-close-btn:hover {
+  background: rgba(255, 77, 77, 0.1);
+  color: #ff4d4d;
+}
+
+.shell-modal-minimize-btn:hover {
+  background: rgba(255, 200, 0, 0.1);
+  color: #ffc800;
+}
+
+.shell-modal-clear-btn:hover {
+  background: rgba(0, 255, 153, 0.08);
+  color: #00ff99;
+}
+
+.shell-modal-reconnect-btn:hover {
+  background: rgba(86, 156, 214, 0.12);
+  color: #56a6e4;
+}
+
+/* Tiny dot in the title showing socket state */
+.shell-status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.shell-status-connecting {
+  background: #f0c36d;
+  box-shadow: 0 0 6px rgba(240, 195, 109, 0.5);
+  animation: shell-status-pulse 1.4s ease-in-out infinite;
+}
+
+.shell-status-open {
+  background: #00ff99;
+  box-shadow: 0 0 6px rgba(0, 255, 153, 0.45);
+}
+
+.shell-status-lost {
+  background: #ff4d4d;
+  box-shadow: 0 0 6px rgba(255, 77, 77, 0.45);
+}
+
+@keyframes shell-status-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* Overlay shown when the WebSocket closes, terminal stays visible underneath */
+.shell-disconnected-overlay {
+  position: absolute;
+  top: 50px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(20, 20, 20, 0.78);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  backdrop-filter: blur(2px);
+  border-radius: 0 0 8px 8px;
+}
+
+.shell-disconnected-card {
+  background: #1f1f1f;
+  border: 1px solid #ff4d4d;
+  border-radius: 10px;
+  padding: 1.4rem 1.8rem;
+  text-align: center;
+  color: #e0e0e0;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+  max-width: 420px;
+}
+
+.shell-disconnected-icon {
+  font-size: 2rem;
+  color: #ff4d4d;
+  margin-bottom: 0.3rem;
+}
+
+.shell-disconnected-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #ff8080;
+  margin-bottom: 0.4rem;
+}
+
+.shell-disconnected-subtitle {
+  font-size: 0.9rem;
+  color: #c5c5c5;
+  margin-bottom: 1rem;
+}
+
+.shell-disconnected-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.6rem;
+}
+
+.shell-disconnected-btn {
+  background: #2a2a2a;
+  color: #e0e0e0;
+  border: 1px solid #444;
+  padding: 0.45rem 1rem;
+  font-size: 0.9rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.shell-disconnected-btn:hover {
+  background: #353535;
+  border-color: #666;
+}
+
+.shell-disconnected-btn-primary {
+  background: #1976d2;
+  border-color: #1976d2;
+  color: #fff;
+  font-weight: 600;
+}
+
+.shell-disconnected-btn-primary:hover {
+  background: #1565c0;
+  border-color: #1565c0;
+}
+
+.shell-connecting-indicator {
+  position: absolute;
+  top: 56px;
+  right: 12px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #f0c36d;
+  font-size: 0.78rem;
+  padding: 3px 8px;
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+.modal-terminal {
+  position: absolute;
+  top: 50px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #1e1e1e;
+  border-radius: 0 0 8px 8px;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  overflow: hidden;
+}
+
+/* xterm customization */
+.modal-terminal .xterm {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.modal-terminal .xterm-screen {
+  background-color: #1e1e1e;
+  color: #e0e0e0;
+  padding: 0.5rem;
+}
+
+.modal-terminal .xterm-viewport {
+  background-color: #1e1e1e;
+}
+
+.modal-terminal .xterm-rows {
+  padding: 0;
+}
+
+/* Mejor selección de texto */
+.modal-terminal .xterm-selection {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+.modal-terminal .xterm-selection-text {
+  background-color: transparent;
+}
+
+.modal-terminal .xterm-cursor-block {
+  background-color: #00ff99;
+  color: #1e1e1e;
+}
+
+.modal-terminal .xterm-cursor-line {
+  background-color: #00ff99;
+}
+
+/* Scrollbar styling */
+.modal-terminal .xterm-viewport::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-terminal .xterm-viewport::-webkit-scrollbar-track {
+  background: #1e1e1e;
+}
+
+.modal-terminal .xterm-viewport::-webkit-scrollbar-thumb {
+  background-color: #00ff99;
+  border-radius: 4px;
+  border: 1px solid #1e1e1e;
+}
+
+.modal-terminal .xterm-viewport::-webkit-scrollbar-thumb:hover {
+  background-color: #00cc77;
+}
+
+/* Firefox scrollbar */
+.modal-terminal .xterm-viewport {
+  scrollbar-color: #00ff99 #1e1e1e;
+  scrollbar-width: thin;
+}
+
+/* Ensure xterm text doesn't blur or flicker */
+.modal-terminal .xterm-char-measure-element {
+  display: inline-block !important;
+}
+
+.modal-terminal .xterm-link {
+  color: #00aaff !important;
+  border-bottom: 1px solid #00aaff !important;
+  text-decoration: none !important;
+  cursor: pointer;
+}
+
+/* Smooth rendering */
+.modal-terminal .xterm-glyph-run {
+  will-change: auto;
+}

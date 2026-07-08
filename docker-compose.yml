@@ -1,0 +1,47 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      # Production-mode Gin (less verbose, no per-request stdout log entry).
+      - GIN_MODE=release
+      - KUBECONFIG=/data/.kube/config
+      - FILES_BASE_PATH=/app/files
+      - KUBENDT_DB_PATH=/data/kubendt.db
+      - CORS_ALLOWED_ORIGINS=http://localhost
+      - SWAGGER_BASE_PATH=/api/
+      # Admin password for login. CHANGE THIS for anything but local use.
+      - KUBENDT_ADMIN_PASSWORD=admin123
+    volumes:
+      - kubendt-files:/app/files
+      - backend-db:/data
+      - ~/.kube/config:/kube/config:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: nginx/Dockerfile
+      args:
+        REACT_APP_API_BASE_URL: /api
+    ports:
+      - "80:8080"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  backend-db:
+  kubendt-files:

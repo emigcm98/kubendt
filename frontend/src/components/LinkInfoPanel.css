@@ -1,0 +1,232 @@
+/* Reuses .pod-info-panel + .panel-wrapper + .close-btn from PodInfoPanel.css */
+
+.link-info-panel {
+  border-color: #c8d3e0;
+}
+
+.link-info-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.link-info-title-icon {
+  font-size: 1.1rem;
+  filter: drop-shadow(0 0 6px rgba(0, 0, 0, 0.12));
+}
+
+.link-info-body {
+  overflow-y: auto;
+  padding: 0.8rem 0;
+}
+
+.link-subnet.subnet-ok {
+  color: #2e7d32;
+  font-weight: 600;
+}
+
+.link-subnet.subnet-diff {
+  color: #c62828;
+  font-weight: 600;
+}
+
+/* Mini ASCII-ish diagram */
+.link-diagram {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.6rem 0.8rem;
+  margin: 0.6rem 0.8rem;
+  background: #ffffff;
+  border: 1px solid #d0dae8;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  color: #1a3a5c;
+}
+
+.link-diagram-side {
+  font-weight: 700;
+  color: #0d3b66;
+  background: #e3f2fd;
+  border: 1px solid #b8d4ea;
+  border-radius: 6px;
+  padding: 2px 6px;
+  max-width: 32%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.link-diagram-iface {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.78rem;
+  color: #1976d2;
+}
+
+.link-diagram-wire {
+  color: #888;
+  letter-spacing: -1px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+/* Endpoint cards */
+.link-endpoints {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0 0.8rem;
+}
+
+.link-endpoints-divider {
+  height: 0;
+  border-top: 1px dashed #c5d0dd;
+  margin: 0.1rem 0;
+  position: relative;
+}
+
+.link-endpoints-divider::after {
+  content: '↕';
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #e8eef5;
+  color: #1976d2;
+  padding: 0 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.link-endpoint {
+  background: #ffffff;
+  border: 1px solid #d0dae8;
+  border-radius: 8px;
+  padding: 0.6rem 0.7rem;
+  box-shadow: 0 1px 3px rgba(25, 118, 210, 0.08);
+}
+
+.link-endpoint-header {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-bottom: 0.4rem;
+}
+
+.link-endpoint-icon {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 6px rgba(0, 0, 0, 0.1));
+}
+
+.link-endpoint-titles {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.link-endpoint-pod {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: #1a1a1a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.link-endpoint-iface {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+}
+
+.link-endpoint-iface-name {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  color: #1976d2;
+  font-weight: 600;
+}
+
+.link-state-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  letter-spacing: 0.04em;
+}
+
+.link-state-badge.badge-up {
+  background: #e6f4ea;
+  color: #1b5e20;
+  border: 1px solid #b6dcc0;
+}
+
+.link-state-badge.badge-down {
+  background: #fdecea;
+  color: #8a2d2d;
+  border: 1px solid #f0bcb4;
+}
+
+.link-endpoint-detail {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  padding: 2px 0;
+}
+
+.link-detail-key {
+  flex: 0 0 50px;
+  color: #555;
+  font-weight: 600;
+}
+
+.link-detail-val {
+  flex: 1;
+  color: #1a1a1a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-all;
+}
+
+.link-detail-mono {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+.link-detail-italic {
+  font-style: italic;
+  opacity: 0.85;
+}
+
+.link-endpoint-loading {
+  color: #999;
+  font-style: italic;
+}
+
+.link-endpoint-external-hint {
+  color: #5a6b7a;
+  font-style: italic;
+  font-size: 0.8rem;
+}
+
+.link-capture-btn {
+  margin-top: 0.5rem;
+  width: 100%;
+  padding: 5px 8px;
+  background: #eef4fb;
+  border: 1px solid #b8d4ea;
+  color: #0d3b66;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.link-capture-btn:hover {
+  background: #dceafa;
+}

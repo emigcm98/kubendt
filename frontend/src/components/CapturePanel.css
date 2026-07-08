@@ -1,0 +1,430 @@
+.cap-panel {
+  position: fixed;
+  width: 720px;
+  height: 460px;
+  min-width: 420px;
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
+  background: #0f1419;
+  border: 1px solid #2a3340;
+  border-radius: 8px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  resize: both;
+  color: #d7dde5;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+}
+
+.cap-panel-min {
+  display: none;
+}
+
+/* Header */
+.cap-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  background: #1c2330;
+  border-bottom: 1px solid #2a3340;
+  cursor: move;
+  user-select: none;
+}
+
+.cap-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #8b97a7;
+  flex: 0 0 auto;
+}
+
+.cap-dot-capturing {
+  background: #22c55e;
+  box-shadow: 0 0 6px #22c55e;
+}
+.cap-dot-connecting {
+  background: #f0c674;
+  box-shadow: 0 0 6px #f0c674;
+}
+.cap-dot-stopped {
+  background: #8b97a7;
+}
+.cap-dot-lost {
+  background: #f59e0b;
+}
+.cap-dot-error {
+  background: #ef4444;
+  box-shadow: 0 0 6px #ef4444;
+}
+
+.cap-title {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+}
+
+.cap-title-pod {
+  font-weight: 600;
+  color: #e6edf3;
+}
+.cap-title-iface {
+  color: #9ecbff;
+}
+
+.cap-meta {
+  margin-left: 6px;
+  color: #8b97a7;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.cap-header-btns {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.cap-btn {
+  background: #222b38;
+  border: 1px solid #2a3340;
+  color: #d7dde5;
+  border-radius: 5px;
+  padding: 3px 9px;
+  font-size: 11px;
+  cursor: pointer;
+  text-decoration: none;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.cap-btn:hover {
+  filter: brightness(1.25);
+}
+.cap-btn-close {
+  color: #fca5a5;
+}
+.cap-btn-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Wireshark-style start (green ▶) / stop (red ■) controls. */
+.cap-btn-start {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #86efac;
+  border-color: #245b3a;
+  background: #16241c;
+}
+.cap-btn-stop {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #fca5a5;
+  border-color: #5b2230;
+  background: #241519;
+}
+.cap-glyph-play {
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 5px 0 5px 8px;
+  border-color: transparent transparent transparent #22c55e;
+}
+.cap-glyph-stop {
+  width: 9px;
+  height: 9px;
+  background: #ef4444;
+  border-radius: 1px;
+}
+
+/* Soft-coloured Save (blue) and Clear (red) actions. */
+.cap-btn-save {
+  color: #93c5fd;
+  border-color: #284a73;
+  background: #11243a;
+}
+.cap-btn-clear {
+  color: #fca5a5;
+  border-color: #5a2a34;
+  background: #2a161b;
+}
+
+/* Save dropdown. */
+.cap-save-wrap {
+  position: relative;
+  display: inline-block;
+}
+.cap-save-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  min-width: 140px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: #1c2330;
+  border: 1px solid #2a3340;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  z-index: 5;
+}
+.cap-save-item {
+  background: transparent;
+  border: none;
+  color: #d7dde5;
+  text-align: left;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.cap-save-item:hover {
+  background: #222b38;
+}
+.cap-save-item-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.cap-save-item-disabled:hover {
+  background: transparent;
+}
+
+/* Filter bar */
+.cap-filterbar {
+  display: flex;
+  gap: 6px;
+  padding: 6px 8px;
+  background: #131922;
+  border-bottom: 1px solid #2a3340;
+}
+
+.cap-filter-input {
+  flex: 1;
+  background: #0c1117;
+  border: 1px solid #2a3340;
+  color: #7ee787;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  border-radius: 5px;
+  padding: 5px 9px;
+  outline: none;
+}
+
+.cap-filter-input::placeholder {
+  color: #586675;
+}
+
+/* Body: table + detail */
+.cap-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.cap-table-wrap {
+  flex: 1 1 60%;
+  overflow: auto;
+  min-height: 0;
+}
+
+.cap-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.cap-table thead th {
+  position: sticky;
+  top: 0;
+  background: #1c2330;
+  color: #8b97a7;
+  text-align: left;
+  font-weight: 600;
+  font-size: 11px;
+  padding: 5px 9px;
+  border-bottom: 1px solid #2a3340;
+  z-index: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cap-table tbody td {
+  padding: 3px 9px;
+  border-bottom: 1px solid #161d27;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cap-table tbody tr {
+  cursor: pointer;
+}
+.cap-table tbody tr:hover {
+  filter: brightness(1.18);
+}
+
+.cap-c-num {
+  text-align: right;
+  color: #8b97a7;
+}
+.cap-c-proto {
+  font-weight: 600;
+}
+.cap-c-info {
+  color: #c9d1d9;
+}
+
+.cap-row-sel td {
+  background: #1d4ed8 !important;
+  color: #fff !important;
+}
+
+/* Draggable column resizer (right edge of each header cell). */
+.cap-col-resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 7px;
+  height: 100%;
+  cursor: col-resize;
+  user-select: none;
+}
+.cap-col-resizer:hover {
+  background: #3b82f6;
+  opacity: 0.6;
+}
+
+/* protocol colours */
+.cap-p-ospf {
+  background: #13231a;
+}
+.cap-p-ospf .cap-c-proto {
+  color: #7ee787;
+}
+.cap-p-icmp {
+  background: #241f12;
+}
+.cap-p-icmp .cap-c-proto {
+  color: #f0c674;
+}
+.cap-p-arp {
+  background: #1d1426;
+}
+.cap-p-arp .cap-c-proto {
+  color: #d2a8ff;
+}
+.cap-p-tcp {
+  background: #0e1a24;
+}
+.cap-p-tcp .cap-c-proto {
+  color: #79c0ff;
+}
+.cap-p-dns {
+  background: #0e1f1f;
+}
+.cap-p-dns .cap-c-proto {
+  color: #56d4c4;
+}
+.cap-p-udp {
+  background: #101722;
+}
+.cap-p-udp .cap-c-proto {
+  color: #a5b4c4;
+}
+.cap-p-other .cap-c-proto {
+  color: #c9d1d9;
+}
+
+.cap-empty {
+  padding: 24px;
+  text-align: center;
+  color: #586675;
+  font-size: 12px;
+}
+
+/* Detail pane */
+.cap-detail {
+  flex: 1 1 40%;
+  border-top: 1px solid #2a3340;
+  background: #0c1117;
+  overflow: auto;
+  min-height: 90px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+}
+
+.cap-detail-hint {
+  padding: 14px;
+  color: #586675;
+}
+
+.cap-detail-err {
+  color: #fca5a5;
+}
+
+.cap-detail-tree {
+  padding: 6px 4px;
+  line-height: 1.5;
+}
+
+.cap-detail-node {
+  cursor: pointer;
+  padding: 1px 4px;
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.cap-detail-node:hover {
+  background: #131922;
+}
+.cap-detail-caret {
+  color: #8b97a7;
+  width: 10px;
+}
+.cap-detail-key {
+  color: #9ecbff;
+}
+.cap-detail-key-branch {
+  color: #7ee787;
+  font-weight: 600;
+}
+
+.cap-detail-leaf {
+  padding: 1px 4px;
+  display: flex;
+  gap: 8px;
+}
+
+.cap-detail-val {
+  color: #e6edf3;
+  word-break: break-all;
+}
+
+.cap-errorbar {
+  padding: 5px 10px;
+  background: #2a1820;
+  border-top: 1px solid #5b2230;
+  color: #fca5a5;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -1,0 +1,64 @@
+.minimap-container {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 50;
+
+  width: 300px;
+  height: 220px;
+
+  background: white;
+  border: 2px solid #4b5563;
+  border-radius: 12px;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+  outline: 6px double #9ca3af;
+  outline-offset: -6px;
+}
+
+/* Fondo del minimap */
+.react-flow__minimap {
+  background: white;
+  border-radius: 12px;
+}
+
+/* SVG renderizado internamente */
+.react-flow__minimap svg {
+  display: block;
+  transform: translate(4px, 5px) scale(105%);
+}
+
+/* Nodos */
+.minimap-node.host {
+  rx: 0 !important;
+  ry: 0 !important;
+  filter: drop-shadow(0 0 10px #4c7958);
+}
+
+.minimap-node.router {
+  rx: 50% !important;
+  ry: 50% !important;
+  filter: drop-shadow(0 0 10px #3498db);
+}
+
+.minimap-node.switch {
+  rx: 0 !important;
+  ry: 0 !important;
+  transform: rotate(45deg) scale(0.9); /* girar y escalar un poco para que no se desborde */
+  transform-box: fill-box; /* importante para que el rotate funcione bien */
+  transform-origin: center;
+  filter: drop-shadow(0 0 10px #9b59b6);
+}
+
+.minimap-node.selected {
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}

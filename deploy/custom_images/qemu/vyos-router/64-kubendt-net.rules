@@ -1,0 +1,35 @@
+# Pre-empt VyOS' interface-naming udev rule (65-vyos-net.rules) for data NICs.
+#
+# Why this exists: VyOS' rule looks up MAC→ifname in /opt/vyatta/etc/config
+# /config.boot during udev coldplug. But the per-pod config.boot only lands
+# on disk *later*, when /config/scripts/vyos-preconfig-bootup.script copies
+# it from the seed CD-ROM (the seed channel stays, it's what carries the
+# per-pod IPs/hostname/SSH key, things that can't be baked at image build).
+# So at coldplug time VyOS only sees the mgmt NIC and falls back to a
+# sequential biosdevname rename, which silently maps e.g. eth10 → eth4 and
+# breaks the later commit.
+#
+# Fix: entrypoint.sh delivers the MAC→ifname table to the guest via QEMU
+# SMBIOS Type 11 (OEM Strings). The kernel exposes it under
+# /sys/firmware/dmi/entries/11-*/raw, readable before any net-device udev
+# rule fires. The kubendt-net-name helper looks up the current NIC's MAC
+# there and we set ENV{VYOS_IFNAME}=<name> so VyOS' own rule takes its
+# "predefined" branch and skips biosdevname entirely.
+#
+# (We originally used QEMU fw_cfg here; that path needs CONFIG_FW_CFG_SYSFS
+# in the guest kernel, which VyOS' custom build does not enable. SMBIOS Type
+# 11 needs only CONFIG_DMI which is ubiquitous.)
+#
+# If the MAC is not in the table (e.g. the mgmt NIC), VYOS_IFNAME stays
+# empty and VyOS' default path runs unchanged.
+
+ACTION!="add",                       GOTO="kubendt_net_end"
+SUBSYSTEM!="net",                    GOTO="kubendt_net_end"
+KERNEL!="eth*|e*",                   GOTO="kubendt_net_end"
+
+# Don't clobber a name already set by an earlier rule.
+ENV{VYOS_IFNAME}=="eth*",            GOTO="kubendt_net_end"
+
+DRIVERS=="?*", PROGRAM="/usr/local/bin/kubendt-net-name %k $attr{address}", ENV{VYOS_IFNAME}="%c"
+
+LABEL="kubendt_net_end"

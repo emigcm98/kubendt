@@ -1,0 +1,311 @@
+{
+  "nodes": [
+    {
+      "name": "user",
+      "image": "alpine",
+      "type": "host",
+      "driver": "HostDriver",
+      "replicas": 4,
+      "commands": [
+        "sh",
+        "-c",
+        "apk add iproute2-tc && sleep infinity"
+      ],
+      "env": {
+        "HOST_VAR": "soy una variable de entorno compartida entre todas las replicas"
+      }
+    },
+    {
+      "name": "web-public",
+      "image": "nginx:alpine",
+      "type": "host",
+      "mounts": [
+        {
+          "file": "web_public/index_public.html",
+          "mountTo": "/usr/share/nginx/html/index.html"
+        }
+      ]
+    },
+    {
+      "name": "web-internal",
+      "image": "nginx:alpine",
+      "type": "host",
+      "mounts": [
+        {
+          "file": "web_internal/index_internal.html",
+          "mountTo": "/usr/share/nginx/html/index.html"
+        }
+      ]
+    },
+    {
+      "name": "dns-server",
+      "image": "internetsystemsconsortium/bind9:9.18",
+      "type": "host",
+      "commands": [
+        "sh",
+        "-c",
+        "set -e; mkdir -p /tmp/bind; named -g -c /etc/bind/named.conf"
+      ],
+      "mounts": [
+        {
+          "file": "dns/named.conf",
+          "mountTo": "/etc/bind/named.conf"
+        },
+        {
+          "file": "dns/named.conf.options",
+          "mountTo": "/etc/bind/named.conf.options"
+        },
+        {
+          "file": "dns/named.conf.local",
+          "mountTo": "/etc/bind/named.conf.local"
+        },
+        {
+          "file": "dns/db.kubendt.local",
+          "mountTo": "/etc/bind/db.kubendt.local"
+        }
+      ]
+    },
+    {
+      "name": "iperf-server",
+      "image": "networkstatic/iperf3",
+      "type": "host",
+      "replicas": 2,
+      "commands": [
+        "sh",
+        "-c",
+        "apt update && apt install -y iproute2 iputils-ping && iperf3 -s -p 5201"
+      ]
+    },
+    {
+      "name": "edge-router",
+      "image": "frrouting/frr",
+      "type": "router",
+      "driver": "FRRRouterDriver",
+      "commands": [
+        "sh",
+        "-c",
+        "echo hostname edge-router > /etc/frr/vtysh.conf && chown frr:frr /etc/frr/vtysh.conf && /usr/lib/frr/zebra -d && /usr/lib/frr/ospfd -d && sleep infinity"
+      ]
+    },
+    {
+      "name": "room-router",
+      "image": "frrouting/frr",
+      "type": "router",
+      "driver": "FRRRouterDriver",
+      "commands": [
+        "sh",
+        "-c",
+        "echo hostname room-router > /etc/frr/vtysh.conf && chown frr:frr /etc/frr/vtysh.conf && /usr/lib/frr/zebra -d && /usr/lib/frr/ospfd -d && sleep infinity"
+      ]
+    },
+    {
+      "name": "svc-router",
+      "image": "frrouting/frr",
+      "type": "router",
+      "driver": "FRRRouterDriver",
+      "commands": [
+        "sh",
+        "-c",
+        "echo hostname svc-router > /etc/frr/vtysh.conf && chown frr:frr /etc/frr/vtysh.conf && /usr/lib/frr/zebra -d && /usr/lib/frr/ospfd -d && sleep infinity"
+      ]
+    },
+    {
+      "name": "core-sw",
+      "image": "globocom/openvswitch",
+      "type": "switch",
+      "commands": [
+        "sh",
+        "-c",
+        "apk update && apk add --no-cache iproute2 iputils && ovsdb-server --remote=punix:/var/run/openvswitch/db.sock --remote=db:Open_vSwitch,Open_vSwitch,manager_options --pidfile --detach && ovs-vswitchd --pidfile --detach && tail -f /dev/null"
+      ]
+    },
+    {
+      "name": "dist-sw",
+      "image": "globocom/openvswitch",
+      "type": "switch",
+      "commands": [
+        "sh",
+        "-c",
+        "apk update && apk add --no-cache iproute2 iputils && ovsdb-server --remote=punix:/var/run/openvswitch/db.sock --remote=db:Open_vSwitch,Open_vSwitch,manager_options --pidfile --detach && ovs-vswitchd --pidfile --detach && tail -f /dev/null"
+      ]
+    },
+    {
+      "name": "dmz-sw",
+      "image": "ubuntu",
+      "type": "switch",
+      "commands": [
+        "sh",
+        "-c",
+        "apt update && apt install -y iproute2 bridge-utils iputils-ping && sleep infinity"
+      ]
+    },
+    {
+      "name": "svc-sw",
+      "image": "ubuntu",
+      "type": "switch",
+      "commands": [
+        "sh",
+        "-c",
+        "apt update && apt install -y iproute2 bridge-utils iputils-ping && sleep infinity"
+      ]
+    },
+    {
+      "name": "room-sw",
+      "replicas": 2,
+      "image": "ubuntu",
+      "type": "switch",
+      "commands": [
+        "sh",
+        "-c",
+        "apt update && apt install -y iproute2 bridge-utils iputils-ping && sleep infinity"
+      ]
+    }
+  ],
+  "links": [
+    {
+      "node": "edge-router",
+      "localIntf": "eth1",
+      "localIp": "",
+      "peerNode": "external",
+      "peerIntf": "ens18",
+      "peerIp": "",
+      "peerLabel": "External Network"
+    },
+    {
+      "node": "edge-router",
+      "localIntf": "eth2",
+      "localIp": "10.0.255.254/24",
+      "peerNode": "core-sw",
+      "peerIntf": "eth1",
+      "peerIp": ""
+    },
+    {
+      "node": "core-sw",
+      "localIntf": "eth2",
+      "localIp": "",
+      "peerNode": "dist-sw",
+      "peerIntf": "eth1",
+      "peerIp": ""
+    },
+    {
+      "node": "core-sw",
+      "localIntf": "eth3",
+      "localIp": "",
+      "peerNode": "dmz-sw",
+      "peerIntf": "eth1",
+      "peerIp": ""
+    },
+    {
+      "node": "dmz-sw",
+      "localIntf": "eth2",
+      "localIp": "",
+      "peerNode": "web-public",
+      "peerIntf": "eth1",
+      "peerIp": "10.0.255.20/24"
+    },
+    {
+      "node": "dmz-sw",
+      "localIntf": "eth3",
+      "localIp": "",
+      "peerNode": "iperf-server-0",
+      "peerIntf": "eth1",
+      "peerIp": "10.0.255.10/24"
+    },
+    {
+      "node": "dist-sw",
+      "localIntf": "eth2",
+      "localIp": "",
+      "peerNode": "svc-router",
+      "peerIntf": "eth1",
+      "peerIp": "10.0.255.253/24"
+    },
+    {
+      "node": "dist-sw",
+      "localIntf": "eth3",
+      "localIp": "",
+      "peerNode": "room-router",
+      "peerIntf": "eth1",
+      "peerIp": "10.0.255.252/24"
+    },
+    {
+      "node": "svc-router",
+      "localIntf": "eth2",
+      "localIp": "192.168.10.1/24",
+      "peerNode": "svc-sw",
+      "peerIntf": "eth1",
+      "peerIp": ""
+    },
+    {
+      "node": "svc-sw",
+      "localIntf": "eth2",
+      "localIp": "",
+      "peerNode": "iperf-server-1",
+      "peerIntf": "eth1",
+      "peerIp": "192.168.10.10/24"
+    },
+    {
+      "node": "svc-sw",
+      "localIntf": "eth3",
+      "localIp": "",
+      "peerNode": "dns-server",
+      "peerIntf": "eth1",
+      "peerIp": "192.168.10.15/24"
+    },
+    {
+      "node": "svc-sw",
+      "localIntf": "eth4",
+      "localIp": "",
+      "peerNode": "web-internal",
+      "peerIntf": "eth1",
+      "peerIp": "192.168.10.20/24"
+    },
+    {
+      "node": "room-router",
+      "localIntf": "eth2",
+      "localIp": "192.168.0.1/24",
+      "peerNode": "room-sw-0",
+      "peerIntf": "eth1",
+      "peerIp": ""
+    },
+    {
+      "node": "room-router",
+      "localIntf": "eth3",
+      "localIp": "192.168.1.1/24",
+      "peerNode": "room-sw-1",
+      "peerIntf": "eth1",
+      "peerIp": ""
+    },
+    {
+      "node": "room-sw-0",
+      "localIntf": "eth2",
+      "localIp": "",
+      "peerNode": "user-0",
+      "peerIntf": "eth1",
+      "peerIp": "192.168.0.10/24"
+    },
+    {
+      "node": "room-sw-0",
+      "localIntf": "eth3",
+      "localIp": "",
+      "peerNode": "user-1",
+      "peerIntf": "eth1",
+      "peerIp": "192.168.0.11/24"
+    },
+    {
+      "node": "room-sw-1",
+      "localIntf": "eth2",
+      "localIp": "",
+      "peerNode": "user-2",
+      "peerIntf": "eth1",
+      "peerIp": "192.168.1.10/24"
+    },
+    {
+      "node": "room-sw-1",
+      "localIntf": "eth3",
+      "localIp": "",
+      "peerNode": "user-3",
+      "peerIntf": "eth1",
+      "peerIp": "192.168.1.11/24"
+    }
+  ]
+}

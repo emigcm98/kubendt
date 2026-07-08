@@ -1,0 +1,598 @@
+/* --- Top bar con dos zonas: izquierda y derecha --- */
+.topbar {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  right: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 10;
+  gap: 15px;
+}
+
+/* --- Animación de carga inicial (puntos sutiles) --- */
+.loading-dots {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+}
+
+.loading-dots .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #1976d2;
+  animation: dot-pulse 1.4s ease-in-out infinite;
+}
+
+.loading-dots .dot:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.loading-dots .dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.loading-dots .dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes dot-pulse {
+  0%,
+  80%,
+  100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
+/* Empty-state card shown when the namespace has no deployed topology */
+.empty-topology {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 18;
+  background: #ffffff;
+  border: 1px solid #c5d0dd;
+  border-radius: 12px;
+  padding: 1.6rem 2rem;
+  box-shadow: 0 4px 18px rgba(25, 60, 100, 0.08);
+  text-align: center;
+  max-width: 380px;
+  pointer-events: none;
+  animation: empty-topology-fade-in 0.35s ease-out both;
+}
+
+.empty-topology h3 {
+  margin: 0 0 0.55rem 0;
+  color: #1a3a5c;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.empty-topology p {
+  margin: 0;
+  color: #5a6b7a;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.empty-topology strong {
+  color: #1a3a5c;
+  font-weight: 600;
+}
+
+@keyframes empty-topology-fade-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -46%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+.topbar-left,
+.topbar-right {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.topbar-right {
+  flex-direction: column;
+  align-items: stretch;
+  align-self: flex-start;
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+
+/* Shared button column width across topbar groups so left and right action
+   buttons line up visually, and the search bar can size itself off of it.
+   Width is sized to fit the longest label ("Load network conf") on a
+   single line so we don't accidentally make the left buttons taller. */
+:root {
+  --topbar-btn-w: 195px;
+  --topbar-btn-gap: 12px;
+}
+
+.topbar-right-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, var(--topbar-btn-w));
+  gap: var(--topbar-btn-gap);
+}
+
+.topbar-left {
+  display: grid;
+  grid-template-columns: repeat(2, var(--topbar-btn-w));
+  gap: var(--topbar-btn-gap);
+  align-content: start;
+  align-self: flex-start; /* keep left group pinned to the top, regardless of right column height */
+}
+
+/* Row holding the "Hide external" toggle and the search box, on the same line. */
+.topbar-tools-row {
+  display: flex;
+  align-items: center;
+  gap: var(--topbar-btn-gap);
+  width: calc(2 * var(--topbar-btn-w) + var(--topbar-btn-gap));
+}
+
+.topbar-tools-row .topbar-search {
+  /* Let the search shrink so the toggle fits beside it on one row. */
+  width: auto;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* "Hide external" toggle styled as a pill matching the search box. */
+.topbar-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 12px;
+  background: #ffffff;
+  border: 1px solid #c5d0dd;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  color: #1a3a5c;
+  font-size: 0.84rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  box-sizing: border-box;
+  flex: 0 0 auto;
+}
+
+.topbar-toggle:hover:not(.disabled) {
+  border-color: #1976d2;
+}
+
+.topbar-toggle input {
+  accent-color: #1976d2;
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  cursor: inherit;
+}
+
+.topbar-toggle.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.topbar button {
+  padding: 0.6rem 1.1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  color: white;
+  /* Keep every action button to a single line; the column width is fixed
+     via --topbar-btn-w so all labels fit without wrapping. */
+  white-space: nowrap;
+}
+
+.topbar-action-import {
+  background: #1976d2;
+  border-bottom: 3px solid #1565c0;
+}
+
+.topbar-action-import:hover:not(:disabled) {
+  background: #1565c0;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(25, 118, 210, 0.3);
+}
+
+/* Clear topology button */
+.topbar-action-clear {
+  background: #e53935;
+  border-bottom: 3px solid #c62828;
+}
+
+.topbar-action-clear:hover:not(:disabled) {
+  background: #d32f2f;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(229, 57, 53, 0.3);
+}
+
+/* Modify topology button */
+.topbar-action-modify {
+  background: #2e7d32;
+  border-bottom: 3px solid #1b5e20;
+}
+
+.topbar-action-modify:hover:not(:disabled) {
+  background: #276a2b;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(46, 125, 50, 0.3);
+}
+
+/* Load network conf button */
+.topbar-action-config {
+  background: #fb8c00;
+  border-bottom: 3px solid #f57c00;
+}
+
+.topbar-action-config:hover:not(:disabled) {
+  background: #f57c00;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(251, 140, 0, 0.3);
+}
+
+/* Export topology - Azul secundario */
+.topbar-right button:nth-child(1) {
+  background: #0288d1;
+  border-bottom: 3px solid #0277bd;
+}
+
+.topbar-right button:nth-child(1):hover:not(:disabled) {
+  background: #0277bd;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(2, 136, 209, 0.3);
+}
+
+/* Save positions - Amarillo corporativo */
+.topbar-right button:nth-child(2) {
+  background: #fb8c00;
+  border-bottom: 3px solid #f57c00;
+}
+
+.topbar-right button:nth-child(2):hover:not(:disabled) {
+  background: #f57c00;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(251, 140, 0, 0.3);
+}
+
+.topbar button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.topbar button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(40%);
+}
+
+.disabled-buttons {
+  opacity: 0.4;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+@media (max-width: 900px) {
+  .topbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .topbar-left,
+  .topbar-right {
+    width: 100%;
+  }
+
+  .topbar-left {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .topbar button {
+    width: 100%;
+  }
+}
+
+/* Import Confirmation Modal */
+.import-confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.import-confirm-modal {
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  width: 90%;
+  max-width: 500px;
+  padding: 0;
+  outline: none;
+}
+
+.import-confirm-modal .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid #eee;
+  background-color: #fff9e6;
+}
+
+.import-confirm-modal .modal-header h2 {
+  margin: 0;
+  color: #000000;
+  font-size: 1.4rem;
+}
+
+.import-confirm-modal .modal-body {
+  padding: 1.5rem;
+}
+
+.import-confirm-modal .modal-body p {
+  margin: 0.5rem 0;
+  font-size: 1rem;
+  color: #555;
+  line-height: 1.5;
+}
+
+.import-confirm-modal .modal-footer {
+  display: flex;
+  gap: 0.8rem;
+  padding: 1.5rem;
+  border-top: 1px solid #eee;
+  justify-content: flex-end;
+}
+
+.modal-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #999;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.modal-close-btn:hover {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+.modal-btn {
+  padding: 0.6rem 1.2rem;
+  font-size: 0.95rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.modal-btn-cancel {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+.modal-btn-cancel:hover {
+  background-color: #e0e0e0;
+}
+
+.modal-btn-confirm {
+  background-color: #4caf50;
+  color: white;
+}
+
+.modal-btn-confirm:hover {
+  background-color: #45a049;
+}
+
+.modal-btn-warning {
+  background-color: #ff9800;
+}
+
+.modal-btn-warning:hover {
+  background-color: #e68900;
+}
+
+/* Bottom-centered taskbar with chips representing minimized shells */
+.shell-taskbar {
+  position: fixed;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(30, 30, 30, 0.92);
+  border: 1px solid #3a3a3a;
+  border-radius: 999px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  z-index: 9000;
+  backdrop-filter: blur(4px);
+}
+
+.shell-taskbar-chip {
+  display: inline-flex;
+  align-items: stretch;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 999px;
+  overflow: hidden;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.shell-taskbar-chip:hover {
+  border-color: #00ff99;
+  background: #303030;
+}
+
+.shell-taskbar-chip-restore {
+  background: transparent;
+  border: none;
+  color: #e0e0e0;
+  padding: 4px 10px 4px 8px;
+  font-size: 0.82rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.shell-taskbar-chip-icon {
+  color: #00ff99;
+  font-size: 0.7rem;
+}
+
+.shell-taskbar-chip-name {
+  font-weight: 600;
+  font-family: 'Monaco', 'Menlo', monospace;
+  color: #00ff99;
+  max-width: 160px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.shell-taskbar-chip-mode {
+  color: #999;
+  font-size: 0.72rem;
+}
+
+.shell-taskbar-chip-close {
+  background: transparent;
+  border: none;
+  border-left: 1px solid #444;
+  color: #888;
+  padding: 0 9px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.shell-taskbar-chip-close:hover {
+  background: rgba(255, 77, 77, 0.18);
+  color: #ff6868;
+}
+
+/* Search input below Save positions / Export topology, centred between them.
+   The width is fixed so the box doesn't grow when the "N matches" badge
+   appears, instead the badge occupies a reserved slot inside the box. */
+.topbar-search {
+  display: grid;
+  grid-template-columns: 18px 1fr 78px 18px;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  border: 1px solid #c5d0dd;
+  border-radius: 6px;
+  padding: 0 8px;
+  height: 36px;
+  /* Match the combined width of the two right-column action buttons
+     (Save positions + Export topology) so the search bar visually spans
+     the same area underneath them. */
+  width: calc(2 * var(--topbar-btn-w) + var(--topbar-btn-gap));
+  align-self: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  box-sizing: border-box;
+}
+
+.topbar-search-icon {
+  font-size: 0.95rem;
+  color: #777;
+  text-align: center;
+}
+
+.topbar-search input {
+  /* Override the global .topbar button rules, this one is an input, not a button */
+  background: transparent !important;
+  color: #1a3a5c !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  padding: 0 !important;
+  font-size: 0.88rem !important;
+  font-weight: 500 !important;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+}
+
+.topbar-search input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.topbar-search-count {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #1976d2;
+  white-space: nowrap;
+  text-align: right;
+  /* Always reserved, even when empty, so the layout doesn't shift. */
+}
+
+/* The clear button is rendered inside .topbar, so the global .topbar button
+   rules (padding, font, color) apply. We undo them here so it stays a small
+   discreet "✖". */
+.topbar-search-clear.topbar-search-clear {
+  background: transparent !important;
+  color: #888 !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  font-size: 0.78rem !important;
+  font-weight: 600 !important;
+  border-radius: 4px !important;
+  height: 22px !important;
+  width: 22px !important;
+  line-height: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.topbar-search-clear.topbar-search-clear:hover {
+  color: #d32f2f !important;
+  background: #ffeaea !important;
+}

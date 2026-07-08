@@ -1,0 +1,275 @@
+{
+  "targets": [
+    {
+      "pod": "edge-router-0",
+      "actions": [
+        {
+          "type": "replace_ip",
+          "iface": "eth1",
+          "cidr": "10.208.11.100/16"
+        },
+        {
+          "type": "enable_snat",
+          "iface": "eth0"
+        },
+        {
+          "type": "enable_dnat",
+          "iface": "eth1",
+          "externalPort": 5201,
+          "internalIP": "10.0.255.10",
+          "internalPort": 5201,
+          "protocol": "tcp"
+        },
+        {
+          "type": "enable_dnat",
+          "iface": "eth1",
+          "externalPort": 5201,
+          "internalIP": "10.0.255.10",
+          "internalPort": 5201,
+          "protocol": "udp"
+        },
+        {
+          "type": "enable_dnat",
+          "iface": "eth1",
+          "externalPort": 80,
+          "internalIP": "10.0.255.20",
+          "internalPort": 80,
+          "protocol": "tcp"
+        },
+        { "type": "ospf_set_router_id", "router_id": "10.0.255.254" },
+        { "type": "ospf_passive_default" },
+        { "type": "ospf_no_passive", "iface": "eth2" },
+        { "type": "ospf_add_network", "cidr": "10.0.255.0/24", "ospf_area": "0" },
+        { "type": "ospf_originate_default" },
+        { "type": "ospf_mtu_ignore", "iface": "eth2" }
+      ]
+    },
+    {
+      "pod": "svc-router-0",
+      "actions": [
+        {
+          "type": "remove_default_route"
+        },
+        { "type": "ospf_set_router_id", "router_id": "10.0.255.253" },
+        { "type": "ospf_passive_default" },
+        { "type": "ospf_no_passive", "iface": "eth1" },
+        { "type": "ospf_add_network", "cidr": "10.0.255.0/24", "ospf_area": "0" },
+        { "type": "ospf_add_network", "cidr": "192.168.10.0/24", "ospf_area": "0" },
+        { "type": "ospf_mtu_ignore", "iface": "eth1" }
+      ]
+    },
+    {
+      "pod": "room-router-0",
+      "actions": [
+        {
+          "type": "remove_default_route"
+        },
+        { "type": "ospf_set_router_id", "router_id": "10.0.255.252" },
+        { "type": "ospf_passive_default" },
+        { "type": "ospf_no_passive", "iface": "eth1" },
+        { "type": "ospf_add_network", "cidr": "10.0.255.0/24", "ospf_area": "0" },
+        { "type": "ospf_add_network", "cidr": "192.168.0.0/24", "ospf_area": "0" },
+        { "type": "ospf_add_network", "cidr": "192.168.1.0/24", "ospf_area": "0" },
+        { "type": "ospf_mtu_ignore", "iface": "eth1" }
+      ]
+    },
+    {
+      "pod": "core-sw-0",
+      "actions": [
+        {
+          "type": "setup_bridge",
+          "bridge": "br0",
+          "ifaces": [
+            "eth1",
+            "eth2",
+            "eth3"
+          ]
+        }
+      ]
+    },
+    {
+      "pod": "dist-sw-0",
+      "actions": [
+        {
+          "type": "setup_bridge",
+          "bridge": "br0",
+          "ifaces": [
+            "eth1",
+            "eth2",
+            "eth3"
+          ]
+        }
+      ]
+    },
+    {
+      "pod": "dmz-sw-0",
+      "actions": [
+        {
+          "type": "setup_bridge",
+          "bridge": "br0",
+          "ifaces": [
+            "eth1",
+            "eth2",
+            "eth3"
+          ]
+        }
+      ]
+    },
+    {
+      "pod": "svc-sw-0",
+      "actions": [
+        {
+          "type": "setup_bridge",
+          "bridge": "br0",
+          "ifaces": [
+            "eth1",
+            "eth2",
+            "eth3",
+            "eth4"
+          ]
+        }
+      ]
+    },
+    {
+      "pod": "room-sw-0",
+      "actions": [
+        {
+          "type": "setup_bridge",
+          "bridge": "br0",
+          "ifaces": [
+            "eth1",
+            "eth2",
+            "eth3"
+          ]
+        }
+      ]
+    },
+    {
+      "pod": "room-sw-1",
+      "actions": [
+        {
+          "type": "setup_bridge",
+          "bridge": "br0",
+          "ifaces": [
+            "eth1",
+            "eth2",
+            "eth3"
+          ]
+        }
+      ]
+    },
+    {
+      "pod": "iperf-server-0",
+      "actions": [
+        {
+          "type": "set_default_route",
+          "gateway": "10.0.255.254"
+        }
+      ]
+    },
+    {
+      "pod": "web-public-0",
+      "actions": [
+        {
+          "type": "set_default_route",
+          "gateway": "10.0.255.254"
+        }
+      ]
+    },
+    {
+      "pod": "iperf-server-1",
+      "actions": [
+        {
+          "type": "set_default_route",
+          "gateway": "192.168.10.1"
+        }
+      ]
+    },
+    {
+      "pod": "web-internal-0",
+      "actions": [
+        {
+          "type": "set_default_route",
+          "gateway": "192.168.10.1"
+        }
+      ]
+    },
+    {
+      "pod": "dns-server-0",
+      "actions": [
+        {
+          "type": "set_default_route",
+          "gateway": "192.168.10.1"
+        }
+      ]
+    },
+    {
+      "pod": "user-0",
+      "actions": [
+        {
+          "type": "set_default_route",
+          "gateway": "192.168.0.1"
+        },
+        {
+          "type": "add_dns_nameserver",
+          "dns_server": "192.168.10.15"
+        },
+        {
+          "type": "add_dns_search",
+          "dns_domain": "kubendt.local"
+        }
+      ]
+    },
+    {
+      "pod": "user-1",
+      "actions": [
+        {
+          "type": "set_default_route",
+          "gateway": "192.168.0.1"
+        },
+        {
+          "type": "add_dns_nameserver",
+          "dns_server": "192.168.10.15"
+        },
+        {
+          "type": "add_dns_search",
+          "dns_domain": "kubendt.local"
+        }
+      ]
+    },
+    {
+      "pod": "user-2",
+      "actions": [
+        {
+          "type": "set_default_route",
+          "gateway": "192.168.1.1"
+        },
+        {
+          "type": "add_dns_nameserver",
+          "dns_server": "192.168.10.15"
+        },
+        {
+          "type": "add_dns_search",
+          "dns_domain": "kubendt.local"
+        }
+      ]
+    },
+    {
+      "pod": "user-3",
+      "actions": [
+        {
+          "type": "set_default_route",
+          "gateway": "192.168.1.1"
+        },
+        {
+          "type": "add_dns_nameserver",
+          "dns_server": "192.168.10.15"
+        },
+        {
+          "type": "add_dns_search",
+          "dns_domain": "kubendt.local"
+        }
+      ]
+    }
+  ]
+}

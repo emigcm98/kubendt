@@ -1,0 +1,97 @@
+{
+  "nodes": [
+    {
+      "name": "ubuntu-host",
+      "image": "ubuntu:20.04",
+      "type": "host",
+      "driver": "HostDriver",
+      "commands": [
+        "sh",
+        "-c",
+        "apt update && apt install -y iproute2 iputils-ping && sleep infinity"
+      ]
+    },
+    {
+      "name": "alpine-host",
+      "image": "alpine",
+      "type": "host",
+      "driver": "BasicHostDriver",
+      "commands": [
+        "sh",
+        "-c",
+        "apk update && apk add iproute2 iputils && sleep infinity"
+      ]
+    },
+    {
+      "name": "switch",
+      "image": "globocom/openvswitch",
+      "type": "switch",
+      "driver": "OpenVSwitchDriver",
+      "replicas": 2,
+      "commands": [
+        "sh",
+        "-c",
+        "apk update && apk add --no-cache iproute2 iputils && ovsdb-server --remote=punix:/var/run/openvswitch/db.sock --remote=db:Open_vSwitch,Open_vSwitch,manager_options --pidfile --detach && ovs-vswitchd --pidfile --detach && tail -f /dev/null"
+      ]
+    },
+    {
+      "name": "frr-router",
+      "image": "frrouting/frr",
+      "type": "router",
+      "driver": "FRRRouterDriver",
+      "commands": [
+        "sh",
+        "-c",
+        "echo hostname frr-router > /etc/frr/vtysh.conf && chown frr:frr /etc/frr/vtysh.conf && /usr/lib/frr/zebra -d && /usr/lib/frr/ospfd -d && sleep infinity"
+      ]
+    },
+    {
+      "name": "vyos-router",
+      "image": "localhost/vyos-router:dev",
+      "type": "router",
+      "driver": "VyOSRouterDriver"
+    }
+  ],
+  "links": [
+    {
+      "localIntf": "eth1",
+      "node": "ubuntu-host",
+      "peerNode": "switch-0",
+      "peerIntf": "eth2",
+      "localIp": "10.0.1.11/24",
+      "peerIp": ""
+    },
+    {
+      "localIntf": "eth1",
+      "node": "frr-router",
+      "peerNode": "switch-0",
+      "peerIntf": "eth1",
+      "localIp": "10.0.1.1/24",
+      "peerIp": ""
+    },
+    {
+      "localIntf": "eth1",
+      "node": "alpine-host",
+      "peerNode": "switch-1",
+      "peerIntf": "eth2",
+      "localIp": "10.0.2.11/24",
+      "peerIp": ""
+    },
+    {
+      "localIntf": "eth1",
+      "node": "vyos-router",
+      "peerNode": "switch-1",
+      "peerIntf": "eth1",
+      "localIp": "10.0.2.1/24",
+      "peerIp": ""
+    },
+    {
+      "localIntf": "eth2",
+      "node": "frr-router",
+      "peerNode": "vyos-router",
+      "peerIntf": "eth2",
+      "localIp": "10.0.254.1/30",
+      "peerIp": "10.0.254.2/30"
+    }
+  ]
+}

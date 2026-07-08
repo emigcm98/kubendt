@@ -1,0 +1,31 @@
+# Build context for the frontend/nginx image (nginx/Dockerfile) is the repo
+# root, but that build only needs frontend/ and nginx/. Everything below is
+# excluded to keep the context small and fast.
+
+# VCS
+.git
+.gitignore
+
+# Paper / docs — large, unrelated to the build
+overleaf/
+overleaf_old/
+doc/
+docs/
+
+# Backend (built by its own image with its own context)
+backend/
+
+# Deployment assets and examples
+deploy/
+docker-compose*.yml
+.env.prod
+
+# Node artifacts (deps are installed fresh inside the image)
+**/node_modules
+frontend/build
+frontend/coverage
+
+# Large binary artifacts
+*.tar
+*.tgz
+*.qcow2

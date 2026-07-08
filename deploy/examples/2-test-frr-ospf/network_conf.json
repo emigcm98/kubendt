@@ -1,0 +1,85 @@
+{
+    "targets": [
+      {
+        "pod": "host-0",
+        "actions": [
+          { "type": "replace_ip", "iface": "eth1", "cidr": "192.168.1.51/24" },
+          { "type": "set_default_route", "gateway": "192.168.1.1" }
+        ]
+      },
+      {
+        "pod": "host-1",
+        "actions": [
+          { "type": "replace_ip", "iface": "eth1", "cidr": "192.168.1.52/24" },
+          { "type": "set_default_route", "gateway": "192.168.1.1" }
+        ]
+      },
+      {
+        "pod": "host-2",
+        "actions": [
+          { "type": "replace_ip", "iface": "eth1", "cidr": "192.168.2.51/24" },
+          { "type": "set_default_route", "gateway": "192.168.2.1" }
+        ]
+      },
+      {
+        "pod": "host-3",
+        "actions": [
+          { "type": "replace_ip", "iface": "eth1", "cidr": "192.168.2.52/24" },
+          { "type": "set_default_route", "gateway": "192.168.2.1" }
+        ]
+      },
+      {
+        "pod": "web",
+        "actions": [
+          { "type": "set_default_route", "gateway": "192.168.3.1" }
+        ]
+      },
+      {
+        "pod": "router1",
+        "actions": [
+          { "type": "enable_snat", "iface": "eth0" },
+          { "type": "ospf_add_network", "cidr": "10.0.0.0/30", "ospf_area": "0" },
+          { "type": "ospf_add_network", "cidr": "192.168.1.0/24", "ospf_area": "0" }
+        ]
+      },
+      {
+        "pod": "router2",
+        "actions": [
+          { "type": "set_default_route", "gateway": "10.0.0.1" },
+          { "type": "ospf_add_network", "cidr": "10.0.0.0/30", "ospf_area": "0" },
+          { "type": "ospf_add_network", "cidr": "192.168.2.0/24", "ospf_area": "0" },
+          { "type": "ospf_add_network", "cidr": "192.168.3.0/24", "ospf_area": "0" }
+        ]
+      },
+      {
+        "pod": "switch-0",
+        "actions": [
+          {
+            "type": "setup_bridge",
+            "bridge": "br0",
+            "ifaces": ["eth1", "eth2", "eth3"]
+          }
+        ]
+      },
+      {
+        "pod": "switch-1",
+        "actions": [
+          {
+            "type": "setup_bridge",
+            "bridge": "br0",
+            "ifaces": ["eth1", "eth2", "eth3"]
+          }
+        ]
+      },
+      {
+        "pod": "switch-2",
+        "actions": [
+          {
+            "type": "setup_bridge",
+            "bridge": "br0",
+            "ifaces": ["eth1", "eth2"]
+          }
+        ]
+      }
+    ]
+  }

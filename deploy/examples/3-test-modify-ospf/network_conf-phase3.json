@@ -1,0 +1,16 @@
+{
+  "targets": [
+    {
+      "pod": "switch-0",
+      "actions": [
+        { "type": "add_interface_to_bridge", "bridge": "br0", "iface": "eth3" }
+      ]
+    },
+    {
+      "pod": "debian-host-0",
+      "actions": [
+        { "type": "set_default_route", "gateway": "10.0.1.1" }
+      ]
+    }
+  ]
+}

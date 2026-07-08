@@ -1,0 +1,58 @@
+{
+  "targets": [
+    {
+      "pod": "switch-0",
+      "actions": [
+        {
+          "type": "setup_bridge",
+          "bridge": "br0",
+          "ifaces": ["eth1", "eth2"]
+        }
+      ]
+    },
+    {
+      "pod": "switch-1",
+      "actions": [
+        {
+          "type": "setup_bridge",
+          "bridge": "br0",
+          "ifaces": ["eth1", "eth2"]
+        }
+      ]
+    },
+    {
+      "pod": "frr-router-0",
+      "actions": [
+        { "type": "ospf_set_router_id", "router_id": "10.0.254.1" },
+        { "type": "ospf_add_network", "cidr": "10.0.1.0/24", "ospf_area": "0" },
+        { "type": "ospf_add_network", "cidr": "10.0.254.0/30", "ospf_area": "0" },
+        { "type": "ospf_passive_default" },
+        { "type": "ospf_no_passive", "iface": "eth2" },
+        { "type": "ospf_mtu_ignore", "iface": "eth2" }
+      ]
+    },
+    {
+      "pod": "vyos-router-0",
+      "actions": [
+        { "type": "ospf_set_router_id", "router_id": "10.0.254.2" },
+        { "type": "ospf_add_network", "cidr": "10.0.2.0/24", "ospf_area": "0" },
+        { "type": "ospf_add_network", "cidr": "10.0.254.0/30", "ospf_area": "0" },
+        { "type": "ospf_passive_default" },
+        { "type": "ospf_no_passive", "iface": "eth2" },
+        { "type": "ospf_mtu_ignore", "iface": "eth2" }
+      ]
+    },
+    {
+      "pod": "ubuntu-host-0",
+      "actions": [
+        { "type": "set_default_route", "gateway": "10.0.1.1" }
+      ]
+    },
+    {
+      "pod": "alpine-host-0",
+      "actions": [
+        { "type": "set_default_route", "gateway": "10.0.2.1" }
+      ]
+    }
+  ]
+}

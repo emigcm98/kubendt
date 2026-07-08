@@ -1,0 +1,99 @@
+{
+  "targets": [
+    {
+      "pod": "pc-0",
+      "actions": [
+        {
+          "type": "set_default_route",
+          "gateway": "10.0.1.1"
+        }
+      ]
+    },
+    {
+      "pod": "pc-1",
+      "actions": [
+        {
+          "type": "set_default_route",
+          "gateway": "10.0.1.1"
+        }
+      ]
+    },
+    {
+      "pod": "pc-2",
+      "actions": [
+        {
+          "type": "set_default_route",
+          "gateway": "10.0.2.1"
+        }
+      ]
+    },
+    {
+      "pod": "pc-3",
+      "actions": [
+        {
+          "type": "set_default_route",
+          "gateway": "10.0.2.1"
+        }
+      ]
+    },
+    {
+      "pod": "r1-0",
+      "actions": [
+        {
+          "type": "enable_snat",
+          "iface": "eth0"
+        }
+      ]
+    },
+    {
+      "pod": "sw-0",
+      "actions": [
+        {
+          "type": "setup_bridge",
+          "bridge": "br0",
+          "ifaces": [
+            "eth1",
+            "eth2",
+            "eth3"
+          ]
+        }
+      ]
+    },
+    {
+      "pod": "sw-1",
+      "actions": [
+        {
+          "type": "setup_bridge",
+          "bridge": "br0",
+          "ifaces": [
+            "eth1",
+            "eth2",
+            "eth3"
+          ]
+        }
+      ]
+    },
+    {
+      "pod": "ovs",
+      "actions": [
+        {
+          "type": "setup_bridge",
+          "bridge": "br0",
+          "ifaces": [
+            "eth1",
+            "eth2"
+          ]
+        }
+      ]
+    },
+    {
+      "pod": "server",
+      "actions": [
+        {
+          "type": "set_default_route",
+          "gateway": "10.0.3.1"
+        }
+      ]
+    }
+  ]
+}

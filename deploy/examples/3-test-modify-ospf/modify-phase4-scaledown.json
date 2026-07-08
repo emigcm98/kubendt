@@ -1,0 +1,5 @@
+{
+  "scale": [
+    { "name": "alpine-host", "replicas": 1 }
+  ]
+}

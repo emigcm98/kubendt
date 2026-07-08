@@ -1,0 +1,64 @@
+#!/bin/sh
+# kubendt-net-name <kernel-name> <mac>
+#
+# Looks up <mac> in the MAC→ifname table delivered by entrypoint.sh via
+# QEMU SMBIOS Type 11 (OEM Strings) and prints the desired VyOS interface
+# name for it. Prints nothing (and exits 0) when there is no entry, so the
+# caller can leave ENV{VYOS_IFNAME} empty and let VyOS' default naming path
+# run.
+#
+# Netmap format: each entry is one SMBIOS OEM string of the form
+#     kubendt-netmap:<MAC>=<ifname>
+# e.g.
+#     kubendt-netmap:0a:f0:68:3e:9f:9e=eth2
+#     kubendt-netmap:26:fd:c6:c1:07:a8=eth10
+#
+# Why SMBIOS Type 11 (and not QEMU fw_cfg): VyOS' kernel builds with
+# CONFIG_FW_CFG_SYSFS unset, so /sys/firmware/qemu_fw_cfg never exists.
+# CONFIG_DMI=y is ubiquitous and parses SMBIOS in core; Type 11 entries are
+# exposed as a binary blob at /sys/firmware/dmi/entries/11-<n>/raw, which
+# we parse below without depending on dmidecode/strings (not shipped with
+# VyOS).
+
+set -e
+
+KERNEL_NAME="$1"
+MAC="$2"
+
+# Be silent if anything we depend on is missing, the worst case is just
+# VyOS' usual sequential-fallback running, which is no regression.
+[ -n "$MAC" ] || exit 0
+
+mac_lc=$(printf '%s' "$MAC" | tr 'A-Z' 'a-z')
+prefix="kubendt-netmap:${mac_lc}="
+
+# QEMU normally emits all Type 11 values as a single structure with one
+# OEM string per -smbios arg, exposed as /sys/firmware/dmi/entries/11-0/raw.
+# Iterate the whole glob defensively in case multiple structures appear.
+#
+# Note: the SMBIOS Type 11 structure has a 5-byte formatted header
+# (type/length/handle/count) immediately followed by the first OEM string
+# with no separator. After `tr '\0' '\n'` the first string ends up with
+# 2 leftover binary bytes (the handle's high byte and the count) glued to
+# its start, so we cannot anchor the match at column 1, that would silently
+# drop the very first entry. The "kubendt-netmap:" prefix is specific enough
+# that a substring match is safe.
+name=$(
+    for raw in /sys/firmware/dmi/entries/11-*/raw; do
+        [ -r "$raw" ] && tr '\0' '\n' < "$raw"
+    done \
+    | awk -v p="$prefix" '
+        {
+            idx = index(tolower($0), p)
+            if (idx > 0) {
+                print substr($0, idx + length(p))
+                exit
+            }
+        }
+    '
+)
+
+if [ -n "$name" ]; then
+    printf '%s' "$name"
+fi
+exit 0

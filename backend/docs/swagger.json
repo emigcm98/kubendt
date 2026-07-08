@@ -1,0 +1,4373 @@
+{
+    "schemes": [
+        "http"
+    ],
+    "swagger": "2.0",
+    "info": {
+        "description": "REST API for KubeNDT (Kubernetes Network Digital Twin).",
+        "title": "KubeNDT API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/",
+    "paths": {
+        "/auth/login": {
+            "post": {
+                "description": "Exchanges the admin password for an HttpOnly session cookie.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Log in",
+                "parameters": [
+                    {
+                        "description": "Admin password",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.LoginResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/logout": {
+            "post": {
+                "description": "Revokes the current session and clears the cookie.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Log out",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.AuthStatus"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/me": {
+            "get": {
+                "description": "Reports whether auth is enabled and whether the caller is authenticated.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Current auth state",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.AuthStatus"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/tokens": {
+            "get": {
+                "description": "Lists API token metadata (never the secrets). Requires a session or the admin password.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "List API tokens",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.APITokenList"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Mints a long-lived bearer token (returned only once). Requires a session or the admin password (not another token).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Create an API token",
+                "parameters": [
+                    {
+                        "description": "Token name",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.CreateTokenRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/types.CreateTokenResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/tokens/{id}": {
+            "delete": {
+                "description": "Revokes an API token by id. Requires a session or the admin password.",
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Revoke an API token",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Token id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/capture/clear/{namespace}/{podName}/{container}": {
+            "post": {
+                "description": "Empties a stopped capture's pcap so a later export starts fresh.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "capture"
+                ],
+                "summary": "Clear capture pcap",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pod name",
+                        "name": "podName",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Capture container id",
+                        "name": "container",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Capture run id",
+                        "name": "pcap",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.MessageResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/capture/packet/{namespace}/{podName}/{container}/{num}": {
+            "get": {
+                "description": "Re-dissects a single packet from a capture's pcap into a full JSON protocol tree (Wireshark's own dissection via tshark -T json).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "capture"
+                ],
+                "summary": "Packet dissection",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pod name",
+                        "name": "podName",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Capture container id",
+                        "name": "container",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Frame number",
+                        "name": "num",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Capture run id",
+                        "name": "pcap",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Wireshark JSON dissection",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/capture/pcap/{namespace}/{podName}/{container}": {
+            "get": {
+                "description": "Streams the pcap a capture run wrote, as a file download. Without `frames` it returns the whole capture; with `frames` (a comma list of numbers/ranges, e.g. 1-5,9,12-20) it returns only those packets (used to export the current display filter).",
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "capture"
+                ],
+                "summary": "Download capture pcap",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pod name",
+                        "name": "podName",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Capture container id",
+                        "name": "container",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Capture run id",
+                        "name": "pcap",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Frame numbers/ranges to export (e.g. 1-5,9,12-20)",
+                        "name": "frames",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/capture/ws/{namespace}/{podName}/{interface}": {
+            "get": {
+                "description": "Injects an ephemeral tshark container into the pod (sharing its network namespace) and streams a live capture of one interface. Control frames are JSON ({type:\"meta\"|\"status\"|\"error\"}); every other text frame is one packet row as tab-separated Wireshark columns (No, Time, Source, Destination, Protocol, Length, Info). Closing the socket stops the capture. Optional `filter` is a BPF capture filter; optional `container` reuses an existing capture container on reconnect.",
+                "tags": [
+                    "capture"
+                ],
+                "summary": "Live packet capture (WebSocket)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pod name",
+                        "name": "podName",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Interface to capture (e.g. eth1)",
+                        "name": "interface",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "BPF capture filter",
+                        "name": "filter",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Existing capture container to reuse",
+                        "name": "container",
+                        "in": "query"
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/cluster/nodes/{name}": {
+            "get": {
+                "description": "Returns the full kubectl-derivable view of a single node: pod CIDR, addresses, OS info, kubelet/runtime versions, capacity vs allocatable, conditions, taints, labels and annotations. Live usage is included when metrics-server is reachable.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cluster"
+                ],
+                "summary": "Get a node's detailed info",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Node name",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.NodeDetailResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/cluster/status": {
+            "get": {
+                "description": "Returns connection status and node info for the Kubernetes cluster.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cluster"
+                ],
+                "summary": "Get cluster status",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.ClusterStatusResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/drivers/": {
+            "get": {
+                "description": "Returns all registered KubeNDT drivers (e.g. linux-switch, ovs-switch, frr-router).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "drivers"
+                ],
+                "summary": "List available drivers",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.DriversListResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/drivers/history/namespace/{namespace}": {
+            "delete": {
+                "description": "Deletes all persisted driver operations across all pods in the namespace.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "drivers"
+                ],
+                "summary": "Delete persisted driver history for a namespace",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.DeleteNamespaceDriverHistoryResponseDoc"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/drivers/history/namespace/{namespace}/pod/{podName}": {
+            "delete": {
+                "description": "Deletes all persisted driver operations for one resolved pod in a namespace (supports base name and indexed pod name).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "drivers"
+                ],
+                "summary": "Delete persisted driver history for one pod",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pod reference (e.g. router1 or router1-0)",
+                        "name": "podName",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.DeletePodDriverHistoryResponseDoc"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/drivers/history/{id}": {
+            "delete": {
+                "description": "Removes a single persisted driver operation from history using its unique operation ID.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "drivers"
+                ],
+                "summary": "Delete one persisted driver operation by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Operation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.DeleteDriverHistoryByIDResponseDoc"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/drivers/history/{namespace}": {
+            "get": {
+                "description": "Returns all persisted driver operations for the namespace across all pods in execution order (oldest first). Each entry includes action payload, execution timestamp, pod name, and equivalent shell commands reconstructed from current driver capabilities when available.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "drivers"
+                ],
+                "summary": "List persisted driver history by namespace",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.NamespaceDriverHistoryResponseDoc"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/drivers/history/{namespace}/{podName}": {
+            "get": {
+                "description": "Returns persisted driver operations for a resolved pod in a namespace (supports base name and indexed pod name). Entries are ordered by insertion time and include action payload, timestamp, and reconstructed equivalent shell commands.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "drivers"
+                ],
+                "summary": "List persisted driver history by pod",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pod reference (e.g. router1 or router1-0)",
+                        "name": "podName",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.PodDriverHistoryResponseDoc"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/drivers/{driver}": {
+            "get": {
+                "description": "Returns the full info (type, executor, capabilities and interface-name constraints) for one registered driver. Same per-item shape used by `GET /drivers/`.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "drivers"
+                ],
+                "summary": "Get a single driver",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Driver name",
+                        "name": "driver",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.DriverInfo"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/file-ops/{namespace}/export": {
+            "get": {
+                "description": "Downloads all files for a namespace as a .zip archive.",
+                "produces": [
+                    "application/zip"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Export as ZIP",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ZIP archive",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/file-ops/{namespace}/folder": {
+            "post": {
+                "description": "Creates a new directory inside namespace file storage.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Create folder",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Folder path to create",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.CreateFolderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.MessageResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/file-ops/{namespace}/import": {
+            "post": {
+                "description": "Imports a .zip or .tar.gz archive into namespace file storage.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Import archive",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Archive file (.zip or .tar.gz)",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Target extraction sub-path",
+                        "name": "path",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.MessageResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/file-ops/{namespace}/rename": {
+            "post": {
+                "description": "Renames or moves a file within namespace storage.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Rename / move file",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Old and new paths",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.RenameFileRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.MessageResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/files/{namespace}": {
+            "get": {
+                "description": "Lists files and directories in the namespace's file storage.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "List files",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sub-path to list (default: root)",
+                        "name": "path",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.FilesListResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Permanently removes every file and folder inside the namespace file-manager directory, then recreates the empty directory.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Delete all namespace files",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.MessageResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/files/{namespace}/": {
+            "post": {
+                "description": "Uploads a file to the namespace's file storage (multipart/form-data).",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Upload file",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "File to upload",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Target sub-path",
+                        "name": "path",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.MessageResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/files/{namespace}/{filename}": {
+            "get": {
+                "description": "Returns the raw content of a file stored for the namespace.",
+                "produces": [
+                    "text/plain"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Get file content",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "File path (relative to namespace root)",
+                        "name": "filename",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "File content",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Overwrites the content of an existing file.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Update file content",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "File path",
+                        "name": "filename",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New file content payload",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.UpdateFileContentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.MessageResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Deletes a file from namespace storage.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Delete file",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "File path",
+                        "name": "filename",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.MessageResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/healthz": {
+            "get": {
+                "description": "Returns basic service/process health and build metadata.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "system"
+                ],
+                "summary": "Liveness check",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.HealthResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/kube/config": {
+            "get": {
+                "description": "Returns information about the currently loaded kubeconfig (contexts, current context, server URLs).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "kubeconfig"
+                ],
+                "summary": "Get kubeconfig info",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.KubeConfigInfo"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Loads kubeconfig from an uploaded file.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "kubeconfig"
+                ],
+                "summary": "Load kubeconfig file",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Kubeconfig file",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.KubeConfigInfo"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/kube/context": {
+            "post": {
+                "description": "Switches the active Kubernetes context.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "kubeconfig"
+                ],
+                "summary": "Set kubeconfig context",
+                "parameters": [
+                    {
+                        "description": "Context name to activate",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.SetContextRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.SetKubeContextResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/namespaces/": {
+            "get": {
+                "description": "Returns all Kubernetes namespaces labelled kubendt/enabled=true.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "namespaces"
+                ],
+                "summary": "List namespaces",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.NamespacesListResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Creates a new Kubernetes namespace and labels it for KubeNDT.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "namespaces"
+                ],
+                "summary": "Create namespace",
+                "parameters": [
+                    {
+                        "description": "Namespace to create",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.CreateNamespaceRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.MessageResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Namespace name already exists (empty or with resources)",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/namespaces/ips/{namespace}": {
+            "get": {
+                "description": "Returns IP, MAC, and NAT configuration for every pod in the namespace.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "namespaces"
+                ],
+                "summary": "Get interfaces for all pods in a namespace",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "$ref": "#/definitions/types.PodInterfaceInfo"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/namespaces/metrics/{namespace}": {
+            "get": {
+                "description": "Returns real-time CPU (millicores) and memory (bytes/MiB) usage for every pod in a namespace, both per-pod and aggregated over the namespace, via the Kubernetes metrics-server API. Returns HTTP 503 with {\"available\": false} when metrics-server is not installed or not yet ready.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "namespaces"
+                ],
+                "summary": "Get namespace CPU/RAM metrics",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.NamespaceMetricsResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/types.PodMetricsUnavailableResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/namespaces/operation/{namespace}": {
+            "get": {
+                "description": "Returns the active operation lock (deploy/modify/clear) for the namespace, or null when idle. Cheap DB read; polled by the UI to reflect a running operation after a reload or navigation.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "namespaces"
+                ],
+                "summary": "Get in-progress operation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.NamespaceOperationResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/namespaces/summary/{namespace}": {
+            "get": {
+                "description": "Returns an aggregated operational summary of the namespace: topology status, node/pod counts, type and driver distribution, persisted operation stats, and active namespace lock (if any).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "namespaces"
+                ],
+                "summary": "Get namespace summary",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.NamespaceSummaryResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/namespaces/{namespace}": {
+            "delete": {
+                "description": "Deletes a KubeNDT namespace and all resources inside it.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "namespaces"
+                ],
+                "summary": "Delete namespace",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.MessageResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/network/clear-topology/{namespace}": {
+            "delete": {
+                "description": "Deletes all topology resources in a namespace without deleting the namespace itself.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "network"
+                ],
+                "summary": "Clear namespace topology",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.ClearTopologyResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/types.NamespaceOperationConflictResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/network/configure/{namespace}": {
+            "post": {
+                "description": "Applies driver-based configuration actions (routes, bridges, NAT, TC, etc.) to pods concurrently. Each action can include options: {\"persist_history\": false, \"capture_output\": true}. The response includes a sequential_equivalent time (sum of per-pod durations) and a speedup factor vs the concurrent wall time.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "network"
+                ],
+                "summary": "Configure network (drivers)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Configuration request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.ConfigureNetworkRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.ConfigureNetworkResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/network/deploy-network/{namespace}": {
+            "post": {
+                "description": "Deploys a full network topology (nodes + links) into a namespace. In links, use the reserved name \"external\" for either node or peerNode to create a host uplink (external network connection). Both ends of a link cannot be \"external\" simultaneously.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "network"
+                ],
+                "summary": "Deploy network topology",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Topology definition",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.DeployRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.DeployNetworkResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/types.NamespaceOperationConflictResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/network/get-network/{namespace}": {
+            "get": {
+                "description": "Returns the current network topology deployed in a namespace.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "network"
+                ],
+                "summary": "Get network topology",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.NetworkTopologyResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/network/modify-network/{namespace}": {
+            "post": {
+                "description": "Adds or removes nodes/links from an existing topology.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "network"
+                ],
+                "summary": "Modify network topology",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Delta topology (add/delete)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.NetworkModifyRequestDoc"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.ModifyNetworkResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/types.NamespaceOperationConflictResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/network/positions/{namespace}": {
+            "get": {
+                "description": "Returns the saved visual positions for nodes in a namespace.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "network"
+                ],
+                "summary": "Get node positions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.NodePositionsResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Persists visual positions of nodes in the topology graph.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "network"
+                ],
+                "summary": "Save node positions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Map of node name to {x, y} position",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.NodePositionsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.MessageResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/pods/ips/{namespace}/{podName}": {
+            "get": {
+                "description": "Returns interface list (name, MAC, IPv4) for a single pod. By\ndefault the result is scoped to the interfaces declared in the\npod's topology (its link endpoints), excluding the reserved CNI\nmanagement interface, loopback and kernel pseudo-interfaces. Use\nscope=all for the full set including the management interface.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pods"
+                ],
+                "summary": "Get interfaces from a pod",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pod name",
+                        "name": "podName",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Return only this interface",
+                        "name": "intf",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "topology",
+                            "all"
+                        ],
+                        "type": "string",
+                        "description": "Interface scope: topology (default) or all",
+                        "name": "scope",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.PodInterfacesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/pods/metrics/{namespace}/{podName}": {
+            "get": {
+                "description": "Returns real-time CPU (millicores) and memory (bytes/MiB) usage for a single pod via the Kubernetes metrics-server API. Returns HTTP 503 with {\"available\": false} when metrics-server is not installed or not yet ready.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pods"
+                ],
+                "summary": "Get pod CPU/RAM metrics",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pod name",
+                        "name": "podName",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.PodMetricsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/types.PodMetricsUnavailableResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/pods/restart/{namespace}/{podName}": {
+            "patch": {
+                "description": "Restarts a pod by deleting it (the StatefulSet controller recreates it),\nwaits for it to reach Running state, then replays all persisted driver\noperations from its history. The response includes a took_time breakdown\nseparating pod_restart (time until Running) from replay (re-execution of\npersisted actions).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pods"
+                ],
+                "summary": "Restart pod",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pod name",
+                        "name": "podName",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.RestartPodResponseDoc"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/pods/tc/{namespace}/{podName}/{interface}": {
+            "get": {
+                "description": "Returns Traffic Control qdisc information for a pod interface.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pods"
+                ],
+                "summary": "Show Qdisc (TC) info",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pod name",
+                        "name": "podName",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Interface name (e.g. eth1)",
+                        "name": "interface",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.QdiscResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/pods/{namespace}": {
+            "get": {
+                "description": "Lists all KubeNDT-managed pods (StatefulSets) in a namespace.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pods"
+                ],
+                "summary": "List pods",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.PodsListResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/readyz": {
+            "get": {
+                "description": "Returns readiness state for backend dependencies such as database and Kubernetes clients.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "system"
+                ],
+                "summary": "Readiness check",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.ReadinessResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/types.ReadinessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/shell/ws/{namespace}/{podName}": {
+            "get": {
+                "description": "Opens a WebSocket connection providing an interactive shell inside a pod. Query parameter `mode` controls shell type: `auto` (default), `sh`, or `serial`.",
+                "tags": [
+                    "shell"
+                ],
+                "summary": "Interactive shell (WebSocket)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pod name",
+                        "name": "podName",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "auto",
+                            "sh",
+                            "serial"
+                        ],
+                        "type": "string",
+                        "default": "auto",
+                        "description": "Shell mode: auto|sh|serial",
+                        "name": "mode",
+                        "in": "query"
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/version": {
+            "get": {
+                "description": "Returns service name and build metadata.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "system"
+                ],
+                "summary": "Service version",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.VersionResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "types.APIToken": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "integer",
+                    "example": 1782905018
+                },
+                "expires_at": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "last_used_at": {
+                    "type": "integer",
+                    "example": 1782905090
+                },
+                "name": {
+                    "type": "string",
+                    "example": "ci-pipeline"
+                }
+            }
+        },
+        "types.APITokenList": {
+            "type": "object",
+            "properties": {
+                "tokens": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.APIToken"
+                    }
+                }
+            }
+        },
+        "types.ActionEntry": {
+            "type": "object"
+        },
+        "types.ActionOptions": {
+            "type": "object",
+            "properties": {
+                "capture_output": {
+                    "description": "CaptureOutput controls whether command output is returned in the response.",
+                    "type": "boolean",
+                    "example": true
+                },
+                "persist_history": {
+                    "description": "PersistHistory controls whether the action is persisted in driver history.",
+                    "type": "boolean",
+                    "example": false
+                }
+            }
+        },
+        "types.AuthStatus": {
+            "type": "object",
+            "properties": {
+                "authenticated": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "enabled": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "identity": {
+                    "type": "string",
+                    "example": "admin"
+                },
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "admin"
+                    ]
+                }
+            }
+        },
+        "types.CapabilityEntry": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "example": "Management of addressing and routes."
+                },
+                "id": {
+                    "type": "string",
+                    "example": "L3Capable"
+                },
+                "label": {
+                    "type": "string",
+                    "example": "Level 3: IP addressing"
+                },
+                "methods": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.DriverMethodEntry"
+                    }
+                }
+            }
+        },
+        "types.ClearTimingResponse": {
+            "type": "object",
+            "properties": {
+                "total": {
+                    "type": "string",
+                    "example": "1.20s"
+                }
+            }
+        },
+        "types.ClearTopologyResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "Topology resources cleared successfully"
+                },
+                "took_time": {
+                    "$ref": "#/definitions/types.ClearTimingResponse"
+                }
+            }
+        },
+        "types.ClusterNodeInfo": {
+            "type": "object",
+            "properties": {
+                "cpu_capacity": {
+                    "type": "string",
+                    "example": "8"
+                },
+                "cpu_percentage": {
+                    "type": "number",
+                    "example": 5.28
+                },
+                "cpu_usage": {
+                    "type": "string",
+                    "example": "423m"
+                },
+                "kubelet_version": {
+                    "type": "string",
+                    "example": "v1.31.0"
+                },
+                "memory_capacity": {
+                    "type": "string",
+                    "example": "15.56Gi"
+                },
+                "memory_percentage": {
+                    "type": "number",
+                    "example": 27.77
+                },
+                "memory_usage": {
+                    "type": "string",
+                    "example": "4.32Gi"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "k8s-worker-1"
+                },
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "worker"
+                    ]
+                },
+                "status": {
+                    "type": "string",
+                    "example": "Ready"
+                }
+            }
+        },
+        "types.ClusterStatusResponse": {
+            "type": "object",
+            "properties": {
+                "avg_cpu_percentage": {
+                    "description": "Cluster-wide weighted averages computed as sum(usage)/sum(capacity)\nacross nodes that report metrics. Zero when metrics-server is\nunavailable or no node reports metrics.",
+                    "type": "number",
+                    "example": 5.28
+                },
+                "avg_memory_percentage": {
+                    "type": "number",
+                    "example": 27.77
+                },
+                "nodes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.ClusterNodeInfo"
+                    }
+                },
+                "ready": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "types.ConfigureNetworkRequest": {
+            "type": "object"
+        },
+        "types.ConfigureNetworkResponse": {
+            "type": "object",
+            "properties": {
+                "failures": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "skipped": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "speedup": {
+                    "type": "number",
+                    "example": 6.35
+                },
+                "status": {
+                    "type": "string",
+                    "example": "success"
+                },
+                "successes": {
+                    "type": "integer",
+                    "example": 8
+                },
+                "took_time": {
+                    "$ref": "#/definitions/types.ConfigureTimingResponse"
+                }
+            }
+        },
+        "types.ConfigureTimingResponse": {
+            "type": "object",
+            "properties": {
+                "sequential_equivalent": {
+                    "type": "string",
+                    "example": "7.81s"
+                },
+                "total": {
+                    "type": "string",
+                    "example": "1.23s"
+                }
+            }
+        },
+        "types.CreateFolderRequest": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "example": "configs/routers"
+                }
+            }
+        },
+        "types.CreateNamespaceRequest": {
+            "type": "object",
+            "properties": {
+                "namespace": {
+                    "type": "string",
+                    "example": "prueba"
+                }
+            }
+        },
+        "types.CreateTokenRequest": {
+            "type": "object",
+            "properties": {
+                "expires_in_days": {
+                    "description": "Days until the token expires; 0 or omitted means it never expires.",
+                    "type": "integer",
+                    "example": 30
+                },
+                "name": {
+                    "type": "string",
+                    "example": "ci-pipeline"
+                }
+            }
+        },
+        "types.CreateTokenResponse": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "example": "ci-pipeline"
+                },
+                "token": {
+                    "type": "string",
+                    "example": "kdt_9f3a...."
+                }
+            }
+        },
+        "types.DeleteDriverHistoryByIDResponseDoc": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer",
+                    "example": 42
+                },
+                "message": {
+                    "type": "string",
+                    "example": "operation deleted"
+                }
+            }
+        },
+        "types.DeleteNamespaceDriverHistoryResponseDoc": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "namespace history deleted"
+                },
+                "namespace": {
+                    "type": "string",
+                    "example": "test-small"
+                }
+            }
+        },
+        "types.DeletePodDriverHistoryResponseDoc": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "pod history deleted"
+                },
+                "namespace": {
+                    "type": "string",
+                    "example": "test-small"
+                },
+                "pod": {
+                    "type": "string",
+                    "example": "router1-0"
+                }
+            }
+        },
+        "types.DeployNetworkResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "Network infrastructure deployed successfully"
+                },
+                "took_time": {
+                    "$ref": "#/definitions/types.DeployTimingResponse"
+                },
+                "warnings": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.WarningDoc"
+                    }
+                }
+            }
+        },
+        "types.DeployRequest": {
+            "type": "object",
+            "properties": {
+                "links": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.LinkSpec"
+                    }
+                },
+                "nodes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.NodeSpec"
+                    }
+                }
+            }
+        },
+        "types.DeployTimingResponse": {
+            "type": "object",
+            "properties": {
+                "node_running": {
+                    "type": "string",
+                    "example": "45.01s"
+                },
+                "reconciliation": {
+                    "type": "string",
+                    "example": "6.18s"
+                },
+                "resource_creation": {
+                    "type": "string",
+                    "example": "0.24s"
+                },
+                "total": {
+                    "type": "string",
+                    "example": "51.43s"
+                }
+            }
+        },
+        "types.DeviceSpec": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "description": "absolute path on host",
+                    "type": "string",
+                    "example": "/dev/net/tun"
+                }
+            }
+        },
+        "types.DriverInfo": {
+            "type": "object",
+            "properties": {
+                "capabilities": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.CapabilityEntry"
+                    }
+                },
+                "executor": {
+                    "type": "string",
+                    "example": "kubectl"
+                },
+                "interfaceNameConstraints": {
+                    "$ref": "#/definitions/types.InterfaceNameConstraintsDoc"
+                },
+                "isDefault": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "name": {
+                    "type": "string",
+                    "example": "frr-router"
+                },
+                "type": {
+                    "type": "string",
+                    "example": "router"
+                }
+            }
+        },
+        "types.DriverMethodEntry": {
+            "type": "object",
+            "properties": {
+                "label": {
+                    "type": "string",
+                    "example": "LinkUp"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "link_up"
+                },
+                "params": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.DriverMethodParamEntry"
+                    }
+                }
+            }
+        },
+        "types.DriverMethodParamEntry": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "example": "iface"
+                },
+                "type": {
+                    "type": "string",
+                    "example": "string"
+                }
+            }
+        },
+        "types.DriverOperationHistoryEntryDoc": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "$ref": "#/definitions/types.ActionEntry"
+                },
+                "action_type": {
+                    "type": "string",
+                    "example": "add_static_route"
+                },
+                "commands": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "ip route add 10.10.0.0/16 via 10.0.0.1 dev net1"
+                    ]
+                },
+                "driver_type": {
+                    "type": "string",
+                    "example": "*drivers.FRRRouterDriver"
+                },
+                "executed_at": {
+                    "type": "string",
+                    "example": "2026-03-22T11:25:44.113Z"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 12
+                },
+                "pod_name": {
+                    "type": "string",
+                    "example": "router1-0"
+                }
+            }
+        },
+        "types.DriverReplayStatsDoc": {
+            "type": "object",
+            "properties": {
+                "pruned": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "replayed": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 3
+                }
+            }
+        },
+        "types.DriversListResponse": {
+            "type": "object",
+            "properties": {
+                "drivers": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.DriverInfo"
+                    }
+                }
+            }
+        },
+        "types.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "descriptive error message"
+                }
+            }
+        },
+        "types.FileEntry": {
+            "type": "object",
+            "properties": {
+                "modTime": {
+                    "type": "string",
+                    "example": "2026-03-10 08:15:00"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "ospfd.conf"
+                },
+                "path": {
+                    "type": "string",
+                    "example": "/prueba/ospfd.conf"
+                },
+                "size": {
+                    "type": "integer",
+                    "example": 2048
+                },
+                "type": {
+                    "type": "string",
+                    "example": "file"
+                }
+            }
+        },
+        "types.FilesListResponse": {
+            "type": "object",
+            "properties": {
+                "files": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.FileEntry"
+                    }
+                }
+            }
+        },
+        "types.HealthResponse": {
+            "type": "object",
+            "properties": {
+                "build_date": {
+                    "type": "string",
+                    "example": "2026-04-28T12:00:00Z"
+                },
+                "commit": {
+                    "type": "string",
+                    "example": "abc1234"
+                },
+                "server_time": {
+                    "type": "string",
+                    "example": "2026-04-28T12:05:00Z"
+                },
+                "service": {
+                    "type": "string",
+                    "example": "kubendt-backend"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "ok"
+                },
+                "version": {
+                    "type": "string",
+                    "example": "0.1.0-pre"
+                }
+            }
+        },
+        "types.InterfaceDetail": {
+            "type": "object",
+            "properties": {
+                "ip": {
+                    "type": "string",
+                    "example": "10.0.0.1/24"
+                },
+                "mac": {
+                    "type": "string",
+                    "example": "aa:bb:cc:dd:ee:ff"
+                }
+            }
+        },
+        "types.InterfaceNameConstraintsDoc": {
+            "type": "object",
+            "properties": {
+                "pattern": {
+                    "type": "string",
+                    "example": "^eth\\d+$"
+                },
+                "patternHuman": {
+                    "type": "string",
+                    "example": "^eth\\d+$ (e.g. eth1, eth10, eth42)"
+                },
+                "reserved": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "eth0"
+                    ]
+                }
+            }
+        },
+        "types.KubeConfigInfo": {
+            "type": "object",
+            "properties": {
+                "configured": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "context_cluster_ids": {
+                    "description": "ContextClusterIDs maps each context name to its cluster's canonical ID\n(the kube-system namespace UID). Contexts whose cluster is currently\nunreachable are omitted.",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "contexts": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "[\"my-cluster\"",
+                        "\"staging\"]"
+                    ]
+                },
+                "current_context": {
+                    "type": "string",
+                    "example": "my-cluster"
+                },
+                "path": {
+                    "type": "string",
+                    "example": "/home/user/.kube/config"
+                }
+            }
+        },
+        "types.LinkSpec": {
+            "type": "object",
+            "properties": {
+                "localIntf": {
+                    "type": "string",
+                    "example": "eth1"
+                },
+                "localIp": {
+                    "type": "string",
+                    "example": "10.0.0.1/24"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "N3"
+                },
+                "node": {
+                    "type": "string",
+                    "example": "router1"
+                },
+                "peerIntf": {
+                    "type": "string",
+                    "example": "eth1"
+                },
+                "peerIp": {
+                    "type": "string",
+                    "example": "10.0.0.2/24"
+                },
+                "peerLabel": {
+                    "type": "string",
+                    "example": "router2-eth1"
+                },
+                "peerNode": {
+                    "description": "use \"external\" as reserved name for host uplinks",
+                    "type": "string",
+                    "example": "router2"
+                },
+                "uid": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "types.LoginRequest": {
+            "type": "object",
+            "properties": {
+                "password": {
+                    "type": "string",
+                    "example": "admin123"
+                }
+            }
+        },
+        "types.LoginResponse": {
+            "type": "object",
+            "properties": {
+                "authenticated": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "identity": {
+                    "type": "string",
+                    "example": "admin"
+                },
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "admin"
+                    ]
+                }
+            }
+        },
+        "types.MessageResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "ok"
+                }
+            }
+        },
+        "types.ModifyNetworkResponse": {
+            "type": "object",
+            "properties": {
+                "add_links_count": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "add_nodes_count": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "del_links_count": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "del_nodes_count": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "deleted_nodes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "message": {
+                    "type": "string",
+                    "example": "network-modify applied successfully"
+                },
+                "restarted_pods": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "scale_count": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "scaled_down_pods": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "scaled_up_pods": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "took_time": {
+                    "$ref": "#/definitions/types.ModifyTimingResponse"
+                },
+                "warnings": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.WarningDoc"
+                    }
+                }
+            }
+        },
+        "types.ModifyTimingResponse": {
+            "type": "object",
+            "properties": {
+                "modify_operations": {
+                    "type": "string",
+                    "example": "3.12s"
+                },
+                "reconciliation": {
+                    "type": "string",
+                    "example": "2.11s"
+                },
+                "total": {
+                    "type": "string",
+                    "example": "5.23s"
+                }
+            }
+        },
+        "types.MountSpec": {
+            "type": "object",
+            "properties": {
+                "file": {
+                    "description": "file name inside namespace directory",
+                    "type": "string",
+                    "example": "ospfd.conf"
+                },
+                "mountTo": {
+                    "description": "absolute path in container",
+                    "type": "string",
+                    "example": "/etc/frr/ospfd.conf"
+                },
+                "sensitive": {
+                    "description": "marks the file as sensitive (Secret-backed)",
+                    "type": "boolean",
+                    "example": false
+                }
+            }
+        },
+        "types.NATRule": {
+            "type": "object",
+            "properties": {
+                "externalPort": {
+                    "type": "integer",
+                    "example": 8080
+                },
+                "internalIP": {
+                    "type": "string",
+                    "example": "10.0.0.5"
+                },
+                "internalPort": {
+                    "type": "integer",
+                    "example": 80
+                },
+                "protocol": {
+                    "type": "string",
+                    "example": "tcp"
+                }
+            }
+        },
+        "types.NamespaceDriverHistoryResponseDoc": {
+            "type": "object",
+            "properties": {
+                "namespace": {
+                    "type": "string",
+                    "example": "test-small"
+                },
+                "operations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.DriverOperationHistoryEntryDoc"
+                    }
+                }
+            }
+        },
+        "types.NamespaceInfo": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string",
+                    "example": "2026-01-15 10:30:00"
+                },
+                "has_topology": {
+                    "description": "HasTopology reflects whether a KubeNDT topology is currently deployed\nin this namespace (StatefulSets/Topology CRDs registered). Updated by\ndeploy / modify / clear flows and cheap to read (DB lookup).",
+                    "type": "boolean",
+                    "example": true
+                },
+                "name": {
+                    "type": "string",
+                    "example": "prueba"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "Active"
+                },
+                "uptime": {
+                    "type": "string",
+                    "example": "5 days, 2 hours, 10 minutes"
+                }
+            }
+        },
+        "types.NamespaceMetricsResponse": {
+            "type": "object",
+            "properties": {
+                "available": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "namespace": {
+                    "type": "string",
+                    "example": "modify-ospf"
+                },
+                "pod_count": {
+                    "type": "integer",
+                    "example": 6
+                },
+                "pods": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.NamespacePodMetrics"
+                    }
+                },
+                "total_cpu_milli": {
+                    "type": "integer",
+                    "example": 870
+                },
+                "total_memory_bytes": {
+                    "type": "integer",
+                    "example": 314572800
+                },
+                "total_memory_mib": {
+                    "type": "integer",
+                    "example": 300
+                }
+            }
+        },
+        "types.NamespaceOperationConflictResponse": {
+            "type": "object",
+            "properties": {
+                "current_operation": {
+                    "type": "string",
+                    "example": "modify-network"
+                },
+                "error": {
+                    "type": "string",
+                    "example": "Namespace 'prueba' already has an operation in progress"
+                },
+                "started_at": {
+                    "type": "string",
+                    "example": "2026-03-17T16:40:12Z"
+                }
+            }
+        },
+        "types.NamespaceOperationLockInfo": {
+            "type": "object",
+            "properties": {
+                "namespace": {
+                    "type": "string",
+                    "example": "open5gs"
+                },
+                "operationType": {
+                    "type": "string",
+                    "example": "deploy-network"
+                },
+                "startedAt": {
+                    "type": "string",
+                    "example": "2026-07-08T07:07:11Z"
+                }
+            }
+        },
+        "types.NamespaceOperationResponse": {
+            "type": "object",
+            "properties": {
+                "operation_lock": {
+                    "$ref": "#/definitions/types.NamespaceOperationLockInfo"
+                }
+            }
+        },
+        "types.NamespacePodMetrics": {
+            "type": "object",
+            "properties": {
+                "cpu_milli": {
+                    "type": "integer",
+                    "example": 145
+                },
+                "memory_bytes": {
+                    "type": "integer",
+                    "example": 52428800
+                },
+                "memory_mib": {
+                    "type": "integer",
+                    "example": 50
+                },
+                "pod": {
+                    "type": "string",
+                    "example": "frr-router-0"
+                }
+            }
+        },
+        "types.NamespaceSummaryDriversSection": {
+            "type": "object",
+            "properties": {
+                "by_driver": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    },
+                    "example": {
+                        "BasicHostDriver": 5,
+                        "FRRRouterDriver": 3,
+                        "HostDriver": 4,
+                        "LinuxSwitchDriver": 6
+                    }
+                }
+            }
+        },
+        "types.NamespaceSummaryNodesSection": {
+            "type": "object",
+            "properties": {
+                "by_type": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    },
+                    "example": {
+                        "host": 9,
+                        "router": 3,
+                        "switch": 6
+                    }
+                },
+                "total_replicas": {
+                    "type": "integer",
+                    "example": 18
+                }
+            }
+        },
+        "types.NamespaceSummaryOperationLockSection": {
+            "type": "object",
+            "properties": {
+                "namespace": {
+                    "type": "string",
+                    "example": "demo"
+                },
+                "operationType": {
+                    "type": "string",
+                    "example": "modify-network"
+                },
+                "startedAt": {
+                    "type": "string",
+                    "example": "2026-03-23T15:00:00Z"
+                }
+            }
+        },
+        "types.NamespaceSummaryOperationsSection": {
+            "type": "object",
+            "properties": {
+                "by_action": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    },
+                    "example": {
+                        "add_dns_nameserver": 4,
+                        "add_dns_search": 4,
+                        "enable_dnat": 3,
+                        "enable_snat": 1,
+                        "remove_default_route": 2,
+                        "replace_ip": 1,
+                        "set_default_route": 9,
+                        "setup_bridge": 6
+                    }
+                },
+                "by_driver": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    },
+                    "example": {
+                        "*drivers.BasicHostDriver": 5,
+                        "*drivers.FRRRouterDriver": 7,
+                        "*drivers.HostDriver": 12,
+                        "*drivers.LinuxSwitchDriver": 6
+                    }
+                },
+                "last_executed_at": {
+                    "type": "string",
+                    "example": "2026-03-23T15:15:25.402889011Z"
+                },
+                "pods_with_history": {
+                    "type": "integer",
+                    "example": 18
+                },
+                "total_persisted": {
+                    "type": "integer",
+                    "example": 30
+                }
+            }
+        },
+        "types.NamespaceSummaryPodsSection": {
+            "type": "object",
+            "properties": {
+                "phase_counts": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    },
+                    "example": {
+                        "Running": 18
+                    }
+                },
+                "ready": {
+                    "type": "integer",
+                    "example": 18
+                },
+                "restarting": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "running": {
+                    "type": "integer",
+                    "example": 18
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 18
+                }
+            }
+        },
+        "types.NamespaceSummaryResponse": {
+            "type": "object",
+            "properties": {
+                "drivers": {
+                    "$ref": "#/definitions/types.NamespaceSummaryDriversSection"
+                },
+                "namespace": {
+                    "$ref": "#/definitions/types.NamespaceSummarySection"
+                },
+                "nodes": {
+                    "$ref": "#/definitions/types.NamespaceSummaryNodesSection"
+                },
+                "operation_lock": {
+                    "$ref": "#/definitions/types.NamespaceSummaryOperationLockSection"
+                },
+                "operations": {
+                    "$ref": "#/definitions/types.NamespaceSummaryOperationsSection"
+                },
+                "pods": {
+                    "$ref": "#/definitions/types.NamespaceSummaryPodsSection"
+                },
+                "runtime": {
+                    "$ref": "#/definitions/types.NamespaceSummaryRuntimeSection"
+                },
+                "took_seconds": {
+                    "type": "number",
+                    "example": 0.037295681
+                },
+                "took_time": {
+                    "type": "string",
+                    "example": "37ms"
+                },
+                "topology": {
+                    "$ref": "#/definitions/types.NamespaceSummaryTopologySection"
+                }
+            }
+        },
+        "types.NamespaceSummaryRuntimeSection": {
+            "type": "object",
+            "properties": {
+                "by_runtime": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    },
+                    "example": {
+                        "k8s-linux": 18
+                    }
+                }
+            }
+        },
+        "types.NamespaceSummarySection": {
+            "type": "object",
+            "properties": {
+                "age": {
+                    "type": "string",
+                    "example": "34m58s"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2026-03-23T16:14:08+01:00"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "demo"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "Active"
+                }
+            }
+        },
+        "types.NamespaceSummaryTopologySection": {
+            "type": "object",
+            "properties": {
+                "has_topology": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "links_to_external": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "logical_links": {
+                    "type": "integer",
+                    "example": 18
+                },
+                "statefulsets": {
+                    "type": "integer",
+                    "example": 13
+                },
+                "topology_crds": {
+                    "type": "integer",
+                    "example": 18
+                }
+            }
+        },
+        "types.NamespacesListResponse": {
+            "type": "object",
+            "properties": {
+                "namespaces": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.NamespaceInfo"
+                    }
+                }
+            }
+        },
+        "types.NetworkDeleteSpecDoc": {
+            "type": "object",
+            "properties": {
+                "links": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.LinkSpec"
+                    }
+                },
+                "nodes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "types.NetworkModifyRequestDoc": {
+            "type": "object",
+            "properties": {
+                "add": {
+                    "$ref": "#/definitions/types.DeployRequest"
+                },
+                "delete": {
+                    "$ref": "#/definitions/types.NetworkDeleteSpecDoc"
+                },
+                "scale": {
+                    "description": "Scale changes the replica count of existing nodes. Each entry takes\nthe absolute number of replicas the node should end with. Replicas\nmust be \u003e= 1 (to remove a node entirely use delete.nodes).",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.ScaleSpec"
+                    }
+                }
+            }
+        },
+        "types.NetworkTopologyResponse": {
+            "type": "object",
+            "properties": {
+                "links": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.LinkSpec"
+                    }
+                },
+                "nodes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.NodeSpec"
+                    }
+                }
+            }
+        },
+        "types.NodeAddressDoc": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string",
+                    "example": "10.0.0.5"
+                },
+                "type": {
+                    "type": "string",
+                    "example": "InternalIP"
+                }
+            }
+        },
+        "types.NodeConditionDoc": {
+            "type": "object",
+            "properties": {
+                "last_transition": {
+                    "type": "string",
+                    "example": "2026-04-28T12:05:00Z"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "kubelet is posting ready status"
+                },
+                "reason": {
+                    "type": "string",
+                    "example": "KubeletReady"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "True"
+                },
+                "type": {
+                    "type": "string",
+                    "example": "Ready"
+                }
+            }
+        },
+        "types.NodeDetailResponse": {
+            "type": "object",
+            "properties": {
+                "addresses": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.NodeAddressDoc"
+                    }
+                },
+                "allocatable": {
+                    "$ref": "#/definitions/types.NodeResourceQuantityDoc"
+                },
+                "annotations": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "capacity": {
+                    "$ref": "#/definitions/types.NodeResourceQuantityDoc"
+                },
+                "conditions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.NodeConditionDoc"
+                    }
+                },
+                "cpu_milli_usage": {
+                    "type": "integer",
+                    "example": 423
+                },
+                "cpu_percentage": {
+                    "type": "number",
+                    "example": 5.28
+                },
+                "creation_timestamp": {
+                    "type": "string",
+                    "example": "2026-04-28T12:00:00Z"
+                },
+                "labels": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "memory_bytes_usage": {
+                    "type": "integer",
+                    "example": 4633038848
+                },
+                "memory_percentage": {
+                    "type": "number",
+                    "example": 27.77
+                },
+                "name": {
+                    "type": "string",
+                    "example": "k8s-worker-1"
+                },
+                "os_info": {
+                    "$ref": "#/definitions/types.NodeOSInfoDoc"
+                },
+                "pod_cidr": {
+                    "type": "string",
+                    "example": "10.244.1.0/24"
+                },
+                "pod_cidrs": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "10.244.1.0/24"
+                    ]
+                },
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "worker"
+                    ]
+                },
+                "status": {
+                    "type": "string",
+                    "example": "Ready"
+                },
+                "taints": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.NodeTaintDoc"
+                    }
+                },
+                "versions": {
+                    "$ref": "#/definitions/types.NodeVersionsInfoDoc"
+                }
+            }
+        },
+        "types.NodeOSInfoDoc": {
+            "type": "object",
+            "properties": {
+                "architecture": {
+                    "type": "string",
+                    "example": "amd64"
+                },
+                "kernel_version": {
+                    "type": "string",
+                    "example": "5.15.0-105-generic"
+                },
+                "operating_system": {
+                    "type": "string",
+                    "example": "linux"
+                },
+                "os_image": {
+                    "type": "string",
+                    "example": "Ubuntu 22.04.4 LTS"
+                }
+            }
+        },
+        "types.NodePosition": {
+            "type": "object",
+            "properties": {
+                "x": {
+                    "type": "number",
+                    "example": 120.5
+                },
+                "y": {
+                    "type": "number",
+                    "example": 340
+                }
+            }
+        },
+        "types.NodePositionsRequest": {
+            "type": "object",
+            "properties": {
+                "positions": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/types.NodePosition"
+                    }
+                }
+            }
+        },
+        "types.NodePositionsResponse": {
+            "type": "object",
+            "properties": {
+                "positions": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/types.NodePosition"
+                    }
+                }
+            }
+        },
+        "types.NodeResourceQuantityDoc": {
+            "type": "object",
+            "properties": {
+                "cpu_milli": {
+                    "type": "integer",
+                    "example": 6000
+                },
+                "memory_bytes": {
+                    "type": "integer",
+                    "example": 7290974208
+                },
+                "pods": {
+                    "type": "integer",
+                    "example": 110
+                },
+                "storage_ephemeral_bytes": {
+                    "type": "integer",
+                    "example": 42949672960
+                }
+            }
+        },
+        "types.NodeSpec": {
+            "type": "object",
+            "properties": {
+                "commands": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "devices": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.DeviceSpec"
+                    }
+                },
+                "driver": {
+                    "type": "string",
+                    "example": "frr-router"
+                },
+                "env": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "image": {
+                    "type": "string",
+                    "example": "frrouting/frr:latest"
+                },
+                "mounts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.MountSpec"
+                    }
+                },
+                "name": {
+                    "type": "string",
+                    "example": "router1"
+                },
+                "privileged": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "replicas": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "shellMode": {
+                    "type": "string",
+                    "example": "sh"
+                },
+                "type": {
+                    "type": "string",
+                    "example": "router"
+                }
+            }
+        },
+        "types.NodeTaintDoc": {
+            "type": "object",
+            "properties": {
+                "effect": {
+                    "type": "string",
+                    "example": "NoSchedule"
+                },
+                "key": {
+                    "type": "string",
+                    "example": "node-role.kubernetes.io/control-plane"
+                },
+                "time_added": {
+                    "type": "string",
+                    "example": "2026-04-28T12:00:00Z"
+                },
+                "value": {
+                    "type": "string",
+                    "example": ""
+                }
+            }
+        },
+        "types.NodeVersionsInfoDoc": {
+            "type": "object",
+            "properties": {
+                "container_runtime_version": {
+                    "type": "string",
+                    "example": "containerd://1.7.20"
+                },
+                "kubelet_version": {
+                    "type": "string",
+                    "example": "v1.32.2"
+                }
+            }
+        },
+        "types.PodDriverHistoryResponseDoc": {
+            "type": "object",
+            "properties": {
+                "namespace": {
+                    "type": "string",
+                    "example": "test-small"
+                },
+                "operations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.DriverOperationHistoryEntryDoc"
+                    }
+                },
+                "pod": {
+                    "type": "string",
+                    "example": "router1-0"
+                }
+            }
+        },
+        "types.PodInfo": {
+            "type": "object",
+            "properties": {
+                "baseName": {
+                    "type": "string",
+                    "example": "router"
+                },
+                "createdAt": {
+                    "type": "string",
+                    "example": "2026-01-15 10:30:00"
+                },
+                "driver": {
+                    "type": "string",
+                    "example": "frr-router"
+                },
+                "image": {
+                    "type": "string",
+                    "example": "frrouting/frr:latest"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "router1"
+                },
+                "namespace": {
+                    "type": "string",
+                    "example": "prueba"
+                },
+                "node": {
+                    "type": "string",
+                    "example": "k8s-worker-1"
+                },
+                "replicaCount": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "replicaIndex": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "runtime": {
+                    "type": "string",
+                    "example": "k8s-linux"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "Running"
+                },
+                "type": {
+                    "type": "string",
+                    "example": "router"
+                },
+                "uptime": {
+                    "type": "string",
+                    "example": "1 days, 4 hours, 5 minutes"
+                }
+            }
+        },
+        "types.PodInterfaceEntry": {
+            "type": "object",
+            "properties": {
+                "interface": {
+                    "type": "string",
+                    "example": "eth1"
+                },
+                "ipv4": {
+                    "type": "string",
+                    "example": "10.0.0.1/24"
+                },
+                "mac": {
+                    "type": "string",
+                    "example": "aa:bb:cc:dd:ee:ff"
+                }
+            }
+        },
+        "types.PodInterfaceInfo": {
+            "type": "object",
+            "properties": {
+                "interfaces": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/types.InterfaceDetail"
+                    }
+                },
+                "nat": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.NATRule"
+                    }
+                }
+            }
+        },
+        "types.PodInterfacesResponse": {
+            "type": "object",
+            "properties": {
+                "interfaces": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.PodInterfaceEntry"
+                    }
+                }
+            }
+        },
+        "types.PodMetricsResponse": {
+            "type": "object",
+            "properties": {
+                "available": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "cpu_milli": {
+                    "type": "integer",
+                    "example": 145
+                },
+                "memory_bytes": {
+                    "type": "integer",
+                    "example": 52428800
+                },
+                "memory_mib": {
+                    "type": "integer",
+                    "example": 50
+                },
+                "pod": {
+                    "type": "string",
+                    "example": "router1-0"
+                }
+            }
+        },
+        "types.PodMetricsUnavailableResponse": {
+            "type": "object",
+            "properties": {
+                "available": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "error": {
+                    "type": "string",
+                    "example": "metrics-server not available or not installed"
+                }
+            }
+        },
+        "types.PodsListResponse": {
+            "type": "object",
+            "properties": {
+                "pods": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.PodInfo"
+                    }
+                }
+            }
+        },
+        "types.QdiscResponse": {
+            "type": "object",
+            "properties": {
+                "interface": {
+                    "type": "string",
+                    "example": "eth1"
+                },
+                "tcparams": {
+                    "type": "object",
+                    "additionalProperties": true
+                }
+            }
+        },
+        "types.ReadinessResponse": {
+            "type": "object",
+            "properties": {
+                "checks": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    },
+                    "example": {
+                        "database": "ok",
+                        "kubernetes": "ok"
+                    }
+                },
+                "server_time": {
+                    "type": "string",
+                    "example": "2026-04-28T12:05:00Z"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "ready"
+                }
+            }
+        },
+        "types.RenameFileRequest": {
+            "type": "object",
+            "properties": {
+                "newPath": {
+                    "type": "string",
+                    "example": "configs/new.conf"
+                },
+                "oldPath": {
+                    "type": "string",
+                    "example": "configs/old.conf"
+                }
+            }
+        },
+        "types.RestartPodResponseDoc": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "Pod router1-0 restarted successfully"
+                },
+                "replay": {
+                    "$ref": "#/definitions/types.DriverReplayStatsDoc"
+                },
+                "replayed_operations": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "took_time": {
+                    "$ref": "#/definitions/types.RestartTimingResponse"
+                }
+            }
+        },
+        "types.RestartTimingResponse": {
+            "type": "object",
+            "properties": {
+                "pod_restart": {
+                    "type": "string",
+                    "example": "40.30s"
+                },
+                "replay": {
+                    "type": "string",
+                    "example": "0.95s"
+                },
+                "total": {
+                    "type": "string",
+                    "example": "42.50s"
+                }
+            }
+        },
+        "types.ScaleSpec": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "example": "host"
+                },
+                "replicas": {
+                    "type": "integer",
+                    "example": 4
+                }
+            }
+        },
+        "types.SetContextRequest": {
+            "type": "object",
+            "properties": {
+                "context": {
+                    "type": "string",
+                    "example": "my-cluster"
+                }
+            }
+        },
+        "types.SetKubeContextResponse": {
+            "type": "object",
+            "properties": {
+                "current_context": {
+                    "type": "string",
+                    "example": "my-cluster"
+                }
+            }
+        },
+        "types.TCParamEntry": {
+            "type": "object",
+            "properties": {
+                "burst": {
+                    "description": "optional (tbf)",
+                    "type": "string",
+                    "example": "32kbit"
+                },
+                "corrupt": {
+                    "description": "optional (netem)",
+                    "type": "string",
+                    "example": "0.1%"
+                },
+                "delay": {
+                    "description": "optional (netem)",
+                    "type": "string",
+                    "example": "100ms"
+                },
+                "duplicate": {
+                    "description": "optional (netem)",
+                    "type": "string",
+                    "example": "0.5%"
+                },
+                "jitter": {
+                    "description": "optional (netem)",
+                    "type": "string",
+                    "example": "10ms"
+                },
+                "latency": {
+                    "description": "optional (tbf)",
+                    "type": "string",
+                    "example": "50ms"
+                },
+                "limit": {
+                    "description": "optional (netem)",
+                    "type": "integer",
+                    "example": 1000
+                },
+                "loss": {
+                    "description": "optional (netem)",
+                    "type": "string",
+                    "example": "1%"
+                },
+                "qdisc": {
+                    "description": "netem or tbf",
+                    "type": "string",
+                    "example": "netem"
+                },
+                "rate": {
+                    "description": "optional (tbf)",
+                    "type": "string",
+                    "example": "10mbit"
+                }
+            }
+        },
+        "types.UpdateFileContentRequest": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string",
+                    "example": "hostname router1"
+                }
+            }
+        },
+        "types.VersionResponse": {
+            "type": "object",
+            "properties": {
+                "build_date": {
+                    "type": "string",
+                    "example": "2026-04-28T12:00:00Z"
+                },
+                "commit": {
+                    "type": "string",
+                    "example": "abc1234"
+                },
+                "service": {
+                    "type": "string",
+                    "example": "kubendt-backend"
+                },
+                "version": {
+                    "type": "string",
+                    "example": "0.1.0-pre"
+                }
+            }
+        },
+        "types.WarningDoc": {
+            "type": "object",
+            "properties": {
+                "detail": {
+                    "type": "string",
+                    "example": "File \"web-server/index.html\" not found in namespace file manager. Mount skipped, the pod will start without it."
+                },
+                "file": {
+                    "type": "string",
+                    "example": "web-server/index.html"
+                },
+                "kind": {
+                    "type": "string",
+                    "example": "mount_file_missing"
+                },
+                "node": {
+                    "type": "string",
+                    "example": "web-server"
+                }
+            }
+        }
+    }
+}

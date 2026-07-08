@@ -1,0 +1,631 @@
+{
+  "nodes": [
+    {
+      "name": "amf",
+      "image": "ghcr.io/herlesupreeth/docker_open5gs:master",
+      "type": "host",
+      "replicas": 1,
+      "commands": [
+        "sh",
+        "-c",
+        "mkdir -p /open5gs/install/var/log/open5gs/ && bash /open5gs_init.sh"
+      ],
+      "env": {
+        "COMPONENT_NAME": "amf",
+        "AMF_IP": "10.5.0.10",
+        "SCP_IP": "10.5.0.13",
+        "NRF_IP": "10.5.0.12",
+        "MCC": "999",
+        "MNC": "30",
+        "TAC": "1",
+        "MAX_NUM_UE": "16"
+      },
+      "mounts": [
+        {
+          "file": "open5gs_init.sh",
+          "mountTo": "/open5gs_init.sh"
+        },
+        {
+          "file": "amf/amf.yaml",
+          "mountTo": "/mnt/amf/amf.yaml"
+        },
+        {
+          "file": "amf/amf_init.sh",
+          "mountTo": "/mnt/amf/amf_init.sh"
+        }
+      ]
+    },
+    {
+      "name": "smf",
+      "image": "ghcr.io/herlesupreeth/docker_open5gs:master",
+      "type": "host",
+      "replicas": 1,
+      "commands": [
+        "sh",
+        "-c",
+        "mkdir -p /open5gs/install/var/log/open5gs/ && bash /open5gs_init.sh"
+      ],
+      "env": {
+        "COMPONENT_NAME": "smf",
+        "SMF_IP": "10.5.0.11",
+        "SCP_IP": "10.5.0.13",
+        "NRF_IP": "10.5.0.12",
+        "UPF_IP": "10.5.1.10",
+        "SMF_DNS1": "8.8.8.8",
+        "SMF_DNS2": "8.8.4.4",
+        "UE_IPV4_INTERNET": "192.168.10.0/24",
+        "UE_IPV4_IMS": "192.168.20.0/24",
+        "MAX_NUM_UE": "16"
+      },
+      "mounts": [
+        {
+          "file": "open5gs_init.sh",
+          "mountTo": "/open5gs_init.sh"
+        },
+        {
+          "file": "smf/smf.yaml",
+          "mountTo": "/mnt/smf/smf.yaml"
+        },
+        {
+          "file": "smf/smf_init.sh",
+          "mountTo": "/mnt/smf/smf_init.sh"
+        },
+        {
+          "file": "ip_utils.py",
+          "mountTo": "/mnt/smf/ip_utils.py"
+        }
+      ]
+    },
+    {
+      "name": "nrf",
+      "image": "ghcr.io/herlesupreeth/docker_open5gs:master",
+      "type": "host",
+      "replicas": 1,
+      "commands": [
+        "sh",
+        "-c",
+        "mkdir -p /open5gs/install/var/log/open5gs/ && bash /open5gs_init.sh"
+      ],
+      "env": {
+        "COMPONENT_NAME": "nrf",
+        "NRF_IP": "10.5.0.12",
+        "MCC": "999",
+        "MNC": "30",
+        "MAX_NUM_UE": "16"
+      },
+      "mounts": [
+        {
+          "file": "open5gs_init.sh",
+          "mountTo": "/open5gs_init.sh"
+        },
+        {
+          "file": "nrf/nrf.yaml",
+          "mountTo": "/mnt/nrf/nrf.yaml"
+        },
+        {
+          "file": "nrf/nrf_init.sh",
+          "mountTo": "/mnt/nrf/nrf_init.sh"
+        }
+      ]
+    },
+    {
+      "name": "scp",
+      "image": "ghcr.io/herlesupreeth/docker_open5gs:master",
+      "type": "host",
+      "replicas": 1,
+      "commands": [
+        "sh",
+        "-c",
+        "mkdir -p /open5gs/install/var/log/open5gs/ && bash /open5gs_init.sh"
+      ],
+      "env": {
+        "COMPONENT_NAME": "scp",
+        "SCP_IP": "10.5.0.13",
+        "NRF_IP": "10.5.0.12",
+        "MAX_NUM_UE": "16"
+      },
+      "mounts": [
+        {
+          "file": "open5gs_init.sh",
+          "mountTo": "/open5gs_init.sh"
+        },
+        {
+          "file": "scp/scp.yaml",
+          "mountTo": "/mnt/scp/scp.yaml"
+        },
+        {
+          "file": "scp/scp_init.sh",
+          "mountTo": "/mnt/scp/scp_init.sh"
+        }
+      ]
+    },
+    
+    {
+      "name": "ausf",
+      "image": "ghcr.io/herlesupreeth/docker_open5gs:master",
+      "type": "host",
+      "replicas": 1,
+      "commands": [
+        "sh",
+        "-c",
+        "mkdir -p /open5gs/install/var/log/open5gs/ && bash /open5gs_init.sh"
+      ],
+      "env": {
+        "COMPONENT_NAME": "ausf",
+        "AUSF_IP": "10.5.0.14",
+        "SCP_IP": "10.5.0.13",
+        "NRF_IP": "10.5.0.12",
+        "MAX_NUM_UE": "16"
+      },
+      "mounts": [
+        {
+          "file": "open5gs_init.sh",
+          "mountTo": "/open5gs_init.sh"
+        },
+        {
+          "file": "ausf/ausf.yaml",
+          "mountTo": "/mnt/ausf/ausf.yaml"
+        },
+        {
+          "file": "ausf/ausf_init.sh",
+          "mountTo": "/mnt/ausf/ausf_init.sh"
+        }
+      ]
+    },
+    {
+      "name": "udm",
+      "image": "ghcr.io/herlesupreeth/docker_open5gs:master",
+      "type": "host",
+      "replicas": 1,
+      "commands": [
+        "sh",
+        "-c",
+        "mkdir -p /open5gs/install/var/log/open5gs/ && bash /open5gs_init.sh"
+      ],
+      "env": {
+        "COMPONENT_NAME": "udm",
+        "UDM_IP": "10.5.0.15",
+        "SCP_IP": "10.5.0.13",
+        "NRF_IP": "10.5.0.12",
+        "MAX_NUM_UE": "16"
+      },
+      "mounts": [
+        {
+          "file": "open5gs_init.sh",
+          "mountTo": "/open5gs_init.sh"
+        },
+        {
+          "file": "udm/udm.yaml",
+          "mountTo": "/mnt/udm/udm.yaml"
+        },
+        {
+          "file": "udm/udm_init.sh",
+          "mountTo": "/mnt/udm/udm_init.sh"
+        },
+        {
+          "file": "udm/curve25519-1.key",
+          "mountTo": "/mnt/udm/curve25519-1.key",
+          "sensitive": true
+        },
+        {
+          "file": "udm/secp256r1-2.key",
+          "mountTo": "/mnt/udm/secp256r1-2.key",
+          "sensitive": true
+        }
+      ]
+    },
+    {
+      "name": "udr",
+      "image": "ghcr.io/herlesupreeth/docker_open5gs:master",
+      "type": "host",
+      "replicas": 1,
+      "commands": [
+        "sh",
+        "-c",
+        "mkdir -p /open5gs/install/var/log/open5gs/ && bash /open5gs_init.sh"
+      ],
+      "env": {
+        "COMPONENT_NAME": "udr",
+        "UDR_IP": "10.5.0.16",
+        "SCP_IP": "10.5.0.13",
+        "NRF_IP": "10.5.0.12",
+        "MONGO_IP": "10.5.0.18",
+        "MAX_NUM_UE": "16"
+      },
+      "mounts": [
+        {
+          "file": "open5gs_init.sh",
+          "mountTo": "/open5gs_init.sh"
+        },
+        {
+          "file": "udr/udr.yaml",
+          "mountTo": "/mnt/udr/udr.yaml"
+        },
+        {
+          "file": "udr/udr_init.sh",
+          "mountTo": "/mnt/udr/udr_init.sh"
+        }
+      ]
+    },
+    {
+      "name": "pcf",
+      "image": "ghcr.io/herlesupreeth/docker_open5gs:master",
+      "type": "host",
+      "replicas": 1,
+      "commands": [
+        "sh",
+        "-c",
+        "mkdir -p /open5gs/install/var/log/open5gs/ && bash /open5gs_init.sh"
+      ],
+      "env": {
+        "COMPONENT_NAME": "pcf",
+        "PCF_IP": "10.5.0.17",
+        "SCP_IP": "10.5.0.13",
+        "NRF_IP": "10.5.0.12",
+        "MONGO_IP": "10.5.0.18",
+        "MAX_NUM_UE": "16"
+      },
+      "mounts": [
+        {
+          "file": "open5gs_init.sh",
+          "mountTo": "/open5gs_init.sh"
+        },
+        {
+          "file": "pcf/pcf.yaml",
+          "mountTo": "/mnt/pcf/pcf.yaml"
+        },
+        {
+          "file": "pcf/pcf_init.sh",
+          "mountTo": "/mnt/pcf/pcf_init.sh"
+        }
+      ]
+    },
+    {
+      "name": "udsf",
+      "image": "mongo:6.0",
+      "type": "host",
+      "replicas": 1,
+      "commands": [
+        "sh",
+        "-c",
+        "apt update && apt install -y iproute2 iputils-ping && docker-entrypoint.sh mongod --bind_ip 0.0.0.0"
+      ],
+      "env": {
+        "MONGO_IP": "10.5.0.18"
+      }
+    },
+    {
+      "name": "upf",
+      "image": "ghcr.io/herlesupreeth/docker_open5gs:master",
+      "type": "host",
+      "replicas": 1,
+      "commands": [
+        "sh",
+        "-c",
+        "mkdir -p /open5gs/install/var/log/open5gs/ && bash /open5gs_init.sh"
+      ],
+      "env": {
+        "COMPONENT_NAME": "upf",
+        "UPF_IP": "10.5.1.10",
+        "SMF_IP": "10.5.0.11",
+        "UE_IPV4_INTERNET": "192.168.10.0/24",
+        "UE_IPV4_IMS": "192.168.20.0/24",
+        "UPF_ADVERTISE_IP": "10.5.1.10",
+        "MAX_NUM_UE": "16",
+        "UPF_TUNTAP_MODE": "tun",
+        "UPF_INTERNET_APN_IF_NAME": "ogstun",
+        "UPF_IMS_APN_IF_NAME": "ogstun2"
+      },
+      "mounts": [
+        {
+          "file": "open5gs_init.sh",
+          "mountTo": "/open5gs_init.sh"
+        },
+        {
+          "file": "upf/upf.yaml",
+          "mountTo": "/mnt/upf/upf.yaml"
+        },
+        {
+          "file": "upf/upf_init.sh",
+          "mountTo": "/mnt/upf/upf_init.sh"
+        },
+        {
+          "file": "ip_utils.py",
+          "mountTo": "/mnt/upf/ip_utils.py"
+        },
+        {
+          "file": "upf/tun_if.py",
+          "mountTo": "/mnt/upf/tun_if.py"
+        }
+      ],
+      "devices": [
+        {
+          "path": "/dev/net/tun"
+        }
+      ]
+    },
+    {
+      "name": "webui",
+      "image": "ghcr.io/herlesupreeth/docker_open5gs:master",
+      "type": "host",
+      "replicas": 1,
+      "commands": [
+        "sh",
+        "-c",
+        "mkdir -p /open5gs/install/var/log/open5gs/ && bash /open5gs_init.sh"
+      ],
+      "env": {
+        "COMPONENT_NAME": "webui",
+        "WEBUI_IP": "10.5.3.10",
+        "MONGO_IP": "10.5.0.18"
+      },
+      "mounts": [
+        {
+          "file": "open5gs_init.sh",
+          "mountTo": "/open5gs_init.sh"
+        },
+        {
+          "file": "webui/webui_init.sh",
+          "mountTo": "/mnt/webui/webui_init.sh"
+        }
+      ]
+    },
+    {
+      "name": "gnb",
+      "image": "gradiant/ueransim:3.2.8",
+      "type": "host",
+      "replicas": 1,
+      "commands": [
+        "sh",
+        "-c",
+        "bash /mnt/gnb/gnb_init.sh"
+      ],
+      "env": {
+        "AMF_IP": "10.5.0.10",
+        "MCC": "999",
+        "MNC": "30",
+        "TAC": "1"
+      },
+      "mounts": [
+        {
+          "file": "gnb/gnb.yaml",
+          "mountTo": "/mnt/gnb/gnb.yaml"
+        },
+        {
+          "file": "gnb/gnb_init.sh",
+          "mountTo": "/mnt/gnb/gnb_init.sh"
+        }
+      ]
+    },
+    {
+      "name": "ue",
+      "image": "gradiant/ueransim:3.2.8",
+      "type": "host",
+      "replicas": 1,
+      "commands": [
+        "sh",
+        "-c",
+        "bash /mnt/ue/ue_init.sh"
+      ],
+      "env": {
+        "GNB_RADIO_IP": "10.6.0.1",
+        "MCC": "999",
+        "MNC": "30",
+        "MSISDN": "0000000001",
+        "KEY": "465B5CE8B199B49FAA5F0A2EE238A6BC",
+        "OP": "E8ED289DEBA952E4283B54E88E6183CA",
+        "OP_TYPE": "OPC"
+      },
+      "mounts": [
+        {
+          "file": "ue/ue.yaml",
+          "mountTo": "/mnt/ue/ue.yaml"
+        },
+        {
+          "file": "ue/ue_init.sh",
+          "mountTo": "/mnt/ue/ue_init.sh"
+        }
+      ],
+      "devices": [
+        {
+          "path": "/dev/net/tun"
+        }
+      ]
+    },
+    {
+      "name": "switch",
+      "image": "ubuntu",
+      "type": "switch",
+      "replicas": 4,
+      "commands": [
+        "sh",
+        "-c",
+        "apt update && apt install -y iproute2 bridge-utils iputils-ping && sleep infinity"
+      ]
+    },
+    {
+      "name": "router",
+      "image": "frrouting/frr",
+      "driver": "FRRRouterDriver",
+      "type": "router",
+      "replicas": 2,
+      "commands": [
+        "sh",
+        "-c",
+        "echo hostname router1 > /etc/frr/vtysh.conf && chown frr:frr /etc/frr/vtysh.conf && /usr/lib/frr/zebra -d && /usr/lib/frr/ospfd -d && sleep infinity"
+      ]
+    }
+  ],
+  "links": [
+    {
+      "localIntf": "eth1",
+      "node": "amf",
+      "peerNode": "switch-0",
+      "peerIntf": "eth2",
+      "localIp": "10.5.0.10/24",
+      "peerIp": "",
+      "name": "N2"
+    },
+    {
+      "localIntf": "eth1",
+      "node": "smf",
+      "peerNode": "switch-0",
+      "peerIntf": "eth3",
+      "localIp": "10.5.0.11/24",
+      "peerIp": "",
+      "name": "N4"
+    },
+    {
+      "localIntf": "eth1",
+      "node": "nrf",
+      "peerNode": "switch-0",
+      "peerIntf": "eth4",
+      "localIp": "10.5.0.12/24",
+      "peerIp": ""
+    },
+    {
+      "localIntf": "eth1",
+      "node": "scp",
+      "peerNode": "switch-0",
+      "peerIntf": "eth5",
+      "localIp": "10.5.0.13/24",
+      "peerIp": ""
+    },
+    
+    {
+      "localIntf": "eth1",
+      "node": "ausf",
+      "peerNode": "switch-0",
+      "peerIntf": "eth6",
+      "localIp": "10.5.0.14/24",
+      "peerIp": ""
+    },
+    {
+      "localIntf": "eth1",
+      "node": "udm",
+      "peerNode": "switch-0",
+      "peerIntf": "eth7",
+      "localIp": "10.5.0.15/24",
+      "peerIp": ""
+    },
+    {
+      "localIntf": "eth1",
+      "node": "udr",
+      "peerNode": "switch-0",
+      "peerIntf": "eth8",
+      "localIp": "10.5.0.16/24",
+      "peerIp": ""
+    },
+    {
+      "localIntf": "eth1",
+      "node": "pcf",
+      "peerNode": "switch-0",
+      "peerIntf": "eth9",
+      "localIp": "10.5.0.17/24",
+      "peerIp": ""
+    },
+    {
+      "localIntf": "eth1",
+      "node": "udsf",
+      "peerNode": "switch-0",
+      "peerIntf": "eth10",
+      "localIp": "10.5.0.18/24",
+      "peerIp": ""
+    },
+    {
+      "localIntf": "eth1",
+      "node": "switch-0",
+      "peerNode": "router-0",
+      "peerIntf": "eth2",
+      "localIp": "",
+      "peerIp": "10.5.0.1/24"
+    },
+    {
+      "localIntf": "eth1",
+      "node": "upf",
+      "peerNode": "switch-1",
+      "peerIntf": "eth2",
+      "localIp": "10.5.1.10/24",
+      "peerIp": "",
+      "name": "N3"
+    },
+    {
+      "localIntf": "eth1",
+      "node": "switch-1",
+      "peerNode": "router-0",
+      "peerIntf": "eth3",
+      "localIp": "",
+      "peerIp": "10.5.1.1/24",
+      "name": "N3"
+    },
+    {
+      "localIntf": "eth2",
+      "node": "upf",
+      "peerNode": "switch-2",
+      "peerIntf": "eth2",
+      "localIp": "10.5.2.10/24",
+      "peerIp": "",
+      "name": "N6"
+    },
+    {
+      "localIntf": "eth1",
+      "node": "switch-2",
+      "peerNode": "router-1",
+      "peerIntf": "eth1",
+      "localIp": "",
+      "peerIp": "10.5.2.1/24",
+      "name": "N6"
+    },
+    {
+      "localIntf": "eth1",
+      "node": "webui",
+      "peerNode": "switch-3",
+      "peerIntf": "eth2",
+      "localIp": "10.5.3.10/24",
+      "peerIp": ""
+    },
+    {
+      "localIntf": "eth1",
+      "node": "switch-3",
+      "peerNode": "router-0",
+      "peerIntf": "eth4",
+      "localIp": "",
+      "peerIp": "10.5.3.1/24"
+    },
+    {
+      "localIntf": "eth5",
+      "node": "router-0",
+      "peerNode": "router-1",
+      "peerIntf": "eth2",
+      "localIp": "10.5.254.1/30",
+      "peerIp": "10.5.254.2/30"
+    },
+    {
+      "localIntf": "eth1",
+      "node": "router-0",
+      "peerNode": "external",
+      "peerIntf": "ens18",
+      "localIp": "",
+      "peerIp": "",
+      "peerLabel": "External Network",
+      "name": "N2-N3"
+    },
+    {
+      "localIntf": "eth1",
+      "node": "gnb",
+      "peerNode": "external",
+      "peerIntf": "ens18",
+      "localIp": "",
+      "peerIp": "",
+      "peerLabel": "External Network"
+    },
+    {
+      "localIntf": "eth2",
+      "node": "gnb",
+      "peerNode": "ue",
+      "peerIntf": "eth1",
+      "localIp": "10.6.0.1/24",
+      "peerIp": "10.6.0.2/24"
+    }
+  ]
+}
