@@ -4,7 +4,7 @@
    <img src="doc/images/kubendt-logo-full.svg" alt="KubeNDT full logo" width="360" />
 </p>
 
-> Last reviewed: 7 Jul 2026
+> Last reviewed: 8 Jul 2026
 
 **KubeNDT** is a platform for deploying and operating virtual network topologies on Kubernetes.
 

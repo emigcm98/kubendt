@@ -20,7 +20,7 @@ Releases are tagged on `main` using semantic versioning. Git tags carry the lead
 Contributors open pull requests from their fork targeting `main` (as documented in [CONTRIBUTING.md](../CONTRIBUTING.md)). They cannot push to the repository directly, so every external change arrives as a PR.
 
 Your review checklist:
-- [ ] CLA comment is present in the PR
+- [ ] CLA confirmation is present in the PR description
 - [ ] Code follows project style
 - [ ] No unrelated changes bundled in
 - [ ] CI is green (lint, format, build, tests)
