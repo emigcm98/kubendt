@@ -87,11 +87,13 @@ The standard way to contribute is via **fork and pull request**:
 
 5. **Open a pull request** from your branch to the `main` branch of the original repository. GitHub will prompt you to do this automatically after pushing. CI (lint, format, build, tests) must pass before the PR can be merged.
 
-6. In the pull request, **add the following comment** to record your acceptance of the CLA:
+6. **Confirm the CLA in the pull request description.** The PR template already
+   includes the line:
    ```
    I have read and agree to the KubeNDT CLA (CLA.md).
    ```
-   Pull requests without this comment will not be merged.
+   Leave it in place to record your acceptance. Pull requests without this
+   confirmation will not be merged.
 
 ## Before Contributing
 
@@ -172,7 +174,7 @@ When submitting a pull request:
 * Any impacted docs updated (`README.md`, `doc/*`, or example README files).
 * Swagger regenerated if routes/contracts changed.
 * Scope limited to one logical change.
-* Add the CLA agreement comment (see step 6 above).
+* Keep the CLA confirmation line from the template (see step 6 above).
 
 ## Contributor License Agreement (CLA)
 
@@ -180,7 +182,7 @@ By contributing to KubeNDT, you agree to the terms described in [CLA.md](CLA.md)
 
 In short: you keep copyright over your contributions, but grant the project maintainer the right to relicense contributions as part of KubeNDT. This keeps the project open source while preserving the option for future dual licensing.
 
-Acceptance is recorded by adding the comment described in step 6 of the workflow above.
+Acceptance is recorded by the CLA confirmation line in the pull request description, as described in step 6 of the workflow above.
 
 ## Community Expectations
 
