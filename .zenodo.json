@@ -1,0 +1,21 @@
+{
+  "title": "KubeNDT: A Network Digital Twin platform in Kubernetes",
+  "description": "KubeNDT is a platform for deploying and operating virtual network topologies on Kubernetes. Topologies are defined declaratively and materialized as Kubernetes-native resources, with a driver and capability system that applies the same network configuration actions regardless of the container image each node runs.",
+  "upload_type": "software",
+  "access_right": "open",
+  "license": "AGPL-3.0-only",
+  "creators": [
+    {
+      "name": "García de la Calera Molina, Emilio",
+      "orcid": "0000-0002-6644-6641"
+    }
+  ],
+  "keywords": [
+    "network digital twin",
+    "Kubernetes",
+    "network emulation",
+    "network orchestration",
+    "cloud-native",
+    "Meshnet CNI"
+  ]
+}

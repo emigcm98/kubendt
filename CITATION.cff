@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "KubeNDT: A Network Digital Twin platform in Kubernetes"
+abstract: "KubeNDT is a platform for deploying and operating virtual network topologies on Kubernetes. Topologies are defined declaratively and materialized as Kubernetes-native resources, with a driver and capability system that applies the same network configuration actions regardless of the container image each node runs."
+type: software
+authors:
+  - family-names: "García de la Calera Molina"
+    given-names: "Emilio"
+    orcid: "https://orcid.org/0000-0002-6644-6641"
+version: "1.0.0"
+date-released: "2026-07-09"
+license: AGPL-3.0-only
+repository-code: "https://github.com/emigcm98/kubendt"
+url: "https://kubendt.org"
+keywords:
+  - network digital twin
+  - Kubernetes
+  - network emulation
+  - network orchestration
+  - cloud-native
+  - Meshnet CNI
+# After the first Zenodo release mints the DOI, add the concept DOI here:
+# doi: "10.5281/zenodo.XXXXXXX"
