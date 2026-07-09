@@ -19,5 +19,4 @@ keywords:
   - network orchestration
   - cloud-native
   - Meshnet CNI
-# After the first Zenodo release mints the DOI, add the concept DOI here:
-# doi: "10.5281/zenodo.XXXXXXX"
+doi: "10.5281/zenodo.21276320"
