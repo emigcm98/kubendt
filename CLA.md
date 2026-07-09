@@ -33,10 +33,10 @@ By submitting a contribution (code, documentation, patches, or other material) t
 
 ## How to sign
 
-To record your acceptance of these terms, add the following comment to your pull request before it is merged:
+The pull request template includes the following line in its description:
 
 ```
 I have read and agree to the KubeNDT CLA (CLA.md).
 ```
 
-Pull requests without this comment will not be merged.
+Leave it in place to record your acceptance of these terms. Pull requests without this confirmation will not be merged.
