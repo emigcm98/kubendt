@@ -18,9 +18,9 @@ Network configuration is abstracted through a **driver and capability system**: 
 
 Copyright (C) 2026 Emilio García de la Calera Molina
 
-**KubeNDT** is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+**KubeNDT** is licensed under the GNU Affero General Public License v3.0 only (AGPL-3.0-only).
 
-You may use, modify, and distribute this software under the terms of the AGPL-3.0 license.
+You may use, modify, and distribute this software under the terms of the AGPL-3.0-only license.
 
 Commercial licensing may be available in the future.
 
