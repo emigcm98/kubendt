@@ -17,6 +17,7 @@ import LinkInfoPanel from './LinkInfoPanel';
 import TopologyInputModal from './TopologyInputModal';
 import PodInteractiveShellModal from './PodInteractiveShellModal';
 import CapturePanel from './CapturePanel';
+import TracePanel from './TracePanel';
 import { ReactComponent as PcapIcon } from '../assets/images/pcap.svg';
 import InnerGraph from './InnerGraph';
 import LoadingOverlay from './LoadingOverlay';
@@ -489,6 +490,37 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
   const openShellsRef = useRef(openShells);
   const [openCaptures, setOpenCaptures] = useState([]); // Array of {id, pod, iface, zIndex, minimized}
   const [maxZIndex, setMaxZIndex] = useState(1000);
+
+  // Traceroute visualization: one session at a time. traceSession opens the
+  // control panel (seeded with a source pod); traceViz holds the packet
+  // animation state (waypoints/segments/step) the graph overlay renders.
+  const [traceSession, setTraceSession] = useState(null); // { source, sourceLabel, z } | null
+  const [traceViz, setTraceViz] = useState(null); // { source, waypoints, segments, step } | null
+  // Like an open shell, an active trace runs inside a pod and reads live
+  // topology, so topology-mutating actions are blocked while it is open.
+  const traceOpen = traceSession !== null;
+
+  const traceSeqRef = useRef(0);
+  const openTrace = (fullInfo) => {
+    if (!fullInfo || !fullInfo.name) return;
+    traceSeqRef.current += 1;
+    setMaxZIndex((z) => z + 1);
+    setTraceSession({
+      id: traceSeqRef.current, // used as React key → a new trace remounts fresh
+      source: fullInfo.name,
+      sourceLabel: fullInfo.baseName || fullInfo.name,
+      z: maxZIndex + 1,
+    });
+    setTraceViz(null);
+  };
+  const closeTrace = () => {
+    setTraceSession(null);
+    setTraceViz(null);
+  };
+  const bringTraceToFront = () => {
+    setMaxZIndex((z) => z + 1);
+    setTraceSession((s) => (s ? { ...s, z: maxZIndex + 1 } : s));
+  };
 
   const positionRef = useRef({});
   const [hoveredInfo, setHoveredInfo] = useState(null);
@@ -2957,6 +2989,7 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
                 initialLoading ||
                 nodes.length > 0 ||
                 openShells.length > 0 ||
+                traceOpen ||
                 clearingTopology ||
                 loadingConfig ||
                 modifyingTopology ||
@@ -2965,7 +2998,7 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
               }
               onClick={() => {
                 if (initialLoading) return;
-                if (openShells.length > 0) return;
+                if (openShells.length > 0 || traceOpen) return;
                 if (!namespace) {
                   setAlertModal({
                     isOpen: true,
@@ -3000,6 +3033,7 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
               disabled={
                 !hasGraph ||
                 openShells.length > 0 ||
+                traceOpen ||
                 clearingTopology ||
                 loadingConfig ||
                 modifyingTopology ||
@@ -3017,6 +3051,7 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
               disabled={
                 !hasGraph ||
                 openShells.length > 0 ||
+                traceOpen ||
                 clearingTopology ||
                 loadingConfig ||
                 modifyingTopology ||
@@ -3163,6 +3198,8 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
             searchQuery={graphSearchQuery}
             isBusy={isBusy}
             onStartCapture={openCapture}
+            onStartTrace={openTrace}
+            trace={traceViz}
           />
         </ReactFlowProvider>
       </div>
@@ -3198,6 +3235,21 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
           onBringToFront={() => bringCaptureToFront(cap.id)}
         />
       ))}
+
+      {/* Traceroute control panel (packet animation renders on the graph) */}
+      {traceSession && (
+        <TracePanel
+          key={traceSession.id}
+          namespace={namespace}
+          source={traceSession.source}
+          nodes={nodes}
+          edges={edges}
+          zIndex={traceSession.z || 1500}
+          onViz={setTraceViz}
+          onClose={closeTrace}
+          onBringToFront={bringTraceToFront}
+        />
+      )}
 
       {/* Bottom-centered taskbar with chips for minimized shells and captures */}
       {(openShells.some((s) => s.minimized) || openCaptures.some((c) => c.minimized)) && (

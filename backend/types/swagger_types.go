@@ -107,6 +107,9 @@ type PodInfo struct {
 	Status    string `json:"status" example:"Running"`
 	CreatedAt string `json:"createdAt" example:"2026-01-15 10:30:00"`
 	Uptime    string `json:"uptime" example:"1 days, 4 hours, 5 minutes"`
+	// L3Capable reports whether the node can originate a traceroute. It gates the
+	// "Traceroute from here" menu item and is true only for L3-capable drivers.
+	L3Capable bool `json:"l3capable" example:"true"`
 }
 
 // PodsListResponse is returned by GET /pods/:namespace.
@@ -688,4 +691,52 @@ type APIToken struct {
 // APITokenList is returned by GET /auth/tokens.
 type APITokenList struct {
 	Tokens []APIToken `json:"tokens"`
+}
+
+// ─── Trace (traceroute / metrics) ────────────────────────────────────────────
+
+// TraceMetricsDoc holds one hop's mtr stats, metrics mode only. Times in
+// milliseconds, loss in percent.
+type TraceMetricsDoc struct {
+	Loss  float64 `json:"loss" example:"0"`
+	Avg   float64 `json:"avg" example:"1.45"`
+	Best  float64 `json:"best" example:"1.2"`
+	Worst float64 `json:"worst" example:"2.05"`
+	Last  float64 `json:"last" example:"1.4"`
+	StDev float64 `json:"stdev" example:"0.32"`
+	Gmean float64 `json:"gmean" example:"1.42"`
+	Sent  int     `json:"sent" example:"5"`
+}
+
+// TraceHopDoc is one hop of a trace/metrics report, resolved to a topology node.
+type TraceHopDoc struct {
+	TTL   int     `json:"ttl" example:"1"`
+	IP    string  `json:"ip,omitempty" example:"192.168.10.1"`
+	RTT   float64 `json:"rtt,omitempty" example:"1.4"`
+	Node  string  `json:"node,omitempty" example:"upf-0"`
+	Iface string  `json:"iface,omitempty" example:"ogstun"`
+	// Kind is "l3" for a resolved node, "external" for a real IP outside the
+	// topology, or "timeout" for no reply.
+	Kind string `json:"kind" example:"l3"`
+	// Unreachable holds the ICMP flag ("!N", "!H") when a router dropped the
+	// probe, empty otherwise.
+	Unreachable string   `json:"unreachable,omitempty" example:"!N"`
+	Path        []string `json:"path,omitempty" example:"ue-0,upf-0"`
+	// Segment is "link" for a topology path (maybe through switches) or "tunnel"
+	// for an overlay jump like GTP-U.
+	Segment string           `json:"segment,omitempty" example:"tunnel"`
+	Metrics *TraceMetricsDoc `json:"metrics,omitempty"`
+}
+
+// TraceReportResponse is returned by GET /trace/run/:namespace/:podName.
+type TraceReportResponse struct {
+	Source      string        `json:"source" example:"ue-0"`
+	Destination string        `json:"destination" example:"8.8.8.8"`
+	Method      string        `json:"method" example:"icmp"`
+	Mode        string        `json:"mode" example:"trace"`
+	Cycles      int           `json:"cycles,omitempty" example:"5"`
+	Outcome     string        `json:"outcome" example:"delivered"`
+	StartedAt   string        `json:"startedAt" example:"2026-07-15T14:30:00Z"`
+	FinishedAt  string        `json:"finishedAt" example:"2026-07-15T14:30:05Z"`
+	Hops        []TraceHopDoc `json:"hops"`
 }

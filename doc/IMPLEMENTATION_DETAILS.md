@@ -742,3 +742,84 @@ Endpoints live under `/capture/*` (Swagger tag **capture**): `ws` (stream),
 `frontend/src/components/CapturePanel.js` with entry points in
 `EdgeContextMenu.js` and `LinkInfoPanel.js`.
 
+## 12. Traceroute / Packet-Path Visualization
+
+Traces the real L3 path from a source pod to any IP or hostname and animates it
+on the graph. An envelope hops node by node along the lit edges, with step and
+scrub controls, a red ✕ when it is dropped or a green ✓ when it arrives, and an
+optional per-hop latency and loss table. The pods run a real dataplane (Meshnet)
+so this is the actual path the traffic takes, not a simulation.
+
+### 12.1 Shared debug container
+
+The probe does not run in the node image. It runs in an ephemeral
+`nicolaka/netshoot` container injected into the source pod's network namespace,
+so any image works (busybox, FRR, mongo) with nothing to install. Trace and
+capture share one debug container per pod. `helpers.EnsureDebugContainer`
+reuses a running `capture-*` husk (`FindRunningDebugContainer`) when there is
+one, otherwise it injects a fresh one. The container gets `NET_RAW` and
+`NET_ADMIN` for the ICMP sockets and for `tcptraceroute`.
+
+### 12.2 Resolving hops to topology nodes
+
+Every hop IP is mapped back to a node. `helpers.BuildTraceIPIndex` builds the
+index up front from the live IPv4 addresses of every pod (`ip -o -4 addr show`,
+which keeps the MAC-less TUN devices like `ogstun` and `uesimtun0` that the
+normal interface listing drops, so tunnel endpoints resolve) plus the IPs
+declared on the topology links. `helpers.AnnotateTraceHop` tags each hop.
+
+- `l3`, resolved to a node. The path from the previous hop is rebuilt with a BFS
+  over the pod adjacency (`BuildPodAdjacency`, `BFSPath`), so the packet animates
+  through the switches on that segment.
+- `tunnel`, resolved but with no topology path from the previous hop, like a
+  GTP-U tunnel from UE to UPF. Drawn as a dashed overlay edge. The frontend
+  refines this. When both ends sit on the same external-network node they share
+  a physical L2 segment, so it reroutes through the grey node instead.
+- `external`, a real IP outside the topology. Private ranges show as "external
+  network", public ones as the internet (the packet flies outward).
+- `timeout`, no reply for that TTL.
+
+### 12.3 Modes, probes and verdict
+
+Trace mode runs `traceroute`, ICMP by default (`-I`), UDP, or TCP through
+`tcptraceroute` (BusyBox `traceroute` has no `-T`). It streams line by line for
+the live animation and gives up after 3 consecutive no-replies
+(`MaxConsecutiveTraceTimeouts`) rather than grinding all the way to `-m 30`.
+
+Metrics mode runs `mtr -n --json -c <cycles>` once and parses the report into
+the same hops, adding loss, avg, best, worst, last, jitter (StDev) and gmean.
+
+The verdict is `unreachable` when a router answers ICMP `!N` or `!H` (red ✕),
+`delivered` when the destination replies (green ✓), or `unreached` when replies
+just stop. That last one stays amber because it might be a host filtering ICMP
+rather than a real drop.
+
+Both modes go through one shared core, `helpers.RunTrace`, with an `emit(hop)`
+callback. The WebSocket forwards each hop live and the REST handler collects
+them into one document.
+
+### 12.4 Interfaces and endpoints
+
+Two front-ends sit over the same core (Swagger tag **trace**). The source node
+must be L3-capable, so a switch is rejected.
+
+- `GET /trace/ws/{namespace}/{podName}` (WebSocket) streams `meta`, `status`,
+  `hop` and `error` frames for the animated `TracePanel`. It is one-shot and
+  closing the socket cancels the probe.
+- `GET /trace/run/{namespace}/{podName}?dest=&method=&metrics=&cycles=` runs the
+  same probe and returns it as one JSON document (`source`, `destination`,
+  `method`, `mode`, `outcome`, `startedAt`, `finishedAt`, `hops`), the same shape
+  as the panel's JSON export.
+
+Code lives in `backend/helpers/trace.go`, `backend/handlers/trace.go` and
+`backend/routes.go`. The UI is `frontend/src/components/TracePanel.js` plus the
+packet and edge overlay in `InnerGraph.js`, launched from the node
+`ContextMenu.js`.
+
+### 12.5 Limitations
+
+IPv4 only (`ip -o -4`, no `-6`). One trace at a time, unlike capture. TCP probes
+hit port 80. Loss and latency on intermediate hops can mislead because routers
+often rate-limit ICMP while still forwarding, so only the final hop's numbers
+are fully trustworthy. The idle debug-container husk cannot be removed, the same
+Kubernetes limitation as capture.

@@ -59,6 +59,8 @@ collections and licenses (CC BY 4.0, OFL).
 - **Traffic control (QoS)**: Rate limiting, traffic shaping, netem (network emulation)
 - **NAT/Port forwarding**: Source NAT (SNAT) and Destination NAT (DNAT) configurations
 - **Network diagnostics**: Real-time interface status, IP address tracking, traffic analysis
+- **Live packet capture**: Wireshark-like per-interface capture streamed to the dashboard, with `.pcap` export
+- **Packet-path visualization**: run a traceroute from any node and watch the packet hop across the graph, with tunnel and drop/delivery detection and optional per-hop latency stats. Also available as a REST endpoint
 
 ### Enterprise Features
 

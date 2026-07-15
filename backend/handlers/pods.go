@@ -79,6 +79,9 @@ func ListPods(c *gin.Context) {
 			"replicaCount": replicaCount,
 			"type":         pod.Labels["kubendt/type"],
 			"driver":       pod.Labels["kubendt/driver"],
+			// Whether this node may originate a traceroute (drives the
+			// "Traceroute from here" menu gate). True only for L3-capable drivers.
+			"l3capable": helpers.DriverIsL3Capable(pod.Labels["kubendt/driver"]),
 			"runtime": func() string {
 				runtime := pod.Labels["kubendt/runtime"]
 				if runtime == "" {

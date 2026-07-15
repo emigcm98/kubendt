@@ -82,3 +82,130 @@
   opacity: 0.12;
   transition: opacity 0.15s ease;
 }
+
+/* ── Traceroute visualization overlay ───────────────────────────────────────
+   Rendered inside React Flow's EdgeLabelRenderer, so coordinates are in graph
+   space (same as the interface badges) and inherit the viewport transform. */
+.trace-seg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 3px;
+  background: #35507a;
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 18;
+  opacity: 0.5;
+}
+
+.trace-seg-done {
+  background: #00e676;
+  opacity: 1;
+  box-shadow: 0 0 8px rgba(0, 230, 118, 0.65);
+}
+
+.trace-seg-active {
+  background: #69f0ae;
+  height: 4px;
+  opacity: 1;
+  box-shadow: 0 0 10px rgba(105, 240, 174, 0.9);
+}
+
+/* Tunnel segments: dashed once traversed, still green & visible. */
+.trace-seg-tunnel.trace-seg-done {
+  background: repeating-linear-gradient(
+    90deg,
+    #00e676 0,
+    #00e676 7px,
+    transparent 7px,
+    transparent 13px
+  );
+  box-shadow: none;
+}
+
+/* Internet egress: a blinking arrow pointing out of the topology, no line. */
+.trace-out {
+  position: absolute;
+  top: 0;
+  left: 0;
+  color: #00e676;
+  font-size: 15px;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 19;
+  opacity: 0.12;
+}
+
+.trace-out-on {
+  animation: trace-out-blink 0.9s ease-in-out infinite;
+}
+
+@keyframes trace-out-blink {
+  0%,
+  100% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 1;
+    filter: drop-shadow(0 0 6px rgba(0, 230, 118, 0.9));
+  }
+}
+
+/* Packet that got dropped here: a gentle fade in/out under the ✕ verdict. */
+.trace-packet-dropped {
+  animation: trace-packet-blink 1.4s ease-in-out infinite;
+}
+
+@keyframes trace-packet-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.trace-packet-out {
+  animation: trace-packet-pulse 0.9s ease-in-out infinite;
+}
+
+@keyframes trace-packet-pulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 5px rgba(0, 230, 118, 0.7));
+  }
+  50% {
+    filter: drop-shadow(0 0 12px rgba(0, 230, 118, 1));
+    opacity: 0.75;
+  }
+}
+
+.trace-packet {
+  position: absolute;
+  top: 0;
+  left: 0;
+  line-height: 0;
+  pointer-events: none;
+  z-index: 1200;
+  transition: transform 0.6s cubic-bezier(0.4, 0.1, 0.3, 1);
+}
+
+/* The envelope SVG: soft green glow so it reads as "the packet in flight". */
+.trace-packet-env {
+  display: block;
+  filter: drop-shadow(0 0 5px rgba(0, 230, 118, 0.85));
+}
+
+/* The drop ✕ SVG, layered dead-centre over the envelope with a dark halo so
+   it stands out over any node colour. Sibling of the envelope inside the same
+   container → shares its blink/fade. */
+.trace-packet-x {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 0 2px #000) drop-shadow(0 0 4px #000);
+  z-index: 1;
+}

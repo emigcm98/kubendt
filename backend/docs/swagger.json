@@ -2352,6 +2352,85 @@
                 "responses": {}
             }
         },
+        "/trace/run/{namespace}/{podName}": {
+            "get": {
+                "description": "Runs a traceroute (or mtr when metrics=1) from a source pod toward an IP or hostname and returns the whole result as one JSON document, each hop resolved to a topology node. Blocks until the probe finishes. The source node must be L3-capable. The probe runs in a shared debug container in the pod, so the pod image needs no traceroute of its own. A live animated version streams the same hops over WebSocket at /trace/ws/{namespace}/{podName}.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "trace"
+                ],
+                "summary": "Traceroute / metrics report",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Source pod (base name or indexed pod name); must be L3-capable",
+                        "name": "podName",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Destination IPv4 address or hostname",
+                        "name": "dest",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Probe method: icmp (default), udp or tcp",
+                        "name": "method",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Set 1 for metrics mode (mtr latency/loss) instead of a plain traceroute",
+                        "name": "metrics",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "mtr probe rounds (metrics mode only; default 5)",
+                        "name": "cycles",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.TraceReportResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/version": {
             "get": {
                 "description": "Returns service name and build metadata.",
@@ -4015,6 +4094,11 @@
                     "type": "string",
                     "example": "frrouting/frr:latest"
                 },
+                "l3capable": {
+                    "description": "L3Capable reports whether the node can originate a traceroute. It gates the\n\"Traceroute from here\" menu item and is true only for L3-capable drivers.",
+                    "type": "boolean",
+                    "example": true
+                },
                 "name": {
                     "type": "string",
                     "example": "router1"
@@ -4315,6 +4399,139 @@
                     "description": "optional (tbf)",
                     "type": "string",
                     "example": "10mbit"
+                }
+            }
+        },
+        "types.TraceHopDoc": {
+            "type": "object",
+            "properties": {
+                "iface": {
+                    "type": "string",
+                    "example": "ogstun"
+                },
+                "ip": {
+                    "type": "string",
+                    "example": "192.168.10.1"
+                },
+                "kind": {
+                    "description": "Kind is \"l3\" for a resolved node, \"external\" for a real IP outside the\ntopology, or \"timeout\" for no reply.",
+                    "type": "string",
+                    "example": "l3"
+                },
+                "metrics": {
+                    "$ref": "#/definitions/types.TraceMetricsDoc"
+                },
+                "node": {
+                    "type": "string",
+                    "example": "upf-0"
+                },
+                "path": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "ue-0",
+                        "upf-0"
+                    ]
+                },
+                "rtt": {
+                    "type": "number",
+                    "example": 1.4
+                },
+                "segment": {
+                    "description": "Segment is \"link\" for a topology path (maybe through switches) or \"tunnel\"\nfor an overlay jump like GTP-U.",
+                    "type": "string",
+                    "example": "tunnel"
+                },
+                "ttl": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "unreachable": {
+                    "description": "Unreachable holds the ICMP flag (\"!N\", \"!H\") when a router dropped the\nprobe, empty otherwise.",
+                    "type": "string",
+                    "example": "!N"
+                }
+            }
+        },
+        "types.TraceMetricsDoc": {
+            "type": "object",
+            "properties": {
+                "avg": {
+                    "type": "number",
+                    "example": 1.45
+                },
+                "best": {
+                    "type": "number",
+                    "example": 1.2
+                },
+                "gmean": {
+                    "type": "number",
+                    "example": 1.42
+                },
+                "last": {
+                    "type": "number",
+                    "example": 1.4
+                },
+                "loss": {
+                    "type": "number",
+                    "example": 0
+                },
+                "sent": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "stdev": {
+                    "type": "number",
+                    "example": 0.32
+                },
+                "worst": {
+                    "type": "number",
+                    "example": 2.05
+                }
+            }
+        },
+        "types.TraceReportResponse": {
+            "type": "object",
+            "properties": {
+                "cycles": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "destination": {
+                    "type": "string",
+                    "example": "8.8.8.8"
+                },
+                "finishedAt": {
+                    "type": "string",
+                    "example": "2026-07-15T14:30:05Z"
+                },
+                "hops": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.TraceHopDoc"
+                    }
+                },
+                "method": {
+                    "type": "string",
+                    "example": "icmp"
+                },
+                "mode": {
+                    "type": "string",
+                    "example": "trace"
+                },
+                "outcome": {
+                    "type": "string",
+                    "example": "delivered"
+                },
+                "source": {
+                    "type": "string",
+                    "example": "ue-0"
+                },
+                "startedAt": {
+                    "type": "string",
+                    "example": "2026-07-15T14:30:00Z"
                 }
             }
         },

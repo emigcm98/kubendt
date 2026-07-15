@@ -777,6 +777,27 @@ func swaggerCreateAPIToken() {}
 //	@Router       /auth/tokens/{id} [delete]
 func swaggerDeleteAPIToken() {}
 
+// ─── Trace (traceroute / metrics) ────────────────────────────────────────────
+
+// swaggerTraceReport godoc
+//
+//	@Summary      Traceroute / metrics report
+//	@Description  Runs a traceroute (or mtr when metrics=1) from a source pod toward an IP or hostname and returns the whole result as one JSON document, each hop resolved to a topology node. Blocks until the probe finishes. The source node must be L3-capable. The probe runs in a shared debug container in the pod, so the pod image needs no traceroute of its own. A live animated version streams the same hops over WebSocket at /trace/ws/{namespace}/{podName}.
+//	@Tags         trace
+//	@Produce      json
+//	@Param        namespace  path      string   true   "Namespace"
+//	@Param        podName     path      string   true   "Source pod (base name or indexed pod name); must be L3-capable"
+//	@Param        dest        query     string   true   "Destination IPv4 address or hostname"
+//	@Param        method      query     string   false  "Probe method: icmp (default), udp or tcp"
+//	@Param        metrics     query     integer  false  "Set 1 for metrics mode (mtr latency/loss) instead of a plain traceroute"
+//	@Param        cycles      query     integer  false  "mtr probe rounds (metrics mode only; default 5)"
+//	@Success      200  {object}  types.TraceReportResponse
+//	@Failure      400  {object}  types.ErrorResponse
+//	@Failure      404  {object}  types.ErrorResponse
+//	@Failure      500  {object}  types.ErrorResponse
+//	@Router       /trace/run/{namespace}/{podName} [get]
+func swaggerTraceReport() {}
+
 // ─── Type aliases used by Swagger (to force inclusion in generated docs) ─────
 
 // Ensure referenced types appear in the generated OpenAPI schema.
@@ -837,3 +858,7 @@ var _ = types.NamespaceSummaryResponse{}
 var _ = types.NamespaceOperationResponse{}
 var _ = types.PodMetricsResponse{}
 var _ = types.PodMetricsUnavailableResponse{}
+
+var _ = types.TraceReportResponse{}
+var _ = types.TraceHopDoc{}
+var _ = types.TraceMetricsDoc{}
