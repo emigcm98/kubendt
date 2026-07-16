@@ -6,7 +6,9 @@ This document provides a practical and formal procedure to prepare a Kubernetes 
 2. Multi-node local cluster with kind (one control-plane, two workers)
 3. Two-node production-style cluster with kubeadm
 
-The same Meshnet installation method is used in all scenarios:
+The same Meshnet installation method is used in all scenarios. Each option below tells you when to install it, always after the
+cluster is created (see §4.2, §5.3 and §6.4). For reference, the method is
+always:
 
 ```bash
 git clone https://github.com/networkop/meshnet-cni.git
@@ -28,6 +30,10 @@ KubeNDT backend reads the kubeconfig mounted from the host, so the active kubect
 - Docker and Docker Compose (for running KubeNDT services)
 - Git (to clone meshnet-cni)
 - Minimum recommended lab resources: 4 vCPU, 8 GB RAM
+- One of the following, depending on the option you pick:
+  - [Minikube](https://minikube.sigs.k8s.io/docs/start/) (Option 1)
+  - [kind](https://kind.sigs.k8s.io/docs/user/quick-start/#installation) (Option 2)
+  - [kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/) (Option 3)
 
 ## 3. Mandatory Validation Checks (All Options)
 
@@ -85,6 +91,8 @@ kubectl get crd | grep -i topologies.networkop.co.uk
 
 When the checks pass, the cluster is ready for KubeNDT.
 
+> Optional: to see per-pod CPU and RAM in the UI, install metrics-server (see §10).
+
 ## 5. Option 2: Multi-node cluster with kind
 
 Use this option for reproducible multi-node local testing. The example below
@@ -106,6 +114,13 @@ Create file kind-cluster.yaml:
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 name: kubendt
+networking:
+  # Bind the API server to a routable host IP instead of 127.0.0.1 so the
+  # kubeconfig KubeNDT mounts can reach the cluster from its container, and so
+  # the API server certificate is valid for that address. kind adds this
+  # address to the cert SANs automatically.
+  apiServerAddress: "192.168.1.50"   # replace with your host IP (see note)
+  apiServerPort: 6443
 nodes:
   - role: control-plane
     kubeadmConfigPatches:
@@ -131,6 +146,11 @@ nodes:
 ```
 
 > The `kubeletExtraArgs` entries are required for KubeNDT switch and router nodes that set `net.ipv4.ip_forward` / `net.ipv6.conf.all.forwarding` as pod-level sysctls. Without them the kubelet rejects those pods with `SysctlForbidden`.
+
+> Replace `apiServerAddress` with your host's LAN IP (find it with
+> `hostname -I` or `ip -4 addr`). Using `127.0.0.1` here makes the generated
+> kubeconfig unreachable from the KubeNDT backend container and produces a
+> certificate that is only valid for localhost.
 
 ### 5.2 Create cluster
 
@@ -162,6 +182,8 @@ kubectl get crd | grep -i topologies.networkop.co.uk
 
 When all nodes (control-plane and both workers) are Ready and Meshnet is
 healthy, the cluster is ready for KubeNDT.
+
+> Optional: to see per-pod CPU and RAM in the UI, install metrics-server (see §10).
 
 ## 6. Option 3: Two Nodes with kubeadm
 
@@ -293,6 +315,8 @@ kubectl get crd | grep -E 'topologies.networkop.co.uk|network-attachment-definit
 ### 6.5 Ready state
 
 When both nodes are Ready and Meshnet resources are healthy, the cluster is ready for KubeNDT.
+
+> Optional: to see per-pod CPU and RAM in the UI, install metrics-server (see §10).
 
 ## 7. Operational Troubleshooting
 
