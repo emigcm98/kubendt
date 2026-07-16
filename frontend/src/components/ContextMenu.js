@@ -2,6 +2,7 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 're
 import './ContextMenu.css';
 import shellIcon from '../assets/images/shell.svg';
 import shellBlueIcon from '../assets/images/shell_blue.svg';
+import { ReactComponent as TraceIcon } from '../assets/images/trace-icon.svg';
 
 const ContextMenu = ({
   x,
@@ -11,6 +12,7 @@ const ContextMenu = ({
   onOpenShell,
   onRestartPod,
   onOpenInfoPanel,
+  onStartTrace,
   onDelete,
 }) => {
   const menuRef = useRef(null);
@@ -147,6 +149,13 @@ const ContextMenu = ({
         >
           <img src={shellBlueIcon} alt="vtysh" className="graph-context-menu-icon" />
           <span className="graph-context-menu-label">Open vtysh console</span>
+        </div>
+      )}
+
+      {!isExternal && onStartTrace && node?.fullInfo?.l3capable && (
+        <div className="graph-context-menu-item" onClick={() => handleOptionClick(onStartTrace)}>
+          <TraceIcon className="graph-context-menu-icon" />
+          <span className="graph-context-menu-label">Traceroute from here</span>
         </div>
       )}
 

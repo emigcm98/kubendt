@@ -53,6 +53,16 @@ func SetupRoutes(router *gin.Engine) {
 		captureGroup.GET("/packet/:namespace/:podName/:container/:num", handlers.GetCapturePacketDetail)
 	}
 
+	traceGroup := router.Group("/trace")
+	{
+		// One-shot traceroute from a pod toward an IP/hostname (WebSocket stream
+		// of hops already resolved to topology nodes).
+		traceGroup.GET("/ws/:namespace/:podName", handlers.TraceWebSocket)
+		// Same probe as a single JSON document (REST, for scripting/automation):
+		// GET /trace/run/:namespace/:podName?dest=…&method=…&metrics=1&cycles=N
+		traceGroup.GET("/run/:namespace/:podName", handlers.TraceReport)
+	}
+
 	podGroup := router.Group("/pods")
 	{
 		// 1. Get pod list

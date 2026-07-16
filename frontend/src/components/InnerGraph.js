@@ -7,6 +7,9 @@ import EdgeContextMenu from './EdgeContextMenu.js';
 import InterfaceContextMenu from './InterfaceContextMenu.js';
 import './InnerGraph.css';
 import { API_BASE_URL } from '../config';
+import { ReactComponent as PacketEnvelope } from '../assets/images/trace-packet.svg';
+import { ReactComponent as PacketDrop } from '../assets/images/trace-drop.svg';
+import { ReactComponent as PacketCheck } from '../assets/images/trace-check.svg';
 
 import CustomNode, { NODE_SIZE } from './CustomNode';
 const nodeTypes = { custom: CustomNode };
@@ -113,6 +116,8 @@ const InnerGraph = ({
   searchQuery = '',
   isBusy = false,
   onStartCapture,
+  onStartTrace,
+  trace = null,
 }) => {
   const containerRef = useRef(null);
   const hoverTimeoutRef = useRef(null);
@@ -149,6 +154,8 @@ const InnerGraph = ({
     const handleKeydown = (e) => {
       if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return;
       if (e.ctrlKey || e.metaKey || e.altKey) return;
+      // While a trace is active the panel owns the arrows (steps the packet).
+      if (trace) return;
 
       // Don't pan while the user is typing in any input / editor (CodeMirror, modals, etc.)
       const t = e.target;
@@ -189,7 +196,7 @@ const InnerGraph = ({
     };
     document.addEventListener('keydown', handleKeydown);
     return () => document.removeEventListener('keydown', handleKeydown);
-  }, [getViewport, setViewport]);
+  }, [getViewport, setViewport, trace]);
 
   const fetchInterfaceInfo = async (podName, intfName, mouseEvent, signal) => {
     setTooltipLoading(true);
@@ -653,6 +660,152 @@ const InnerGraph = ({
               </React.Fragment>
             );
           })}
+          {trace &&
+            Array.isArray(trace.waypoints) &&
+            trace.waypoints.length >= 1 &&
+            (trace.waypoints.length > 1 || trace.drop) &&
+            (() => {
+              const centerOf = (pod) => {
+                const n = nodes.find((x) => x.id === pod);
+                if (!n || !n.position) return null;
+                return { x: n.position.x + NODE_SIZE / 2, y: n.position.y + NODE_SIZE / 2 };
+              };
+              // Graph centroid → direction to fling the packet "toward the
+              // internet" (a hop that leaves the topology).
+              let cx = 0;
+              let cy = 0;
+              let cnt = 0;
+              for (const n of nodes) {
+                if (n.position) {
+                  cx += n.position.x + NODE_SIZE / 2;
+                  cy += n.position.y + NODE_SIZE / 2;
+                  cnt += 1;
+                }
+              }
+              if (cnt) {
+                cx /= cnt;
+                cy /= cnt;
+              }
+              const outward = (from) => {
+                if (!from) return null;
+                let dx = from.x - cx;
+                let dy = from.y - cy;
+                const d = Math.sqrt(dx * dx + dy * dy);
+                if (d < 1) {
+                  dx = 0.7;
+                  dy = -0.7;
+                } else {
+                  dx /= d;
+                  dy /= d;
+                }
+                return { x: from.x + dx * 90, y: from.y + dy * 90 };
+              };
+              // Resolve every waypoint to a point. "__internet__" waypoints all
+              // sit at the same outward point, derived from the last real node.
+              const wps = trace.waypoints;
+              const pts = [];
+              let lastReal = centerOf(wps[0].pod);
+              for (let i = 0; i < wps.length; i += 1) {
+                if (wps[i].pod === '__internet__') {
+                  pts.push(outward(lastReal));
+                } else {
+                  const c = centerOf(wps[i].pod);
+                  pts.push(c);
+                  if (c) lastReal = c;
+                }
+              }
+              const els = [];
+              for (let i = 1; i < wps.length; i += 1) {
+                const a = pts[i - 1];
+                const b = pts[i];
+                if (!a || !b) continue;
+                const done = i <= trace.step;
+                const active = i === trace.step;
+                const seg = wps[i].seg;
+                const dx = b.x - a.x;
+                const dy = b.y - a.y;
+                const len = Math.sqrt(dx * dx + dy * dy);
+                const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
+                // Internet egress draws a blinking arrow, not a line. Only on
+                // the step that leaves the last real node, not on the following
+                // internet steps that sit at the same point.
+                if (seg === 'internet') {
+                  if (wps[i - 1].pod === '__internet__' || len < 1) continue;
+                  const mx = (a.x + b.x) / 2;
+                  const my = (a.y + b.y) / 2;
+                  els.push(
+                    <div
+                      key={`trace-out-${i}`}
+                      className={`trace-out${done || active ? ' trace-out-on' : ''}`}
+                      style={{
+                        transformOrigin: '50% 50%',
+                        transform: `translate(${mx}px, ${my}px) translate(-50%, -50%) rotate(${angle}deg)`,
+                      }}
+                    >
+                      ➤➤➤
+                    </div>
+                  );
+                  continue;
+                }
+                if (len < 1) continue; // zero-length, nothing to draw
+                els.push(
+                  <div
+                    key={`trace-seg-${i}`}
+                    className={`trace-seg${done ? ' trace-seg-done' : ''}${active ? ' trace-seg-active' : ''}${seg === 'tunnel' ? ' trace-seg-tunnel' : ''}${seg === 'external' ? ' trace-seg-external' : ''}`}
+                    style={{
+                      transformOrigin: '0 50%',
+                      transform: `translate(${a.x}px, ${a.y - 1.5}px) rotate(${angle}deg)`,
+                      width: `${len}px`,
+                    }}
+                  />
+                );
+              }
+              const curStep = Math.min(trace.step, wps.length - 1);
+              const pos = pts[curStep];
+              const leaving = curStep > 0 && wps[curStep] && wps[curStep].seg === 'internet';
+              // The packet dies at its own final spot, wherever it ended. Dim
+              // the envelope there and stamp the mark over it, not over a node
+              // behind it.
+              const atEnd = curStep === wps.length - 1;
+              const atDeath = !!trace.drop && atEnd;
+              const arrived = !!trace.delivered && atEnd;
+              if (pos) {
+                // Packet = an inline SVG envelope; the drop ✕ (dropped) or the
+                // ✓ (delivered) is a sibling SVG inside the SAME container, so
+                // it shares the packet's position and, on a drop, its fade.
+                els.push(
+                  <div
+                    key="trace-packet"
+                    className={`trace-packet${atDeath ? ' trace-packet-dropped' : leaving ? ' trace-packet-out' : ''}`}
+                    style={{ transform: `translate(${pos.x}px, ${pos.y}px) translate(-50%, -50%)` }}
+                  >
+                    <PacketEnvelope
+                      className="trace-packet-env"
+                      width="24"
+                      height="24"
+                      aria-hidden="true"
+                    />
+                    {atDeath && (
+                      <PacketDrop
+                        className="trace-packet-x"
+                        width="18"
+                        height="18"
+                        aria-hidden="true"
+                      />
+                    )}
+                    {arrived && (
+                      <PacketCheck
+                        className="trace-packet-x"
+                        width="18"
+                        height="18"
+                        aria-hidden="true"
+                      />
+                    )}
+                  </div>
+                );
+              }
+              return els;
+            })()}
         </EdgeLabelRenderer>
       </ReactFlow>
 
@@ -700,6 +853,14 @@ const InnerGraph = ({
               onOpenInteractiveShell(pod, mode);
             }
           }}
+          onStartTrace={
+            onStartTrace
+              ? () => {
+                  const info = nodes.find((n) => n.id === contextMenu.nodeId)?.data?.fullInfo;
+                  if (info) onStartTrace(info);
+                }
+              : null
+          }
           onRestartPod={
             isBusy
               ? null
