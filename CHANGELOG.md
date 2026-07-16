@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-07-16
+
 ### Added
 
 - Traceroute from any L3-capable node toward an IP or hostname, with every hop
@@ -36,6 +38,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   controls (play, pause, step, scrub) let you replay the traced path, and the
   full result can be downloaded as JSON.
 
+### Changed
+
+- Improved the Kubernetes cluster deploy guide, clarifying when Meshnet is
+  installed, how to bind the kind API server to a routable host IP, where
+  metrics-server fits per option, and adding install links for Minikube, kind
+  and kubeadm.
+
 ## [1.0.0] - 2026-07-09
 
 Initial public release. KubeNDT deploys and operates virtual network topologies
@@ -63,5 +72,6 @@ resources over the Meshnet CNI.
 - Health, readiness and version endpoints, and Swagger docs at `/swagger`.
 - Container images published to GHCR and a Docker Compose deployment.
 
-[Unreleased]: https://github.com/emigcm98/kubendt/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/emigcm98/kubendt/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/emigcm98/kubendt/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/emigcm98/kubendt/releases/tag/v1.0.0
