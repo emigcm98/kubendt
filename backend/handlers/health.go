@@ -12,7 +12,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func appVersion() string {
+// AppVersion returns the build version injected via KUBENDT_VERSION, or "dev"
+// for local builds where the build arg was not set.
+func AppVersion() string {
 	version := os.Getenv("KUBENDT_VERSION")
 	if version == "" {
 		version = "dev"
@@ -40,7 +42,7 @@ func Healthz(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status":      "ok",
 		"service":     "kubendt-backend",
-		"version":     appVersion(),
+		"version":     AppVersion(),
 		"commit":      appCommit(),
 		"build_date":  appBuildDate(),
 		"server_time": time.Now().UTC().Format(time.RFC3339),
@@ -50,7 +52,7 @@ func Healthz(c *gin.Context) {
 func Version(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"service":    "kubendt-backend",
-		"version":    appVersion(),
+		"version":    AppVersion(),
 		"commit":     appCommit(),
 		"build_date": appBuildDate(),
 	})

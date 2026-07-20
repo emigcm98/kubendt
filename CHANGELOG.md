@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The Swagger UI version badge now reflects the running build version instead of
+  a fixed `1.0`, so it changes across releases.
+
 ## [1.1.0] - 2026-07-16
 
 ### Added

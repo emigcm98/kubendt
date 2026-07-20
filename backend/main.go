@@ -14,6 +14,7 @@ import (
 	"kubendt/database"
 	docs "kubendt/docs"
 	drivers "kubendt/drivers"
+	"kubendt/handlers"
 	"kubendt/helpers"
 	"kubendt/kubeclient"
 	"log"
@@ -79,6 +80,11 @@ func main() {
 		docs.SwaggerInfo.BasePath = basePath
 		docs.SwaggerInfo.Host = ""
 	}
+
+	// Reflect the build version in the Swagger "Version" badge. SwaggerInfo is
+	// exported for exactly this. Without it the badge is stuck at the static
+	// @version annotation and never changes between releases.
+	docs.SwaggerInfo.Version = handlers.AppVersion()
 
 	// Create router (gin.New avoids the "already attached" warning from gin.Default)
 	router := gin.New()
