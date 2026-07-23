@@ -165,8 +165,6 @@
 .main-layout {
   flex: 1;
   display: grid;
-  /* Fixed widths on both columns so the cluster card stays compact and the
-       node cards inside don't get stretched horizontally. */
   grid-template-columns: 640px 480px;
   gap: 20px;
   padding: 20px;
@@ -183,7 +181,22 @@
   min-height: 0;
 }
 
-/* (right-column width is now driven by the grid template) */
+/* Narrow windows / small screens: node cards go single-column and the header
+   tightens up. */
+@media (max-width: 640px) {
+  .nodes-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .home-header {
+    min-height: 0;
+    padding: 10px 14px;
+  }
+
+  .main-layout {
+    padding: 12px;
+  }
+}
 
 /* === NAMESPACE CONTROLS === */
 .namespace-controls-wrapper {
@@ -203,6 +216,9 @@
   border-radius: 12px;
   padding: 14px 16px;
   box-shadow: 0 4px 16px rgba(25, 118, 210, 0.12);
+  /* Keep the Kubectl panel fully visible at the bottom; the cluster card above
+     absorbs the remaining space and scrolls its node grid. */
+  flex-shrink: 0;
 }
 
 .kubeconfig-header {
@@ -362,10 +378,11 @@
   border-radius: 16px;
   padding: 18px 22px;
   box-shadow: 0 4px 16px rgba(25, 118, 210, 0.12);
-  min-height: 480px;
-  /* Fill the column height so the right column (Kubectl + Namespaces)
-       lines up with the bottom of this card. */
+  /* Fill the column height and let the node grid scroll inside, so the card
+       shrinks to fit next to the Kubectl panel instead of overflowing. Mirrors
+       how the Namespaces card fills the right column. No fixed min-height. */
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
