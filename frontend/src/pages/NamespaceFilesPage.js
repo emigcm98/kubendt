@@ -5,6 +5,14 @@ import FileSidebar from '../components/FileSidebar';
 import './NamespaceFilesPage.css';
 import ErrorPage from './ErrorPage';
 import { API_BASE_URL } from '../config';
+import { ReactComponent as BoxIcon } from '../assets/images/icons/box.svg';
+import { ReactComponent as SaveIcon } from '../assets/images/icons/save.svg';
+import { ReactComponent as LockIcon } from '../assets/images/icons/lock.svg';
+import { ReactComponent as EyeIcon } from '../assets/images/icons/eye.svg';
+import { ReactComponent as FileIcon } from '../assets/images/icons/file.svg';
+import { ReactComponent as FolderIcon } from '../assets/images/icons/folder.svg';
+import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
+import { ReactComponent as EditIcon } from '../assets/images/icons/edit.svg';
 
 import CodeMirror from '@uiw/react-codemirror';
 import { json } from '@codemirror/lang-json';
@@ -418,7 +426,7 @@ function NamespaceFilesPage() {
     }
 
     setImportStatus('importing');
-    setImportMessage(`📦 Importing ${filename}...`);
+    setImportMessage(`Importing ${filename}...`);
 
     try {
       const formData = new FormData();
@@ -435,7 +443,7 @@ function NamespaceFilesPage() {
       }
 
       setImportStatus('success');
-      setImportMessage(`✅ ${filename} imported successfully`);
+      setImportMessage(`${filename} imported successfully`);
       setShowImportModal(false);
 
       setTimeout(() => {
@@ -722,7 +730,13 @@ function NamespaceFilesPage() {
         <div className="file-editor">
           {saveStatus && (
             <div className={`save-indicator save-${saveStatus}`}>
-              {saveStatus === 'saving' ? '💾 Saving...' : '✓ Saved'}
+              {saveStatus === 'saving' ? (
+                <>
+                  <SaveIcon className="app-icon" /> Saving...
+                </>
+              ) : (
+                '✓ Saved'
+              )}
             </div>
           )}
           {selectedFile ? (
@@ -735,7 +749,7 @@ function NamespaceFilesPage() {
                       title="Sensitive file (stored as a Kubernetes Secret when mounted)"
                       aria-label="Sensitive"
                     >
-                      🔒
+                      <LockIcon className="app-icon" />
                     </span>
                   )}
                   {selectedFile}
@@ -745,11 +759,13 @@ function NamespaceFilesPage() {
                     </span>
                   )}
                 </strong>
-                <button onClick={handleSave}>💾 Save File</button>
+                <button onClick={handleSave}>
+                  <SaveIcon className="app-icon" /> Save File
+                </button>
               </div>
               {selectedIsSensitive && !revealSensitive ? (
                 <div className="sensitive-shield">
-                  <div className="sensitive-shield-icon">🔒</div>
+                  <LockIcon className="sensitive-shield-icon" />
                   <div className="sensitive-shield-title">Sensitive content hidden</div>
                   <div className="sensitive-shield-message">
                     This file is marked as sensitive. Its content is materialised as a Kubernetes
@@ -760,7 +776,7 @@ function NamespaceFilesPage() {
                     className="sensitive-shield-show"
                     onClick={() => setRevealSensitive(true)}
                   >
-                    👁️ Show content
+                    <EyeIcon className="app-icon" /> Show content
                   </button>
                 </div>
               ) : (
@@ -793,7 +809,9 @@ function NamespaceFilesPage() {
               )}
             </>
           ) : (
-            <div className="editor-placeholder">📄 Select or create a file to start editing</div>
+            <div className="editor-placeholder">
+              <FileIcon className="app-icon" /> Select or create a file to start editing
+            </div>
           )}
         </div>
       </div>
@@ -802,7 +820,9 @@ function NamespaceFilesPage() {
       {showCreateFolderModal && (
         <div className="create-file-modal-overlay" onClick={() => setShowCreateFolderModal(false)}>
           <div className="create-file-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="create-file-modal-header">📁 New Folder</div>
+            <div className="create-file-modal-header">
+              <FolderIcon className="app-icon icon-folder" /> New Folder
+            </div>
             <div className="create-file-modal-body">
               {targetFolder && (
                 <div className="folder-location">
@@ -840,7 +860,9 @@ function NamespaceFilesPage() {
       {showCreateFileModal && (
         <div className="create-file-modal-overlay" onClick={() => setShowCreateFileModal(false)}>
           <div className="create-file-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="create-file-modal-header">📄 New File</div>
+            <div className="create-file-modal-header">
+              <FileIcon className="app-icon" /> New File
+            </div>
             <div className="create-file-modal-body">
               {targetFolder && (
                 <div className="folder-location">
@@ -878,7 +900,9 @@ function NamespaceFilesPage() {
       {showDeleteModal && deleteTarget && (
         <div className="create-file-modal-overlay" onClick={() => setShowDeleteModal(false)}>
           <div className="create-file-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="create-file-modal-header">🗑️ Confirm Delete</div>
+            <div className="create-file-modal-header">
+              <TrashIcon className="app-icon" /> Confirm Delete
+            </div>
             <div className="create-file-modal-body">
               <p className="confirm-message">
                 {deleteTarget.type === 'folder'
@@ -902,7 +926,9 @@ function NamespaceFilesPage() {
       {showDeleteAllModal && (
         <div className="create-file-modal-overlay" onClick={() => setShowDeleteAllModal(false)}>
           <div className="create-file-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="create-file-modal-header">🗑️ Delete All Files</div>
+            <div className="create-file-modal-header">
+              <TrashIcon className="app-icon" /> Delete All Files
+            </div>
             <div className="create-file-modal-body">
               <p className="confirm-message">
                 Delete <strong>all files and folders</strong> in namespace{' '}
@@ -930,7 +956,7 @@ function NamespaceFilesPage() {
                   handleDeleteAllFiles();
                 }}
               >
-                🗑️ Delete all
+                <TrashIcon className="app-icon" /> Delete all
               </button>
             </div>
           </div>
@@ -941,7 +967,9 @@ function NamespaceFilesPage() {
       {showRenameModal && (
         <div className="create-file-modal-overlay" onClick={() => setShowRenameModal(false)}>
           <div className="create-file-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="create-file-modal-header">✏️ Rename</div>
+            <div className="create-file-modal-header">
+              <EditIcon className="app-icon" /> Rename
+            </div>
             <div className="create-file-modal-body">
               <div className="folder-location">
                 Current: <strong>{renameSourcePath}</strong>
@@ -976,7 +1004,9 @@ function NamespaceFilesPage() {
       {showImportModal && (
         <div className="import-modal-overlay" onClick={() => setShowImportModal(false)}>
           <div className="import-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="import-modal-header">📦 Import Archive</div>
+            <div className="import-modal-header">
+              <BoxIcon className="app-icon icon-import" /> Import Archive
+            </div>
             <div className="import-modal-body">
               <input
                 ref={importFileInputRef}
@@ -1015,7 +1045,14 @@ function NamespaceFilesPage() {
                 }}
               >
                 <div className="drop-zone-content">
-                  <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>📁</div>
+                  <FolderIcon
+                    style={{
+                      width: '2.5rem',
+                      height: '2.5rem',
+                      marginBottom: '0.5rem',
+                      color: '#d99a2b',
+                    }}
+                  />
                   <div style={{ fontWeight: 'bold', marginBottom: '0.3rem' }}>
                     Drop archive here
                   </div>

@@ -125,7 +125,16 @@
 .folder-icon,
 .file-icon {
   flex-shrink: 0;
-  font-size: 1rem;
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Amber folders / neutral files in the tree, matching the file-manager palette. */
+.folder-icon {
+  color: #d99a2b;
+}
+.file-icon {
+  color: #64748b;
 }
 
 .folder-name,
@@ -180,9 +189,20 @@
   margin-bottom: 0.6rem;
 }
 
+.sidebar-search-icon {
+  position: absolute;
+  top: 50%;
+  left: 8px;
+  transform: translateY(-50%);
+  width: 0.9rem;
+  height: 0.9rem;
+  color: #888;
+  pointer-events: none;
+}
+
 .sidebar-search input {
   width: 100%;
-  padding: 0.4rem 1.8rem 0.4rem 0.55rem;
+  padding: 0.4rem 1.8rem 0.4rem 1.9rem;
   border: 1px solid #c5cdd6;
   border-radius: 6px;
   background-color: #ffffff;

@@ -1,8 +1,10 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import './ContextMenu.css';
-import shellIcon from '../assets/images/shell.svg';
-import shellBlueIcon from '../assets/images/shell_blue.svg';
-import { ReactComponent as TraceIcon } from '../assets/images/trace-icon.svg';
+import { ReactComponent as TraceIcon } from '../assets/images/icons/trace-icon.svg';
+import { ReactComponent as TerminalIcon } from '../assets/images/icons/terminal.svg';
+import { ReactComponent as RefreshIcon } from '../assets/images/icons/refresh.svg';
+import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
+import { ReactComponent as InfoIcon } from '../assets/images/icons/info.svg';
 
 const ContextMenu = ({
   x,
@@ -117,7 +119,7 @@ const ContextMenu = ({
 
       {onOpenInfoPanel && (
         <div className="graph-context-menu-item" onClick={() => handleOptionClick(onOpenInfoPanel)}>
-          <span className="graph-context-menu-icon">ℹ️</span>
+          <InfoIcon className="graph-context-menu-icon" />
           <span className="graph-context-menu-label">Open info panel</span>
         </div>
       )}
@@ -127,7 +129,7 @@ const ContextMenu = ({
           className="graph-context-menu-item"
           onClick={() => handleOptionClick(() => onOpenShell('sh'))}
         >
-          <img src={shellIcon} alt="shell" className="graph-context-menu-icon" />
+          <TerminalIcon className="graph-context-menu-icon" />
           <span className="graph-context-menu-label">Open pod shell (sh)</span>
         </div>
       )}
@@ -137,7 +139,7 @@ const ContextMenu = ({
           className="graph-context-menu-item"
           onClick={() => handleOptionClick(() => onOpenShell('serial'))}
         >
-          <img src={shellBlueIcon} alt="serial" className="graph-context-menu-icon" />
+          <TerminalIcon className="graph-context-menu-icon" />
           <span className="graph-context-menu-label">Open serial shell (attach)</span>
         </div>
       )}
@@ -147,7 +149,7 @@ const ContextMenu = ({
           className="graph-context-menu-item"
           onClick={() => handleOptionClick(() => onOpenShell('vtysh'))}
         >
-          <img src={shellBlueIcon} alt="vtysh" className="graph-context-menu-icon" />
+          <TerminalIcon className="graph-context-menu-icon" />
           <span className="graph-context-menu-label">Open vtysh console</span>
         </div>
       )}
@@ -161,7 +163,7 @@ const ContextMenu = ({
 
       {!isExternal && onRestartPod && (
         <div className="graph-context-menu-item" onClick={() => handleOptionClick(onRestartPod)}>
-          <span className="graph-context-menu-icon">🔄</span>
+          <RefreshIcon className="graph-context-menu-icon" />
           <span className="graph-context-menu-label">Restart pod</span>
         </div>
       )}
@@ -171,7 +173,7 @@ const ContextMenu = ({
           className="graph-context-menu-item graph-context-menu-item-danger"
           onClick={() => handleOptionClick(onDelete)}
         >
-          <span className="graph-context-menu-icon">🗑️</span>
+          <TrashIcon className="graph-context-menu-icon" />
           <span className="graph-context-menu-label">
             {isExternal ? 'Delete external network' : 'Delete pod'}
           </span>

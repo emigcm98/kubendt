@@ -1,10 +1,10 @@
 import React from 'react';
 import { Handle } from 'reactflow';
-import pcIcon from '../assets/images/host.svg';
-import routerIcon from '../assets/images/router.svg';
-import switchIcon from '../assets/images/switch.svg';
-import externalIcon from '../assets/images/switch_gray.svg';
-import internetIcon from '../assets/images/internet.svg';
+import pcIcon from '../assets/images/nodes/host.svg';
+import routerIcon from '../assets/images/nodes/router.svg';
+import switchIcon from '../assets/images/nodes/switch.svg';
+import externalIcon from '../assets/images/nodes/switch_gray.svg';
+import internetIcon from '../assets/images/nodes/internet.svg';
 import './CustomNode.css';
 
 export const NODE_SIZE = 64;

@@ -1,5 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import './InterfaceContextMenu.css';
+import { ReactComponent as PowerIcon } from '../assets/images/icons/power.svg';
+import { ReactComponent as WarningIcon } from '../assets/images/icons/warning.svg';
 
 const InterfaceContextMenu = ({
   x,
@@ -130,14 +132,14 @@ const InterfaceContextMenu = ({
           className={`intf-context-item ${isUp ? 'item-danger' : 'item-success'}`}
           onClick={handleToggle}
         >
-          <span className="intf-context-item-icon">{isUp ? '⏻' : '⏼'}</span>
+          <PowerIcon className="intf-context-item-icon" />
           <span className="intf-context-item-label">
             {isUp ? 'Disable interface' : 'Enable interface'}
           </span>
         </div>
       ) : (
         <div className="intf-context-item item-disabled">
-          <span className="intf-context-item-icon">⚠</span>
+          <WarningIcon className="intf-context-item-icon" />
           <span className="intf-context-item-label">State unavailable</span>
         </div>
       )}

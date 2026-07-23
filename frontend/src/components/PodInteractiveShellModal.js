@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import 'xterm/css/xterm.css';
+import { ReactComponent as RefreshIcon } from '../assets/images/icons/refresh.svg';
+import { ReactComponent as WarningIcon } from '../assets/images/icons/warning.svg';
 import './PodInteractiveShellModal.css';
 import { WS_BASE_URL } from '../config';
 
@@ -373,7 +375,7 @@ const PodInteractiveShellModal = ({
             title={connectionState === 'lost' ? 'Reconnect' : 'Force reconnect'}
             onClick={handleReconnect}
           >
-            🔄
+            <RefreshIcon className="app-icon" />
           </button>
           {onMinimize && (
             <button className="shell-modal-minimize-btn" title="Minimize" onClick={onMinimize}>
@@ -391,7 +393,7 @@ const PodInteractiveShellModal = ({
       {connectionState === 'lost' && (
         <div className="shell-disconnected-overlay" role="alertdialog" aria-modal="false">
           <div className="shell-disconnected-card">
-            <div className="shell-disconnected-icon">⚠</div>
+            <WarningIcon className="shell-disconnected-icon" />
             <div className="shell-disconnected-title">Connection lost</div>
             <div className="shell-disconnected-subtitle">
               The shell stream to <strong>{podName}</strong> was closed.
@@ -401,7 +403,7 @@ const PodInteractiveShellModal = ({
                 className="shell-disconnected-btn shell-disconnected-btn-primary"
                 onClick={handleReconnect}
               >
-                🔄 Reconnect
+                <RefreshIcon className="app-icon" /> Reconnect
               </button>
               <button className="shell-disconnected-btn" onClick={handleClose}>
                 ✖ Close

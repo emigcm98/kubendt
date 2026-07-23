@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import Modal from 'react-modal';
 import './ErrorModal.css';
+import { ReactComponent as ErrorIcon } from '../assets/images/icons/error.svg';
+import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
 
 Modal.setAppElement('#root');
 
@@ -28,10 +30,10 @@ const ErrorModal = ({ isOpen, message, details, note, onClose, title = 'Error' }
       overlayClassName="error-modal-overlay"
     >
       <div className="error-modal-header">
-        <div className="error-modal-icon">❌</div>
+        <ErrorIcon className="error-modal-icon" />
         <h2>{title}</h2>
         <button className="error-modal-close-btn" onClick={onClose}>
-          ✖
+          <CloseIcon className="app-icon" />
         </button>
       </div>
 

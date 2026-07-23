@@ -4,9 +4,17 @@ import { useNavigate } from 'react-router-dom';
 import './PodInfoPanel.css';
 import AlertModal from './AlertModal';
 import { API_BASE_URL } from '../config';
-import pcIcon from '../assets/images/host.svg';
-import routerIcon from '../assets/images/router.svg';
-import switchIcon from '../assets/images/switch.svg';
+import pcIcon from '../assets/images/nodes/host.svg';
+import routerIcon from '../assets/images/nodes/router.svg';
+import switchIcon from '../assets/images/nodes/switch.svg';
+import { ReactComponent as RefreshIcon } from '../assets/images/icons/refresh.svg';
+import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
+import { ReactComponent as FileIcon } from '../assets/images/icons/file.svg';
+import { ReactComponent as EyeIcon } from '../assets/images/icons/eye.svg';
+import { ReactComponent as LockIcon } from '../assets/images/icons/lock.svg';
+import { ReactComponent as CopyIcon } from '../assets/images/icons/copy.svg';
+import { ReactComponent as WarningIcon } from '../assets/images/icons/warning.svg';
+import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
 
 const POD_INFO_TAB_KEY_PREFIX = 'kubendt.podInfoPanel.activeTab.';
 const VALID_TABS = new Set(['summary', 'driver', 'links', 'vars']);
@@ -926,7 +934,7 @@ const PodInfoPanel = ({
           {restartElapsed !== null ? (
             <span className="restart-counter">{restartElapsed}s</span>
           ) : (
-            '🔄'
+            <RefreshIcon className="app-icon" />
           )}
         </button>
         {onDeletePod && (
@@ -936,11 +944,11 @@ const PodInfoPanel = ({
             title={isBusy ? 'Operation in progress…' : 'Delete pod (remove from topology)'}
             disabled={isBusy}
           >
-            🗑️
+            <TrashIcon className="app-icon" />
           </button>
         )}
         <button className="close-btn" onClick={onClosePanel} title="Close panel">
-          ✖
+          <CloseIcon className="app-icon" />
         </button>
 
         <h3>
@@ -1137,7 +1145,7 @@ const PodInfoPanel = ({
                           setHistoryBtnTooltip({ visible: false, top: 0, left: 0 })
                         }
                       >
-                        📄
+                        <FileIcon className="app-icon" />
                       </button>
                     ) : (
                       <button
@@ -1146,7 +1154,7 @@ const PodInfoPanel = ({
                         disabled={clearingPodHistory}
                         title="Delete all operations for this pod"
                       >
-                        {clearingPodHistory ? '…' : '🗑'}
+                        {clearingPodHistory ? '…' : <TrashIcon className="app-icon" />}
                       </button>
                     )}
                   </div>
@@ -1174,7 +1182,7 @@ const PodInfoPanel = ({
                                         title="Show action details"
                                         onClick={() => setSelectedHistoryEntry(entry)}
                                       >
-                                        👁
+                                        <EyeIcon className="app-icon" />
                                       </button>
                                       <button
                                         className="driver-history-delete-btn"
@@ -1184,7 +1192,11 @@ const PodInfoPanel = ({
                                           deletingHistoryId === entry.id || clearingPodHistory
                                         }
                                       >
-                                        {deletingHistoryId === entry.id ? '…' : '🗑'}
+                                        {deletingHistoryId === entry.id ? (
+                                          '…'
+                                        ) : (
+                                          <TrashIcon className="app-icon" />
+                                        )}
                                       </button>
                                     </div>
                                   </div>
@@ -1397,7 +1409,11 @@ const PodInfoPanel = ({
                             </div>
                             {feedback && (
                               <div className={`qdisc-feedback ${feedback.type}`}>
-                                {feedback.type === 'ok' ? '✓ ' : '⚠ '}
+                                {feedback.type === 'ok' ? (
+                                  '✓ '
+                                ) : (
+                                  <WarningIcon className="app-icon" />
+                                )}{' '}
                                 {feedback.text}
                               </div>
                             )}
@@ -1457,7 +1473,7 @@ const PodInfoPanel = ({
                               title="Sensitive file (Kubernetes Secret)"
                               aria-label="Sensitive"
                             >
-                              🔒
+                              <LockIcon className="app-icon" />
                             </span>
                           )}
                           {mount.file}
@@ -1540,7 +1556,7 @@ const PodInfoPanel = ({
                     className="history-popup-close"
                     onClick={() => setSelectedHistoryEntry(null)}
                   >
-                    ✖
+                    <CloseIcon className="app-icon" />
                   </button>
                 </div>
 
@@ -1595,7 +1611,7 @@ const PodInfoPanel = ({
                             title="Copy command"
                             onClick={() => copyToClipboard(cmd)}
                           >
-                            📋
+                            <CopyIcon className="app-icon" />
                           </button>
                         </div>
                       ))}

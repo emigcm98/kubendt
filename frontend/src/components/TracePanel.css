@@ -447,6 +447,13 @@
   color: #7fe0ff;
 }
 
+.trace-hop-inline-icon {
+  width: 13px;
+  height: 13px;
+  vertical-align: -2px;
+  margin-right: 2px;
+}
+
 .trace-hop-external-label {
   color: #c9a36b;
 }

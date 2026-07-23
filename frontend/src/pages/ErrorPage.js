@@ -1,6 +1,7 @@
 // src/components/ErrorPage.jsx
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ReactComponent as ForbiddenIcon } from '../assets/images/icons/forbidden.svg';
 import './ErrorPage.css';
 
 const statusTitles = {
@@ -25,7 +26,7 @@ function ErrorPage({ statusCode = 500, rawMessage = 'An unexpected error occurre
   return (
     <div className="error-page-container">
       <div className="error-card">
-        <div className="error-icon">🚫</div>
+        <ForbiddenIcon className="error-icon" aria-hidden="true" />
         <h1 className="error-title">{title}</h1>
         <p className="error-message">{cleanMessage}</p>
         <button className="error-button" onClick={() => navigate('/')}>

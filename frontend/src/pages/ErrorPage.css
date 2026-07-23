@@ -24,8 +24,10 @@
 }
 
 .error-icon {
-  font-size: 5rem;
-  margin-bottom: 1rem;
+  display: block;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 1rem;
   color: #d32f2f;
 }
 

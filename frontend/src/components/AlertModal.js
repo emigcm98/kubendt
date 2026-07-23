@@ -1,4 +1,10 @@
 import React from 'react';
+import { ReactComponent as SuccessIcon } from '../assets/images/icons/success.svg';
+import { ReactComponent as ErrorIcon } from '../assets/images/icons/error.svg';
+import { ReactComponent as WarningIcon } from '../assets/images/icons/warning.svg';
+import { ReactComponent as QuestionIcon } from '../assets/images/icons/question.svg';
+import { ReactComponent as LoadingIcon } from '../assets/images/icons/loading.svg';
+import { ReactComponent as InfoIcon } from '../assets/images/icons/info.svg';
 import './AlertModal.css';
 
 const AlertModal = ({
@@ -25,17 +31,17 @@ const AlertModal = ({
   const getIcon = () => {
     switch (type) {
       case 'success':
-        return '✅';
+        return <SuccessIcon className="alert-modal-icon-svg" />;
       case 'error':
-        return '❌';
+        return <ErrorIcon className="alert-modal-icon-svg" />;
       case 'warning':
-        return '⚠️';
+        return <WarningIcon className="alert-modal-icon-svg" />;
       case 'confirm':
-        return '❓';
+        return <QuestionIcon className="alert-modal-icon-svg" />;
       case 'loading':
-        return '⏳';
+        return <LoadingIcon className="alert-modal-icon-svg" />;
       default:
-        return 'ℹ️';
+        return <InfoIcon className="alert-modal-icon-svg" />;
     }
   };
 

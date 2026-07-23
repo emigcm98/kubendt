@@ -7,8 +7,11 @@ licenses. The kubendt source code itself is covered by the license in
 
 ## SVG icons
 
-All icons live in [`frontend/src/assets/images/`](./frontend/src/assets/images/)
-and were obtained from [SVG Repo](https://www.svgrepo.com/).
+The icons listed in the tables below were obtained from
+[SVG Repo](https://www.svgrepo.com/) and live under
+[`frontend/src/assets/images/`](./frontend/src/assets/images/). Any icon in that
+directory that is not listed below is original work created for this project and
+is covered by the project [LICENSE](./LICENSE), not the terms below.
 
 ### Cyber Security Isometric 3d Vectors, by coolbile (CC BY 4.0)
 
@@ -18,31 +21,14 @@ and were obtained from [SVG Repo](https://www.svgrepo.com/).
 
 | File | Modifications |
 |------|---------------|
-| `router.svg` | None |
-| `switch.svg` | None |
-| `switch_gray.svg` | Recolored to gray |
-| `host.svg` | None |
-| `internet.svg` | None |
+| `nodes/router.svg` | None |
+| `nodes/switch.svg` | None |
+| `nodes/switch_gray.svg` | Recolored to gray |
+| `nodes/host.svg` | None |
+| `nodes/internet.svg` | None |
 
 CC BY 4.0 allows commercial use; the only requirement is attribution
 (this file) and indicating modifications, which the table above covers.
-
-### Ligature Symbols Icons, by kudakurage (OFL)
-
-- Author: **kudakurage**
-- Collection: *Ligature Symbols Icons*, <https://www.svgrepo.com/collection/ligature-symbols-icons/>
-- License: [SIL Open Font License 1.1 (OFL)](https://openfontlicense.org/open-font-license-official-text/)
-
-| File | Modifications |
-|------|---------------|
-| `shell.svg` | None |
-| `shell_blue.svg` | Recolored to blue (`#2979ff`) |
-
-OFL allows commercial use, modification, and embedding in proprietary
-software. Attribution is not strictly required but is provided here as
-good practice. The "no selling the font itself" clause of OFL does not
-apply: these icons are embedded in the application, not redistributed
-as a standalone font asset.
 
 ## In-app surfacing
 

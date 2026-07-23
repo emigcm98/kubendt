@@ -1,6 +1,8 @@
 import React from 'react';
 import './PodInfoPanel.css';
 import './ExternalNodeInfoPanel.css';
+import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
+import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
 
 const ExternalNodeInfoPanel = ({ node, onClosePanel, onDeleteExternal, isBusy = false }) => {
   if (!node) return null;
@@ -26,11 +28,11 @@ const ExternalNodeInfoPanel = ({ node, onClosePanel, onDeleteExternal, isBusy = 
             }
             disabled={isBusy}
           >
-            🗑️
+            <TrashIcon className="app-icon" />
           </button>
         )}
         <button className="close-btn" onClick={onClosePanel} title="Close panel">
-          ✖
+          <CloseIcon className="app-icon" />
         </button>
 
         <h3>{node.baseName || node.name}</h3>
