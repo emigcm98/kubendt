@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import './TracePanel.css';
 import { WS_BASE_URL, API_BASE_URL } from '../config';
-import { ReactComponent as TraceIcon } from '../assets/images/trace-icon.svg';
+import { ReactComponent as TraceIcon } from '../assets/images/icons/trace-icon.svg';
 
 // TracePanel is the remote control for the traceroute visualization. It owns the
 // WebSocket, the hop list and the scrubber (play, step forward, step back). The

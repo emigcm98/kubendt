@@ -4,9 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import './PodInfoPanel.css';
 import AlertModal from './AlertModal';
 import { API_BASE_URL } from '../config';
-import pcIcon from '../assets/images/host.svg';
-import routerIcon from '../assets/images/router.svg';
-import switchIcon from '../assets/images/switch.svg';
+import pcIcon from '../assets/images/nodes/host.svg';
+import routerIcon from '../assets/images/nodes/router.svg';
+import switchIcon from '../assets/images/nodes/switch.svg';
 
 const POD_INFO_TAB_KEY_PREFIX = 'kubendt.podInfoPanel.activeTab.';
 const VALID_TABS = new Set(['summary', 'driver', 'links', 'vars']);

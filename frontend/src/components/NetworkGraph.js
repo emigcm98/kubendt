@@ -18,7 +18,7 @@ import TopologyInputModal from './TopologyInputModal';
 import PodInteractiveShellModal from './PodInteractiveShellModal';
 import CapturePanel from './CapturePanel';
 import TracePanel from './TracePanel';
-import { ReactComponent as PcapIcon } from '../assets/images/pcap.svg';
+import { ReactComponent as PcapIcon } from '../assets/images/icons/pcap.svg';
 import InnerGraph from './InnerGraph';
 import LoadingOverlay from './LoadingOverlay';
 import './NetworkGraph.css';

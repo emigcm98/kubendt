@@ -2,11 +2,11 @@ import React, { useEffect, useState } from 'react';
 import './PodInfoPanel.css';
 import './LinkInfoPanel.css';
 import { API_BASE_URL } from '../config';
-import { ReactComponent as PcapIcon } from '../assets/images/pcap.svg';
-import pcIcon from '../assets/images/host.svg';
-import routerIcon from '../assets/images/router.svg';
-import switchIcon from '../assets/images/switch.svg';
-import externalIcon from '../assets/images/switch_gray.svg';
+import { ReactComponent as PcapIcon } from '../assets/images/icons/pcap.svg';
+import pcIcon from '../assets/images/nodes/host.svg';
+import routerIcon from '../assets/images/nodes/router.svg';
+import switchIcon from '../assets/images/nodes/switch.svg';
+import externalIcon from '../assets/images/nodes/switch_gray.svg';
 
 const ICONS = {
   host: pcIcon,

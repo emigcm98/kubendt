@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import './ContextMenu.css';
-import { ReactComponent as PcapIcon } from '../assets/images/pcap.svg';
+import { ReactComponent as PcapIcon } from '../assets/images/icons/pcap.svg';
 
 const EdgeContextMenu = ({
   x,

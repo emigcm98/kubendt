@@ -7,9 +7,9 @@ import EdgeContextMenu from './EdgeContextMenu.js';
 import InterfaceContextMenu from './InterfaceContextMenu.js';
 import './InnerGraph.css';
 import { API_BASE_URL } from '../config';
-import { ReactComponent as PacketEnvelope } from '../assets/images/trace-packet.svg';
-import { ReactComponent as PacketDrop } from '../assets/images/trace-drop.svg';
-import { ReactComponent as PacketCheck } from '../assets/images/trace-check.svg';
+import { ReactComponent as PacketEnvelope } from '../assets/images/icons/trace-packet.svg';
+import { ReactComponent as PacketDrop } from '../assets/images/icons/trace-drop.svg';
+import { ReactComponent as PacketCheck } from '../assets/images/icons/trace-check.svg';
 
 import CustomNode, { NODE_SIZE } from './CustomNode';
 const nodeTypes = { custom: CustomNode };

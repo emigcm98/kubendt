@@ -1,8 +1,8 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import './ContextMenu.css';
-import shellIcon from '../assets/images/shell.svg';
-import shellBlueIcon from '../assets/images/shell_blue.svg';
-import { ReactComponent as TraceIcon } from '../assets/images/trace-icon.svg';
+import shellIcon from '../assets/images/icons/shell.svg';
+import shellBlueIcon from '../assets/images/icons/shell_blue.svg';
+import { ReactComponent as TraceIcon } from '../assets/images/icons/trace-icon.svg';
 
 const ContextMenu = ({
   x,

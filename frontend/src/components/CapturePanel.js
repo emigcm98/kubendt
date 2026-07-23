@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import './CapturePanel.css';
 import { WS_BASE_URL, API_BASE_URL } from '../config';
-import { ReactComponent as PcapIcon } from '../assets/images/pcap.svg';
+import { ReactComponent as PcapIcon } from '../assets/images/icons/pcap.svg';
 
 const MAX_PACKETS = 5000; // ring-buffer cap held in memory
 const MAX_RENDERED = 2000; // most recent rows actually rendered
