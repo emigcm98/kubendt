@@ -1,6 +1,8 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import './ContextMenu.css';
 import { ReactComponent as PcapIcon } from '../assets/images/icons/pcap.svg';
+import { ReactComponent as InfoIcon } from '../assets/images/icons/info.svg';
+import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
 
 const EdgeContextMenu = ({
   x,
@@ -101,7 +103,7 @@ const EdgeContextMenu = ({
 
       {onOpenInfoPanel && (
         <div className="graph-context-menu-item" onClick={() => handleOptionClick(onOpenInfoPanel)}>
-          <span className="graph-context-menu-icon">ℹ️</span>
+          <InfoIcon className="graph-context-menu-icon" />
           <span className="graph-context-menu-label">Open info panel</span>
         </div>
       )}
@@ -133,7 +135,7 @@ const EdgeContextMenu = ({
           className="graph-context-menu-item graph-context-menu-item-danger"
           onClick={() => handleOptionClick(onDelete)}
         >
-          <span className="graph-context-menu-icon">🗑️</span>
+          <TrashIcon className="graph-context-menu-icon" />
           <span className="graph-context-menu-label">Delete link</span>
         </div>
       )}

@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Modal from 'react-modal';
 import './NamespaceNavbar.css';
+import { ReactComponent as WarningIcon } from '../assets/images/icons/warning.svg';
+import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
+import { ReactComponent as RefreshIcon } from '../assets/images/icons/refresh.svg';
 
 Modal.setAppElement('#root');
 
@@ -57,20 +60,7 @@ function NamespaceNavbar({ namespace, onDelete, onDeleteHistory, onRefresh, disa
               disabled={disabled}
               title="Refresh topology"
             >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <polyline points="23 4 23 10 17 10" />
-                <polyline points="1 20 1 14 7 14" />
-                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-              </svg>
+              <RefreshIcon style={{ width: 14, height: 14 }} />
             </button>
           </div>
         </div>
@@ -105,9 +95,11 @@ function NamespaceNavbar({ namespace, onDelete, onDeleteHistory, onRefresh, disa
         overlayClassName="delete-confirm-overlay"
       >
         <div className="modal-header">
-          <h2>⚠️ Confirm Namespace Deletion</h2>
+          <h2>
+            <WarningIcon className="app-icon" /> Confirm Namespace Deletion
+          </h2>
           <button className="modal-close-btn" onClick={() => setShowDeleteConfirmModal(false)}>
-            ✖
+            <CloseIcon className="app-icon" />
           </button>
         </div>
 
@@ -201,12 +193,14 @@ function NamespaceNavbar({ namespace, onDelete, onDeleteHistory, onRefresh, disa
         overlayClassName="delete-confirm-overlay"
       >
         <div className="modal-header">
-          <h2>⚠️ Confirm History Deletion</h2>
+          <h2>
+            <WarningIcon className="app-icon" /> Confirm History Deletion
+          </h2>
           <button
             className="modal-close-btn"
             onClick={() => setShowDeleteHistoryConfirmModal(false)}
           >
-            ✖
+            <CloseIcon className="app-icon" />
           </button>
         </div>
 

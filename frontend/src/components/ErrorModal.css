@@ -32,7 +32,10 @@
 }
 
 .error-modal-icon {
-  font-size: 28px;
+  display: block;
+  width: 26px;
+  height: 26px;
+  color: #e53935;
   flex-shrink: 0;
 }
 

@@ -4,6 +4,9 @@ import Modal from 'react-modal';
 import NetworkGraph from '../components/NetworkGraph';
 import NamespaceNavbar from '../components/NamespaceNavbar';
 import ErrorPage from './ErrorPage';
+import { ReactComponent as SuccessIcon } from '../assets/images/icons/success.svg';
+import { ReactComponent as ErrorIcon } from '../assets/images/icons/error.svg';
+import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
 import { API_BASE_URL } from '../config';
 import './NamespacePage.css';
 
@@ -125,9 +128,19 @@ function NamespacePage() {
         overlayClassName="delete-result-overlay"
       >
         <div className="modal-header">
-          <h2>{deleteResult.success ? '✅ Operation completed' : '❌ Operation failed'}</h2>
+          <h2>
+            {deleteResult.success ? (
+              <>
+                <SuccessIcon className="app-icon" /> Operation completed
+              </>
+            ) : (
+              <>
+                <ErrorIcon className="app-icon" /> Operation failed
+              </>
+            )}
+          </h2>
           <button className="modal-close-btn" onClick={handleCloseDeleteModal}>
-            ✖
+            <CloseIcon className="app-icon" />
           </button>
         </div>
 

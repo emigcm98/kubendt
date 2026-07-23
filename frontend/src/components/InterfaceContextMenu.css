@@ -178,9 +178,8 @@
 }
 
 .intf-context-item-icon {
-  font-size: 15px;
-  width: 18px;
-  text-align: center;
+  width: 16px;
+  height: 16px;
   flex-shrink: 0;
 }
 

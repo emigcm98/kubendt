@@ -180,7 +180,8 @@
 }
 
 .shell-disconnected-icon {
-  font-size: 2rem;
+  width: 2rem;
+  height: 2rem;
   color: #ff4d4d;
   margin-bottom: 0.3rem;
 }

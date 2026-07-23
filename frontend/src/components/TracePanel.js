@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './TracePanel.css';
 import { WS_BASE_URL, API_BASE_URL } from '../config';
 import { ReactComponent as TraceIcon } from '../assets/images/icons/trace-icon.svg';
+import { ReactComponent as GlobeIcon } from '../assets/images/icons/globe.svg';
 
 // TracePanel is the remote control for the traceroute visualization. It owns the
 // WebSocket, the hop list and the scrubber (play, step forward, step back). The
@@ -746,7 +747,9 @@ const TracePanel = ({
               ) : r.kind === 'internet' ? (
                 <>
                   <span className="trace-hop-ip">{r.ip}</span>
-                  <span className="trace-hop-node trace-hop-internet-label">🌐 internet</span>
+                  <span className="trace-hop-node trace-hop-internet-label">
+                    <GlobeIcon className="trace-hop-inline-icon" /> internet
+                  </span>
                 </>
               ) : r.kind === 'external-net' ? (
                 <>

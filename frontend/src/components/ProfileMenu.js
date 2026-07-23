@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import './ProfileMenu.css';
+import { ReactComponent as KeyIcon } from '../assets/images/icons/key.svg';
 
 // Header account menu: click the user chip to reveal identity/roles plus the
 // API tokens and logout actions.
@@ -62,7 +63,7 @@ export default function ProfileMenu({ onOpenTokens }) {
             }}
           >
             <span className="profile-item-icon" aria-hidden="true">
-              🔑
+              <KeyIcon className="app-icon" />
             </span>
             API tokens
           </button>

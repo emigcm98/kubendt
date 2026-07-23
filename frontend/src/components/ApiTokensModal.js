@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { ReactComponent as KeyIcon } from '../assets/images/icons/key.svg';
+import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
 import { API_BASE_URL } from '../config';
 import './ApiTokensModal.css';
 
@@ -93,7 +95,7 @@ export default function ApiTokensModal({ onClose }) {
         <div className="tokens-header">
           <h2>API tokens</h2>
           <button className="tokens-close" onClick={onClose} title="Close">
-            ✖
+            <CloseIcon className="app-icon" />
           </button>
         </div>
 
@@ -146,7 +148,7 @@ export default function ApiTokensModal({ onClose }) {
           {tokens.map((t) => (
             <div key={t.id} className="tokens-row">
               <span className="tokens-row-icon" aria-hidden="true">
-                🔑
+                <KeyIcon className="tokens-row-icon-svg" />
               </span>
               <div className="tokens-row-main">
                 <span className="tokens-row-name">{t.name}</span>

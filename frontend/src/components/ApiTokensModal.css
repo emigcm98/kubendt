@@ -203,9 +203,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1rem;
+  color: #3182ce;
   background: #ebf4ff;
   border-radius: 8px;
+}
+
+.tokens-row-icon-svg {
+  width: 18px;
+  height: 18px;
 }
 
 .tokens-row-main {

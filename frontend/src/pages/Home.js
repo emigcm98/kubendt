@@ -9,6 +9,16 @@ import ProfileMenu from '../components/ProfileMenu';
 import { useAuth } from '../auth/AuthContext';
 import { API_BASE_URL, SWAGGER_UI_URL } from '../config';
 import kubendtLogo from '../assets/images/kubendt-logo.svg';
+import { ReactComponent as WarningIcon } from '../assets/images/icons/warning.svg';
+import { ReactComponent as LoadingIcon } from '../assets/images/icons/loading.svg';
+import { ReactComponent as ErrorIcon } from '../assets/images/icons/error.svg';
+import { ReactComponent as FolderIcon } from '../assets/images/icons/folder.svg';
+import { ReactComponent as ClockIcon } from '../assets/images/icons/clock.svg';
+import { ReactComponent as SearchIcon } from '../assets/images/icons/search.svg';
+import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
+import { ReactComponent as PlusIcon } from '../assets/images/icons/plus.svg';
+import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
+import { ReactComponent as RefreshIcon } from '../assets/images/icons/refresh.svg';
 import './Home.css';
 
 Modal.setAppElement('#root');
@@ -437,9 +447,7 @@ const Home = () => {
       {/* No kubeconfig loaded: nothing works until one is provided. */}
       {kubeConfigured === false && (
         <div className="kubeconfig-gate-banner" role="alert">
-          <span className="kubeconfig-gate-icon" aria-hidden="true">
-            ⚠
-          </span>
+          <WarningIcon className="kubeconfig-gate-icon" aria-hidden="true" />
           <div className="kubeconfig-gate-text">
             <strong>No kubeconfig loaded.</strong> KubeNDT needs a kubeconfig to talk to a cluster.
             Load one in the <em>Kubectl context</em> panel below to get started.
@@ -469,25 +477,15 @@ const Home = () => {
                   disabled={clusterLoading || kubeConfigured === false}
                   title="Refresh cluster status"
                 >
-                  <svg
-                    width="15"
-                    height="15"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <polyline points="23 4 23 10 17 10" />
-                    <polyline points="1 20 1 14 7 14" />
-                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-                  </svg>
+                  <RefreshIcon style={{ width: 15, height: 15 }} />
                 </button>
               </div>
             </div>
             {initialClusterLoading ? (
-              <div className="cluster-loading">⏳ Loading cluster information...</div>
+              <div className="cluster-loading">
+                <LoadingIcon className="app-icon" aria-hidden="true" /> Loading cluster
+                information...
+              </div>
             ) : clusterStatus && clusterStatus.nodes && clusterStatus.nodes.length > 0 ? (
               <>
                 {clusterAggregates && (
@@ -526,7 +524,8 @@ const Home = () => {
                           className="cluster-summary-warning"
                           title="metrics-server is not reachable or no node is reporting metrics. Install metrics-server in the cluster to see live CPU and RAM."
                         >
-                          ⚠ metrics-server unavailable. CPU / RAM not reported
+                          <WarningIcon className="app-icon" aria-hidden="true" /> metrics-server
+                          unavailable. CPU / RAM not reported
                         </div>
                       </>
                     )}
@@ -606,7 +605,10 @@ const Home = () => {
             ) : kubeConfigured === false ? (
               <div className="cluster-error">Load a kubeconfig to see cluster status</div>
             ) : (
-              <div className="cluster-error">❌ Failed to fetch cluster information</div>
+              <div className="cluster-error">
+                <ErrorIcon className="app-icon" aria-hidden="true" /> Failed to fetch cluster
+                information
+              </div>
             )}
           </div>
 
@@ -620,20 +622,7 @@ const Home = () => {
                 disabled={kubeInfoLoading}
                 title="Refresh kubeconfig info"
               >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <polyline points="23 4 23 10 17 10" />
-                  <polyline points="1 20 1 14 7 14" />
-                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-                </svg>
+                <RefreshIcon style={{ width: 14, height: 14 }} />
               </button>
             </div>
             {kubeInfoLoading ? (
@@ -729,9 +718,7 @@ const Home = () => {
                   }}
                   aria-busy={loadingKubeConfig || undefined}
                 >
-                  <span className="kubeconfig-drop-icon" aria-hidden="true">
-                    📁
-                  </span>
+                  <FolderIcon className="kubeconfig-drop-icon" aria-hidden="true" />
                   <span className="kubeconfig-drop-text">
                     {loadingKubeConfig
                       ? 'Loading kubeconfig…'
@@ -786,9 +773,7 @@ const Home = () => {
                       }
                       aria-pressed={sortField === 'created'}
                     >
-                      <span className="namespace-sort-glyph" aria-hidden="true">
-                        🕐
-                      </span>
+                      <ClockIcon className="namespace-sort-glyph app-icon" aria-hidden="true" />
                       <span className="namespace-sort-arrow">
                         {sortField === 'created' ? (sortDir === 'desc' ? '↓' : '↑') : '↕'}
                       </span>
@@ -821,9 +806,7 @@ const Home = () => {
 
             {namespaces.length > 0 && (
               <div className="namespace-search">
-                <span className="namespace-search-icon" aria-hidden="true">
-                  🔍
-                </span>
+                <SearchIcon className="namespace-search-icon app-icon" aria-hidden="true" />
                 <input
                   type="text"
                   value={namespaceSearch}
@@ -838,7 +821,7 @@ const Home = () => {
                     onClick={() => setNamespaceSearch('')}
                     title="Clear filter"
                   >
-                    ✖
+                    <CloseIcon className="app-icon" />
                   </button>
                 )}
               </div>
@@ -910,7 +893,7 @@ const Home = () => {
                       title={terminating ? 'Already terminating' : `Delete namespace ${ns.name}`}
                       aria-label={`Delete namespace ${ns.name}`}
                     >
-                      🗑️
+                      <TrashIcon className="app-icon" aria-hidden="true" />
                     </button>
                   </div>
                 );
@@ -953,13 +936,15 @@ const Home = () => {
         shouldCloseOnOverlayClick={!creatingNamespace}
       >
         <div className="modal-header">
-          <h2>🆕 Create Namespace</h2>
+          <h2>
+            <PlusIcon className="app-icon" aria-hidden="true" /> Create Namespace
+          </h2>
           <button
             className="modal-close-btn"
             onClick={() => setIsModalOpen(false)}
             disabled={creatingNamespace}
           >
-            ✖
+            <CloseIcon className="app-icon" />
           </button>
         </div>
 
@@ -1017,8 +1002,9 @@ const Home = () => {
             nsNameValidation?.ok !== false &&
             namespaces.some((n) => n.name === newNamespaceName.trim()) && (
               <p className="ns-dup-warning" role="alert">
-                ⚠ A namespace named “{newNamespaceName.trim()}” already exists in this cluster.
-                Choose a different name or open the existing one.
+                <WarningIcon className="app-icon" aria-hidden="true" /> A namespace named “
+                {newNamespaceName.trim()}” already exists in this cluster. Choose a different name
+                or open the existing one.
               </p>
             )}
         </div>
@@ -1042,7 +1028,13 @@ const Home = () => {
             }
             title={nsNameValidation?.ok === false ? nsNameValidation.message : undefined}
           >
-            {creatingNamespace ? '⏳ Creating...' : '✓ Create'}
+            {creatingNamespace ? (
+              <>
+                <LoadingIcon className="app-icon" aria-hidden="true" /> Creating...
+              </>
+            ) : (
+              '✓ Create'
+            )}
           </button>
         </div>
       </Modal>
@@ -1056,13 +1048,15 @@ const Home = () => {
         shouldCloseOnOverlayClick={!deletingNamespace}
       >
         <div className="modal-header">
-          <h2>⚠️ Confirm Namespace Deletion</h2>
+          <h2>
+            <WarningIcon className="app-icon" aria-hidden="true" /> Confirm Namespace Deletion
+          </h2>
           <button
             className="modal-close-btn"
             onClick={() => setDeleteTarget(null)}
             disabled={deletingNamespace}
           >
-            ✖
+            <CloseIcon className="app-icon" />
           </button>
         </div>
 
@@ -1149,7 +1143,15 @@ const Home = () => {
             onClick={handleConfirmDeleteNamespace}
             disabled={deletingNamespace}
           >
-            {deletingNamespace ? '⏳ Deleting…' : '🗑️ Delete namespace'}
+            {deletingNamespace ? (
+              <>
+                <LoadingIcon className="app-icon" aria-hidden="true" /> Deleting…
+              </>
+            ) : (
+              <>
+                <TrashIcon className="app-icon" aria-hidden="true" /> Delete namespace
+              </>
+            )}
           </button>
         </div>
       </Modal>

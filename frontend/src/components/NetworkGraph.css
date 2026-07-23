@@ -538,9 +538,10 @@
 }
 
 .topbar-search-icon {
-  font-size: 0.95rem;
+  width: 15px;
+  height: 15px;
   color: #777;
-  text-align: center;
+  flex-shrink: 0;
 }
 
 .topbar-search input {

@@ -11,6 +11,32 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
 
+/* Shared inline icon: SVG that scales with the surrounding text and inherits
+   its color (icons use stroke="currentColor"). Use for icons placed inline with
+   text (buttons, menu items, headings). Add an explicit size for standalone or
+   oversized icons instead. */
+.app-icon {
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.15em;
+  flex-shrink: 0;
+}
+
+/* Semantic icon colors (applied alongside .app-icon where a colored icon aids
+   scanning, e.g. the file manager). Icons use currentColor. */
+.icon-folder {
+  color: #d99a2b;
+}
+.icon-save {
+  color: #2563eb;
+}
+.icon-import {
+  color: #0d9488;
+}
+.icon-danger {
+  color: #dc2626;
+}
+
 /* ---------------------------------------------------------------------------
    CodeMirror search / replace panel (Ctrl+F)
    The default styling from @codemirror/search is plain and wraps awkwardly

@@ -30,23 +30,6 @@ is covered by the project [LICENSE](./LICENSE), not the terms below.
 CC BY 4.0 allows commercial use; the only requirement is attribution
 (this file) and indicating modifications, which the table above covers.
 
-### Ligature Symbols Icons, by kudakurage (OFL)
-
-- Author: **kudakurage**
-- Collection: *Ligature Symbols Icons*, <https://www.svgrepo.com/collection/ligature-symbols-icons/>
-- License: [SIL Open Font License 1.1 (OFL)](https://openfontlicense.org/open-font-license-official-text/)
-
-| File | Modifications |
-|------|---------------|
-| `icons/shell.svg` | None |
-| `icons/shell_blue.svg` | Recolored to blue (`#2979ff`) |
-
-OFL allows commercial use, modification, and embedding in proprietary
-software. Attribution is not strictly required but is provided here as
-good practice. The "no selling the font itself" clause of OFL does not
-apply: these icons are embedded in the application, not redistributed
-as a standalone font asset.
-
 ## In-app surfacing
 
 When kubendt is presented in a context where attribution must be visible

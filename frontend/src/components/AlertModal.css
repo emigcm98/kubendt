@@ -32,11 +32,37 @@
 }
 
 .alert-modal-icon {
-  font-size: 32px;
   min-width: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: #4c8bf5; /* default / info tint */
+}
+
+.alert-modal-icon-svg {
+  display: block;
+  width: 24px;
+  height: 24px;
+}
+
+.alert-modal-icon-success {
+  color: #4caf50;
+}
+
+.alert-modal-icon-error {
+  color: #d32f2f;
+}
+
+.alert-modal-icon-warning {
+  color: #f5a623;
+}
+
+.alert-modal-icon-confirm {
+  color: #4c8bf5;
+}
+
+.alert-modal-icon-info {
+  color: #4c8bf5;
 }
 
 .alert-modal-icon-loading {

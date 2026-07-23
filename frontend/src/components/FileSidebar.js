@@ -1,5 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Tooltip from './Tooltip';
+import { ReactComponent as FolderIcon } from '../assets/images/icons/folder.svg';
+import { ReactComponent as FileIcon } from '../assets/images/icons/file.svg';
+import { ReactComponent as LockIcon } from '../assets/images/icons/lock.svg';
+import { ReactComponent as UnlockIcon } from '../assets/images/icons/unlock.svg';
+import { ReactComponent as BoxIcon } from '../assets/images/icons/box.svg';
+import { ReactComponent as SaveIcon } from '../assets/images/icons/save.svg';
+import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
+import { ReactComponent as RefreshIcon } from '../assets/images/icons/refresh.svg';
+import { ReactComponent as SearchIcon } from '../assets/images/icons/search.svg';
+import { ReactComponent as EditIcon } from '../assets/images/icons/edit.svg';
+import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
 import './FileSidebar.css';
 
 // Walk the tree and collect every folder path that contains at least one node
@@ -342,12 +353,12 @@ function FileSidebar({
               >
                 {isExpanded ? '▼' : '▶'}
               </button>
-              <span className="folder-icon">📁</span>
+              <FolderIcon className="folder-icon" />
               <span className="folder-name">{renderHighlightedName(node.name)}</span>
             </>
           ) : (
             <>
-              <span className="file-icon">📄</span>
+              <FileIcon className="file-icon" />
               <span className="file-name">
                 {renderHighlightedName(node.name)}
                 {node.sensitive && (
@@ -356,7 +367,7 @@ function FileSidebar({
                     title="Sensitive file (stored as a Kubernetes Secret when mounted)"
                     aria-label="Sensitive"
                   >
-                    🔒
+                    <LockIcon className="app-icon" />
                   </span>
                 )}
                 {unsavedFiles?.has?.(node.path) && (
@@ -393,12 +404,12 @@ function FileSidebar({
         <div className="actions">
           <Tooltip text="Import archive">
             <button aria-label="Import: upload a ZIP or tar.gz archive" onClick={onImport}>
-              📦
+              <BoxIcon className="app-icon icon-import" />
             </button>
           </Tooltip>
           <Tooltip text="Export ZIP">
             <button aria-label="Export: download all files as a ZIP archive" onClick={onExport}>
-              💾
+              <SaveIcon className="app-icon icon-save" />
             </button>
           </Tooltip>
           {onDeleteAllFiles && (
@@ -408,7 +419,7 @@ function FileSidebar({
                 aria-label="Delete all files: permanently removes every file and folder"
                 onClick={onDeleteAllFiles}
               >
-                🗑️
+                <TrashIcon className="app-icon icon-danger" />
               </button>
             </Tooltip>
           )}
@@ -418,27 +429,28 @@ function FileSidebar({
       <div className="actions actions-quick">
         <Tooltip text={createFileTooltip}>
           <button aria-label={createFileTooltip} onClick={handleCreateFileClick}>
-            📄
+            <FileIcon className="app-icon" />
           </button>
         </Tooltip>
         <Tooltip text={createFolderTooltip}>
           <button aria-label={createFolderTooltip} onClick={handleCreateFolderClick}>
-            📁
+            <FolderIcon className="app-icon icon-folder" />
           </button>
         </Tooltip>
         <Tooltip text="Refresh">
           <button aria-label="Refresh file list" onClick={onRefresh}>
-            🔃
+            <RefreshIcon className="app-icon" />
           </button>
         </Tooltip>
       </div>
 
       <div className="sidebar-search">
+        <SearchIcon className="sidebar-search-icon" aria-hidden="true" />
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="🔍 Filter files…"
+          placeholder="Filter files…"
           aria-label="Filter files"
         />
         {searchQuery && (
@@ -449,7 +461,7 @@ function FileSidebar({
               aria-label="Clear filter"
               onClick={() => setSearchQuery('')}
             >
-              ✖
+              <CloseIcon className="app-icon" />
             </button>
           </Tooltip>
         )}
@@ -479,10 +491,10 @@ function FileSidebar({
           {contextMenu.type === 'root' && (
             <>
               <button className="context-menu-item" onClick={() => onCreateFileRoot?.()}>
-                📄 New File
+                <FileIcon className="app-icon" /> New File
               </button>
               <button className="context-menu-item" onClick={() => onCreateFolderRoot?.()}>
-                📁 New Folder
+                <FolderIcon className="app-icon icon-folder" /> New Folder
               </button>
             </>
           )}
@@ -493,26 +505,26 @@ function FileSidebar({
                 className="context-menu-item"
                 onClick={() => onCreateFileInFolder?.(contextMenu.path)}
               >
-                📄 New File
+                <FileIcon className="app-icon" /> New File
               </button>
               <button
                 className="context-menu-item"
                 onClick={() => onCreateFolderInFolder?.(contextMenu.path)}
               >
-                📁 New Folder
+                <FolderIcon className="app-icon icon-folder" /> New Folder
               </button>
               <div className="context-menu-divider"></div>
               <button
                 className="context-menu-item"
                 onClick={() => onRequestRename?.(contextMenu.path)}
               >
-                ✏️ Rename
+                <EditIcon className="app-icon" /> Rename
               </button>
               <button
                 className="context-menu-item delete"
                 onClick={() => onRequestDeleteFolder?.(contextMenu.path)}
               >
-                🗑️ Delete
+                <TrashIcon className="app-icon icon-danger" /> Delete
               </button>
             </>
           )}
@@ -539,7 +551,7 @@ function FileSidebar({
                     className="context-menu-item"
                     onClick={() => onRequestRename?.(contextMenu.path)}
                   >
-                    ✏️ Rename
+                    <EditIcon className="app-icon" /> Rename
                   </button>
                   {onToggleSensitive && (
                     <button
@@ -551,14 +563,22 @@ function FileSidebar({
                           : 'Mark this file as sensitive. Future mounts will use a Secret instead of a ConfigMap.'
                       }
                     >
-                      {isSensitive ? '🔓 Mark as non-sensitive' : '🔒 Mark as sensitive'}
+                      {isSensitive ? (
+                        <>
+                          <UnlockIcon className="app-icon" /> Mark as non-sensitive
+                        </>
+                      ) : (
+                        <>
+                          <LockIcon className="app-icon" /> Mark as sensitive
+                        </>
+                      )}
                     </button>
                   )}
                   <button
                     className="context-menu-item delete"
                     onClick={() => onRequestDeleteFile?.(contextMenu.path)}
                   >
-                    🗑️ Delete
+                    <TrashIcon className="app-icon icon-danger" /> Delete
                   </button>
                 </>
               );

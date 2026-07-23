@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Modal from 'react-modal';
 import CodeMirror from '@uiw/react-codemirror';
 import { json } from '@codemirror/lang-json';
+import { ReactComponent as WarningIcon } from '../assets/images/icons/warning.svg';
+import { ReactComponent as ErrorIcon } from '../assets/images/icons/error.svg';
+import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
 import './TopologyInputModal.css';
 
 const TopologyInputModal = ({
@@ -227,13 +230,17 @@ const TopologyInputModal = ({
       >
         <h2>{title}</h2>
         <button className="modal-close-btn" onClick={onClose} title="Close (Esc)">
-          ✖
+          <CloseIcon className="app-icon" />
         </button>
       </div>
 
       <div className="modal-body">
         {description && <p className="tinput-description">{description}</p>}
-        {warningText && <div className="tinput-warning">⚠ {warningText}</div>}
+        {warningText && (
+          <div className="tinput-warning">
+            <WarningIcon className="app-icon" /> {warningText}
+          </div>
+        )}
 
         <div className="tinput-toolbar">
           <input
@@ -311,11 +318,11 @@ const TopologyInputModal = ({
         <div className="tinput-status">
           {parseError ? (
             <div className="tinput-status-error" title={parseError}>
-              ❌ Invalid JSON: {parseError}
+              <ErrorIcon className="app-icon" /> Invalid JSON: {parseError}
             </div>
           ) : semanticError ? (
             <div className="tinput-status-error" title={semanticError}>
-              ❌ {semanticError}
+              <ErrorIcon className="app-icon" /> {semanticError}
             </div>
           ) : parsed ? (
             <div className="tinput-status-ok">✓ Valid payload. Ctrl+Enter to submit</div>

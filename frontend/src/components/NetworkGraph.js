@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import Modal from 'react-modal';
 import { useNodesState, useEdgesState, ReactFlowProvider } from 'reactflow';
 import 'reactflow/dist/style.css';
+import { ReactComponent as SearchIcon } from '../assets/images/icons/search.svg';
+import { ReactComponent as WarningIcon } from '../assets/images/icons/warning.svg';
 import {
   forceSimulation,
   forceManyBody,
@@ -19,6 +21,7 @@ import PodInteractiveShellModal from './PodInteractiveShellModal';
 import CapturePanel from './CapturePanel';
 import TracePanel from './TracePanel';
 import { ReactComponent as PcapIcon } from '../assets/images/icons/pcap.svg';
+import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
 import InnerGraph from './InnerGraph';
 import LoadingOverlay from './LoadingOverlay';
 import './NetworkGraph.css';
@@ -3120,9 +3123,7 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
               </label>
 
               <div className="topbar-search">
-                <span className="topbar-search-icon" aria-hidden="true">
-                  🔍
-                </span>
+                <SearchIcon className="topbar-search-icon" aria-hidden="true" />
                 <input
                   type="text"
                   value={graphSearchQuery}
@@ -3150,7 +3151,7 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
                     onClick={() => setGraphSearchQuery('')}
                     title="Clear search"
                   >
-                    ✖
+                    <CloseIcon className="app-icon" />
                   </button>
                 )}
               </div>
@@ -3274,7 +3275,7 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
                   onClick={() => closeInteractiveShell(shell.id)}
                   title="Close shell"
                 >
-                  ✖
+                  <CloseIcon className="app-icon" />
                 </button>
               </div>
             ))}
@@ -3300,7 +3301,7 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
                   onClick={() => closeCapture(cap.id)}
                   title="Close capture"
                 >
-                  ✖
+                  <CloseIcon className="app-icon" />
                 </button>
               </div>
             ))}
@@ -3549,7 +3550,8 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
               {warnings.length > 0 && (
                 <div className="am-warnings">
                   <div className="am-warnings-header">
-                    ⚠ {warnings.length} warning{warnings.length === 1 ? '' : 's'}
+                    <WarningIcon className="app-icon" /> {warnings.length} warning
+                    {warnings.length === 1 ? '' : 's'}
                   </div>
                   <ul className="am-warnings-list">
                     {warnings.map((w, i) => (

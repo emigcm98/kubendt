@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { ReactComponent as WarningIcon } from '../assets/images/icons/warning.svg';
+import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
 import { API_BASE_URL } from '../config';
 import './K8sNodeInfoPanel.css';
 
@@ -113,7 +115,7 @@ const K8sNodeInfoPanel = ({ nodeName, onClose }) => {
             </div>
           </div>
           <button className="kni-close" onClick={onClose} title="Close (Esc)">
-            ✖
+            <CloseIcon className="app-icon" />
           </button>
         </header>
 
@@ -126,7 +128,9 @@ const K8sNodeInfoPanel = ({ nodeName, onClose }) => {
           )}
 
           {!loading && error && (
-            <div className="kni-error">⚠ Could not load node info: {error}</div>
+            <div className="kni-error">
+              <WarningIcon className="app-icon" /> Could not load node info: {error}
+            </div>
           )}
 
           {!loading && !error && data && (
