@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Replaced UI emojis with a consistent SVG icon set that inherits text color,
+  and reorganized image assets into `nodes/` and `icons/` subfolders.
+
 ### Fixed
 
 - The Swagger UI version badge now reflects the running build version instead of
