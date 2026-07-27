@@ -208,12 +208,12 @@
 }
 
 .topbar-action-import {
-  background: #1976d2;
-  border-bottom: 3px solid #1565c0;
+  background: var(--primary);
+  border-bottom: 3px solid var(--primary-hover);
 }
 
 .topbar-action-import:hover:not(:disabled) {
-  background: #1565c0;
+  background: var(--primary-hover);
   transform: translateY(-1px);
   box-shadow: 0 3px 8px rgba(25, 118, 210, 0.3);
 }
@@ -232,48 +232,48 @@
 
 /* Modify topology button */
 .topbar-action-modify {
-  background: #2e7d32;
-  border-bottom: 3px solid #1b5e20;
+  background: var(--success);
+  border-bottom: 3px solid var(--success-strong);
 }
 
 .topbar-action-modify:hover:not(:disabled) {
-  background: #276a2b;
+  background: var(--success-strong);
   transform: translateY(-1px);
   box-shadow: 0 3px 8px rgba(46, 125, 50, 0.3);
 }
 
 /* Load network conf button */
 .topbar-action-config {
-  background: #fb8c00;
-  border-bottom: 3px solid #f57c00;
+  background: var(--warning);
+  border-bottom: 3px solid var(--warning-strong);
 }
 
 .topbar-action-config:hover:not(:disabled) {
-  background: #f57c00;
+  background: var(--warning-strong);
   transform: translateY(-1px);
   box-shadow: 0 3px 8px rgba(251, 140, 0, 0.3);
 }
 
 /* Export topology - Azul secundario */
 .topbar-right button:nth-child(1) {
-  background: #0288d1;
-  border-bottom: 3px solid #0277bd;
+  background: var(--primary);
+  border-bottom: 3px solid var(--primary-hover);
 }
 
 .topbar-right button:nth-child(1):hover:not(:disabled) {
-  background: #0277bd;
+  background: var(--primary-hover);
   transform: translateY(-1px);
   box-shadow: 0 3px 8px rgba(2, 136, 209, 0.3);
 }
 
 /* Save positions - Amarillo corporativo */
 .topbar-right button:nth-child(2) {
-  background: #fb8c00;
-  border-bottom: 3px solid #f57c00;
+  background: var(--warning);
+  border-bottom: 3px solid var(--warning-strong);
 }
 
 .topbar-right button:nth-child(2):hover:not(:disabled) {
-  background: #f57c00;
+  background: var(--warning-strong);
   transform: translateY(-1px);
   box-shadow: 0 3px 8px rgba(251, 140, 0, 0.3);
 }
@@ -419,7 +419,7 @@
 }
 
 .modal-btn-confirm:hover {
-  background-color: #45a049;
+  background-color: var(--success-accent);
 }
 
 .modal-btn-warning {
@@ -427,7 +427,7 @@
 }
 
 .modal-btn-warning:hover {
-  background-color: #e68900;
+  background-color: var(--warning-strong);
 }
 
 /* Bottom-centered taskbar with chips representing minimized shells */

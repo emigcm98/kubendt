@@ -41,11 +41,13 @@
   /* Status */
   --success: #2e7d32;
   --success-accent: #4caf50;
+  --success-strong: #1b5e20;
   --success-bg: #e6f4ea;
   --danger: #d32f2f;
   --danger-strong: #c62828;
   --danger-bg: #fdecea;
   --warning: #f0a020;
+  --warning-strong: #f57c00;
   --warning-border: #f0c36d;
   --warning-bg: #fff8e6;
   --warning-text: #8a5a00;
