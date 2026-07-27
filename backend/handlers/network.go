@@ -969,6 +969,19 @@ func ClearTopology(c *gin.Context) {
 	})
 }
 
+// resolveMountPath recovers the original file-manager path of a mounted file
+// and whether it still exists. It prefers the path recorded on the backing
+// ConfigMap/Secret annotation (correct even when the source file was deleted),
+// and falls back to matching the sanitized data key against the file manager
+// for mounts deployed before the annotation existed.
+func resolveMountPath(namespace, resourceName string, isSecret bool, dataKey string) (string, bool) {
+	if path := helpers.OriginalMountFilePath(namespace, resourceName, isSecret); path != "" {
+		exists, _ := helpers.NamespaceFileExists(namespace, path)
+		return path, exists
+	}
+	return helpers.ResolveMountedFileName(namespace, dataKey)
+}
+
 func GetNetwork(c *gin.Context) {
 	namespace := c.Param("namespace")
 
@@ -1066,25 +1079,35 @@ func GetNetwork(c *gin.Context) {
 					continue
 				}
 				if volume.ConfigMap != nil {
-					fileName := volumeMount.SubPath
-					if fileName == "" {
-						fileName = volume.ConfigMap.Name
+					// Skip kubendt-internal ConfigMaps (e.g. the iface-counts
+					// state): they are not user file-manager files and must not
+					// surface in the pod's Mounted Files list.
+					if volume.ConfigMap.Name == helpers.IfaceCountsConfigMapName {
+						break
 					}
+					dataKey := volumeMount.SubPath
+					if dataKey == "" {
+						dataKey = volume.ConfigMap.Name
+					}
+					fileName, exists := resolveMountPath(namespace, volume.ConfigMap.Name, false, dataKey)
 					mounts = append(mounts, types.MountSpec{
 						File:    fileName,
 						MountTo: volumeMount.MountPath,
+						Missing: !exists,
 					})
 					break
 				}
 				if volume.Secret != nil {
-					fileName := volumeMount.SubPath
-					if fileName == "" {
-						fileName = volume.Secret.SecretName
+					dataKey := volumeMount.SubPath
+					if dataKey == "" {
+						dataKey = volume.Secret.SecretName
 					}
+					fileName, exists := resolveMountPath(namespace, volume.Secret.SecretName, true, dataKey)
 					mounts = append(mounts, types.MountSpec{
 						File:      fileName,
 						MountTo:   volumeMount.MountPath,
 						Sensitive: true,
+						Missing:   !exists,
 					})
 					break
 				}

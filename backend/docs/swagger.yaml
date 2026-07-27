@@ -629,6 +629,10 @@ definitions:
         description: file name inside namespace directory
         example: ospfd.conf
         type: string
+      missing:
+        description: file is mounted but no longer present in the namespace file manager
+        example: false
+        type: boolean
       mountTo:
         description: absolute path in container
         example: /etc/frr/ospfd.conf

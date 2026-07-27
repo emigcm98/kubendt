@@ -17,6 +17,10 @@ Mounts are always **read-only**. Writes from inside the container don't persist:
 - The ConfigMap/Secret is rebuilt from disk on every sync, so container-side writes are lost on the next kubelet reconcile.
 - `SubPath` is a static bind mount: updates to the ConfigMap/Secret do NOT propagate to running pods.
 
+## Source path preservation
+
+ConfigMap and Secret data keys cannot contain `/`, so a file in a subfolder is stored under a sanitized key where separators become `_` (`web-server/index.html` is stored as `web-server_index.html`). To keep the original path recoverable, the backend records it in a `kubendt/mount-file-path` annotation on the mount resource. `get-network` reads that annotation to show the real path in the pod panel, and it survives even after the source file is deleted. Resources created before the annotation existed fall back to matching the sanitized key against the current file manager, which only resolves while the file still exists.
+
 ## Persistence
 
 Per-file metadata (the `sensitive` flag) lives in the backend's SQLite DB:
@@ -95,3 +99,6 @@ When `clear-topology` runs, every mount ConfigMap and Secret declared by every S
 - **Do not store production credentials in mounted files.** K8s Secrets are not a vault: they need etcd encryption-at-rest configured and proper namespace RBAC to actually protect data. For real secrets use Vault, sealed-secrets, or similar.
 - **Pods must be restarted to see changes** (SubPath mount limitation). The file manager surfaces an "N pods need restart" hint after each save.
 - **The `sensitive` field in a mount declaration can mark a file as sensitive on import** (any mount with `sensitive: true` upgrades the file's metadata before the resource is materialised). It cannot **unmark**: omitting the field is indistinguishable from `false`, so use the file manager toggle to clear the flag. `get-network` emits the field per mount when the file is sensitive, so export → import roundtrips correctly.
+- **Deleted sources are flagged, not hidden.** If a mounted file is later removed from the file manager, the pod's Mounted Files panel shows it with a warning and disables the link. The pod keeps serving the old content from its ConfigMap/Secret until it is redeployed.
+- **Path sanitization can collide.** Files whose paths sanitize to the same key share one backing resource: `web-server/index.html` and a root file literally named `web-server_index.html` both map to `kubendt-file-web-server-index-html`. They cannot be mounted at the same time, the second overwrites the first. Avoid file names that mimic a folder separator with `_`.
+- **Internal state is not a mount.** The `kubendt-internal-iface-counts` ConfigMap is kubendt's own per-pod interface-count state, not a user file, so it never appears in the pod's Mounted Files list.

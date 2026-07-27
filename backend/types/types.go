@@ -121,6 +121,7 @@ type MountSpec struct {
 	File      string `json:"file" example:"ospfd.conf"`             // file name inside namespace directory
 	MountTo   string `json:"mountTo" example:"/etc/frr/ospfd.conf"` // absolute path in container
 	Sensitive bool   `json:"sensitive,omitempty" example:"false"`   // marks the file as sensitive (Secret-backed)
+	Missing   bool   `json:"missing,omitempty" example:"false"`     // file is mounted but no longer present in the namespace file manager
 }
 
 // Main structure for the deployment request

@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Meshnet CNI health awareness. The Home dashboard shows whether the Meshnet dataplane is running, both cluster-wide (a badge next to the node count) and per node (on each node card and in the node detail panel), so a missing or partial install is visible instead of failing silently.
 - New `meshnet` field on the cluster status and node detail API responses reporting the dataplane state.
+- Mounted files whose source no longer exists in the namespace file manager are flagged in the pod detail panel with a warning and a disabled link, instead of silently linking to a missing file. The mount API carries a matching `missing` field.
 
 ### Changed
 
@@ -25,6 +26,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Home dashboard no longer clips the cluster/kubeconfig panels on shorter
   viewports (left column fits and scrolls its node list internally, like the
   namespaces column).
+- Mounted files stored in a subfolder now show their real path (for example
+  `web-server/index.html`) and open the correct file, instead of a sanitized
+  key (`web-server_index.html`) that pointed nowhere.
+- Kubendt's internal interface-count ConfigMap no longer appears in a pod's
+  Mounted Files list.
 
 ## [1.1.0] - 2026-07-16
 
