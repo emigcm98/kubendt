@@ -419,7 +419,7 @@
 }
 
 .modal-btn-confirm:hover {
-  background-color: var(--success-accent);
+  background-color: var(--success);
 }
 
 .modal-btn-warning {
