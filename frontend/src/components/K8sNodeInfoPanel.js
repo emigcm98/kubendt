@@ -26,6 +26,29 @@ const formatCpu = (milli) => {
 
 const sortEntries = (obj) => Object.entries(obj || {}).sort(([a], [b]) => a.localeCompare(b));
 
+// Maps the per-node meshnet state to a chip. Null hides it (older backends
+// that don't report the field).
+const meshnetChip = (state) => {
+  switch (state) {
+    case 'running':
+      return { cls: 'ok', label: 'Meshnet', title: 'A ready meshnet pod is running on this node.' };
+    case 'not-running':
+      return {
+        cls: 'down',
+        label: 'Meshnet down',
+        title: 'No ready meshnet pod on this node. Links landing here will not be wired.',
+      };
+    case 'unknown':
+      return {
+        cls: 'unknown',
+        label: 'Meshnet ?',
+        title: 'Could not check meshnet on this node (no permission to list pods).',
+      };
+    default:
+      return null;
+  }
+};
+
 const Section = ({ title, children, count }) => (
   <section className="kni-section">
     <h3 className="kni-section-title">
@@ -112,6 +135,15 @@ const K8sNodeInfoPanel = ({ nodeName, onClose }) => {
                 <span className="kni-status-dot" />
                 {status}
               </span>
+              {(() => {
+                const chip = meshnetChip(data?.meshnet);
+                return chip ? (
+                  <span className={`kni-meshnet kni-meshnet-${chip.cls}`} title={chip.title}>
+                    <span className="kni-status-dot" />
+                    {chip.label}
+                  </span>
+                ) : null;
+              })()}
             </div>
           </div>
           <button className="kni-close" onClick={onClose} title="Close (Esc)">

@@ -7,12 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Meshnet CNI health awareness. The Home dashboard shows whether the Meshnet dataplane is running, both cluster-wide (a badge next to the node count) and per node (on each node card and in the node detail panel), so a missing or partial install is visible instead of failing silently.
+- New `meshnet` field on the cluster status and node detail API responses reporting the dataplane state.
+
 ### Changed
 
-- Replaced UI emojis with a consistent SVG icon set that inherits text color,
-  and reorganized image assets into `nodes/` and `icons/` subfolders.
-- Unified the UI styling behind a set of design tokens (colors, radii,
-  elevation) and refreshed the palette for a cleaner look.
+- Replaced UI emojis with a consistent SVG icon set that inherits text color, and reorganized image assets into `nodes/` and `icons/` subfolders.
+- Unified the UI styling behind a set of design tokens (colors, radii, elevation) and refreshed the palette for a cleaner look.
+- Topology changes now require a running Meshnet CNI. Deploying, and modifying a topology (add, delete or scale), return `412` when Meshnet is not detected, so pods are never left unwired or stuck. Clearing a topology is always allowed, and `?force=true` overrides the check.
 
 ### Fixed
 

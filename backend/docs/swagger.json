@@ -7,7 +7,7 @@
         "description": "REST API for KubeNDT (Kubernetes Network Digital Twin).",
         "title": "KubeNDT API",
         "contact": {},
-        "version": "1.0"
+        "version": "annotation and never changes between releases."
     },
     "host": "localhost:8080",
     "basePath": "/",
@@ -1791,6 +1791,12 @@
                         "required": true
                     },
                     {
+                        "type": "boolean",
+                        "description": "Deploy even if the Meshnet CNI is not detected. Without it a missing Meshnet returns 412 and nothing is deployed.",
+                        "name": "force",
+                        "in": "query"
+                    },
+                    {
                         "description": "Topology definition",
                         "name": "body",
                         "in": "body",
@@ -1829,6 +1835,12 @@
                         "description": "Conflict",
                         "schema": {
                             "$ref": "#/definitions/types.NamespaceOperationConflictResponse"
+                        }
+                    },
+                    "412": {
+                        "description": "Precondition Failed",
+                        "schema": {
+                            "$ref": "#/definitions/types.MeshnetGateResponse"
                         }
                     },
                     "500": {
@@ -1877,7 +1889,7 @@
         },
         "/network/modify-network/{namespace}": {
             "post": {
-                "description": "Adds or removes nodes/links from an existing topology.",
+                "description": "Adds or removes nodes/links from an existing topology. Any change (add, delete or scale) returns 412 when the Meshnet CNI is not detected, since it restarts or creates pods that need rewiring. Bypass with force=true. Only clearing a topology is exempt.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1895,6 +1907,12 @@
                         "name": "namespace",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Apply the change even if the Meshnet CNI is not detected.",
+                        "name": "force",
+                        "in": "query"
                     },
                     {
                         "description": "Delta topology (add/delete)",
@@ -1935,6 +1953,12 @@
                         "description": "Conflict",
                         "schema": {
                             "$ref": "#/definitions/types.NamespaceOperationConflictResponse"
+                        }
+                    },
+                    "412": {
+                        "description": "Precondition Failed",
+                        "schema": {
+                            "$ref": "#/definitions/types.MeshnetGateResponse"
                         }
                     },
                     "500": {
@@ -2608,6 +2632,10 @@
                     "type": "string",
                     "example": "4.32Gi"
                 },
+                "meshnet": {
+                    "type": "string",
+                    "example": "running"
+                },
                 "name": {
                     "type": "string",
                     "example": "k8s-worker-1"
@@ -2638,6 +2666,9 @@
                 "avg_memory_percentage": {
                     "type": "number",
                     "example": 27.77
+                },
+                "meshnet": {
+                    "$ref": "#/definitions/types.MeshnetStatusDoc"
                 },
                 "nodes": {
                     "type": "array",
@@ -3193,6 +3224,47 @@
                     "example": [
                         "admin"
                     ]
+                }
+            }
+        },
+        "types.MeshnetGateResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "Meshnet CNI not detected in the cluster. Topology links would not be wired. Install Meshnet, or retry with force=true to deploy anyway."
+                },
+                "reason": {
+                    "type": "string",
+                    "example": "meshnet_missing"
+                }
+            }
+        },
+        "types.MeshnetStatusDoc": {
+            "type": "object",
+            "properties": {
+                "desired": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "message": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "meshnet"
+                },
+                "namespace": {
+                    "type": "string",
+                    "example": "meshnet"
+                },
+                "ready": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "state": {
+                    "type": "string",
+                    "example": "ok"
                 }
             }
         },
@@ -3843,6 +3915,10 @@
                 "memory_percentage": {
                     "type": "number",
                     "example": 27.77
+                },
+                "meshnet": {
+                    "type": "string",
+                    "example": "running"
                 },
                 "name": {
                     "type": "string",

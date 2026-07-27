@@ -111,6 +111,9 @@ definitions:
       memory_usage:
         example: 4.32Gi
         type: string
+      meshnet:
+        example: running
+        type: string
       name:
         example: k8s-worker-1
         type: string
@@ -136,6 +139,8 @@ definitions:
       avg_memory_percentage:
         example: 27.77
         type: number
+      meshnet:
+        $ref: '#/definitions/types.MeshnetStatusDoc'
       nodes:
         items:
           $ref: '#/definitions/types.ClusterNodeInfo'
@@ -526,6 +531,36 @@ definitions:
         items:
           type: string
         type: array
+    type: object
+  types.MeshnetGateResponse:
+    properties:
+      error:
+        example: Meshnet CNI not detected in the cluster. Topology links would not
+          be wired. Install Meshnet, or retry with force=true to deploy anyway.
+        type: string
+      reason:
+        example: meshnet_missing
+        type: string
+    type: object
+  types.MeshnetStatusDoc:
+    properties:
+      desired:
+        example: 3
+        type: integer
+      message:
+        type: string
+      name:
+        example: meshnet
+        type: string
+      namespace:
+        example: meshnet
+        type: string
+      ready:
+        example: 3
+        type: integer
+      state:
+        example: ok
+        type: string
     type: object
   types.MessageResponse:
     properties:
@@ -987,6 +1022,9 @@ definitions:
       memory_percentage:
         example: 27.77
         type: number
+      meshnet:
+        example: running
+        type: string
       name:
         example: k8s-worker-1
         type: string
@@ -1527,7 +1565,7 @@ info:
   contact: {}
   description: REST API for KubeNDT (Kubernetes Network Digital Twin).
   title: KubeNDT API
-  version: "1.0"
+  version: annotation and never changes between releases.
 paths:
   /auth/login:
     post:
@@ -2748,6 +2786,11 @@ paths:
         name: namespace
         required: true
         type: string
+      - description: Deploy even if the Meshnet CNI is not detected. Without it a
+          missing Meshnet returns 412 and nothing is deployed.
+        in: query
+        name: force
+        type: boolean
       - description: Topology definition
         in: body
         name: body
@@ -2777,6 +2820,10 @@ paths:
           description: Conflict
           schema:
             $ref: '#/definitions/types.NamespaceOperationConflictResponse'
+        "412":
+          description: Precondition Failed
+          schema:
+            $ref: '#/definitions/types.MeshnetGateResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -2811,13 +2858,20 @@ paths:
     post:
       consumes:
       - application/json
-      description: Adds or removes nodes/links from an existing topology.
+      description: Adds or removes nodes/links from an existing topology. Any change
+        (add, delete or scale) returns 412 when the Meshnet CNI is not detected, since
+        it restarts or creates pods that need rewiring. Bypass with force=true. Only
+        clearing a topology is exempt.
       parameters:
       - description: Namespace name
         in: path
         name: namespace
         required: true
         type: string
+      - description: Apply the change even if the Meshnet CNI is not detected.
+        in: query
+        name: force
+        type: boolean
       - description: Delta topology (add/delete)
         in: body
         name: body
@@ -2847,6 +2901,10 @@ paths:
           description: Conflict
           schema:
             $ref: '#/definitions/types.NamespaceOperationConflictResponse'
+        "412":
+          description: Precondition Failed
+          schema:
+            $ref: '#/definitions/types.MeshnetGateResponse'
         "500":
           description: Internal Server Error
           schema:

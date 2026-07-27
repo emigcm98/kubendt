@@ -75,6 +75,21 @@ func ModifyNetwork(c *gin.Context) {
 		return
 	}
 
+	// Meshnet gate. Any topology change (add, delete or scale) creates or
+	// restarts pods that the CNI has to wire, so without a running dataplane
+	// they come up unwired or stuck in ContainerCreating. Only clearing a
+	// topology and deleting the namespace are exempt (full teardown, no
+	// rewiring). Only "missing" blocks; ?force=true overrides.
+	if c.Query("force") != "true" {
+		if m := detectMeshnet(c.Request.Context()); m.State == "missing" {
+			c.JSON(http.StatusPreconditionFailed, gin.H{
+				"error":  "Meshnet CNI not detected in the cluster. Topology changes would leave pods unwired. Install Meshnet, clear the topology, or retry with force=true.",
+				"reason": "meshnet_missing",
+			})
+			return
+		}
+	}
+
 	// Driver-aware interface-name validation runs BEFORE we grab the operation
 	// lock or sync namespace state. A request whose payload is malformed
 	// shouldn't pay the cost of lock contention, ConfigMap reads or any other
@@ -593,6 +608,22 @@ func DeployNetwork(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		}
 		return
+	}
+
+	// Meshnet gate: refuse to deploy when the CNI dataplane is missing, since
+	// the Topology CRD would be created but its links never wired (a silent
+	// failure). Only "missing" blocks. "degraded" (a pod restarting) and
+	// "unknown" (no permission to check) are allowed through. Callers who know
+	// better, or hit a false positive in detection, can override with
+	// ?force=true. This runs for API clients too, not just the UI.
+	if c.Query("force") != "true" {
+		if m := detectMeshnet(c.Request.Context()); m.State == "missing" {
+			c.JSON(http.StatusPreconditionFailed, gin.H{
+				"error":  "Meshnet CNI not detected in the cluster. Topology links would not be wired. Install Meshnet, or retry with force=true to deploy anyway.",
+				"reason": "meshnet_missing",
+			})
+			return
+		}
 	}
 
 	lock, acquired, err := helpers.AcquireNamespaceOperationLock(namespace, "deploy-network")

@@ -6,6 +6,7 @@ import (
 	"kubendt/kubeclient"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	v1 "k8s.io/api/core/v1"
@@ -24,12 +25,32 @@ type NodeInfo struct {
 	CPUPercentage    float64  `json:"cpu_percentage"`
 	MemoryPercentage float64  `json:"memory_percentage"`
 	KubeletVersion   string   `json:"kubelet_version"`
+	// Meshnet is "running", "not-running" or "unknown" for this node.
+	Meshnet string `json:"meshnet"`
+}
+
+// MeshnetStatus reports whether the Meshnet CNI dataplane is running. The
+// Topology CRD ships in the same install, so the DaemonSet is the signal that
+// matters: without a ready pod on every node, KubeNDT's topology objects are
+// created but the veth wiring never happens (a silent failure).
+type MeshnetStatus struct {
+	// State is one of: ok, degraded, missing, unknown.
+	State string `json:"state"`
+	// Ready and Desired are the DaemonSet's ready vs scheduled pod counts.
+	Ready   int    `json:"ready"`
+	Desired int    `json:"desired"`
+	Name    string `json:"name,omitempty"`
+	// Namespace where the meshnet DaemonSet was found (varies by install).
+	Namespace string `json:"namespace,omitempty"`
+	// Message carries a short reason for degraded/missing/unknown states.
+	Message string `json:"message,omitempty"`
 }
 
 type ClusterStatusResponse struct {
-	Nodes []NodeInfo `json:"nodes"`
-	Ready int        `json:"ready"`
-	Total int        `json:"total"`
+	Nodes   []NodeInfo    `json:"nodes"`
+	Ready   int           `json:"ready"`
+	Total   int           `json:"total"`
+	Meshnet MeshnetStatus `json:"meshnet"`
 	// Aggregated cluster-wide percentages, weighted by node capacity so a
 	// 2-CPU node at 50% does not weigh the same as an 8-CPU node at 50%.
 	// Computed as sum(usage)/sum(capacity) across nodes that report metrics.
@@ -83,6 +104,110 @@ func fetchNodeMetrics(ctx context.Context) map[string]nodeMetrics {
 	return result
 }
 
+// detectMeshnet looks for the meshnet DaemonSet across all namespaces and
+// reports its health. The DaemonSet name and namespace vary between installs
+// (kube-system on older setups, a dedicated meshnet namespace on newer ones),
+// so we match by name/label rather than assuming a location. Best-effort: a
+// Forbidden or failed list returns "unknown" so we never paint a red "missing"
+// badge just because the kubeconfig lacks cluster-wide read access.
+func detectMeshnet(ctx context.Context) MeshnetStatus {
+	dsList, err := kubeclient.Clientset.AppsV1().DaemonSets("").List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return MeshnetStatus{State: "unknown", Message: "could not list daemonsets: " + err.Error()}
+	}
+
+	for _, ds := range dsList.Items {
+		isMeshnet := strings.Contains(strings.ToLower(ds.Name), "meshnet") ||
+			ds.Labels["app"] == "meshnet" || ds.Labels["name"] == "meshnet"
+		if !isMeshnet {
+			continue
+		}
+
+		desired := int(ds.Status.DesiredNumberScheduled)
+		ready := int(ds.Status.NumberReady)
+		status := MeshnetStatus{
+			Ready:     ready,
+			Desired:   desired,
+			Name:      ds.Name,
+			Namespace: ds.Namespace,
+		}
+		if desired > 0 && ready == desired {
+			status.State = "ok"
+		} else {
+			status.State = "degraded"
+			status.Message = "dataplane not ready on every node"
+		}
+		return status
+	}
+
+	return MeshnetStatus{State: "missing", Message: "no meshnet daemonset found in any namespace"}
+}
+
+// meshnetNodeStates maps node name -> "running"/"not-running" by listing the
+// meshnet pods in the DaemonSet's namespace (cheap, one small namespace). Lets
+// the cluster status show meshnet health on each node card without a per-node
+// round trip. Returns an empty map on any error or when the namespace is empty.
+func meshnetNodeStates(ctx context.Context, namespace string) map[string]string {
+	states := map[string]string{}
+	if namespace == "" {
+		return states
+	}
+	pods, err := kubeclient.Clientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return states
+	}
+	for _, p := range pods.Items {
+		isMeshnet := strings.Contains(strings.ToLower(p.Name), "meshnet") ||
+			p.Labels["app"] == "meshnet" || p.Labels["name"] == "meshnet"
+		if !isMeshnet || p.Spec.NodeName == "" {
+			continue
+		}
+		ready := false
+		for _, cond := range p.Status.Conditions {
+			if cond.Type == v1.PodReady {
+				ready = cond.Status == v1.ConditionTrue
+				break
+			}
+		}
+		if ready {
+			states[p.Spec.NodeName] = "running"
+		} else {
+			states[p.Spec.NodeName] = "not-running"
+		}
+	}
+	return states
+}
+
+// meshnetOnNode reports whether a ready meshnet pod is running on one node, so
+// the node detail panel can pinpoint which node a "degraded" cluster is missing
+// its dataplane on. Returns "running", "not-running", or "unknown" when the pod
+// list fails (e.g. RBAC).
+func meshnetOnNode(ctx context.Context, nodeName string) string {
+	pods, err := kubeclient.Clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{
+		FieldSelector: "spec.nodeName=" + nodeName,
+	})
+	if err != nil {
+		return "unknown"
+	}
+	for _, p := range pods.Items {
+		isMeshnet := strings.Contains(strings.ToLower(p.Name), "meshnet") ||
+			p.Labels["app"] == "meshnet" || p.Labels["name"] == "meshnet"
+		if !isMeshnet {
+			continue
+		}
+		for _, cond := range p.Status.Conditions {
+			if cond.Type == v1.PodReady {
+				if cond.Status == v1.ConditionTrue {
+					return "running"
+				}
+				return "not-running"
+			}
+		}
+		return "not-running"
+	}
+	return "not-running"
+}
+
 func GetClusterStatus(c *gin.Context) {
 	ctx := c.Request.Context()
 	nodes, err := kubeclient.Clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
@@ -93,6 +218,13 @@ func GetClusterStatus(c *gin.Context) {
 
 	// Fetch all node metrics in one call (nil if metrics-server unavailable)
 	metricsMap := fetchNodeMetrics(ctx)
+
+	// Meshnet health, both the cluster-wide badge and the per-node state.
+	meshnet := detectMeshnet(ctx)
+	var meshnetNodes map[string]string
+	if meshnet.State != "unknown" {
+		meshnetNodes = meshnetNodeStates(ctx, meshnet.Namespace)
+	}
 
 	nodeInfos := []NodeInfo{}
 	readyCount := 0
@@ -159,6 +291,16 @@ func GetClusterStatus(c *gin.Context) {
 			}
 		}
 
+		// Per-node meshnet: "unknown" when we couldn't check at all, otherwise
+		// the pod's state, defaulting to "not-running" when no meshnet pod runs
+		// on this node.
+		nodeMeshnet := "not-running"
+		if meshnet.State == "unknown" {
+			nodeMeshnet = "unknown"
+		} else if s, ok := meshnetNodes[node.Name]; ok {
+			nodeMeshnet = s
+		}
+
 		nodeInfos = append(nodeInfos, NodeInfo{
 			Name:             node.Name,
 			Roles:            roles,
@@ -170,6 +312,7 @@ func GetClusterStatus(c *gin.Context) {
 			CPUPercentage:    cpuPercentage,
 			MemoryPercentage: memPercentage,
 			KubeletVersion:   kubeletVersion,
+			Meshnet:          nodeMeshnet,
 		})
 	}
 
@@ -186,6 +329,7 @@ func GetClusterStatus(c *gin.Context) {
 		Nodes:               nodeInfos,
 		Ready:               readyCount,
 		Total:               len(nodes.Items),
+		Meshnet:             meshnet,
 		AvgCPUPercentage:    avgCPU,
 		AvgMemoryPercentage: avgMem,
 	})
@@ -253,6 +397,9 @@ type NodeDetailResponse struct {
 	MemoryBytesUsage int64   `json:"memory_bytes_usage"`
 	CPUPercentage    float64 `json:"cpu_percentage"`
 	MemoryPercentage float64 `json:"memory_percentage"`
+	// Meshnet reports whether a ready meshnet pod runs on this node:
+	// "running", "not-running" or "unknown".
+	Meshnet string `json:"meshnet"`
 }
 
 func resourceQuantity(rl v1.ResourceList) NodeResourceQuantity {
@@ -389,6 +536,7 @@ func GetClusterNodeDetail(c *gin.Context) {
 		MemoryBytesUsage: memBytesUsage,
 		CPUPercentage:    cpuPct,
 		MemoryPercentage: memPct,
+		Meshnet:          meshnetOnNode(ctx, node.Name),
 	}
 
 	c.JSON(http.StatusOK, resp)
