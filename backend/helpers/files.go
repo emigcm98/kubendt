@@ -186,6 +186,44 @@ func NamespaceFileExists(namespace, filename string) (bool, error) {
 	return !info.IsDir(), nil
 }
 
+// ResolveMountedFileName maps a mounted volume's SubPath data key back to the
+// original file-manager path and reports whether that file still exists.
+//
+// Mounts store the file under a sanitized ConfigMap/Secret data key where path
+// separators are collapsed to "_" (see SanitizeConfigMapDataKey), so a file in
+// a subfolder like "web-server/index.html" appears in the pod spec only as
+// "web-server_index.html". The mangling is not reversible in isolation (a real
+// file could legitimately contain "_"), so we walk the file manager and return
+// the path whose sanitized key matches. When nothing matches (the source file
+// was deleted) the sanitized key is returned as-is with exists=false, so
+// callers can flag the mount as missing.
+func ResolveMountedFileName(namespace, dataKey string) (path string, exists bool) {
+	baseDir, err := namespaceFilesDir(namespace)
+	if err != nil {
+		return dataKey, false
+	}
+	match := ""
+	_ = filepath.WalkDir(baseDir, func(p string, d os.DirEntry, walkErr error) error {
+		if walkErr != nil || d.IsDir() {
+			return nil
+		}
+		rel, relErr := filepath.Rel(baseDir, p)
+		if relErr != nil {
+			return nil
+		}
+		rel = filepath.ToSlash(rel)
+		if SanitizeConfigMapDataKey(rel) == dataKey {
+			match = rel
+			return filepath.SkipAll
+		}
+		return nil
+	})
+	if match == "" {
+		return dataKey, false
+	}
+	return match, true
+}
+
 // GetFileContent gets file content (supports nested subfolder paths)
 func GetFileContent(namespace, filename string) ([]byte, error) {
 	basePath, err := namespaceFilesDir(namespace)

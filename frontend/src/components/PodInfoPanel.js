@@ -1459,14 +1459,29 @@ const PodInfoPanel = ({
                     pod.mounts.map((mount, idx) => (
                       <div
                         key={`${mount.file}-${idx}`}
-                        className="pod-vars-row"
+                        className="pod-vars-row pod-vars-mount-row"
                         title={`${mount.file} -> ${mount.mountTo}`}
                       >
                         <span
-                          className="pod-vars-key pod-vars-file"
-                          title={mount.file}
-                          onClick={() => handleOpenFile(mount.file)}
+                          className={`pod-vars-key pod-vars-file${
+                            mount.missing ? ' pod-vars-file-missing' : ''
+                          }`}
+                          title={
+                            mount.missing
+                              ? `${mount.file} is no longer present in the file manager`
+                              : mount.file
+                          }
+                          onClick={mount.missing ? undefined : () => handleOpenFile(mount.file)}
                         >
+                          {mount.missing && (
+                            <span
+                              className="mount-missing-warning"
+                              title="File is no longer present in the file manager"
+                              aria-label="Missing file"
+                            >
+                              <WarningIcon className="app-icon icon-warning" />
+                            </span>
+                          )}
                           {mount.sensitive && (
                             <span
                               className="sensitive-lock"
@@ -1478,10 +1493,12 @@ const PodInfoPanel = ({
                           )}
                           {mount.file}
                         </span>
-                        <span className="pod-vars-arrow">→</span>
-                        <span className="pod-vars-value" title={mount.mountTo}>
-                          {mount.mountTo}
-                        </span>
+                        <div className="pod-vars-mount-target">
+                          <span className="pod-vars-arrow">→</span>
+                          <span className="pod-vars-value" title={mount.mountTo}>
+                            {mount.mountTo}
+                          </span>
+                        </div>
                       </div>
                     ))
                   ) : (

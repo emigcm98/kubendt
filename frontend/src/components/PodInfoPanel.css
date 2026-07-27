@@ -850,9 +850,50 @@
   user-select: text;
 }
 
+/* Mounted files stack the source file over its target path: rutas largas en
+   un panel estrecho se troceaban en una sola línea. Cada una ocupa ahora el
+   ancho completo y trunca mucho menos. */
+.pod-vars-mount-row {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.2rem;
+}
+
+.pod-vars-mount-row .pod-vars-key {
+  flex: 0 0 auto;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.pod-vars-mount-target {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  padding-left: 0.2rem;
+}
+
+.pod-vars-mount-target .pod-vars-value {
+  min-width: 0;
+}
+
 .pod-vars-file {
   cursor: pointer;
   text-decoration: underline;
+}
+
+/* Mounted file whose source no longer exists in the file manager: not
+   clickable (the target would be a dead link) and flagged with a warning. */
+.pod-vars-file-missing {
+  cursor: not-allowed;
+  text-decoration: line-through;
+  color: var(--warning-text);
+}
+
+.mount-missing-warning {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 4px;
 }
 
 .pod-vars-value {

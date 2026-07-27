@@ -3367,6 +3367,11 @@ const docTemplate = `{
                     "type": "string",
                     "example": "ospfd.conf"
                 },
+                "missing": {
+                    "description": "file is mounted but no longer present in the namespace file manager",
+                    "type": "boolean",
+                    "example": false
+                },
                 "mountTo": {
                     "description": "absolute path in container",
                     "type": "string",

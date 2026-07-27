@@ -99,6 +99,9 @@ code {
 .icon-danger {
   color: #dc2626;
 }
+.icon-warning {
+  color: var(--warning);
+}
 
 /* ---------------------------------------------------------------------------
    CodeMirror search / replace panel (Ctrl+F)

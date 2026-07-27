@@ -470,6 +470,34 @@ func SanitizeConfigMapDataKey(name string) string {
 	return strings.ReplaceAll(name, "/", "_")
 }
 
+// MountFilePathAnnotation records, on a mount ConfigMap/Secret, the original
+// file-manager path that created it. The data key sanitizes "/" to "_" (see
+// SanitizeConfigMapDataKey), which is lossy, so once the source file is deleted
+// the real path is otherwise unrecoverable. Persisting it here lets the pod
+// panel show "web-server/index.html" instead of the mangled key even for a
+// missing mount.
+const MountFilePathAnnotation = "kubendt/mount-file-path"
+
+// OriginalMountFilePath returns the original file-manager path recorded on a
+// mount ConfigMap/Secret, or "" when the resource is gone or predates the
+// annotation (deployed before this existed). Callers fall back to resolving the
+// path from the file manager in that case.
+func OriginalMountFilePath(namespace, resourceName string, isSecret bool) string {
+	ctx := context.TODO()
+	if isSecret {
+		s, err := kubeclient.Clientset.CoreV1().Secrets(namespace).Get(ctx, resourceName, metav1.GetOptions{})
+		if err != nil {
+			return ""
+		}
+		return s.Annotations[MountFilePathAnnotation]
+	}
+	cm, err := kubeclient.Clientset.CoreV1().ConfigMaps(namespace).Get(ctx, resourceName, metav1.GetOptions{})
+	if err != nil {
+		return ""
+	}
+	return cm.Annotations[MountFilePathAnnotation]
+}
+
 // SyncMountResourceFromFile refreshes the ConfigMap or Secret backing a file
 // mount if one already exists. Returns kind="ConfigMap"|"Secret" on success,
 // synced=false with no error if nothing existed to sync.
@@ -499,10 +527,15 @@ func SyncMountResourceFromFile(namespace, fileName string) (synced bool, kind st
 	// Secret and ConfigMap are mutually exclusive per file after a deploy.
 	secretName := SanitizeMountSecretName(fileName)
 	if secret, err := kubeclient.Clientset.CoreV1().Secrets(namespace).Get(ctx, secretName, metav1.GetOptions{}); err == nil {
-		if secret.Data != nil && string(secret.Data[dataKey]) == string(data) && len(secret.Data) == 1 {
+		if secret.Data != nil && string(secret.Data[dataKey]) == string(data) && len(secret.Data) == 1 &&
+			secret.Annotations[MountFilePathAnnotation] == fileName {
 			return true, "Secret", nil
 		}
 		secret.Data = map[string][]byte{dataKey: data}
+		if secret.Annotations == nil {
+			secret.Annotations = map[string]string{}
+		}
+		secret.Annotations[MountFilePathAnnotation] = fileName
 		if _, err := kubeclient.Clientset.CoreV1().Secrets(namespace).Update(ctx, secret, metav1.UpdateOptions{}); err != nil {
 			return false, "", fmt.Errorf("error updating Secret %s: %w", secretName, err)
 		}
@@ -513,10 +546,15 @@ func SyncMountResourceFromFile(namespace, fileName string) (synced bool, kind st
 
 	configMapName := SanitizeMountConfigMapName(fileName)
 	if cm, err := kubeclient.Clientset.CoreV1().ConfigMaps(namespace).Get(ctx, configMapName, metav1.GetOptions{}); err == nil {
-		if cm.Data != nil && cm.Data[dataKey] == string(data) && len(cm.Data) == 1 {
+		if cm.Data != nil && cm.Data[dataKey] == string(data) && len(cm.Data) == 1 &&
+			cm.Annotations[MountFilePathAnnotation] == fileName {
 			return true, "ConfigMap", nil
 		}
 		cm.Data = map[string]string{dataKey: string(data)}
+		if cm.Annotations == nil {
+			cm.Annotations = map[string]string{}
+		}
+		cm.Annotations[MountFilePathAnnotation] = fileName
 		if _, err := kubeclient.Clientset.CoreV1().ConfigMaps(namespace).Update(ctx, cm, metav1.UpdateOptions{}); err != nil {
 			return false, "", fmt.Errorf("error updating ConfigMap %s: %w", configMapName, err)
 		}
@@ -589,10 +627,15 @@ func CreateMountResourceForFile(namespace, fileName string) (name string, isSecr
 
 		existing, getErr := kubeclient.Clientset.CoreV1().Secrets(namespace).Get(ctx, secretName, metav1.GetOptions{})
 		if getErr == nil {
-			if existing.Data != nil && string(existing.Data[dataKey]) == string(data) && len(existing.Data) == 1 {
+			if existing.Data != nil && string(existing.Data[dataKey]) == string(data) && len(existing.Data) == 1 &&
+				existing.Annotations[MountFilePathAnnotation] == fileName {
 				return secretName, true, nil
 			}
 			existing.Data = desiredData
+			if existing.Annotations == nil {
+				existing.Annotations = map[string]string{}
+			}
+			existing.Annotations[MountFilePathAnnotation] = fileName
 			if _, updateErr := kubeclient.Clientset.CoreV1().Secrets(namespace).Update(ctx, existing, metav1.UpdateOptions{}); updateErr != nil {
 				return "", true, fmt.Errorf("error updating Secret %s: %w", secretName, updateErr)
 			}
@@ -616,6 +659,9 @@ func CreateMountResourceForFile(namespace, fileName string) (name string, isSecr
 					"kubendt/mount-file":           "true",
 					"kubendt/sensitive":            "true",
 				},
+				Annotations: map[string]string{
+					MountFilePathAnnotation: fileName,
+				},
 			},
 			Type: v1.SecretTypeOpaque,
 			Data: desiredData,
@@ -632,10 +678,15 @@ func CreateMountResourceForFile(namespace, fileName string) (name string, isSecr
 
 	existing, getErr := kubeclient.Clientset.CoreV1().ConfigMaps(namespace).Get(ctx, configMapName, metav1.GetOptions{})
 	if getErr == nil {
-		if existing.Data != nil && existing.Data[dataKey] == string(data) && len(existing.Data) == 1 {
+		if existing.Data != nil && existing.Data[dataKey] == string(data) && len(existing.Data) == 1 &&
+			existing.Annotations[MountFilePathAnnotation] == fileName {
 			return configMapName, false, nil
 		}
 		existing.Data = desiredData
+		if existing.Annotations == nil {
+			existing.Annotations = map[string]string{}
+		}
+		existing.Annotations[MountFilePathAnnotation] = fileName
 		if _, updateErr := kubeclient.Clientset.CoreV1().ConfigMaps(namespace).Update(ctx, existing, metav1.UpdateOptions{}); updateErr != nil {
 			return "", false, fmt.Errorf("error updating ConfigMap %s: %w", configMapName, updateErr)
 		}
@@ -657,6 +708,9 @@ func CreateMountResourceForFile(namespace, fileName string) (name string, isSecr
 			Labels: map[string]string{
 				"app.kubernetes.io/managed-by": "kubendt-backend",
 				"kubendt/mount-file":           "true",
+			},
+			Annotations: map[string]string{
+				MountFilePathAnnotation: fileName,
 			},
 		},
 		Data: desiredData,
