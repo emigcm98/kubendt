@@ -20,12 +20,12 @@
 }
 
 .custom-node.node-selected .node-icon {
-  filter: drop-shadow(0 0 6px #1976d2) drop-shadow(0 0 12px rgba(25, 118, 210, 0.55));
+  filter: drop-shadow(0 0 6px var(--primary)) drop-shadow(0 0 12px rgba(25, 118, 210, 0.55));
 }
 
 .custom-node.node-selected .label {
   background: rgba(187, 222, 251, 0.95);
-  border-color: #1976d2;
+  border-color: var(--primary);
   box-shadow: 0 0 6px rgba(25, 118, 210, 0.45);
 }
 
@@ -42,7 +42,7 @@
   left: 50%;
   font-weight: bold;
   background: rgba(184, 208, 223, 0.8);
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   border: 1px solid #4695c9;
   z-index: 20;
   white-space: nowrap;
@@ -55,7 +55,7 @@
     transform: translate(-50%, -50%);
     font-weight: bold;
     background: rgba(184, 208, 223, 0.8);
-    border-radius: 5px;
+    border-radius: var(--radius-sm);
     border: 1px solid #4695c9;
     z-index: 20;
   } */
@@ -68,7 +68,7 @@
 }
 
 .status-running {
-  background-color: #4caf50; /* green */
+  background-color: var(--success-accent); /* green */
 }
 
 .status-pending {
@@ -76,11 +76,11 @@
 }
 
 .status-notready {
-  background-color: #ff9800; /* orange, running but not yet ready */
+  background-color: var(--warning); /* orange, running but not yet ready */
 }
 
 .status-error {
-  background-color: #f44336; /* red */
+  background-color: var(--danger); /* red */
 }
 
 @keyframes spin {
@@ -134,7 +134,7 @@
 
 @keyframes node-restart-success-flash {
   0% {
-    filter: drop-shadow(0 0 8px #4caf50) drop-shadow(0 0 16px rgba(76, 175, 80, 0.85));
+    filter: drop-shadow(0 0 8px var(--success-accent)) drop-shadow(0 0 16px rgba(76, 175, 80, 0.85));
   }
   100% {
     filter: none;
@@ -161,8 +161,8 @@
 
 .custom-node.node-deleting .label {
   background: rgba(244, 67, 54, 0.16);
-  border-color: #f44336;
-  color: #b71c1c;
+  border-color: var(--danger);
+  color: var(--danger-strong);
 }
 
 /* Create state: translucent icon + pulsing green glow (no emoji, no spinner) */
@@ -185,6 +185,6 @@
 
 .custom-node.node-creating .label {
   background: rgba(76, 175, 80, 0.16);
-  border-color: #4caf50;
-  color: #1b5e20;
+  border-color: var(--success-accent);
+  color: var(--success);
 }

@@ -14,8 +14,8 @@
 
 .error-card {
   background: white;
-  border: 1px solid #ddd;
-  border-radius: 12px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
   padding: 3rem;
   max-width: 500px;
   width: 100%;
@@ -28,18 +28,18 @@
   width: 64px;
   height: 64px;
   margin: 0 auto 1rem;
-  color: #d32f2f;
+  color: var(--danger);
 }
 
 .error-title {
   font-size: 3rem;
-  color: #333;
+  color: var(--text-heading);
   margin-bottom: 0.5rem;
 }
 
 .error-message {
   font-size: 1.2rem;
-  color: #666;
+  color: var(--text-muted);
   margin-bottom: 2rem;
   font-style: italic;
 }
@@ -47,15 +47,15 @@
 .error-button {
   padding: 0.5rem 1.2rem;
   font-size: 0.9rem;
-  background-color: #1976d2;
+  background-color: var(--primary);
   color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   font-weight: bold;
   cursor: pointer;
   transition: background 0.2s ease;
 }
 
 .error-button:hover {
-  background-color: #145ea8;
+  background-color: var(--primary-hover);
 }
