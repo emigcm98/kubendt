@@ -117,18 +117,46 @@
 }
 
 .kni-status-ready {
-  background: rgba(76, 175, 80, 0.18);
-  color: #b6f0bd;
+  background: var(--success-accent);
+  color: #fff;
 }
 
 .kni-status-notready {
-  background: rgba(229, 57, 53, 0.22);
-  color: #ffb1ae;
+  background: var(--danger-bg);
+  color: var(--danger-strong);
 }
 
 .kni-status-unknown {
-  background: rgba(255, 255, 255, 0.18);
-  color: rgba(255, 255, 255, 0.85);
+  background: var(--border-light);
+  color: var(--text-muted);
+}
+
+.kni-meshnet {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  cursor: default;
+}
+
+.kni-meshnet-ok {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.kni-meshnet-down {
+  background: var(--danger-bg);
+  color: var(--danger-strong);
+}
+
+.kni-meshnet-unknown {
+  background: var(--border-light);
+  color: var(--text-muted);
 }
 
 .kni-close {

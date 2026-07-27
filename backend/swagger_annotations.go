@@ -227,13 +227,15 @@ func swaggerGetNamespaceMetrics() {}
 //	@Tags         network
 //	@Accept       json
 //	@Produce      json
-//	@Param        namespace  path      string                true  "Namespace name"
-//	@Param        body       body      types.DeployRequest   true  "Topology definition"
+//	@Param        namespace  path      string                true   "Namespace name"
+//	@Param        force      query     bool                  false  "Deploy even if the Meshnet CNI is not detected. Without it a missing Meshnet returns 412 and nothing is deployed."
+//	@Param        body       body      types.DeployRequest   true   "Topology definition"
 //	@Success      200        {object}  types.DeployNetworkResponse
 //	@Failure      400        {object}  types.ErrorResponse
 //	@Failure      403        {object}  types.ErrorResponse
 //	@Failure      404        {object}  types.ErrorResponse
 //	@Failure      409        {object}  types.NamespaceOperationConflictResponse
+//	@Failure      412        {object}  types.MeshnetGateResponse
 //	@Failure      500        {object}  types.ErrorResponse
 //	@Router       /network/deploy-network/{namespace} [post]
 func swaggerDeployNetwork() {}
@@ -256,17 +258,19 @@ func swaggerClearTopology() {}
 // swaggerModifyNetwork godoc
 //
 //	@Summary      Modify network topology
-//	@Description  Adds or removes nodes/links from an existing topology.
+//	@Description  Adds or removes nodes/links from an existing topology. Any change (add, delete or scale) returns 412 when the Meshnet CNI is not detected, since it restarts or creates pods that need rewiring. Bypass with force=true. Only clearing a topology is exempt.
 //	@Tags         network
 //	@Accept       json
 //	@Produce      json
-//	@Param        namespace  path      string                true  "Namespace name"
+//	@Param        namespace  path      string                true   "Namespace name"
+//	@Param        force      query     bool                  false  "Apply the change even if the Meshnet CNI is not detected."
 //	@Param        body       body      types.NetworkModifyRequestDoc   true  "Delta topology (add/delete)"
 //	@Success      200        {object}  types.ModifyNetworkResponse
 //	@Failure      400        {object}  types.ErrorResponse
 //	@Failure      403        {object}  types.ErrorResponse
 //	@Failure      404        {object}  types.ErrorResponse
 //	@Failure      409        {object}  types.NamespaceOperationConflictResponse
+//	@Failure      412        {object}  types.MeshnetGateResponse
 //	@Failure      500        {object}  types.ErrorResponse
 //	@Router       /network/modify-network/{namespace} [post]
 func swaggerModifyNetwork() {}
@@ -843,6 +847,7 @@ var _ = types.DriverOperationHistoryEntryDoc{}
 var _ = types.NamespaceDriverHistoryResponseDoc{}
 var _ = types.PodDriverHistoryResponseDoc{}
 var _ = types.ClusterStatusResponse{}
+var _ = types.MeshnetGateResponse{}
 var _ = types.HealthResponse{}
 var _ = types.ReadinessResponse{}
 var _ = types.VersionResponse{}

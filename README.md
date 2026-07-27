@@ -45,6 +45,7 @@ collections and licenses (CC BY 4.0, OFL).
 - **Real-time topology visualization** using React Flow with drag-and-drop node positioning
 - **Multi-instance nodes** via StatefulSets with configurable replicas (e.g., 3 routers running simultaneously)
 - **Virtual networking overlays** powered by Meshnet CNI for custom L2/L3 connectivity
+- **Meshnet health awareness** - the dashboard shows whether the Meshnet dataplane is running (per cluster and per node), and blocks a deploy when it is missing so topologies don't come up with unwired links
 - **Modular driver architecture** supporting different node types (hosts, routers, switches) with extensible capabilities
 - **Interactive terminal shell** with WebSocket for real-time pod access
 - **Dynamic network modification** - add/delete nodes and links without redeploying the entire topology

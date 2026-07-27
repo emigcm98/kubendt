@@ -450,11 +450,52 @@
 
 .cluster-status-badge {
   font-size: 0.8rem;
-  background: linear-gradient(135deg, var(--success-accent) 0%, var(--success-accent) 100%);
-  color: white;
+  background: var(--success-accent);
+  color: #fff;
   padding: 4px 12px;
   border-radius: var(--radius-lg);
   font-weight: 600;
+}
+
+.meshnet-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: var(--radius-lg);
+  border: 1px solid transparent;
+  cursor: default;
+}
+
+.meshnet-badge .meshnet-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.meshnet-ok {
+  color: var(--success);
+  background: var(--success-bg);
+}
+
+.meshnet-degraded {
+  color: var(--warning-strong);
+  background: var(--warning-bg);
+  border-color: var(--warning-border);
+}
+
+.meshnet-missing {
+  color: var(--danger-strong);
+  background: var(--danger-bg);
+}
+
+.meshnet-unknown {
+  color: var(--text-muted);
+  background: var(--border-light);
 }
 
 .cluster-loading {
@@ -541,6 +582,48 @@
   white-space: nowrap;
 }
 
+.node-header-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.node-meshnet {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  padding: 2px 7px;
+  border-radius: var(--radius-md);
+  cursor: default;
+}
+
+.node-meshnet-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.node-meshnet-ok {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.node-meshnet-down {
+  background: var(--danger-bg);
+  color: var(--danger-strong);
+}
+
+.node-meshnet-unknown {
+  background: var(--border-light);
+  color: var(--text-muted);
+}
+
 .node-status-indicator {
   font-size: 0.7rem;
   padding: 2px 8px;
@@ -552,8 +635,8 @@
 }
 
 .node-status-indicator.ready {
-  background: var(--success-bg);
-  color: var(--success);
+  background: var(--success-accent);
+  color: #fff;
 }
 
 .node-status-indicator.notready {

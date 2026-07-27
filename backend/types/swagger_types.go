@@ -476,13 +476,32 @@ type ClusterNodeInfo struct {
 	CPUPercentage    float64  `json:"cpu_percentage" example:"5.28"`
 	MemoryPercentage float64  `json:"memory_percentage" example:"27.77"`
 	KubeletVersion   string   `json:"kubelet_version" example:"v1.31.0"`
+	Meshnet          string   `json:"meshnet" example:"running"`
+}
+
+// MeshnetGateResponse is the 412 returned by deploy and modify (add path) when
+// the Meshnet CNI is not detected. Retry with ?force=true to proceed anyway.
+type MeshnetGateResponse struct {
+	Error  string `json:"error" example:"Meshnet CNI not detected in the cluster. Topology links would not be wired. Install Meshnet, or retry with force=true to deploy anyway."`
+	Reason string `json:"reason" example:"meshnet_missing"`
+}
+
+// MeshnetStatusDoc mirrors the meshnet health block in the cluster status.
+type MeshnetStatusDoc struct {
+	State     string `json:"state" example:"ok"`
+	Ready     int    `json:"ready" example:"3"`
+	Desired   int    `json:"desired" example:"3"`
+	Name      string `json:"name,omitempty" example:"meshnet"`
+	Namespace string `json:"namespace,omitempty" example:"meshnet"`
+	Message   string `json:"message,omitempty"`
 }
 
 // ClusterStatusResponse is returned by GET /cluster/status.
 type ClusterStatusResponse struct {
-	Nodes []ClusterNodeInfo `json:"nodes"`
-	Ready int               `json:"ready" example:"1"`
-	Total int               `json:"total" example:"1"`
+	Nodes   []ClusterNodeInfo `json:"nodes"`
+	Ready   int               `json:"ready" example:"1"`
+	Total   int               `json:"total" example:"1"`
+	Meshnet MeshnetStatusDoc  `json:"meshnet"`
 	// Cluster-wide weighted averages computed as sum(usage)/sum(capacity)
 	// across nodes that report metrics. Zero when metrics-server is
 	// unavailable or no node reports metrics.
@@ -559,6 +578,7 @@ type NodeDetailResponse struct {
 	MemoryBytesUsage  int64                   `json:"memory_bytes_usage" example:"4633038848"`
 	CPUPercentage     float64                 `json:"cpu_percentage" example:"5.28"`
 	MemoryPercentage  float64                 `json:"memory_percentage" example:"27.77"`
+	Meshnet           string                  `json:"meshnet" example:"running"`
 }
 
 // ─── System ──────────────────────────────────────────────────────────────────

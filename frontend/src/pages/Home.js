@@ -352,6 +352,61 @@ const Home = () => {
     };
   })();
 
+  // Meshnet CNI health, shown as a pill next to the node count. The Topology
+  // CRD ships with meshnet, so the DaemonSet is the real signal: without it the
+  // topology deploys but links never get wired. "unknown" stays neutral so a
+  // kubeconfig that can't list DaemonSets doesn't look like a missing install.
+  const meshnetBadge = (() => {
+    const m = clusterStatus?.meshnet;
+    if (!m || !m.state) return null;
+    switch (m.state) {
+      case 'ok':
+        return {
+          cls: 'ok',
+          label: `Meshnet ${m.ready}/${m.desired}`,
+          title: 'Meshnet CNI is running on every node.',
+        };
+      case 'degraded':
+        return {
+          cls: 'degraded',
+          label: `Meshnet ${m.ready}/${m.desired}`,
+          title:
+            'Meshnet is installed but the dataplane is not ready on every node. New topology links may not be wired until it recovers.',
+        };
+      case 'missing':
+        return {
+          cls: 'missing',
+          label: 'Meshnet not found',
+          title:
+            'No meshnet DaemonSet found. Topologies will deploy but their links will not be wired. Install the Meshnet CNI in this cluster.',
+        };
+      default:
+        return {
+          cls: 'unknown',
+          label: 'Meshnet unknown',
+          title:
+            m.message || 'Could not determine meshnet status (no permission to list DaemonSets).',
+        };
+    }
+  })();
+
+  // Per-node meshnet chip for the node cards. Null hides it (older backends).
+  const nodeMeshnetChip = (state) => {
+    switch (state) {
+      case 'running':
+        return { cls: 'ok', title: 'Meshnet is running on this node.' };
+      case 'not-running':
+        return {
+          cls: 'down',
+          title: 'No meshnet pod on this node. Links landing here will not be wired.',
+        };
+      case 'unknown':
+        return { cls: 'unknown', title: 'Could not check meshnet on this node.' };
+      default:
+        return null;
+    }
+  };
+
   // Render the "v" prefix only if the backend didn't already include one.
   const formatKubeletVersion = (v) =>
     !v ? '' : v.startsWith('v') || v.startsWith('V') ? v : `v${v}`;
@@ -466,7 +521,16 @@ const Home = () => {
                 Cluster status{' '}
                 {clusterStatus && (
                   <span className="cluster-status-badge">
-                    {clusterStatus.ready}/{clusterStatus.total} Nodes
+                    Ready {clusterStatus.ready}/{clusterStatus.total}
+                  </span>
+                )}
+                {meshnetBadge && (
+                  <span
+                    className={`meshnet-badge meshnet-${meshnetBadge.cls}`}
+                    title={meshnetBadge.title}
+                  >
+                    <span className="meshnet-dot" aria-hidden="true" />
+                    {meshnetBadge.label}
                   </span>
                 )}
               </h2>
@@ -551,8 +615,22 @@ const Home = () => {
                         <div className="node-name" title={node.name}>
                           {node.name}
                         </div>
-                        <div className={`node-status-indicator ${node.status.toLowerCase()}`}>
-                          {node.status}
+                        <div className="node-header-badges">
+                          <div className={`node-status-indicator ${node.status.toLowerCase()}`}>
+                            {node.status}
+                          </div>
+                          {(() => {
+                            const chip = nodeMeshnetChip(node.meshnet);
+                            return chip ? (
+                              <span
+                                className={`node-meshnet node-meshnet-${chip.cls}`}
+                                title={chip.title}
+                              >
+                                <span className="node-meshnet-dot" aria-hidden="true" />
+                                meshnet
+                              </span>
+                            ) : null;
+                          })()}
                         </div>
                       </div>
                       <div className="node-roles">

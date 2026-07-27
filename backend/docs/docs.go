@@ -1794,6 +1794,12 @@ const docTemplate = `{
                         "required": true
                     },
                     {
+                        "type": "boolean",
+                        "description": "Deploy even if the Meshnet CNI is not detected. Without it a missing Meshnet returns 412 and nothing is deployed.",
+                        "name": "force",
+                        "in": "query"
+                    },
+                    {
                         "description": "Topology definition",
                         "name": "body",
                         "in": "body",
@@ -1832,6 +1838,12 @@ const docTemplate = `{
                         "description": "Conflict",
                         "schema": {
                             "$ref": "#/definitions/types.NamespaceOperationConflictResponse"
+                        }
+                    },
+                    "412": {
+                        "description": "Precondition Failed",
+                        "schema": {
+                            "$ref": "#/definitions/types.MeshnetGateResponse"
                         }
                     },
                     "500": {
@@ -1880,7 +1892,7 @@ const docTemplate = `{
         },
         "/network/modify-network/{namespace}": {
             "post": {
-                "description": "Adds or removes nodes/links from an existing topology.",
+                "description": "Adds or removes nodes/links from an existing topology. Any change (add, delete or scale) returns 412 when the Meshnet CNI is not detected, since it restarts or creates pods that need rewiring. Bypass with force=true. Only clearing a topology is exempt.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1898,6 +1910,12 @@ const docTemplate = `{
                         "name": "namespace",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Apply the change even if the Meshnet CNI is not detected.",
+                        "name": "force",
+                        "in": "query"
                     },
                     {
                         "description": "Delta topology (add/delete)",
@@ -1938,6 +1956,12 @@ const docTemplate = `{
                         "description": "Conflict",
                         "schema": {
                             "$ref": "#/definitions/types.NamespaceOperationConflictResponse"
+                        }
+                    },
+                    "412": {
+                        "description": "Precondition Failed",
+                        "schema": {
+                            "$ref": "#/definitions/types.MeshnetGateResponse"
                         }
                     },
                     "500": {
@@ -2611,6 +2635,10 @@ const docTemplate = `{
                     "type": "string",
                     "example": "4.32Gi"
                 },
+                "meshnet": {
+                    "type": "string",
+                    "example": "running"
+                },
                 "name": {
                     "type": "string",
                     "example": "k8s-worker-1"
@@ -2641,6 +2669,9 @@ const docTemplate = `{
                 "avg_memory_percentage": {
                     "type": "number",
                     "example": 27.77
+                },
+                "meshnet": {
+                    "$ref": "#/definitions/types.MeshnetStatusDoc"
                 },
                 "nodes": {
                     "type": "array",
@@ -3196,6 +3227,47 @@ const docTemplate = `{
                     "example": [
                         "admin"
                     ]
+                }
+            }
+        },
+        "types.MeshnetGateResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "Meshnet CNI not detected in the cluster. Topology links would not be wired. Install Meshnet, or retry with force=true to deploy anyway."
+                },
+                "reason": {
+                    "type": "string",
+                    "example": "meshnet_missing"
+                }
+            }
+        },
+        "types.MeshnetStatusDoc": {
+            "type": "object",
+            "properties": {
+                "desired": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "message": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "meshnet"
+                },
+                "namespace": {
+                    "type": "string",
+                    "example": "meshnet"
+                },
+                "ready": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "state": {
+                    "type": "string",
+                    "example": "ok"
                 }
             }
         },
@@ -3846,6 +3918,10 @@ const docTemplate = `{
                 "memory_percentage": {
                     "type": "number",
                     "example": 27.77
+                },
+                "meshnet": {
+                    "type": "string",
+                    "example": "running"
                 },
                 "name": {
                     "type": "string",
@@ -4594,7 +4670,7 @@ const docTemplate = `{
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "1.0",
+	Version:          "annotation and never changes between releases.",
 	Host:             "localhost:8080",
 	BasePath:         "/",
 	Schemes:          []string{"http"},

@@ -1690,7 +1690,10 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
     }
   };
 
-  const applyImportTopology = async (json) => {
+  // force=true replays the deploy after the user confirms past the meshnet
+  // gate (backend returned 412 meshnet_missing). It adds ?force=true so the
+  // same guard that protects API clients does not block a deliberate deploy.
+  const applyImportTopology = async (json, force = false) => {
     try {
       // Re-validate as a safety net (modal already validated; this is harmless if valid).
       validateImportTopologyPayload(json);
@@ -1818,11 +1821,14 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
 
       let res;
       try {
-        res = await fetch(`${API_BASE_URL}/network/deploy-network/${namespace}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(json),
-        });
+        res = await fetch(
+          `${API_BASE_URL}/network/deploy-network/${namespace}${force ? '?force=true' : ''}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(json),
+          }
+        );
       } catch (netErr) {
         rollbackPlaceholders();
         throw netErr;
@@ -1837,6 +1843,31 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
           payload?.took_time,
           payload?.warnings
         );
+      } else if (
+        res.status === 412 &&
+        (
+          await res
+            .clone()
+            .json()
+            .catch(() => null)
+        )?.reason === 'meshnet_missing'
+      ) {
+        // Meshnet gate. Nothing was deployed yet, so just drop the placeholders
+        // and let the user decide whether to force the deploy anyway.
+        rollbackPlaceholders();
+        setAlertModal({
+          isOpen: true,
+          type: 'confirm',
+          title: 'Meshnet not detected',
+          message:
+            'The Meshnet CNI dataplane was not found in this cluster. The topology will deploy but its links will not be wired, so pods will come up without their extra interfaces. Deploy anyway?',
+          onConfirm: () => {
+            setAlertModal((prev) => ({ ...prev, isOpen: false }));
+            applyImportTopology(json, true);
+          },
+          onCancel: () => setAlertModal((prev) => ({ ...prev, isOpen: false })),
+        });
+        return;
       } else {
         const payload = await res.json().catch(() => null);
         // The backend rolled back the partial deploy. Show the attempted
@@ -2207,15 +2238,44 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
     deletePayload,
     successTitle,
     onLocalSuccess,
-    onLocalCleanup
+    onLocalCleanup,
+    force = false
   ) => {
     setModifyingTopology(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/network/modify-network/${namespace}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ delete: deletePayload }),
-      });
+      const res = await fetch(
+        `${API_BASE_URL}/network/modify-network/${namespace}${force ? '?force=true' : ''}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ delete: deletePayload }),
+        }
+      );
+      if (
+        res.status === 412 &&
+        (
+          await res
+            .clone()
+            .json()
+            .catch(() => null)
+        )?.reason === 'meshnet_missing'
+      ) {
+        // Meshnet gate. A delete restarts the surviving peers so the CNI can
+        // redraw their wiring; without meshnet they would come back stuck.
+        setAlertModal({
+          isOpen: true,
+          type: 'confirm',
+          title: 'Meshnet not detected',
+          message:
+            'The Meshnet CNI dataplane was not found in this cluster. This change restarts the affected pods, which will not come back correctly wired until Meshnet is running. Apply anyway?',
+          onConfirm: () => {
+            setAlertModal((prev) => ({ ...prev, isOpen: false }));
+            executeDeleteModify(deletePayload, successTitle, onLocalSuccess, onLocalCleanup, true);
+          },
+          onCancel: () => setAlertModal((prev) => ({ ...prev, isOpen: false })),
+        });
+        return;
+      }
       if (!res.ok) {
         const payload = await res.json().catch(() => null);
         throw new Error(payload?.error || `Backend error (${res.status})`);
@@ -2429,7 +2489,9 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
     });
   };
 
-  const applyModifyTopology = async (json) => {
+  // force=true replays past the meshnet gate (only reachable when the payload
+  // has an `add`, which is the sole path the backend gates).
+  const applyModifyTopology = async (json, force = false) => {
     try {
       validateModifyTopologyPayload(json);
 
@@ -2552,14 +2614,44 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
 
       let res;
       try {
-        res = await fetch(`${API_BASE_URL}/network/modify-network/${namespace}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(json),
-        });
+        res = await fetch(
+          `${API_BASE_URL}/network/modify-network/${namespace}${force ? '?force=true' : ''}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(json),
+          }
+        );
       } catch (netErr) {
         rollbackOptimistic();
         throw netErr;
+      }
+
+      if (
+        res.status === 412 &&
+        (
+          await res
+            .clone()
+            .json()
+            .catch(() => null)
+        )?.reason === 'meshnet_missing'
+      ) {
+        // Meshnet gate. Undo the optimistic changes and let the user confirm
+        // forcing the change through.
+        rollbackOptimistic();
+        setAlertModal({
+          isOpen: true,
+          type: 'confirm',
+          title: 'Meshnet not detected',
+          message:
+            'The Meshnet CNI dataplane was not found in this cluster. This change creates or restarts pods that will not come up correctly wired until Meshnet is running. Apply anyway?',
+          onConfirm: () => {
+            setAlertModal((prev) => ({ ...prev, isOpen: false }));
+            applyModifyTopology(json, true);
+          },
+          onCancel: () => setAlertModal((prev) => ({ ...prev, isOpen: false })),
+        });
+        return;
       }
 
       if (!res.ok) {
