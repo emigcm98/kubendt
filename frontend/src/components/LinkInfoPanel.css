@@ -1,9 +1,5 @@
 /* Reuses .pod-info-panel + .panel-wrapper + .close-btn from PodInfoPanel.css */
 
-.link-info-panel {
-  border-color: #c8d3e0;
-}
-
 .link-info-title {
   display: flex;
   align-items: center;
@@ -12,8 +8,8 @@
 }
 
 .link-info-title-icon {
-  width: 1.1rem;
-  height: 1.1rem;
+  width: 24px;
+  height: 24px;
   filter: drop-shadow(0 0 6px rgba(0, 0, 0, 0.12));
 }
 
@@ -23,12 +19,12 @@
 }
 
 .link-subnet.subnet-ok {
-  color: #2e7d32;
+  color: var(--success);
   font-weight: 600;
 }
 
 .link-subnet.subnet-diff {
-  color: #c62828;
+  color: var(--danger-strong);
   font-weight: 600;
 }
 
@@ -42,18 +38,18 @@
   padding: 0.6rem 0.8rem;
   margin: 0.6rem 0.8rem;
   background: #ffffff;
-  border: 1px solid #d0dae8;
-  border-radius: 8px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
   font-size: 0.82rem;
-  color: #1a3a5c;
+  color: var(--text-heading);
 }
 
 .link-diagram-side {
   font-weight: 700;
   color: #0d3b66;
-  background: #e3f2fd;
+  background: var(--info-bg);
   border: 1px solid #b8d4ea;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   padding: 2px 6px;
   max-width: 32%;
   overflow: hidden;
@@ -64,11 +60,11 @@
 .link-diagram-iface {
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 0.78rem;
-  color: #1976d2;
+  color: var(--primary);
 }
 
 .link-diagram-wire {
-  color: #888;
+  color: var(--text-subtle);
   letter-spacing: -1px;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
 }
@@ -83,7 +79,7 @@
 
 .link-endpoints-divider {
   height: 0;
-  border-top: 1px dashed #c5d0dd;
+  border-top: 1px dashed var(--border);
   margin: 0.1rem 0;
   position: relative;
 }
@@ -94,8 +90,8 @@
   top: -10px;
   left: 50%;
   transform: translateX(-50%);
-  background: #e8eef5;
-  color: #1976d2;
+  background: var(--panel-from);
+  color: var(--primary);
   padding: 0 6px;
   font-size: 0.85rem;
   font-weight: 700;
@@ -103,8 +99,8 @@
 
 .link-endpoint {
   background: #ffffff;
-  border: 1px solid #d0dae8;
-  border-radius: 8px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
   padding: 0.6rem 0.7rem;
   box-shadow: 0 1px 3px rgba(25, 118, 210, 0.08);
 }
@@ -134,7 +130,7 @@
 .link-endpoint-pod {
   font-weight: 700;
   font-size: 0.92rem;
-  color: #1a1a1a;
+  color: var(--text-heading);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -149,7 +145,7 @@
 
 .link-endpoint-iface-name {
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  color: #1976d2;
+  color: var(--primary);
   font-weight: 600;
 }
 
@@ -157,18 +153,18 @@
   font-size: 0.65rem;
   font-weight: 700;
   padding: 1px 6px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   letter-spacing: 0.04em;
 }
 
 .link-state-badge.badge-up {
-  background: #e6f4ea;
-  color: #1b5e20;
+  background: var(--success-bg);
+  color: var(--success);
   border: 1px solid #b6dcc0;
 }
 
 .link-state-badge.badge-down {
-  background: #fdecea;
+  background: var(--danger-bg);
   color: #8a2d2d;
   border: 1px solid #f0bcb4;
 }
@@ -182,13 +178,13 @@
 
 .link-detail-key {
   flex: 0 0 50px;
-  color: #555;
+  color: var(--text-muted);
   font-weight: 600;
 }
 
 .link-detail-val {
   flex: 1;
-  color: #1a1a1a;
+  color: var(--text-heading);
   overflow: hidden;
   text-overflow: ellipsis;
   word-break: break-all;
@@ -204,12 +200,12 @@
 }
 
 .link-endpoint-loading {
-  color: #999;
+  color: var(--text-subtle);
   font-style: italic;
 }
 
 .link-endpoint-external-hint {
-  color: #5a6b7a;
+  color: var(--text-muted);
   font-style: italic;
   font-size: 0.8rem;
 }
@@ -221,7 +217,7 @@
   background: #eef4fb;
   border: 1px solid #b8d4ea;
   color: #0d3b66;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;

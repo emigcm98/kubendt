@@ -1,3 +1,64 @@
+/* === KubeNDT design tokens ===
+   Single source of truth for colors, radii and elevation. Values are the
+   canonical ones distilled from the existing UI; each token collapses several
+   near-duplicate hex values that were scattered across the stylesheets. */
+:root {
+  /* Brand (header banner) */
+  --brand: #2b8fd4;
+  --brand-edge: #1c74c0;
+
+  /* Primary / interactive */
+  --primary: #1976d2;
+  --primary-hover: #1565c0;
+
+  /* Surfaces */
+  --panel-from: #f3f7fc;
+  --panel-to: #eaf1f9;
+  --panel-border: #d3dfec;
+  --panel-shadow: 0 4px 16px rgba(25, 118, 210, 0.12);
+  --surface: #ffffff;
+
+  /* Context menus (dark surface) */
+  --menu-from: #1e1e2e;
+  --menu-to: #2a2a3e;
+  --menu-border: rgba(88, 166, 255, 0.3);
+  --menu-accent: #58a6ff;
+  --menu-text: #e0e0e0;
+  --menu-hover: rgba(88, 166, 255, 0.15);
+  --menu-danger: #ff6b6b;
+
+  /* Text */
+  --text-heading: #1a3a5c;
+  --text-body: #334155;
+  --text-muted: #64748b;
+  --text-subtle: #94a3b8;
+  --text-on-brand: #ffffff;
+
+  /* Borders / dividers */
+  --border: #d3dfec;
+  --border-light: #e2e8f0;
+
+  /* Status */
+  --success: #2e7d32;
+  --success-accent: #4caf50;
+  --success-bg: #e6f4ea;
+  --danger: #d32f2f;
+  --danger-strong: #c62828;
+  --danger-bg: #fdecea;
+  --warning: #f0a020;
+  --warning-border: #f0c36d;
+  --warning-bg: #fff8e6;
+  --warning-text: #8a5a00;
+  --info: #1976d2;
+  --info-bg: #e3f2fd;
+
+  /* Radii */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-pill: 999px;
+}
+
 body {
   margin: 0;
   font-family:

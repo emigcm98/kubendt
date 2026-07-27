@@ -2,8 +2,8 @@
   position: relative;
   display: flex;
   align-items: center;
-  background: #3397df;
-  border-bottom: 3px solid #047ed5;
+  background: var(--brand);
+  border-bottom: 3px solid var(--brand-edge);
   padding: 0.7rem 1rem;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
@@ -33,7 +33,7 @@
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.8);
   padding: 0.25rem 0.55rem;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   text-decoration: none;
@@ -62,7 +62,7 @@ a.navbar-brand:focus-visible {
   z-index: 0;
   background: rgba(255, 255, 255, 0.12);
   padding: 0.5rem 1.8rem;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   border: 1px solid rgba(255, 255, 255, 0.2);
   max-width: 400px;
 }
@@ -97,7 +97,7 @@ a.navbar-brand:focus-visible {
   background: rgba(255, 255, 255, 0.2);
   color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.35);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   width: 30px;
   height: 30px;
   font-size: 0.9rem;
@@ -123,7 +123,7 @@ a.navbar-brand:focus-visible {
   font-size: 0.85rem;
   color: white;
   border: none;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -133,11 +133,11 @@ a.navbar-brand:focus-visible {
 .navbar-left button:nth-child(1) {
   background: #fafafa;
   color: #424242;
-  border-bottom: 2px solid #e0e0e0;
+  border-bottom: 2px solid var(--border-light);
 }
 
 .navbar-left button:nth-child(1):hover:not(:disabled) {
-  background: #eeeeee;
+  background: var(--border-light);
   border-bottom-color: #bdbdbd;
   transform: translateY(-1px);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
@@ -145,13 +145,13 @@ a.navbar-brand:focus-visible {
 
 /* Delete button - Rojo */
 .navbar-left button:nth-child(2) {
-  background: #e53935;
-  border-bottom: 2px solid #c62828;
+  background: var(--danger-strong);
+  border-bottom: 2px solid var(--danger-strong);
 }
 
 .navbar-left button:nth-child(2):hover:not(:disabled) {
-  background: #d32f2f;
-  border-bottom-color: #b71c1c;
+  background: var(--danger);
+  border-bottom-color: var(--danger-strong);
   transform: translateY(-1px);
   box-shadow: 0 2px 6px rgba(229, 57, 53, 0.3);
 }
@@ -210,7 +210,7 @@ a.navbar-brand:focus-visible {
 
 .delete-confirm-modal {
   background-color: white;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
   width: 90%;
   max-width: 450px;
@@ -223,12 +223,12 @@ a.navbar-brand:focus-visible {
   justify-content: space-between;
   align-items: center;
   padding: 1.5rem;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-light);
 }
 
 .delete-confirm-modal .modal-header h2 {
   margin: 0;
-  color: #333;
+  color: var(--text-body);
   font-size: 1.4rem;
 }
 
@@ -237,20 +237,20 @@ a.navbar-brand:focus-visible {
   border: none;
   font-size: 1.5rem;
   cursor: pointer;
-  color: #999;
+  color: var(--text-subtle);
   padding: 0;
   width: 30px;
   height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   transition: all 0.2s;
 }
 
 .delete-confirm-modal .modal-close-btn:hover {
   background-color: #f0f0f0;
-  color: #333;
+  color: var(--text-body);
 }
 
 .delete-confirm-modal .modal-body {
@@ -260,7 +260,7 @@ a.navbar-brand:focus-visible {
 .delete-confirm-modal .modal-body p {
   margin: 0;
   font-size: 1.05rem;
-  color: #333;
+  color: var(--text-body);
   line-height: 1.5;
 }
 
@@ -268,7 +268,7 @@ a.navbar-brand:focus-visible {
   display: flex;
   gap: 0.8rem;
   padding: 1.5rem;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--border-light);
   justify-content: flex-end;
 }
 
@@ -276,7 +276,7 @@ a.navbar-brand:focus-visible {
   padding: 0.6rem 1.2rem;
   font-size: 0.95rem;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font-weight: 600;
   transition: all 0.2s;
@@ -284,15 +284,15 @@ a.navbar-brand:focus-visible {
 
 .delete-confirm-modal .modal-btn-cancel {
   background-color: #f0f0f0;
-  color: #333;
+  color: var(--text-body);
 }
 
 .delete-confirm-modal .modal-btn-cancel:hover {
-  background-color: #e0e0e0;
+  background-color: var(--border-light);
 }
 
 .delete-confirm-modal .modal-btn-danger {
-  background-color: #f44336;
+  background-color: var(--danger);
   color: white;
 }
 

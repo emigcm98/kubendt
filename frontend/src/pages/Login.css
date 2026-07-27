@@ -3,7 +3,7 @@
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #1f4e79 0%, #2b6cb0 100%);
+  background: linear-gradient(135deg, #1f4e79 0%, var(--primary) 100%);
   padding: 20px;
 }
 
@@ -15,7 +15,7 @@
   max-width: 360px;
   padding: 32px 28px;
   background: #fff;
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
 }
 
@@ -33,7 +33,7 @@
 
 .login-subtitle {
   margin: 4px 0 20px;
-  color: #718096;
+  color: var(--text-muted);
   font-size: 0.9rem;
 }
 
@@ -50,7 +50,7 @@
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: #a0aec0;
+  color: var(--text-subtle);
 }
 
 .login-user {
@@ -59,10 +59,10 @@
   gap: 9px;
   padding: 9px 12px;
   font-weight: 600;
-  color: #2d3748;
+  color: var(--text-body);
   background: #f7fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
 }
 
 .login-user-avatar {
@@ -73,7 +73,7 @@
   height: 24px;
   font-size: 0.8rem;
   color: #fff;
-  background: #2b6cb0;
+  background: var(--primary);
   border-radius: 50%;
 }
 
@@ -81,14 +81,14 @@
   width: 100%;
   padding: 11px 13px;
   font-size: 0.95rem;
-  border: 1px solid #cbd5e0;
-  border-radius: 8px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
   box-sizing: border-box;
 }
 
 .login-input:focus {
   outline: none;
-  border-color: #2b6cb0;
+  border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(43, 108, 176, 0.15);
 }
 
@@ -97,10 +97,10 @@
   margin-top: 10px;
   padding: 8px 10px;
   font-size: 0.85rem;
-  color: #9b2c2c;
+  color: var(--danger-strong);
   background: #fff5f5;
   border: 1px solid #feb2b2;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   box-sizing: border-box;
 }
 
@@ -111,9 +111,9 @@
   font-size: 0.95rem;
   font-weight: 600;
   color: #fff;
-  background: #2b6cb0;
+  background: var(--primary);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   cursor: pointer;
 }
 

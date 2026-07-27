@@ -1,7 +1,7 @@
 .intf-context-menu {
-  background: linear-gradient(135deg, #1e1e2e 0%, #2a2a3e 100%);
+  background: linear-gradient(135deg, var(--menu-from) 0%, var(--menu-to) 100%);
   border: 1px solid rgba(88, 166, 255, 0.3);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   box-shadow:
     0 8px 24px rgba(0, 0, 0, 0.5),
     0 0 16px rgba(88, 166, 255, 0.12);
@@ -45,7 +45,7 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  color: #58a6ff;
+  color: var(--menu-accent);
   font-weight: 700;
   font-size: 13px;
   letter-spacing: 0.3px;
@@ -78,7 +78,7 @@
   font-weight: 800;
   letter-spacing: 0.6px;
   padding: 1px 6px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   align-self: flex-start;
 }
 

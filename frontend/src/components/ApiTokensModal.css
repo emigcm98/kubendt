@@ -16,7 +16,7 @@
   max-height: 85vh;
   overflow-y: auto;
   background: #fff;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   padding: 22px;
 }
@@ -38,19 +38,19 @@
   border: none;
   font-size: 1rem;
   cursor: pointer;
-  color: #718096;
+  color: var(--text-muted);
 }
 
 .tokens-hint {
   margin: 8px 0 16px;
   font-size: 0.85rem;
-  color: #718096;
+  color: var(--text-muted);
 }
 
 .tokens-hint code {
   background: #edf2f7;
   padding: 1px 5px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .tokens-create {
@@ -61,18 +61,18 @@
 .tokens-input {
   flex: 1;
   padding: 9px 11px;
-  border: 1px solid #cbd5e0;
-  border-radius: 8px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
   font-size: 0.9rem;
 }
 
 .tokens-expiry {
   padding: 9px 8px;
-  border: 1px solid #cbd5e0;
-  border-radius: 8px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
   font-size: 0.85rem;
   background: #fff;
-  color: #2d3748;
+  color: var(--text-body);
   cursor: pointer;
 }
 
@@ -80,9 +80,9 @@
   padding: 9px 16px;
   font-weight: 600;
   color: #fff;
-  background: #2b6cb0;
+  background: var(--primary);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   cursor: pointer;
 }
 
@@ -96,7 +96,7 @@
   padding: 12px;
   background: #f0fff4;
   border: 1px solid #9ae6b4;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
 }
 
 .tokens-new-label {
@@ -120,7 +120,7 @@
   font-size: 0.82rem;
   background: #fff;
   border: 1px solid #c6f6d5;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   padding: 8px;
 }
 
@@ -130,24 +130,24 @@
   font-size: 0.82rem;
   font-weight: 600;
   color: #fff;
-  background: #2f855a;
+  background: var(--success);
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
 }
 
 .tokens-copy:hover {
-  background: #276749;
+  background: var(--success);
 }
 
 .tokens-error {
   margin-top: 12px;
   padding: 8px 10px;
   font-size: 0.85rem;
-  color: #9b2c2c;
+  color: var(--danger-strong);
   background: #fff5f5;
   border: 1px solid #feb2b2;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
 }
 
 .tokens-list-title {
@@ -156,7 +156,7 @@
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #a0aec0;
+  color: var(--text-subtle);
 }
 
 .tokens-list {
@@ -169,13 +169,13 @@
 }
 
 .tokens-empty {
-  color: #a0aec0;
+  color: var(--text-subtle);
   font-size: 0.88rem;
   text-align: center;
   padding: 18px;
   background: #f7fafc;
-  border: 1px dashed #e2e8f0;
-  border-radius: 10px;
+  border: 1px dashed var(--border-light);
+  border-radius: var(--radius-md);
 }
 
 .tokens-row {
@@ -184,8 +184,8 @@
   gap: 12px;
   padding: 12px 14px;
   background: #f7fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
   transition:
     border-color 0.15s ease,
     background 0.15s ease;
@@ -193,7 +193,7 @@
 
 .tokens-row:hover {
   background: #fff;
-  border-color: #cbd5e0;
+  border-color: var(--border-light);
 }
 
 .tokens-row-icon {
@@ -203,9 +203,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #3182ce;
-  background: #ebf4ff;
-  border-radius: 8px;
+  color: var(--primary);
+  background: var(--info-bg);
+  border-radius: var(--radius-md);
 }
 
 .tokens-row-icon-svg {
@@ -223,7 +223,7 @@
 
 .tokens-row-name {
   font-weight: 600;
-  color: #2d3748;
+  color: var(--text-body);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -231,7 +231,7 @@
 
 .tokens-row-meta {
   font-size: 0.75rem;
-  color: #a0aec0;
+  color: var(--text-subtle);
 }
 
 .tokens-row-dot {
@@ -243,10 +243,10 @@
   padding: 7px 14px;
   font-size: 0.8rem;
   font-weight: 600;
-  color: #c53030;
+  color: var(--danger-strong);
   background: #fff;
   border: 1px solid #feb2b2;
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   transition: background 0.15s ease;
 }

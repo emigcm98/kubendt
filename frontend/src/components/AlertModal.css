@@ -13,7 +13,7 @@
 
 .alert-modal-container {
   background: #ffffff;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
   width: 90%;
   max-width: 420px;
@@ -27,7 +27,7 @@
   align-items: center;
   gap: 12px;
   padding: 16px;
-  border-bottom: 1px solid #eeeeee;
+  border-bottom: 1px solid var(--border-light);
   background-color: #f9fafb;
 }
 
@@ -36,7 +36,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #4c8bf5; /* default / info tint */
+  color: var(--info); /* default / info tint */
 }
 
 .alert-modal-icon-svg {
@@ -46,23 +46,23 @@
 }
 
 .alert-modal-icon-success {
-  color: #4caf50;
+  color: var(--success-accent);
 }
 
 .alert-modal-icon-error {
-  color: #d32f2f;
+  color: var(--danger);
 }
 
 .alert-modal-icon-warning {
-  color: #f5a623;
+  color: var(--warning);
 }
 
 .alert-modal-icon-confirm {
-  color: #4c8bf5;
+  color: var(--info);
 }
 
 .alert-modal-icon-info {
-  color: #4c8bf5;
+  color: var(--info);
 }
 
 .alert-modal-icon-loading {
@@ -74,8 +74,8 @@
 .spinner {
   width: 32px;
   height: 32px;
-  border: 3px solid #eeeeee;
-  border-top-color: #1976d2;
+  border: 3px solid var(--border-light);
+  border-top-color: var(--primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -98,7 +98,7 @@
 }
 
 .alert-modal-message {
-  color: #666666;
+  color: var(--text-muted);
   font-size: 0.95rem;
   line-height: 1.4;
   margin: 0;
@@ -111,8 +111,8 @@
 .alert-modal-message-secondary {
   background: #f6f8fb;
   border: 1px solid #e3e8ef;
-  border-radius: 8px;
-  color: #344054;
+  border-radius: var(--radius-md);
+  color: var(--text-body);
   font-size: 0.9rem;
   font-weight: 600;
   padding: 8px 10px;
@@ -125,7 +125,7 @@
 .alert-modal-extra {
   margin-top: 12px;
   padding-top: 10px;
-  border-top: 1px solid #eeeeee;
+  border-top: 1px solid var(--border-light);
 }
 
 .alert-modal-extra label {
@@ -142,7 +142,7 @@
   width: 15px;
   height: 15px;
   cursor: pointer;
-  accent-color: #d32f2f;
+  accent-color: var(--danger);
   flex-shrink: 0;
 }
 
@@ -150,7 +150,7 @@
   display: flex;
   gap: 8px;
   padding: 12px 16px;
-  border-top: 1px solid #eeeeee;
+  border-top: 1px solid var(--border-light);
   background-color: #fafafa;
   justify-content: flex-end;
 }
@@ -158,7 +158,7 @@
 .alert-modal-btn {
   padding: 6px 16px;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
@@ -177,22 +177,22 @@
 
 .alert-modal-btn-primary,
 .alert-modal-btn-confirm {
-  background-color: #4caf50;
+  background-color: var(--success-accent);
   color: white;
 }
 
 .alert-modal-btn-primary:hover,
 .alert-modal-btn-confirm:hover {
-  background-color: #45a049;
+  background-color: var(--success-accent);
 }
 
 .alert-modal-btn-cancel {
   background-color: #f0f0f0;
-  color: #333333;
+  color: var(--text-body);
 }
 
 .alert-modal-btn-cancel:hover {
-  background-color: #e0e0e0;
+  background-color: var(--border-light);
 }
 
 /* ── Timing widget (shown inside alert-modal-extra) ─────────────────────── */
@@ -208,9 +208,9 @@
   align-items: center;
   justify-content: space-between;
   padding: 6px 10px;
-  background: #eef4ff;
-  border-radius: 8px;
-  border-left: 3px solid #4c8bf5;
+  background: var(--info-bg);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--info);
 }
 
 .am-timing-total-label {
@@ -218,7 +218,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #4c8bf5;
+  color: var(--info);
 }
 
 .am-timing-total-value {
@@ -240,7 +240,7 @@
   justify-content: space-between;
   padding: 4px 10px 4px 13px;
   background: #f6f8fb;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   border-left: 2px solid #d0d8e8;
 }
 
@@ -253,7 +253,7 @@
 .am-timing-phase-value {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--text-body);
   font-variant-numeric: tabular-nums;
 }
 
@@ -262,9 +262,9 @@
 .am-warnings {
   margin-top: 10px;
   padding: 8px 10px;
-  background: #fffbe6;
-  border-radius: 8px;
-  border-left: 3px solid #f0c36d;
+  background: var(--warning-bg);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--warning-border);
 }
 
 .am-warnings-header {
@@ -296,7 +296,7 @@
 
 .am-warnings-node {
   font-weight: 700;
-  color: #1a3a5c;
+  color: var(--text-heading);
   flex-shrink: 0;
 }
 
