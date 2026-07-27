@@ -31,6 +31,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   key (`web-server_index.html`) that pointed nowhere.
 - Kubendt's internal interface-count ConfigMap no longer appears in a pod's
   Mounted Files list.
+- The import and modify topology dialogs no longer clip their content on shorter
+  viewports. They now use a fixed-height shell that adapts to the screen, with the
+  JSON editor scrolling internally.
 
 ## [1.1.0] - 2026-07-16
 

@@ -5,6 +5,9 @@ import { json } from '@codemirror/lang-json';
 import { ReactComponent as WarningIcon } from '../assets/images/icons/warning.svg';
 import { ReactComponent as ErrorIcon } from '../assets/images/icons/error.svg';
 import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
+import { ReactComponent as FolderIcon } from '../assets/images/icons/folder.svg';
+import { ReactComponent as FileIcon } from '../assets/images/icons/file.svg';
+import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
 import './TopologyInputModal.css';
 
 const TopologyInputModal = ({
@@ -256,6 +259,7 @@ const TopologyInputModal = ({
             onClick={() => fileInputRef.current?.click()}
             title="Load JSON from a file into the editor"
           >
+            <FolderIcon className="app-icon" />
             Choose file
           </button>
           {fileName && (
@@ -271,16 +275,18 @@ const TopologyInputModal = ({
               onClick={handleInsertSample}
               title="Insert a minimal example payload"
             >
+              <FileIcon className="app-icon" />
               Sample
             </button>
           )}
           <button
             type="button"
-            className="tinput-toolbar-btn"
+            className="tinput-toolbar-btn tinput-toolbar-btn-danger"
             onClick={handleClear}
             disabled={!text}
             title="Clear editor"
           >
+            <TrashIcon className="app-icon" />
             Clear
           </button>
         </div>
