@@ -1,5 +1,5 @@
 .external-info-panel {
-  border-color: #c8d3e0;
+  border-color: var(--border-light);
 }
 
 .external-info-body {
@@ -29,7 +29,7 @@
 .external-connected-chip {
   font-size: 0.82rem;
   padding: 0.2rem 0.5rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: #e6eff8;
   border: 1px solid #c3d5e8;
   color: #1d4f7a;

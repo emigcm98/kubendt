@@ -18,7 +18,7 @@
 
 .topology-input-modal {
   background-color: white;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   width: 92%;
   max-width: 760px;
@@ -46,15 +46,15 @@
   justify-content: space-between;
   align-items: center;
   padding: 0.9rem 1.5rem;
-  border-bottom: 1px solid #c5d0dd;
+  border-bottom: 1px solid var(--border);
   background: linear-gradient(to bottom, #e3eaf3, #d8e2ee);
-  border-top-left-radius: 12px;
-  border-top-right-radius: 12px;
+  border-top-left-radius: var(--radius-lg);
+  border-top-right-radius: var(--radius-lg);
 }
 
 .topology-input-modal .modal-header h2 {
   margin: 0;
-  color: #1a3a5c;
+  color: var(--text-heading);
   font-size: 1.2rem;
   font-weight: 700;
 }
@@ -71,14 +71,14 @@
 .tinput-description {
   margin: 0 0 0.7rem 0;
   font-size: 0.92rem;
-  color: #555;
+  color: var(--text-muted);
   line-height: 1.45;
 }
 
 .tinput-warning {
-  background: #fffbe6;
-  border: 1px solid #f0c36d;
-  border-radius: 6px;
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-border);
+  border-radius: var(--radius-sm);
   padding: 0.55rem 0.8rem;
   color: #7a5a00;
   font-size: 0.88rem;
@@ -98,9 +98,9 @@
   border: 1px solid #c8d3e0;
   padding: 0.35rem 0.7rem;
   font-size: 0.85rem;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  color: #1a3a5c;
+  color: var(--text-heading);
   transition:
     background-color 0.15s ease,
     border-color 0.15s ease,
@@ -124,7 +124,7 @@
 .tinput-filename {
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 0.78rem;
-  color: #1976d2;
+  color: var(--primary);
   max-width: 280px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -137,8 +137,8 @@
 
 .tinput-editor-wrapper {
   position: relative;
-  border: 1px solid #d0dae8;
-  border-radius: 6px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
   overflow: hidden;
   background: #ffffff;
   /* Cap the editor height here in CSS. @uiw/react-codemirror's height/maxHeight props
@@ -152,7 +152,7 @@
 }
 
 .tinput-editor-wrapper.is-dragging {
-  border-color: #1976d2;
+  border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.15);
 }
 
@@ -163,7 +163,7 @@
   align-items: center;
   justify-content: center;
   background: rgba(227, 242, 253, 0.92);
-  color: #0d47a1;
+  color: var(--primary-hover);
   font-weight: 700;
   pointer-events: none;
   z-index: 2;
@@ -183,7 +183,7 @@
 
 .tinput-editor-wrapper .cm-gutters {
   background-color: #f5f7fa;
-  border-right: 1px solid #d0dae8;
+  border-right: 1px solid var(--border-light);
 }
 
 /* Internal scroll: this is where ALL editor overflow goes (vertical and horizontal). */
@@ -198,8 +198,8 @@
   background-color: #f5f7fa;
 }
 .tinput-editor-wrapper .cm-scroller::-webkit-scrollbar-thumb {
-  background-color: #c5d0dd;
-  border-radius: 5px;
+  background-color: var(--border);
+  border-radius: var(--radius-sm);
 }
 .tinput-editor-wrapper .cm-scroller::-webkit-scrollbar-thumb:hover {
   background-color: #95a9c0;
@@ -223,18 +223,18 @@
 }
 
 .tinput-status-ok {
-  color: #2e7d32;
+  color: var(--success);
   font-weight: 600;
   align-self: center;
 }
 
 .tinput-status-error {
-  color: #c62828;
+  color: var(--danger-strong);
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 0.78rem;
-  background: #fdecea;
+  background: var(--danger-bg);
   border: 1px solid #f0bcb4;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   padding: 0.45rem 0.65rem;
   word-break: break-word;
   line-height: 1.4;
@@ -242,7 +242,7 @@
 }
 
 .tinput-status-empty {
-  color: #999;
+  color: var(--text-subtle);
   font-style: italic;
   align-self: center;
 }
@@ -251,11 +251,11 @@
   display: flex;
   gap: 0.8rem;
   padding: 0.9rem 1.5rem;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--border-light);
   justify-content: flex-end;
   background: #fafbfd;
-  border-bottom-left-radius: 12px;
-  border-bottom-right-radius: 12px;
+  border-bottom-left-radius: var(--radius-lg);
+  border-bottom-right-radius: var(--radius-lg);
 }
 
 .topology-input-modal .modal-btn:disabled {

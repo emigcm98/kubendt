@@ -23,7 +23,7 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #1976d2;
+  background: var(--primary);
   animation: dot-pulse 1.4s ease-in-out infinite;
 }
 
@@ -60,8 +60,8 @@
   transform: translate(-50%, -50%);
   z-index: 18;
   background: #ffffff;
-  border: 1px solid #c5d0dd;
-  border-radius: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   padding: 1.6rem 2rem;
   box-shadow: 0 4px 18px rgba(25, 60, 100, 0.08);
   text-align: center;
@@ -72,7 +72,7 @@
 
 .empty-topology h3 {
   margin: 0 0 0.55rem 0;
-  color: #1a3a5c;
+  color: var(--text-heading);
   font-size: 1.05rem;
   font-weight: 600;
   letter-spacing: 0.01em;
@@ -86,7 +86,7 @@
 }
 
 .empty-topology strong {
-  color: #1a3a5c;
+  color: var(--text-heading);
   font-weight: 600;
 }
 
@@ -162,10 +162,10 @@
   height: 36px;
   padding: 0 12px;
   background: #ffffff;
-  border: 1px solid #c5d0dd;
-  border-radius: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
-  color: #1a3a5c;
+  color: var(--text-heading);
   font-size: 0.84rem;
   font-weight: 600;
   white-space: nowrap;
@@ -176,11 +176,11 @@
 }
 
 .topbar-toggle:hover:not(.disabled) {
-  border-color: #1976d2;
+  border-color: var(--primary);
 }
 
 .topbar-toggle input {
-  accent-color: #1976d2;
+  accent-color: var(--primary);
   width: 15px;
   height: 15px;
   margin: 0;
@@ -198,7 +198,7 @@
   font-weight: 600;
   cursor: pointer;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   transition: all 0.2s ease;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
   color: white;
@@ -208,72 +208,72 @@
 }
 
 .topbar-action-import {
-  background: #1976d2;
-  border-bottom: 3px solid #1565c0;
+  background: var(--primary);
+  border-bottom: 3px solid var(--primary-hover);
 }
 
 .topbar-action-import:hover:not(:disabled) {
-  background: #1565c0;
+  background: var(--primary-hover);
   transform: translateY(-1px);
   box-shadow: 0 3px 8px rgba(25, 118, 210, 0.3);
 }
 
 /* Clear topology button */
 .topbar-action-clear {
-  background: #e53935;
-  border-bottom: 3px solid #c62828;
+  background: var(--danger-strong);
+  border-bottom: 3px solid var(--danger-strong);
 }
 
 .topbar-action-clear:hover:not(:disabled) {
-  background: #d32f2f;
+  background: var(--danger);
   transform: translateY(-1px);
   box-shadow: 0 3px 8px rgba(229, 57, 53, 0.3);
 }
 
 /* Modify topology button */
 .topbar-action-modify {
-  background: #2e7d32;
-  border-bottom: 3px solid #1b5e20;
+  background: var(--success);
+  border-bottom: 3px solid var(--success-strong);
 }
 
 .topbar-action-modify:hover:not(:disabled) {
-  background: #276a2b;
+  background: var(--success-strong);
   transform: translateY(-1px);
   box-shadow: 0 3px 8px rgba(46, 125, 50, 0.3);
 }
 
 /* Load network conf button */
 .topbar-action-config {
-  background: #fb8c00;
-  border-bottom: 3px solid #f57c00;
+  background: var(--warning);
+  border-bottom: 3px solid var(--warning-strong);
 }
 
 .topbar-action-config:hover:not(:disabled) {
-  background: #f57c00;
+  background: var(--warning-strong);
   transform: translateY(-1px);
   box-shadow: 0 3px 8px rgba(251, 140, 0, 0.3);
 }
 
 /* Export topology - Azul secundario */
 .topbar-right button:nth-child(1) {
-  background: #0288d1;
-  border-bottom: 3px solid #0277bd;
+  background: var(--primary);
+  border-bottom: 3px solid var(--primary-hover);
 }
 
 .topbar-right button:nth-child(1):hover:not(:disabled) {
-  background: #0277bd;
+  background: var(--primary-hover);
   transform: translateY(-1px);
   box-shadow: 0 3px 8px rgba(2, 136, 209, 0.3);
 }
 
 /* Save positions - Amarillo corporativo */
 .topbar-right button:nth-child(2) {
-  background: #fb8c00;
-  border-bottom: 3px solid #f57c00;
+  background: var(--warning);
+  border-bottom: 3px solid var(--warning-strong);
 }
 
 .topbar-right button:nth-child(2):hover:not(:disabled) {
-  background: #f57c00;
+  background: var(--warning-strong);
   transform: translateY(-1px);
   box-shadow: 0 3px 8px rgba(251, 140, 0, 0.3);
 }
@@ -331,7 +331,7 @@
 
 .import-confirm-modal {
   background-color: white;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   width: 90%;
   max-width: 500px;
@@ -344,7 +344,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 1.5rem;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-light);
   background-color: #fff9e6;
 }
 
@@ -361,7 +361,7 @@
 .import-confirm-modal .modal-body p {
   margin: 0.5rem 0;
   font-size: 1rem;
-  color: #555;
+  color: var(--text-muted);
   line-height: 1.5;
 }
 
@@ -369,7 +369,7 @@
   display: flex;
   gap: 0.8rem;
   padding: 1.5rem;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--border-light);
   justify-content: flex-end;
 }
 
@@ -378,27 +378,27 @@
   border: none;
   font-size: 1.5rem;
   cursor: pointer;
-  color: #999;
+  color: var(--text-subtle);
   padding: 0;
   width: 30px;
   height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   transition: all 0.2s;
 }
 
 .modal-close-btn:hover {
   background-color: #f0f0f0;
-  color: #333;
+  color: var(--text-body);
 }
 
 .modal-btn {
   padding: 0.6rem 1.2rem;
   font-size: 0.95rem;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font-weight: 600;
   transition: all 0.2s;
@@ -406,28 +406,28 @@
 
 .modal-btn-cancel {
   background-color: #f0f0f0;
-  color: #333;
+  color: var(--text-body);
 }
 
 .modal-btn-cancel:hover {
-  background-color: #e0e0e0;
+  background-color: var(--border-light);
 }
 
 .modal-btn-confirm {
-  background-color: #4caf50;
+  background-color: var(--success-accent);
   color: white;
 }
 
 .modal-btn-confirm:hover {
-  background-color: #45a049;
+  background-color: var(--success-accent);
 }
 
 .modal-btn-warning {
-  background-color: #ff9800;
+  background-color: var(--warning);
 }
 
 .modal-btn-warning:hover {
-  background-color: #e68900;
+  background-color: var(--warning-strong);
 }
 
 /* Bottom-centered taskbar with chips representing minimized shells */
@@ -441,7 +441,7 @@
   padding: 6px 10px;
   background: rgba(30, 30, 30, 0.92);
   border: 1px solid #3a3a3a;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
   z-index: 9000;
   backdrop-filter: blur(4px);
@@ -452,7 +452,7 @@
   align-items: stretch;
   background: #2a2a2a;
   border: 1px solid #444;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   overflow: hidden;
   transition:
     border-color 0.15s ease,
@@ -467,7 +467,7 @@
 .shell-taskbar-chip-restore {
   background: transparent;
   border: none;
-  color: #e0e0e0;
+  color: var(--border-light);
   padding: 4px 10px 4px 8px;
   font-size: 0.82rem;
   display: inline-flex;
@@ -493,7 +493,7 @@
 }
 
 .shell-taskbar-chip-mode {
-  color: #999;
+  color: var(--text-subtle);
   font-size: 0.72rem;
 }
 
@@ -501,7 +501,7 @@
   background: transparent;
   border: none;
   border-left: 1px solid #444;
-  color: #888;
+  color: var(--text-subtle);
   padding: 0 9px;
   cursor: pointer;
   font-size: 0.8rem;
@@ -524,8 +524,8 @@
   align-items: center;
   gap: 6px;
   background: #ffffff;
-  border: 1px solid #c5d0dd;
-  border-radius: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   padding: 0 8px;
   height: 36px;
   /* Match the combined width of the two right-column action buttons
@@ -547,7 +547,7 @@
 .topbar-search input {
   /* Override the global .topbar button rules, this one is an input, not a button */
   background: transparent !important;
-  color: #1a3a5c !important;
+  color: var(--text-heading) !important;
   border: none !important;
   box-shadow: none !important;
   outline: none !important;
@@ -567,7 +567,7 @@
 .topbar-search-count {
   font-size: 0.76rem;
   font-weight: 600;
-  color: #1976d2;
+  color: var(--primary);
   white-space: nowrap;
   text-align: right;
   /* Always reserved, even when empty, so the layout doesn't shift. */
@@ -578,13 +578,13 @@
    discreet "✖". */
 .topbar-search-clear.topbar-search-clear {
   background: transparent !important;
-  color: #888 !important;
+  color: var(--text-subtle) !important;
   border: none !important;
   box-shadow: none !important;
   padding: 0 !important;
   font-size: 0.78rem !important;
   font-weight: 600 !important;
-  border-radius: 4px !important;
+  border-radius: var(--radius-sm) !important;
   height: 22px !important;
   width: 22px !important;
   line-height: 1 !important;
@@ -594,6 +594,6 @@
 }
 
 .topbar-search-clear.topbar-search-clear:hover {
-  color: #d32f2f !important;
+  color: var(--danger) !important;
   background: #ffeaea !important;
 }

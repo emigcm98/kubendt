@@ -52,7 +52,7 @@
   width: 0.75em;
   height: 0.75em;
   border: 1.5px solid #aaa;
-  border-top-color: #555;
+  border-top-color: var(--text-muted);
   border-radius: 50%;
   animation: edge-label-spin 0.7s linear infinite;
   flex-shrink: 0;
@@ -61,11 +61,11 @@
 /* Centre badge shown on links that have a name defined (e.g. "N3", "N6") */
 .link-name-label {
   position: absolute;
-  background: #1565c0;
+  background: var(--primary-hover);
   color: #fff;
   font-weight: 700;
   padding: 1px 6px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   pointer-events: none;
   z-index: 25;
   white-space: nowrap;

@@ -5,7 +5,7 @@
 
 .namespace-page h2 {
   text-align: center;
-  color: #333;
+  color: var(--text-body);
   font-weight: 600;
   margin-bottom: 1.5rem;
 }
@@ -26,7 +26,7 @@
 
 .delete-result-modal {
   background-color: white;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
   width: 90%;
   max-width: 400px;
@@ -39,12 +39,12 @@
   justify-content: space-between;
   align-items: center;
   padding: 1.5rem;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-light);
 }
 
 .delete-result-modal .modal-header h2 {
   margin: 0;
-  color: #333;
+  color: var(--text-body);
   font-size: 1.4rem;
 }
 
@@ -53,20 +53,20 @@
   border: none;
   font-size: 1.5rem;
   cursor: pointer;
-  color: #999;
+  color: var(--text-subtle);
   padding: 0;
   width: 30px;
   height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   transition: all 0.2s;
 }
 
 .delete-result-modal .modal-close-btn:hover {
   background-color: #f0f0f0;
-  color: #333;
+  color: var(--text-body);
 }
 
 .delete-result-modal .modal-body {
@@ -77,7 +77,7 @@
 .delete-result-modal .modal-body p {
   margin: 0;
   font-size: 1.1rem;
-  color: #333;
+  color: var(--text-body);
   line-height: 1.5;
 }
 
@@ -85,7 +85,7 @@
   display: flex;
   gap: 0.8rem;
   padding: 1.5rem;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--border-light);
   justify-content: center;
 }
 
@@ -93,23 +93,23 @@
   padding: 0.6rem 2rem;
   font-size: 1rem;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font-weight: 600;
   transition: all 0.2s;
 }
 
 .delete-result-modal .modal-btn.success {
-  background-color: #4caf50;
+  background-color: var(--success-accent);
   color: white;
 }
 
 .delete-result-modal .modal-btn.success:hover {
-  background-color: #45a049;
+  background-color: var(--success-accent);
 }
 
 .delete-result-modal .modal-btn.error {
-  background-color: #f44336;
+  background-color: var(--danger);
   color: white;
 }
 

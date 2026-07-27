@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Replaced UI emojis with a consistent SVG icon set that inherits text color,
   and reorganized image assets into `nodes/` and `icons/` subfolders.
+- Unified the UI styling behind a set of design tokens (colors, radii,
+  elevation) and refreshed the palette for a cleaner look.
 
 ### Fixed
 

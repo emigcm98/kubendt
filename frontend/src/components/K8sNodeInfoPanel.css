@@ -46,7 +46,7 @@
 /* === Header === */
 .kni-header {
   flex-shrink: 0;
-  background: linear-gradient(135deg, #1976d2 0%, #0d47a1 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
   color: #ffffff;
   padding: 18px 22px;
   display: flex;
@@ -93,7 +93,7 @@
   background: rgba(255, 255, 255, 0.18);
   color: #ffffff;
   padding: 3px 9px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   border: 1px solid rgba(255, 255, 255, 0.28);
 }
 
@@ -106,7 +106,7 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   padding: 3px 9px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
 }
 
 .kni-status-dot {
@@ -137,7 +137,7 @@
   border: 1px solid rgba(255, 255, 255, 0.28);
   width: 32px;
   height: 32px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -163,8 +163,8 @@
 }
 
 .kni-body::-webkit-scrollbar-thumb {
-  background: #c5d0dd;
-  border-radius: 4px;
+  background: var(--border);
+  border-radius: var(--radius-sm);
 }
 
 .kni-body::-webkit-scrollbar-thumb:hover {
@@ -178,15 +178,15 @@
   justify-content: center;
   gap: 10px;
   padding: 32px 14px;
-  color: #6b7a8c;
+  color: var(--text-muted);
   font-size: 0.92rem;
 }
 
 .kni-error {
-  color: #c62828;
-  background: #fdecea;
+  color: var(--danger-strong);
+  background: var(--danger-bg);
   border: 1px solid #f0bcb4;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 14px 16px;
 }
 
@@ -194,7 +194,7 @@
   width: 16px;
   height: 16px;
   border: 2px solid #cfd8dc;
-  border-top-color: #1976d2;
+  border-top-color: var(--primary);
   border-radius: 50%;
   animation: kni-spin 0.8s linear infinite;
 }
@@ -210,8 +210,8 @@
   margin-top: 12px;
   padding: 12px 14px;
   background: linear-gradient(180deg, #f7faff 0%, #eef3fa 100%);
-  border: 1px solid #d9e1ec;
-  border-radius: 10px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
 }
 
 .kni-section:first-child {
@@ -224,7 +224,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1px;
-  color: #1a3a5c;
+  color: var(--text-heading);
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -232,10 +232,10 @@
 
 .kni-section-count {
   font-size: 0.65rem;
-  background: #1976d2;
+  background: var(--primary);
   color: #ffffff;
   padding: 2px 7px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   letter-spacing: 0.3px;
 }
 
@@ -260,7 +260,7 @@
 }
 
 .kni-kv-key {
-  color: #5a6b7d;
+  color: var(--text-muted);
   font-size: 0.82rem;
   font-weight: 600;
   flex-shrink: 0;
@@ -321,14 +321,14 @@
   display: flex;
   justify-content: space-between;
   font-size: 0.78rem;
-  color: #5a6b7d;
+  color: var(--text-muted);
   font-weight: 600;
 }
 
 .kni-usage-bar {
   height: 12px;
   background: #e0e8f1;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
 }
 
@@ -337,16 +337,16 @@
   /* Width is fed by the JS-set --kni-fill custom property so we don't have
        to inline `style={{ width: ... }}` in the JSX. */
   width: var(--kni-fill, 0%);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   transition: width 0.3s ease;
 }
 
 .kni-bar-cpu {
-  background: linear-gradient(90deg, #42a5f5 0%, #1976d2 100%);
+  background: linear-gradient(90deg, #42a5f5 0%, var(--primary) 100%);
 }
 
 .kni-bar-mem {
-  background: linear-gradient(90deg, #66bb6a 0%, #388e3c 100%);
+  background: linear-gradient(90deg, #66bb6a 0%, var(--success-accent) 100%);
 }
 
 /* === Capacity grid === */
@@ -362,7 +362,7 @@
   gap: 2px;
   background: rgba(255, 255, 255, 0.6);
   border: 1px solid rgba(149, 169, 192, 0.25);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   padding: 6px 9px;
 }
 
@@ -371,7 +371,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: #6b7a8c;
+  color: var(--text-muted);
 }
 
 /* === Conditions === */
@@ -387,7 +387,7 @@
   gap: 6px;
   font-size: 0.78rem;
   padding: 4px 10px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   border: 1px solid transparent;
   cursor: default;
 }
@@ -410,24 +410,24 @@
 }
 
 .kni-condition-good {
-  background: #e6f4ea;
-  color: #1b5e20;
+  background: var(--success-bg);
+  color: var(--success);
   border-color: rgba(46, 125, 50, 0.25);
 }
 
 .kni-condition-bad {
-  background: #fdecea;
-  color: #b71c1c;
+  background: var(--danger-bg);
+  color: var(--danger-strong);
   border-color: rgba(198, 40, 40, 0.25);
 }
 
 /* === Taints === */
 .kni-taint {
-  background: #fff4e0;
-  border: 1px solid #f0c36d;
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-border);
   color: #5a3a00;
   padding: 4px 8px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   word-break: break-all;
 }
 
@@ -436,7 +436,7 @@
 }
 
 .kni-taint-effect {
-  color: #c62828;
+  color: var(--danger-strong);
   font-weight: 700;
 }
 
@@ -450,8 +450,8 @@
 .kni-tag {
   display: inline-flex;
   background: #ffffff;
-  border: 1px solid #d9e1ec;
-  border-radius: 6px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
   padding: 2px 7px;
   font-size: 0.72rem;
   max-width: 100%;
@@ -461,7 +461,7 @@
 }
 
 .kni-tag-key {
-  color: #0d47a1;
+  color: var(--primary-hover);
   font-weight: 600;
 }
 
@@ -472,7 +472,7 @@
 
 .kni-collapse > summary {
   cursor: pointer;
-  color: #1976d2;
+  color: var(--primary);
   font-size: 0.82rem;
   font-weight: 600;
   user-select: none;
@@ -480,5 +480,5 @@
 }
 
 .kni-collapse > summary:hover {
-  color: #0d47a1;
+  color: var(--primary-hover);
 }

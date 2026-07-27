@@ -3,9 +3,9 @@
   width: 900px;
   height: 550px;
   background-color: #1e1e1e;
-  color: #e0e0e0;
+  color: var(--border-light);
   border: 1px solid #444;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
   user-select: none;
   overflow: hidden;
@@ -44,7 +44,7 @@
   align-items: center;
   gap: 0.5rem;
   font-size: 0.95rem;
-  color: #ccc;
+  color: var(--border-light);
   flex: 1;
   white-space: nowrap;
   overflow: hidden;
@@ -59,7 +59,7 @@
 }
 
 .shell-pod-status {
-  color: #999;
+  color: var(--text-subtle);
   font-size: 0.85rem;
 }
 
@@ -74,7 +74,7 @@
 .shell-modal-clear-btn,
 .shell-modal-reconnect-btn {
   background: transparent;
-  color: #999;
+  color: var(--text-subtle);
   border: none;
   font-size: 1.05rem;
   cursor: pointer;
@@ -83,7 +83,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 /* "Clear" is a text label, not a glyph, use a smaller weighted font so it
@@ -127,7 +127,7 @@
 }
 
 .shell-status-connecting {
-  background: #f0c36d;
+  background: var(--warning-border);
   box-shadow: 0 0 6px rgba(240, 195, 109, 0.5);
   animation: shell-status-pulse 1.4s ease-in-out infinite;
 }
@@ -171,10 +171,10 @@
 .shell-disconnected-card {
   background: #1f1f1f;
   border: 1px solid #ff4d4d;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   padding: 1.4rem 1.8rem;
   text-align: center;
-  color: #e0e0e0;
+  color: var(--border-light);
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
   max-width: 420px;
 }
@@ -207,11 +207,11 @@
 
 .shell-disconnected-btn {
   background: #2a2a2a;
-  color: #e0e0e0;
+  color: var(--border-light);
   border: 1px solid #444;
   padding: 0.45rem 1rem;
   font-size: 0.9rem;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   transition:
     background 0.15s ease,
@@ -220,19 +220,19 @@
 
 .shell-disconnected-btn:hover {
   background: #353535;
-  border-color: #666;
+  border-color: var(--text-muted);
 }
 
 .shell-disconnected-btn-primary {
-  background: #1976d2;
-  border-color: #1976d2;
+  background: var(--primary);
+  border-color: var(--primary);
   color: #fff;
   font-weight: 600;
 }
 
 .shell-disconnected-btn-primary:hover {
-  background: #1565c0;
-  border-color: #1565c0;
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
 }
 
 .shell-connecting-indicator {
@@ -240,10 +240,10 @@
   top: 56px;
   right: 12px;
   background: rgba(0, 0, 0, 0.55);
-  color: #f0c36d;
+  color: var(--warning-border);
   font-size: 0.78rem;
   padding: 3px 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   pointer-events: none;
 }
 
@@ -272,7 +272,7 @@
 
 .modal-terminal .xterm-screen {
   background-color: #1e1e1e;
-  color: #e0e0e0;
+  color: var(--border-light);
   padding: 0.5rem;
 }
 
@@ -313,7 +313,7 @@
 
 .modal-terminal .xterm-viewport::-webkit-scrollbar-thumb {
   background-color: #00ff99;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   border: 1px solid #1e1e1e;
 }
 

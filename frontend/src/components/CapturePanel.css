@@ -8,7 +8,7 @@
   flex-direction: column;
   background: #0f1419;
   border: 1px solid #2a3340;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
   overflow: hidden;
   resize: both;
@@ -60,8 +60,8 @@
   background: #f59e0b;
 }
 .cap-dot-error {
-  background: #ef4444;
-  box-shadow: 0 0 6px #ef4444;
+  background: var(--danger);
+  box-shadow: 0 0 6px var(--danger);
 }
 
 .cap-title {
@@ -98,7 +98,7 @@
   background: #222b38;
   border: 1px solid #2a3340;
   color: #d7dde5;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   padding: 3px 9px;
   font-size: 11px;
   cursor: pointer;
@@ -145,7 +145,7 @@
 .cap-glyph-stop {
   width: 9px;
   height: 9px;
-  background: #ef4444;
+  background: var(--danger);
   border-radius: 1px;
 }
 
@@ -178,7 +178,7 @@
   gap: 2px;
   background: #1c2330;
   border: 1px solid #2a3340;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
   z-index: 5;
 }
@@ -188,7 +188,7 @@
   color: #d7dde5;
   text-align: left;
   padding: 6px 10px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font-size: 12px;
 }
@@ -219,7 +219,7 @@
   color: #7ee787;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 12px;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   padding: 5px 9px;
   outline: none;
 }

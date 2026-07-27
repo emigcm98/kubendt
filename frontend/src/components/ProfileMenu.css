@@ -12,7 +12,7 @@
   color: #fff;
   background: rgba(255, 255, 255, 0.15);
   border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   cursor: pointer;
 }
 
@@ -28,7 +28,7 @@
   height: 24px;
   font-size: 0.78rem;
   font-weight: 700;
-  color: #2b6cb0;
+  color: var(--primary);
   background: #fff;
   border-radius: 50%;
 }
@@ -49,8 +49,8 @@
   z-index: 1200;
   min-width: 210px;
   background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
   padding: 8px;
 }
@@ -80,12 +80,12 @@
 
 .profile-info-name {
   font-weight: 700;
-  color: #2d3748;
+  color: var(--text-body);
 }
 
 .profile-info-roles {
   font-size: 0.75rem;
-  color: #a0aec0;
+  color: var(--text-subtle);
 }
 
 .profile-sep {
@@ -101,10 +101,10 @@
   width: 100%;
   padding: 9px 8px;
   font-size: 0.88rem;
-  color: #2d3748;
+  color: var(--text-body);
   background: none;
   border: none;
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   text-align: left;
 }
