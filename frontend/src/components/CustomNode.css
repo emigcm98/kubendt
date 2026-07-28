@@ -63,12 +63,25 @@
 .status-dot {
   position: absolute;
   border-radius: 50%;
-  border: 1px solid #fff;
+  border: 1px solid var(--surface);
   z-index: 30;
+}
+
+@keyframes status-running-pulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--success-accent) 55%, transparent);
+  }
+  70% {
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--success-accent) 0%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--success-accent) 0%, transparent);
+  }
 }
 
 .status-running {
   background-color: var(--success-accent); /* green */
+  animation: status-running-pulse 2.4s ease-in-out infinite;
 }
 
 .status-pending {

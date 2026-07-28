@@ -5,6 +5,12 @@ import './NamespaceNavbar.css';
 import { ReactComponent as WarningIcon } from '../assets/images/icons/warning.svg';
 import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
 import { ReactComponent as RefreshIcon } from '../assets/images/icons/refresh.svg';
+import { ReactComponent as HomeIcon } from '../assets/images/icons/home.svg';
+import { ReactComponent as FolderIcon } from '../assets/images/icons/folder.svg';
+import { ReactComponent as TopologyIcon } from '../assets/images/icons/topology.svg';
+import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
+import { ReactComponent as ClockIcon } from '../assets/images/icons/clock.svg';
+import kubendtLogo from '../assets/images/kubendt-logo.svg';
 
 Modal.setAppElement('#root');
 
@@ -32,9 +38,15 @@ function NamespaceNavbar({ namespace, onDelete, onDeleteHistory, onRefresh, disa
       <div className="navbar-container">
         <div className="navbar-left">
           <button className="navbar-button" onClick={() => navigate('/')}>
-            ← Home
+            <HomeIcon className="app-icon" aria-hidden="true" />
+            Home
           </button>
-          <button className="navbar-button" onClick={handleDelete} disabled={disabled}>
+          <button
+            className="navbar-button navbar-button-danger"
+            onClick={handleDelete}
+            disabled={disabled}
+          >
+            <TrashIcon className="app-icon" aria-hidden="true" />
             Delete namespace
           </button>
           <button
@@ -46,34 +58,37 @@ function NamespaceNavbar({ namespace, onDelete, onDeleteHistory, onRefresh, disa
             }}
             disabled={disabled}
           >
-            Delete namespace history
+            <ClockIcon className="app-icon" aria-hidden="true" />
+            Delete history
           </button>
         </div>
 
-        <div className="navbar-center">
-          <div className="navbar-label">Namespace</div>
-          <div className="navbar-namespace-row">
-            <div className="navbar-namespace">{namespace}</div>
-            <button
-              className="navbar-refresh-btn"
-              onClick={() => !disabled && onRefresh && onRefresh()}
-              disabled={disabled}
-              title="Refresh topology"
-            >
-              <RefreshIcon style={{ width: 14, height: 14 }} />
-            </button>
+        <div className="navbar-center" title={`Namespace: ${namespace}`}>
+          <TopologyIcon className="navbar-ns-icon" aria-hidden="true" />
+          <div className="navbar-center-text">
+            <span className="navbar-label">Namespace</span>
+            <span className="navbar-namespace">{namespace}</span>
           </div>
+          <button
+            className="navbar-refresh-btn"
+            onClick={() => !disabled && onRefresh && onRefresh()}
+            disabled={disabled}
+            title="Refresh topology"
+          >
+            <RefreshIcon style={{ width: 14, height: 14 }} />
+          </button>
         </div>
 
         <div className="navbar-right">
           <button
-            className="navbar-button"
+            className="navbar-button navbar-button-files"
             onClick={() => {
               sessionStorage.setItem(`kubendt.restoreCache.${namespace}`, 'true');
               navigate(`/${namespace}/files`);
             }}
           >
-            File Manager →
+            <FolderIcon className="app-icon" aria-hidden="true" />
+            File Manager
           </button>
           <a
             className="navbar-brand"
@@ -82,7 +97,7 @@ function NamespaceNavbar({ namespace, onDelete, onDeleteHistory, onRefresh, disa
             rel="noopener noreferrer"
             title="View KubeNDT on GitHub"
           >
-            KubeNDT
+            <img src={kubendtLogo} alt="KubeNDT" className="navbar-brand-logo" />
           </a>
         </div>
       </div>

@@ -9,6 +9,15 @@
   align-items: center;
   z-index: 10;
   gap: 15px;
+  /* The bar spans the full width but its center is empty. Let that empty area
+     pass pointer events through to the graph, so nodes sitting up there can
+     still be grabbed; only the button groups capture events (re-enabled below). */
+  pointer-events: none;
+}
+
+.topbar-left,
+.topbar-right {
+  pointer-events: auto;
 }
 
 /* --- Animación de carga inicial (puntos sutiles) --- */
@@ -192,91 +201,83 @@
   cursor: not-allowed;
 }
 
+/* Tonal button system: every action uses a soft tinted fill with matching text
+   and border (Material "tonal"), one hue per action, so they have presence on
+   the light canvas without turning into a rainbow of solids. Neutral slate is
+   the default (Export); the others set their own hue below. */
 .topbar button {
-  padding: 0.6rem 1.1rem;
-  font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0.5rem 1rem;
+  font-size: 0.88rem;
   font-weight: 600;
   cursor: pointer;
-  border: none;
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
-  color: white;
+  transition: all 0.18s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  /* Default (Export): neutral slate tonal. */
+  background: var(--border-light);
+  color: var(--text-body);
   /* Keep every action button to a single line; the column width is fixed
      via --topbar-btn-w so all labels fit without wrapping. */
   white-space: nowrap;
 }
 
-.topbar-action-import {
-  background: var(--primary);
-  border-bottom: 3px solid var(--primary-hover);
+.topbar button .app-icon {
+  width: 1.05em;
+  height: 1.05em;
 }
 
-.topbar-action-import:hover:not(:disabled) {
-  background: var(--primary-hover);
+.topbar button:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(25, 118, 210, 0.3);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.16);
+  filter: brightness(0.96);
 }
 
-/* Clear topology button */
-.topbar-action-clear {
-  background: var(--danger-strong);
-  border-bottom: 3px solid var(--danger-strong);
+/* NOTE: selectors include `button` so they out-specify `.topbar button` above
+   (which also sets background/color); otherwise the base slate would win. */
+
+/* Import: blue tonal (topology-editing, shares the blue family with Modify). */
+.topbar button.topbar-action-import {
+  background: var(--info-bg);
+  border-color: color-mix(in srgb, var(--primary) 30%, transparent);
+  color: var(--primary);
 }
 
-.topbar-action-clear:hover:not(:disabled) {
-  background: var(--danger);
-  transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(229, 57, 53, 0.3);
+/* Clear: red tonal (destructive; red still reads as danger). */
+.topbar button.topbar-action-clear {
+  background: var(--danger-bg);
+  border-color: color-mix(in srgb, var(--danger) 32%, transparent);
+  color: var(--danger-strong);
 }
 
-/* Modify topology button */
-.topbar-action-modify {
-  background: var(--success);
-  border-bottom: 3px solid var(--success-strong);
+/* Modify: teal tonal. Each action gets its own soft hue + matching border and
+   icon (icons inherit currentColor) so they read distinctly without being
+   loud. */
+.topbar button.topbar-action-modify {
+  background: var(--teal-bg);
+  border-color: color-mix(in srgb, var(--teal) 30%, transparent);
+  color: var(--teal);
 }
 
-.topbar-action-modify:hover:not(:disabled) {
-  background: var(--success-strong);
-  transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(46, 125, 50, 0.3);
+/* Load network conf: amber tonal. */
+.topbar button.topbar-action-config {
+  background: var(--warning-bg);
+  border-color: var(--warning-border);
+  color: var(--warning-strong);
 }
 
-/* Load network conf button */
-.topbar-action-config {
-  background: var(--warning);
-  border-bottom: 3px solid var(--warning-strong);
+/* Save positions: violet tonal. */
+.topbar-right-buttons button:nth-child(1) {
+  background: var(--violet-bg);
+  border-color: color-mix(in srgb, var(--violet) 30%, transparent);
+  color: var(--violet);
 }
 
-.topbar-action-config:hover:not(:disabled) {
-  background: var(--warning-strong);
-  transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(251, 140, 0, 0.3);
-}
-
-/* Export topology - Azul secundario */
-.topbar-right button:nth-child(1) {
-  background: var(--primary);
-  border-bottom: 3px solid var(--primary-hover);
-}
-
-.topbar-right button:nth-child(1):hover:not(:disabled) {
-  background: var(--primary-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(2, 136, 209, 0.3);
-}
-
-/* Save positions - Amarillo corporativo */
-.topbar-right button:nth-child(2) {
-  background: var(--warning);
-  border-bottom: 3px solid var(--warning-strong);
-}
-
-.topbar-right button:nth-child(2):hover:not(:disabled) {
-  background: var(--warning-strong);
-  transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(251, 140, 0, 0.3);
-}
+/* Export topology: neutral slate (utility action) — inherits the base tonal. */
 
 .topbar button:active:not(:disabled) {
   transform: translateY(0);
@@ -397,37 +398,39 @@
 .modal-btn {
   padding: 0.6rem 1.2rem;
   font-size: 0.95rem;
-  border: none;
+  border: 1px solid transparent;
   border-radius: var(--radius-sm);
   cursor: pointer;
   font-weight: 600;
-  transition: all 0.2s;
+  transition: all 0.18s ease;
+}
+
+.modal-btn:hover:not(:disabled) {
+  filter: brightness(0.96);
+  transform: translateY(-1px);
 }
 
 .modal-btn-cancel {
-  background-color: #f0f0f0;
+  background: var(--border-light);
   color: var(--text-body);
 }
 
-.modal-btn-cancel:hover {
-  background-color: var(--border-light);
-}
-
 .modal-btn-confirm {
-  background-color: var(--success-accent);
-  color: white;
+  background: var(--info-bg);
+  color: var(--primary);
+  border-color: color-mix(in srgb, var(--primary) 30%, transparent);
 }
 
-.modal-btn-confirm:hover {
-  background-color: var(--success);
+.modal-btn-danger {
+  background: var(--danger-bg);
+  color: var(--danger-strong);
+  border-color: color-mix(in srgb, var(--danger) 32%, transparent);
 }
 
 .modal-btn-warning {
-  background-color: var(--warning);
-}
-
-.modal-btn-warning:hover {
-  background-color: var(--warning-strong);
+  background: var(--warning-bg);
+  color: var(--warning-strong);
+  border-color: var(--warning-border);
 }
 
 /* Bottom-centered taskbar with chips representing minimized shells */

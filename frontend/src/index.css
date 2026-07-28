@@ -38,6 +38,10 @@
   --border: #d3dfec;
   --border-light: #e2e8f0;
 
+  /* Graph (topology canvas) */
+  --graph-edge: #2b333f; /* near-black slate for links, crisp but a touch softer than pure black */
+  --graph-edge-selected: var(--primary); /* selected link / selected node's links */
+
   /* Status */
   --success: #2e7d32;
   --success-accent: #4caf50;
@@ -53,6 +57,10 @@
   --warning-text: #8a5a00;
   --info: #1976d2;
   --info-bg: #e3f2fd;
+  --teal: #0f766e;
+  --teal-bg: #d6f2ec;
+  --violet: #6d28d9;
+  --violet-bg: #ece6fb;
 
   /* Radii */
   --radius-sm: 6px;

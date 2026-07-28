@@ -8,23 +8,24 @@
   height: 220px;
 
   background: white;
-  border: 2px solid #4b5563;
-  border-radius: 12px;
-  box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
-  outline: 6px double #9ca3af;
-  outline-offset: -6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  /* Clip the inner minimap to the rounded corners so its gray mask never
+     bleeds over the border. */
+  overflow: hidden;
 }
 
 /* Fondo del minimap */
 .react-flow__minimap {
   background: white;
-  border-radius: 12px;
+  margin: 0;
 }
 
-/* SVG renderizado internamente */
+/* SVG fills the container symmetrically (the old translate/scale nudge made the
+   gray mask overlap the border on the left). */
 .react-flow__minimap svg {
   display: block;
-  transform: translate(4px, 5px) scale(105%);
 }
 
 /* Nodos */
@@ -47,6 +48,17 @@
   transform-box: fill-box; /* importante para que el rotate funcione bien */
   transform-origin: center;
   filter: drop-shadow(0 0 10px #9b59b6);
+}
+
+/* External network: a diamond like a switch (shared L2 segment), in violet to
+   set it apart from the gray switches. */
+.minimap-node.external {
+  rx: 0 !important;
+  ry: 0 !important;
+  transform: rotate(45deg) scale(0.9);
+  transform-box: fill-box;
+  transform-origin: center;
+  filter: drop-shadow(0 0 10px #8b5cf6);
 }
 
 .minimap-node.selected {

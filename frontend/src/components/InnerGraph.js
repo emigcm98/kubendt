@@ -1,5 +1,5 @@
 import React, { useRef, useLayoutEffect, useEffect, useState, useMemo } from 'react';
-import { ReactFlow, Controls, Background, EdgeLabelRenderer, useReactFlow } from 'reactflow';
+import { ReactFlow, Panel, Background, EdgeLabelRenderer, useReactFlow } from 'reactflow';
 import 'reactflow/dist/style.css';
 import MiniMapOverlay from './MiniMapOverlay.js';
 import ContextMenu from './ContextMenu.js';
@@ -10,6 +10,12 @@ import { API_BASE_URL } from '../config';
 import { ReactComponent as PacketEnvelope } from '../assets/images/icons/trace-packet.svg';
 import { ReactComponent as PacketDrop } from '../assets/images/icons/trace-drop.svg';
 import { ReactComponent as PacketCheck } from '../assets/images/icons/trace-check.svg';
+import { ReactComponent as PlusIcon } from '../assets/images/icons/plus.svg';
+import { ReactComponent as MinusIcon } from '../assets/images/icons/minus.svg';
+import { ReactComponent as MaximizeIcon } from '../assets/images/icons/maximize.svg';
+import { ReactComponent as LockIcon } from '../assets/images/icons/lock.svg';
+import { ReactComponent as UnlockIcon } from '../assets/images/icons/unlock.svg';
+import { ReactComponent as MagnetIcon } from '../assets/images/icons/magnet.svg';
 
 import CustomNode, { NODE_SIZE } from './CustomNode';
 const nodeTypes = { custom: CustomNode };
@@ -28,12 +34,12 @@ const EdgeLabel = ({ x, y, intfName, status, loading, dimmed, onClick, onHover, 
   }, [intfName, loading]);
 
   const borderColor = loading
-    ? '#888'
+    ? 'var(--text-muted)'
     : status === true
-      ? '#4caf50'
+      ? 'var(--success-accent)'
       : status === false
-        ? '#f44336'
-        : '#ddd';
+        ? 'var(--danger)'
+        : 'var(--border)';
 
   return (
     <div
@@ -42,7 +48,7 @@ const EdgeLabel = ({ x, y, intfName, status, loading, dimmed, onClick, onHover, 
       style={{
         transform: `translate(${x - size.width / 2}px, ${y - size.height / 2}px)`,
         fontSize: `${NODE_SIZE / 10}px`,
-        border: `${1 + NODE_SIZE / 64}px solid ${borderColor}`,
+        border: `1.5px solid ${borderColor}`,
       }}
       onMouseEnter={onHover}
       onMouseLeave={() => onHover(null)}
@@ -87,6 +93,23 @@ const LinkNameLabel = ({ x, y, name, dimmed }) => {
   );
 };
 
+// How far a label sits from the node center, as a fraction of NODE_SIZE: base
+// radius for up/down links (V) and for left/right links (H). Switch and router
+// share these; the host is a bit taller and narrower, so it gets +HOST_DELTA on
+// V and -HOST_DELTA on H. SHIFT is a constant downward nudge (px) on top, scaled
+// per link by how vertical it is. Tune these four.
+const RADIUS_V = NODE_SIZE * 0.54; // up / down (switch, router)
+const RADIUS_H = NODE_SIZE * 0.72; // left / right (switch, router)
+const HOST_DELTA = NODE_SIZE * 0.12; // host: +on V, -on H
+const SHIFT = 5; // downward nudge (px)
+
+// Returns { v, h, s } for a node type. External (and anything unknown) reuses
+// the switch/router values, since the external-network node draws as a switch.
+const labelRadii = (type) =>
+  type === 'host'
+    ? { v: RADIUS_V + HOST_DELTA, h: RADIUS_H - HOST_DELTA, s: SHIFT }
+    : { v: RADIUS_V, h: RADIUS_H, s: SHIFT };
+
 const InnerGraph = ({
   namespace,
   nodes,
@@ -98,6 +121,7 @@ const InnerGraph = ({
   selectedLink,
   setSelectedLink,
   handleNodesChange,
+  onNodeDropRelax,
   hoveredInfo,
   setHoveredInfo,
   setTooltipPos,
@@ -127,11 +151,41 @@ const InnerGraph = ({
   // (and open the shell instead, without opening the panel underneath).
   const nodeClickTimerRef = useRef(null);
   const NODE_CLICK_DELAY_MS = 220;
-  const { getViewport, setViewport, setCenter } = useReactFlow();
+  const { getViewport, setViewport, setCenter, zoomIn, zoomOut, fitView } = useReactFlow();
+  const [locked, setLocked] = useState(() => {
+    try {
+      return localStorage.getItem('kubendt.graph.locked') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [repel, setRepel] = useState(() => {
+    try {
+      return localStorage.getItem('kubendt.graph.repel') === 'true';
+    } catch {
+      return false;
+    }
+  });
   const [contextMenu, setContextMenu] = useState(null);
   const [edgeContextMenu, setEdgeContextMenu] = useState(null);
   const [interfaceContextMenu, setInterfaceContextMenu] = useState(null);
   const [loadingInterfaces, setLoadingInterfaces] = useState(new Set());
+
+  // Remember the lock / repulsion toggles across sessions.
+  useEffect(() => {
+    try {
+      localStorage.setItem('kubendt.graph.locked', String(locked));
+    } catch {
+      /* localStorage unavailable, ignore */
+    }
+  }, [locked]);
+  useEffect(() => {
+    try {
+      localStorage.setItem('kubendt.graph.repel', String(repel));
+    } catch {
+      /* localStorage unavailable, ignore */
+    }
+  }, [repel]);
 
   const normalizedSearch = (searchQuery || '').trim().toLowerCase();
   const matchedNodeIds = useMemo(() => {
@@ -281,6 +335,8 @@ const InnerGraph = ({
     }
   };
 
+  const selectedNodeId = selectedNodeInfo?.name || selectedNodeInfo?.id;
+
   const displayedEdges = edges.map((e) => {
     let styled = e;
     // When the user is searching, dim every link that doesn't touch a match.
@@ -291,12 +347,26 @@ const InnerGraph = ({
         style: { ...styled.style, opacity: touchesMatch ? 1 : 0.12 },
       };
     }
+    // Selecting a node lights up its links so you can see what it connects to.
+    // Solid blue + flow animation, distinct from a directly selected link
+    // (which is dashed below).
+    if (selectedNodeId && (e.source === selectedNodeId || e.target === selectedNodeId)) {
+      styled = {
+        ...styled,
+        style: {
+          ...styled.style,
+          stroke: 'var(--graph-edge-selected)',
+          strokeWidth: (styled.style?.strokeWidth || 2) + 0.8,
+        },
+        animated: true,
+      };
+    }
     if (selectedLink && e.id === selectedLink.id) {
       styled = {
         ...styled,
         style: {
           ...styled.style,
-          stroke: '#1976d2',
+          stroke: 'var(--graph-edge-selected)',
           strokeWidth: (styled.style?.strokeWidth || 2) + 1,
           strokeDasharray: '8 4',
         },
@@ -308,7 +378,7 @@ const InnerGraph = ({
         ...styled,
         style: {
           ...styled.style,
-          stroke: '#4caf50',
+          stroke: 'var(--success-accent)',
           strokeWidth: (styled.style?.strokeWidth || 2) + 1,
           strokeDasharray: '6,4',
           opacity: 0.9,
@@ -321,7 +391,7 @@ const InnerGraph = ({
         ...styled,
         style: {
           ...styled.style,
-          stroke: '#f44336',
+          stroke: 'var(--danger)',
           strokeWidth: (styled.style?.strokeWidth || 2) + 1,
           strokeDasharray: '6,4',
           opacity: 0.85,
@@ -332,7 +402,6 @@ const InnerGraph = ({
     return styled;
   });
 
-  const selectedNodeId = selectedNodeInfo?.name || selectedNodeInfo?.id;
   const displayedNodes = nodes.map((n) => {
     let next = n;
     if (n.id === selectedNodeId) {
@@ -382,8 +451,11 @@ const InnerGraph = ({
         onNodesChange={handleNodesChange}
         onEdgesChange={onEdgesChange}
         panOnDrag={[2]}
-        nodesDraggable={!isBusy}
+        nodesDraggable={!isBusy && !locked}
         nodeDragThreshold={8}
+        minZoom={0.4}
+        maxZoom={3.5}
+        proOptions={{ hideAttribution: true }}
         onPaneContextMenu={(e) => e.preventDefault()}
         onNodeClick={(_, node) => {
           if (isBusy) return;
@@ -480,7 +552,7 @@ const InnerGraph = ({
             time: Date.now(),
           };
         }}
-        onNodeDragStop={(_, node) => {
+        onNodeDragStop={(dragEvent, node) => {
           const info = dragInfoRef.current;
           dragInfoRef.current = null;
           if (!info || info.nodeId !== node.id) return;
@@ -495,6 +567,11 @@ const InnerGraph = ({
             onNodesChange([{ id: node.id, type: 'position', position: info.position }]);
             setSelectedNodeInfo(node.data?.fullInfo || null);
             if (setSelectedLink) setSelectedLink(null);
+          } else if (onNodeDropRelax && repel && !dragEvent?.ctrlKey && !dragEvent?.metaKey) {
+            // Real drag: bounce the dropped node out if it landed on top of
+            // another. Skipped when repulsion is off or Ctrl/Cmd is held, so
+            // nodes can be placed close on purpose.
+            onNodeDropRelax(node.id, node.position);
           }
         }}
         onMoveStart={() => {
@@ -503,10 +580,68 @@ const InnerGraph = ({
           setInterfaceContextMenu(null);
         }}
         fitView
+        fitViewOptions={{ padding: 0.15 }}
         nodeTypes={nodeTypes}
       >
         <MiniMapOverlay nodes={nodes} selectedNodeId={selectedNodeInfo?.id} />
-        <Controls />
+        {/* Custom controls: zoom and fit are animated with a duration so they
+            glide (the built-in Controls can't animate the +/- without firing
+            twice). Also lets us style them to match the app. */}
+        <Panel position="bottom-left" className="graph-controls">
+          <button
+            type="button"
+            className="graph-control-btn"
+            title="Zoom in"
+            onClick={() => zoomIn({ duration: 150 })}
+          >
+            <PlusIcon className="app-icon" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            className="graph-control-btn"
+            title="Zoom out"
+            onClick={() => zoomOut({ duration: 150 })}
+          >
+            <MinusIcon className="app-icon" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            className="graph-control-btn"
+            title="Fit view"
+            onClick={() => fitView({ padding: 0.15, duration: 600 })}
+          >
+            <MaximizeIcon className="app-icon" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            className="graph-control-btn"
+            title={locked ? 'Unlock node dragging' : 'Lock node dragging'}
+            onClick={() => setLocked((v) => !v)}
+          >
+            {locked ? (
+              <LockIcon className="app-icon" aria-hidden="true" />
+            ) : (
+              <UnlockIcon className="app-icon" aria-hidden="true" />
+            )}
+          </button>
+          <button
+            type="button"
+            className={`graph-control-btn${repel ? ' graph-control-btn-active' : ''}`}
+            title={
+              repel
+                ? 'Node repulsion on (nodes spread apart on drop). Hold Ctrl to place close.'
+                : 'Node repulsion off (nodes can overlap)'
+            }
+            onClick={() => setRepel((v) => !v)}
+          >
+            <MagnetIcon className="app-icon" aria-hidden="true" />
+          </button>
+        </Panel>
+        {repel && (
+          <Panel position="bottom-center" className="graph-repel-hint">
+            Hold <kbd>Ctrl</kbd> while dragging to place nodes close
+          </Panel>
+        )}
         <Background gap={12} size={1} />
         <EdgeLabelRenderer>
           {edges.map((edge) => {
@@ -527,10 +662,28 @@ const InnerGraph = ({
             const dy = targetCenter.y - sourceCenter.y;
             const length = Math.sqrt(dx * dx + dy * dy) || 1;
 
-            const LABEL_OFFSET = NODE_SIZE * 0.3;
-
-            const offsetX = (dx / length) * (NODE_SIZE / 2 + LABEL_OFFSET);
-            const offsetY = (dy / length) * (NODE_SIZE / 2 + LABEL_OFFSET);
+            const ux = dx / length;
+            const uy = dy / length;
+            // Place the label ON the cable line (along the real link direction),
+            // at the distance where that direction crosses the node's ellipse
+            // (radius h sideways, v up/down). This keeps the V/H tuning but,
+            // unlike (ux*h, uy*v), never drifts a diagonal label off its cable —
+            // which matters on hubs like switch-0 with links at many angles.
+            // The downward shift (name clearance) is faded by how vertical the
+            // link is, so horizontal labels stay centered on the cable.
+            const sr = labelRadii(sourceNode.data?.type);
+            const tr = labelRadii(targetNode.data?.type);
+            const vfactor = Math.abs(uy);
+            const srcR = 1 / Math.hypot(ux / sr.h, uy / sr.v);
+            const tgtR = 1 / Math.hypot(ux / tr.h, uy / tr.v);
+            const srcPt = {
+              x: sourceCenter.x + ux * srcR,
+              y: sourceCenter.y + uy * srcR + sr.s * vfactor,
+            };
+            const tgtPt = {
+              x: targetCenter.x - ux * tgtR,
+              y: targetCenter.y - uy * tgtR + tr.s * vfactor,
+            };
 
             const localStatus = interfacesData?.[edge.source]?.interfaces?.[edge.data?.localIntf];
             const peerStatus = interfacesData?.[edge.target]?.interfaces?.[edge.data?.peerIntf];
@@ -549,8 +702,8 @@ const InnerGraph = ({
               <React.Fragment key={edge.id}>
                 {sourceNode?.data?.type !== 'external' && (
                   <EdgeLabel
-                    x={sourceCenter.x + offsetX}
-                    y={sourceCenter.y + offsetY}
+                    x={srcPt.x}
+                    y={srcPt.y}
                     intfName={edge.data?.localIntf}
                     status={localStatus}
                     loading={loadingInterfaces.has(`${edge.source}:${edge.data?.localIntf}`)}
@@ -600,8 +753,8 @@ const InnerGraph = ({
                 )}
                 {targetNode?.data?.type !== 'external' && (
                   <EdgeLabel
-                    x={targetCenter.x - offsetX}
-                    y={targetCenter.y - offsetY}
+                    x={tgtPt.x}
+                    y={tgtPt.y}
                     intfName={edge.data?.peerIntf}
                     status={peerStatus}
                     loading={loadingInterfaces.has(`${edge.target}:${edge.data?.peerIntf}`)}
