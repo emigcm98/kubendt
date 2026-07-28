@@ -22,6 +22,12 @@ import CapturePanel from './CapturePanel';
 import TracePanel from './TracePanel';
 import { ReactComponent as PcapIcon } from '../assets/images/icons/pcap.svg';
 import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
+import { ReactComponent as UploadIcon } from '../assets/images/icons/upload.svg';
+import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
+import { ReactComponent as EditIcon } from '../assets/images/icons/edit.svg';
+import { ReactComponent as SlidersIcon } from '../assets/images/icons/sliders.svg';
+import { ReactComponent as SaveIcon } from '../assets/images/icons/save.svg';
+import { ReactComponent as DownloadIcon } from '../assets/images/icons/download.svg';
 import InnerGraph from './InnerGraph';
 import LoadingOverlay from './LoadingOverlay';
 import './NetworkGraph.css';
@@ -392,6 +398,49 @@ const animateToPositions = (targets, setNodes, duration = 750) =>
     requestAnimationFrame(step);
   });
 
+// Animate a set of nodes from their current positions to targets (unlike
+// animateToPositions, which flies them in from the origin). Used for the small
+// "bounce apart" nudge when a node is dropped too close to another.
+const animateNodesFromTo = (fromMap, toMap, setNodes, duration = 280) =>
+  new Promise((resolve) => {
+    const ids = Object.keys(toMap || {});
+    if (ids.length === 0) {
+      resolve();
+      return;
+    }
+    const ease = (t) => 1 - Math.pow(1 - t, 3); // easeOutCubic
+    let startTs = null;
+    const step = (ts) => {
+      if (startTs === null) startTs = ts;
+      const t = Math.min(1, (ts - startTs) / duration);
+      const k = ease(t);
+      setNodes((prev) =>
+        prev.map((n) => {
+          const to = toMap[n.id];
+          const from = fromMap[n.id];
+          if (!to || !from) return n;
+          return {
+            ...n,
+            position: { x: from.x + (to.x - from.x) * k, y: from.y + (to.y - from.y) * k },
+          };
+        })
+      );
+      if (t < 1) {
+        requestAnimationFrame(step);
+      } else {
+        setNodes((prev) =>
+          prev.map((n) => (toMap[n.id] ? { ...n, position: { ...toMap[n.id] } } : n))
+        );
+        resolve();
+      }
+    };
+    requestAnimationFrame(step);
+  });
+
+// Minimum center-to-center clearance enforced when a node is dropped
+const MIN_GAP_X = NODE_SIZE * 2; // horizontal
+const MIN_GAP_Y = NODE_SIZE * 1.6; // vertical
+
 const generateNodes = ({
   pods,
   interfacesData,
@@ -476,7 +525,11 @@ const generateEdges = (links, expandedPods, originalNodes) => {
           uid: link.uid,
           linkName: link.name || null,
         },
-        style: { strokeWidth: 1 + NODE_SIZE / 64, stroke: 'black' },
+        style: {
+          strokeWidth: 1.4,
+          stroke: 'var(--graph-edge)',
+          strokeLinecap: 'round',
+        },
       };
     })
     .filter((e) => e.source && e.target); // remove invalid edges
@@ -828,7 +881,11 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
             peerIntf: link.peerIntf,
             creating: true,
           },
-          style: { strokeWidth: 1 + NODE_SIZE / 64, stroke: 'black' },
+          style: {
+            strokeWidth: 1.4,
+            stroke: 'var(--graph-edge)',
+            strokeLinecap: 'round',
+          },
         };
       })
       .filter(Boolean);
@@ -1541,6 +1598,53 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
       }
     });
     onNodesChange(changes);
+  };
+
+  // When a node is dropped too close to another, push ONLY the dropped node out
+  // until it clears the elliptical gap from every neighbor, then animate it
+  // there. Nothing
+  // else moves, so the rest of the layout the user arranged stays put.
+  const relaxDroppedNode = (nodeId, dropPos) => {
+    const all = nodesRef.current || [];
+    const others = all.filter((n) => n.id !== nodeId && n.position && !n.data?.deleting);
+    if (others.length === 0 || !dropPos) return;
+
+    // Work in ELLIPSE space (divide by the two gaps) so the forbidden region
+    // around every node becomes a unit circle. The drop point is valid when it
+    // sits >= 1 unit from every other node there.
+    const gx = MIN_GAP_X;
+    const gy = MIN_GAP_Y;
+    const othersN = others.map((o) => ({ x: o.position.x / gx, y: o.position.y / gy }));
+    const dropN = { x: dropPos.x / gx, y: dropPos.y / gy };
+    const clearAt = (p) => othersN.every((o) => Math.hypot(p.x - o.x, p.y - o.y) >= 1);
+
+    // Already clear: leave it exactly where dropped.
+    if (clearAt(dropN)) return;
+
+    // Search outward ring by ring for the NEAREST valid spot (in real distance),
+    // instead of summing repulsions (which could fling the node far or leave it
+    // still overlapping). Deterministic and always lands somewhere valid+close.
+    const ANGLES = 48;
+    let best = null;
+    let bestCost = Infinity;
+    for (let r = 0.08; r <= 5 && !best; r += 0.08) {
+      for (let k = 0; k < ANGLES; k++) {
+        const a = (2 * Math.PI * k) / ANGLES;
+        const cand = { x: dropN.x + r * Math.cos(a), y: dropN.y + r * Math.sin(a) };
+        if (!clearAt(cand)) continue;
+        const cost = Math.hypot(cand.x * gx - dropPos.x, cand.y * gy - dropPos.y);
+        if (cost < bestCost) {
+          bestCost = cost;
+          best = cand;
+        }
+      }
+    }
+    if (!best) return; // no room found (shouldn't happen); leave as dropped
+
+    const pos = { x: best.x * gx, y: best.y * gy };
+    positionRef.current[nodeId] = { ...pos };
+    // Longer, eased tween so the bounce reads as a smooth glide, not a snap.
+    animateNodesFromTo({ [nodeId]: dropPos }, { [nodeId]: pos }, setNodes, 520);
   };
 
   const handleSavePositions = async () => {
@@ -3120,6 +3224,7 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
               }}
               title="Import topology JSON and deploy it in this namespace"
             >
+              <UploadIcon className="app-icon" aria-hidden="true" />
               Import topology
             </button>
 
@@ -3138,6 +3243,7 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
               onClick={handleClearTopologyClick}
               title="Delete all deployed topology resources in this namespace without deleting the namespace"
             >
+              <TrashIcon className="app-icon" aria-hidden="true" />
               Clear topology
             </button>
 
@@ -3156,6 +3262,7 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
               onClick={handleModifyTopologyClick}
               title="Apply modify topology JSON with 'add' and/or 'delete'"
             >
+              <EditIcon className="app-icon" aria-hidden="true" />
               Modify topology
             </button>
 
@@ -3172,6 +3279,7 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
               onClick={handleLoadNetworkConfClick}
               title="Apply a network configuration JSON (targets/actions)"
             >
+              <SlidersIcon className="app-icon" aria-hidden="true" />
               Load network conf
             </button>
           </div>
@@ -3184,6 +3292,7 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
                 disabled={nodes.length === 0 || isBusy}
                 title="Save node positions (x,y)"
               >
+                <SaveIcon className="app-icon" aria-hidden="true" />
                 Save positions
               </button>
 
@@ -3192,6 +3301,7 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
                 onClick={!isBusy ? handleExportTopology : undefined}
                 title="Export current topology as JSON"
               >
+                <DownloadIcon className="app-icon" aria-hidden="true" />
                 Export topology
               </button>
             </div>
@@ -3262,6 +3372,7 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
             selectedLink={selectedLink}
             setSelectedLink={setSelectedLink}
             handleNodesChange={handleNodesChange}
+            onNodeDropRelax={relaxDroppedNode}
             hoveredInfo={hoveredInfo}
             setHoveredInfo={setHoveredInfo}
             setTooltipPos={setTooltipPos}

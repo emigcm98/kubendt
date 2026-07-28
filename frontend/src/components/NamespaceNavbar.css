@@ -13,6 +13,7 @@
 .navbar-left,
 .navbar-right {
   display: flex;
+  align-items: center;
   gap: 0.8rem;
   z-index: 1;
 }
@@ -26,26 +27,34 @@
   margin-left: auto;
 }
 
+/* Logo on a white chip so the blue mark stays crisp on the blue navbar. */
 .navbar-brand {
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.8);
-  padding: 0.25rem 0.55rem;
-  border-radius: var(--radius-sm);
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  padding: 4px 9px;
+  border-radius: var(--radius-md);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
   text-decoration: none;
   transition:
-    color 0.15s ease,
-    background 0.15s ease;
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
   cursor: pointer;
 }
 
+.navbar-brand-logo {
+  height: 44px;
+  width: auto;
+  display: block;
+  /* The logo SVG uses light-dark() strokes; force the light (dark-ink) variant
+     so it stays visible on the white chip even when the OS is in dark mode. */
+  color-scheme: light;
+}
+
 a.navbar-brand:hover {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
   text-decoration: none;
 }
 
@@ -54,49 +63,73 @@ a.navbar-brand:focus-visible {
   outline-offset: 2px;
 }
 
+/* Namespace: a topology glyph on the left, the "NAMESPACE" kicker over the name
+   in the middle, and a ghost refresh button on the right, in a subtle pill. */
 .navbar-center {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  text-align: center;
   z-index: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
   background: rgba(255, 255, 255, 0.12);
-  padding: 0.5rem 1.8rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  max-width: 400px;
+  padding: 5px 6px 5px 15px;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  max-width: 460px;
+}
+
+/* No refresh button (File Manager navbar): balance the right padding so the
+   name doesn't sit flush against the pill edge. */
+.navbar-center-static {
+  padding-right: 16px;
+}
+
+.navbar-center-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  line-height: 1.08;
+  min-width: 0;
 }
 
 .navbar-label {
-  font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.85);
-  margin-bottom: 0.1rem;
+  font-size: 0.54rem;
+  color: rgba(255, 255, 255, 0.72);
   text-transform: uppercase;
-  letter-spacing: 1px;
-  font-weight: 500;
+  letter-spacing: 1.5px;
+  font-weight: 800;
+}
+
+.navbar-ns-icon {
+  width: 20px;
+  height: 20px;
+  color: rgba(255, 255, 255, 0.9);
+  flex-shrink: 0;
 }
 
 .navbar-namespace {
-  font-size: 1.3rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: white;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  letter-spacing: 0.3px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.navbar-namespace-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.55rem;
+  max-width: 100%;
+  /* Roomier line box so descenders (the g in "open5gs") aren't clipped by
+     overflow: hidden. */
+  line-height: 1.35;
+  padding-bottom: 1px;
 }
 
 .navbar-refresh-btn {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.18);
   color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  border: none;
   border-radius: var(--radius-pill);
   width: 30px;
   height: 30px;
@@ -105,6 +138,7 @@ a.navbar-brand:focus-visible {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
   transition: all 0.2s ease;
 }
 
@@ -118,69 +152,54 @@ a.navbar-brand:focus-visible {
   cursor: not-allowed;
 }
 
+/* Tonal chips on the blue bar: soft tinted fill + matching text/icon, one hue
+   per action, so each has personality and reads cleanly against the brand blue.
+   Neutral (Home) is the default; the rest are set by class below. */
 .navbar-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   padding: 0.5rem 1rem;
   font-size: 0.85rem;
-  color: white;
-  border: none;
+  background: var(--surface);
+  color: var(--text-body);
+  border: 1px solid transparent;
   border-radius: var(--radius-sm);
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  transition: all 0.18s ease;
 }
 
-/* Home button - Blanco/Neutro */
-.navbar-left button:nth-child(1) {
-  background: #fafafa;
-  color: #424242;
-  border-bottom: 2px solid var(--border-light);
+.navbar-button .app-icon {
+  width: 1.05em;
+  height: 1.05em;
 }
 
-.navbar-left button:nth-child(1):hover:not(:disabled) {
-  background: var(--border-light);
-  border-bottom-color: #bdbdbd;
+.navbar-button:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
+  filter: brightness(0.97);
 }
 
-/* Delete button - Rojo */
-.navbar-left button:nth-child(2) {
-  background: var(--danger-strong);
-  border-bottom: 2px solid var(--danger-strong);
-}
-
-.navbar-left button:nth-child(2):hover:not(:disabled) {
-  background: var(--danger);
-  border-bottom-color: var(--danger-strong);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(229, 57, 53, 0.3);
-}
-
+/* Delete namespace / Delete history: red tonal (destructive). Targeted by class,
+   not position, so it never bleeds onto other bars' buttons. */
+.navbar-button-danger,
 .navbar-button-namespace-history {
-  background: #c89a1b;
-  color: #2f2410;
-  border-bottom: 2px solid #9b7410;
+  background: var(--danger-bg);
+  color: var(--danger-strong);
 }
 
-.navbar-button-namespace-history:hover:not(:disabled) {
-  background: #b88913;
-  border-bottom-color: #7f5f0b;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(200, 154, 27, 0.35);
+/* File Manager: amber tonal. */
+.navbar-button-files {
+  background: var(--warning-bg);
+  color: var(--warning-strong);
 }
 
-/* Files button - Amarillo suave */
-.navbar-right button:nth-child(1) {
-  background: #fdd835;
-  color: #424242;
-  border-bottom: 2px solid #f9a825;
-}
-
-.navbar-right button:nth-child(1):hover:not(:disabled) {
-  background: #fbc02d;
-  border-bottom-color: #f57f17;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(253, 216, 53, 0.3);
+/* Go to graph: teal tonal, matching the topology accent. */
+.navbar-button-graph {
+  background: var(--teal-bg);
+  color: var(--teal);
 }
 
 .navbar-button:active:not(:disabled) {
@@ -188,10 +207,8 @@ a.navbar-brand:focus-visible {
 }
 
 .navbar-button:disabled {
-  background: rgba(255, 255, 255, 0.08);
+  opacity: 0.5;
   cursor: not-allowed;
-  opacity: 0.4;
-  border-color: rgba(255, 255, 255, 0.1);
 }
 
 /* Deletion confirmation modal */
@@ -292,12 +309,13 @@ a.navbar-brand:focus-visible {
 }
 
 .delete-confirm-modal .modal-btn-danger {
-  background-color: var(--danger);
-  color: white;
+  background: var(--danger-bg);
+  color: var(--danger-strong);
+  border: 1px solid color-mix(in srgb, var(--danger) 32%, transparent);
 }
 
 .delete-confirm-modal .modal-btn-danger:hover {
-  background-color: #da190b;
+  filter: brightness(0.96);
 }
 
 @media (max-width: 900px) {

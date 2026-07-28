@@ -19,6 +19,7 @@ import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
 import { ReactComponent as PlusIcon } from '../assets/images/icons/plus.svg';
 import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
 import { ReactComponent as RefreshIcon } from '../assets/images/icons/refresh.svg';
+import { ReactComponent as BookIcon } from '../assets/images/icons/book.svg';
 import './Home.css';
 
 Modal.setAppElement('#root');
@@ -489,10 +490,19 @@ const Home = () => {
                 @emigcm98
               </a>
             </span>
+            <a
+              className="home-header-site"
+              href="https://kubendt.org"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              kubendt.org
+            </a>
           </div>
         </div>
         <div className="home-header-right">
           <button className="open-api-btn" onClick={handleOpenSwagger}>
+            <BookIcon className="app-icon" aria-hidden="true" />
             Open API
           </button>
           {auth.enabled && <ProfileMenu onOpenTokens={() => setTokensOpen(true)} />}

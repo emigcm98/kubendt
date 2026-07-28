@@ -79,11 +79,17 @@
 .tokens-create-btn {
   padding: 9px 16px;
   font-weight: 600;
-  color: #fff;
-  background: var(--primary);
-  border: none;
+  color: var(--primary);
+  background: var(--info-bg);
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
   border-radius: var(--radius-md);
   cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.tokens-create-btn:hover:not(:disabled) {
+  filter: brightness(0.96);
+  transform: translateY(-1px);
 }
 
 .tokens-create-btn:disabled {
@@ -129,15 +135,17 @@
   padding: 8px 16px;
   font-size: 0.82rem;
   font-weight: 600;
-  color: #fff;
-  background: var(--success);
-  border: none;
+  color: var(--success);
+  background: var(--success-bg);
+  border: 1px solid color-mix(in srgb, var(--success-accent) 35%, transparent);
   border-radius: var(--radius-sm);
   cursor: pointer;
+  transition: all 0.18s ease;
 }
 
 .tokens-copy:hover {
-  background: var(--success);
+  filter: brightness(0.96);
+  transform: translateY(-1px);
 }
 
 .tokens-error {

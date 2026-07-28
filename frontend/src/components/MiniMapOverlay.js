@@ -12,6 +12,8 @@ const MiniMapOverlay = ({ nodes, selectedNodeId }) => {
         return '#6b7280';
       case 'host':
         return '#10b981';
+      case 'external':
+        return '#8b5cf6';
       default:
         return '#facc15';
     }
@@ -24,7 +26,9 @@ const MiniMapOverlay = ({ nodes, selectedNodeId }) => {
         ? 'minimap-node router'
         : type === 'switch'
           ? 'minimap-node switch'
-          : 'minimap-node host';
+          : type === 'external'
+            ? 'minimap-node external'
+            : 'minimap-node host';
     return node.id === selectedNodeId ? `${base} selected` : base;
   };
 
@@ -39,8 +43,9 @@ const MiniMapOverlay = ({ nodes, selectedNodeId }) => {
         zoomable
         pannable
         style={{
-          width: 280,
-          height: 200,
+          width: 300,
+          height: 220,
+          margin: 0,
         }}
       />
     </div>

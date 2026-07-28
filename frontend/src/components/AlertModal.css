@@ -157,16 +157,17 @@
 
 .alert-modal-btn {
   padding: 6px 16px;
-  border: none;
+  border: 1px solid transparent;
   border-radius: var(--radius-sm);
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.18s ease;
 }
 
 .alert-modal-btn:hover {
   transform: translateY(-1px);
+  filter: brightness(0.96);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
@@ -177,22 +178,14 @@
 
 .alert-modal-btn-primary,
 .alert-modal-btn-confirm {
-  background-color: var(--success-accent);
-  color: white;
-}
-
-.alert-modal-btn-primary:hover,
-.alert-modal-btn-confirm:hover {
-  background-color: var(--success-accent);
+  background: var(--info-bg);
+  color: var(--primary);
+  border-color: color-mix(in srgb, var(--primary) 30%, transparent);
 }
 
 .alert-modal-btn-cancel {
-  background-color: #f0f0f0;
+  background: var(--border-light);
   color: var(--text-body);
-}
-
-.alert-modal-btn-cancel:hover {
-  background-color: var(--border-light);
 }
 
 /* ── Timing widget (shown inside alert-modal-extra) ─────────────────────── */
