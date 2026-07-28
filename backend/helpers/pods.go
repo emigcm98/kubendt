@@ -478,26 +478,6 @@ func SanitizeConfigMapDataKey(name string) string {
 // missing mount.
 const MountFilePathAnnotation = "kubendt/mount-file-path"
 
-// OriginalMountFilePath returns the original file-manager path recorded on a
-// mount ConfigMap/Secret, or "" when the resource is gone or predates the
-// annotation (deployed before this existed). Callers fall back to resolving the
-// path from the file manager in that case.
-func OriginalMountFilePath(namespace, resourceName string, isSecret bool) string {
-	ctx := context.TODO()
-	if isSecret {
-		s, err := kubeclient.Clientset.CoreV1().Secrets(namespace).Get(ctx, resourceName, metav1.GetOptions{})
-		if err != nil {
-			return ""
-		}
-		return s.Annotations[MountFilePathAnnotation]
-	}
-	cm, err := kubeclient.Clientset.CoreV1().ConfigMaps(namespace).Get(ctx, resourceName, metav1.GetOptions{})
-	if err != nil {
-		return ""
-	}
-	return cm.Annotations[MountFilePathAnnotation]
-}
-
 // SyncMountResourceFromFile refreshes the ConfigMap or Secret backing a file
 // mount if one already exists. Returns kind="ConfigMap"|"Secret" on success,
 // synced=false with no error if nothing existed to sync.

@@ -972,14 +972,19 @@ func ClearTopology(c *gin.Context) {
 // resolveMountPath recovers the original file-manager path of a mounted file
 // and whether it still exists. It prefers the path recorded on the backing
 // ConfigMap/Secret annotation (correct even when the source file was deleted),
-// and falls back to matching the sanitized data key against the file manager
-// for mounts deployed before the annotation existed.
-func resolveMountPath(namespace, resourceName string, isSecret bool, dataKey string) (string, bool) {
-	if path := helpers.OriginalMountFilePath(namespace, resourceName, isSecret); path != "" {
-		exists, _ := helpers.NamespaceFileExists(namespace, path)
-		return path, exists
+// and falls back to matching the sanitized data key against the prebuilt file
+// index for mounts deployed before the annotation existed. Both the annotation
+// and the index are resolved from memory so this makes no K8s or filesystem
+// round-trip per mount, apart from the existence stat.
+func resolveMountPath(namespace, annotation, dataKey string, fileIndex map[string]string) (string, bool) {
+	if annotation != "" {
+		exists, _ := helpers.NamespaceFileExists(namespace, annotation)
+		return annotation, exists
 	}
-	return helpers.ResolveMountedFileName(namespace, dataKey)
+	if path, ok := fileIndex[dataKey]; ok {
+		return path, true
+	}
+	return dataKey, false
 }
 
 func GetNetwork(c *gin.Context) {
@@ -1022,6 +1027,37 @@ func GetNetwork(c *gin.Context) {
 		podLabels[pod.Name] = pod.Labels
 	}
 
+	// Batch-fetch ConfigMaps and Secrets once, up front. This handler used to do
+	// one Get per env-from ref and per mounted file inside the per-node loop; on a
+	// remote API server (each round-trip ~200ms) that turned a medium topology
+	// into several seconds. Listing once and resolving from memory keeps the API
+	// traffic constant regardless of node count.
+	cmData := make(map[string]map[string]string) // name -> Data (env-from)
+	cmMountPath := make(map[string]string)       // name -> mount-file-path annotation
+	if cmList, err := kubeclient.Clientset.CoreV1().ConfigMaps(namespace).List(ctx, metav1.ListOptions{}); err != nil {
+		log.Printf("⚠️ Could not list ConfigMaps in namespace %s: %v", namespace, err)
+	} else {
+		for i := range cmList.Items {
+			cm := &cmList.Items[i]
+			cmData[cm.Name] = cm.Data
+			cmMountPath[cm.Name] = cm.Annotations[helpers.MountFilePathAnnotation]
+		}
+	}
+
+	secretMountPath := make(map[string]string) // name -> mount-file-path annotation
+	if secretList, err := kubeclient.Clientset.CoreV1().Secrets(namespace).List(ctx, metav1.ListOptions{}); err != nil {
+		log.Printf("⚠️ Could not list Secrets in namespace %s: %v", namespace, err)
+	} else {
+		for i := range secretList.Items {
+			s := &secretList.Items[i]
+			secretMountPath[s.Name] = s.Annotations[helpers.MountFilePathAnnotation]
+		}
+	}
+
+	// Sanitized-key -> real path index from a single directory walk, so legacy
+	// mounts without the path annotation don't each trigger their own walk.
+	fileIndex := helpers.BuildMountedFileIndex(namespace)
+
 	var nodes []types.NodeSpec
 	replicaCount := make(map[string]int)
 
@@ -1058,12 +1094,12 @@ func GetNetwork(c *gin.Context) {
 		for _, envFrom := range container.EnvFrom {
 			if envFrom.ConfigMapRef != nil {
 				cmName := envFrom.ConfigMapRef.Name
-				cm, err := kubeclient.Clientset.CoreV1().ConfigMaps(namespace).Get(ctx, cmName, metav1.GetOptions{})
-				if err != nil {
-					log.Printf("⚠️ Could not retrieve ConfigMap %s: %v", cmName, err)
+				data, ok := cmData[cmName]
+				if !ok {
+					log.Printf("⚠️ Could not retrieve ConfigMap %s: not found in namespace listing", cmName)
 					continue
 				}
-				for k, v := range cm.Data {
+				for k, v := range data {
 					envVars[k] = v
 				}
 			}
@@ -1089,7 +1125,7 @@ func GetNetwork(c *gin.Context) {
 					if dataKey == "" {
 						dataKey = volume.ConfigMap.Name
 					}
-					fileName, exists := resolveMountPath(namespace, volume.ConfigMap.Name, false, dataKey)
+					fileName, exists := resolveMountPath(namespace, cmMountPath[volume.ConfigMap.Name], dataKey, fileIndex)
 					mounts = append(mounts, types.MountSpec{
 						File:    fileName,
 						MountTo: volumeMount.MountPath,
@@ -1102,7 +1138,7 @@ func GetNetwork(c *gin.Context) {
 					if dataKey == "" {
 						dataKey = volume.Secret.SecretName
 					}
-					fileName, exists := resolveMountPath(namespace, volume.Secret.SecretName, true, dataKey)
+					fileName, exists := resolveMountPath(namespace, secretMountPath[volume.Secret.SecretName], dataKey, fileIndex)
 					mounts = append(mounts, types.MountSpec{
 						File:      fileName,
 						MountTo:   volumeMount.MountPath,
