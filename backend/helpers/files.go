@@ -186,23 +186,23 @@ func NamespaceFileExists(namespace, filename string) (bool, error) {
 	return !info.IsDir(), nil
 }
 
-// ResolveMountedFileName maps a mounted volume's SubPath data key back to the
-// original file-manager path and reports whether that file still exists.
+// BuildMountedFileIndex walks the namespace file directory once and maps every
+// file's sanitized ConfigMap/Secret data key back to its real file-manager path.
 //
 // Mounts store the file under a sanitized ConfigMap/Secret data key where path
 // separators are collapsed to "_" (see SanitizeConfigMapDataKey), so a file in
 // a subfolder like "web-server/index.html" appears in the pod spec only as
 // "web-server_index.html". The mangling is not reversible in isolation (a real
-// file could legitimately contain "_"), so we walk the file manager and return
-// the path whose sanitized key matches. When nothing matches (the source file
-// was deleted) the sanitized key is returned as-is with exists=false, so
-// callers can flag the mount as missing.
-func ResolveMountedFileName(namespace, dataKey string) (path string, exists bool) {
+// file could legitimately contain "_"), so callers match a mount's sanitized key
+// against this index. A key absent from the map means the source file was
+// deleted, so the mount can be flagged as missing. Building the map from a single
+// walk lets a caller resolve many mounts without walking once per mount.
+func BuildMountedFileIndex(namespace string) map[string]string {
+	index := make(map[string]string)
 	baseDir, err := namespaceFilesDir(namespace)
 	if err != nil {
-		return dataKey, false
+		return index
 	}
-	match := ""
 	_ = filepath.WalkDir(baseDir, func(p string, d os.DirEntry, walkErr error) error {
 		if walkErr != nil || d.IsDir() {
 			return nil
@@ -212,16 +212,10 @@ func ResolveMountedFileName(namespace, dataKey string) (path string, exists bool
 			return nil
 		}
 		rel = filepath.ToSlash(rel)
-		if SanitizeConfigMapDataKey(rel) == dataKey {
-			match = rel
-			return filepath.SkipAll
-		}
+		index[SanitizeConfigMapDataKey(rel)] = rel
 		return nil
 	})
-	if match == "" {
-		return dataKey, false
-	}
-	return match, true
+	return index
 }
 
 // GetFileContent gets file content (supports nested subfolder paths)
