@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New `meshnet` field on the cluster status and node detail API responses reporting the dataplane state.
 - Mounted files whose source no longer exists in the namespace file manager are flagged in the pod detail panel with a warning and a disabled link, instead of silently linking to a missing file. The mount API carries a matching `missing` field.
 - Optional node repulsion on the graph: dropping a node too close to another bounces it to the nearest free spot. Toggle it from the graph controls (off by default. Hold Ctrl to place nodes close), next to a new lock toggle. Both preferences persist across sessions.
+- Enable or disable a pod interface from the Links tab of the node panel by right-clicking it, the same action already available on the graph.
 
 ### Changed
 
@@ -21,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Topology changes now require a running Meshnet CNI. Deploying, and modifying a topology (add, delete or scale), return `412` when Meshnet is not detected, so pods are never left unwired or stuck. Clearing a topology is always allowed, and `?force=true` overrides the check.
 - Polished the UI with a tonal button palette (one soft color per action, applied across the graph toolbar, the namespace and File Manager bars, and the Home dashboard), thinner graph links, interface labels that stay aligned to their cable across node types, a pulsing active-node dot, custom animated zoom/fit controls with a wider zoom range, and a cleaner minimap.
 - `GET /network/get-network` now loads much faster on remote clusters. It reads every ConfigMap and Secret in the namespace in a single batch and resolves mounted-file paths from one directory walk, instead of one API request per node and one walk per mount.
+- Refreshed the node, link and external info panels with consistent typography, tokenized colors, a slide-in and slide-out animation, and a cleaner driver capability view. The link panel now shows its endpoint path (`pod:iface ↔ pod:iface`) as an attribute.
 
 ### Fixed
 

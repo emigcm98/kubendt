@@ -542,6 +542,24 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
   const edgesRef = useRef([]);
   const [selectedNodeInfo, setSelectedNodeInfo] = useState(null);
   const [selectedLink, setSelectedLink] = useState(null);
+  // Bumped to ask the open info panel to play its exit animation before it
+  // unmounts (e.g. when the user clicks the graph background).
+  const [closeSignal, setCloseSignal] = useState(0);
+  const requestClosePanels = () => setCloseSignal((n) => n + 1);
+
+  // Shared across the graph edge labels and the node panel's Links tab so that
+  // toggling an interface from either place shows the same loading spinner and
+  // updates the graph optimistically.
+  const [loadingInterfaces, setLoadingInterfaces] = useState(new Set());
+  const updateInterfaceStatus = (podName, ifaceName, newStatus) => {
+    setInterfacesData((prev) => ({
+      ...prev,
+      [podName]: {
+        ...prev[podName],
+        interfaces: { ...(prev[podName]?.interfaces || {}), [ifaceName]: newStatus },
+      },
+    }));
+  };
   const [openShells, setOpenShells] = useState([]); // Array of {id, podName, pod, shellMode, zIndex, minimized}
   const openShellsRef = useRef(openShells);
   const [openCaptures, setOpenCaptures] = useState([]); // Array of {id, pod, iface, zIndex, minimized}
@@ -3065,6 +3083,7 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
             node={selectedNodeInfo}
             onClosePanel={() => setSelectedNodeInfo(null)}
             onDeleteExternal={handleDeleteExternal}
+            closeSignal={closeSignal}
             isBusy={isBusy}
           />
         ) : (
@@ -3077,6 +3096,10 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
             isBusy={isBusy}
             showInteractiveShell={openShells.length > 0}
             onClosePanel={() => setSelectedNodeInfo(null)}
+            closeSignal={closeSignal}
+            loadingInterfaces={loadingInterfaces}
+            setLoadingInterfaces={setLoadingInterfaces}
+            onUpdateInterface={updateInterfaceStatus}
           />
         ))}
 
@@ -3088,6 +3111,7 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
           onClosePanel={() => setSelectedLink(null)}
           onDeleteLink={handleDeleteLink}
           onStartCapture={openCapture}
+          closeSignal={closeSignal}
           isBusy={isBusy}
         />
       )}
@@ -3371,6 +3395,7 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
             setSelectedNodeInfo={setSelectedNodeInfo}
             selectedLink={selectedLink}
             setSelectedLink={setSelectedLink}
+            onDeselect={requestClosePanels}
             handleNodesChange={handleNodesChange}
             onNodeDropRelax={relaxDroppedNode}
             hoveredInfo={hoveredInfo}
@@ -3381,18 +3406,9 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
             setTooltipLoading={setTooltipLoading}
             interfacesData={interfacesData}
             fetchTopology={fetchTopology}
-            onUpdateInterface={(podName, ifaceName, newStatus) => {
-              setInterfacesData((prev) => ({
-                ...prev,
-                [podName]: {
-                  ...prev[podName],
-                  interfaces: {
-                    ...(prev[podName]?.interfaces || {}),
-                    [ifaceName]: newStatus,
-                  },
-                },
-              }));
-            }}
+            loadingInterfaces={loadingInterfaces}
+            setLoadingInterfaces={setLoadingInterfaces}
+            onUpdateInterface={updateInterfaceStatus}
             onOpenInteractiveShell={openInteractiveShell}
             onRestartPod={handleRestartPod}
             onDeleteNode={handleDeleteNode}

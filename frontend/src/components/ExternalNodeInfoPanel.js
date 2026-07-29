@@ -1,10 +1,18 @@
 import React from 'react';
 import './PodInfoPanel.css';
 import './ExternalNodeInfoPanel.css';
+import usePanelClose from './usePanelClose';
 import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
 import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
 
-const ExternalNodeInfoPanel = ({ node, onClosePanel, onDeleteExternal, isBusy = false }) => {
+const ExternalNodeInfoPanel = ({
+  node,
+  onClosePanel,
+  onDeleteExternal,
+  closeSignal,
+  isBusy = false,
+}) => {
+  const { isClosing, requestClose, handleAnimationEnd } = usePanelClose(onClosePanel, closeSignal);
   if (!node) return null;
 
   const hostInterfaces = Array.isArray(node.hostInterfaces) ? node.hostInterfaces : [];
@@ -18,7 +26,10 @@ const ExternalNodeInfoPanel = ({ node, onClosePanel, onDeleteExternal, isBusy = 
 
   return (
     <div className="panel-wrapper">
-      <div className="pod-info-panel external-info-panel">
+      <div
+        className={`pod-info-panel external-info-panel${isClosing ? ' is-closing' : ''}`}
+        onAnimationEnd={handleAnimationEnd}
+      >
         {onDeleteExternal && (
           <button
             className="delete-btn"
@@ -31,7 +42,7 @@ const ExternalNodeInfoPanel = ({ node, onClosePanel, onDeleteExternal, isBusy = 
             <TrashIcon className="app-icon" />
           </button>
         )}
-        <button className="close-btn" onClick={onClosePanel} title="Close panel">
+        <button className="close-btn" onClick={requestClose} title="Close panel">
           <CloseIcon className="app-icon" />
         </button>
 
@@ -39,10 +50,8 @@ const ExternalNodeInfoPanel = ({ node, onClosePanel, onDeleteExternal, isBusy = 
 
         <div className="pod-body external-info-body">
           <p className="external-description">
-            This is an external source connected to the host system through the{' '}
-            <strong>{interfaceText}</strong> interface{hostInterfaces.length > 1 ? 's' : ''} on
-            worker <strong>{workerText}</strong>. It provides external L2 connectivity to all
-            devices in this network segment.
+            External L2 uplink to the host network. Devices in this segment reach outside through
+            it.
           </p>
 
           <hr />
@@ -92,8 +101,7 @@ const ExternalNodeInfoPanel = ({ node, onClosePanel, onDeleteExternal, isBusy = 
 
           <hr />
           <p className="external-hint">
-            This node is informational. Shell and restart operations are not available for external
-            endpoints.
+            Informational node. Shell and restart are not available for external endpoints.
           </p>
         </div>
       </div>

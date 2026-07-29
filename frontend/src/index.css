@@ -17,6 +17,9 @@
   --panel-border: #d3dfec;
   --panel-shadow: 0 4px 16px rgba(25, 118, 210, 0.12);
   --surface: #ffffff;
+  /* Panel/section header band (the light blue-gray gradient). */
+  --panel-header-from: #e3eaf3;
+  --panel-header-to: #d8e2ee;
 
   /* Context menus (dark surface) */
   --menu-from: #1e1e2e;
