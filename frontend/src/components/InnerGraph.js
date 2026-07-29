@@ -1,4 +1,4 @@
-import React, { useRef, useLayoutEffect, useEffect, useState, useMemo } from 'react';
+import React, { useRef, useLayoutEffect, useEffect, useState, useMemo, useCallback } from 'react';
 import { ReactFlow, Panel, Background, EdgeLabelRenderer, useReactFlow } from 'reactflow';
 import 'reactflow/dist/style.css';
 import MiniMapOverlay from './MiniMapOverlay.js';
@@ -103,6 +103,14 @@ const RADIUS_H = NODE_SIZE * 0.72; // left / right (switch, router)
 const HOST_DELTA = NODE_SIZE * 0.12; // host: +on V, -on H
 const SHIFT = 5; // downward nudge (px)
 
+// --- Auto-fit tuning (single place for both the auto-fit and the fit button) ---
+// FIT_PADDING is a FRACTION of the viewport (0.25 = 25% margin), not pixels;
+// higher = more zoomed out. FIT_DURATION is the glide in ms. FIT_DEBOUNCE_MS is
+// how long to wait for the topology to settle before fitting.
+const FIT_PADDING = 0.25;
+const FIT_DURATION = 800;
+const FIT_DEBOUNCE_MS = 400;
+
 // Returns { v, h, s } for a node type. External (and anything unknown) reuses
 // the switch/router values, since the external-network node draws as a switch.
 const labelRadii = (type) =>
@@ -155,6 +163,29 @@ const InnerGraph = ({
   const nodeClickTimerRef = useRef(null);
   const NODE_CLICK_DELAY_MS = 220;
   const { getViewport, setViewport, setCenter, zoomIn, zoomOut, fitView } = useReactFlow();
+
+  // Single fit used by both the auto-fit and the fit button.
+  const fitGraph = useCallback(
+    () => fitView({ padding: FIT_PADDING, duration: FIT_DURATION }),
+    [fitView]
+  );
+
+  // Auto-fit whenever the topology STRUCTURE changes (initial load, import,
+  // modify): debounced so it waits for the force layout to settle
+  const prevNodeIdsRef = useRef('');
+  const fitTimerRef = useRef(null);
+  useEffect(() => {
+    const ids = nodes
+      .map((n) => n.id)
+      .sort()
+      .join(',');
+    if (ids === prevNodeIdsRef.current) return;
+    prevNodeIdsRef.current = ids;
+    if (fitTimerRef.current) clearTimeout(fitTimerRef.current);
+    if (nodes.length === 0) return;
+    fitTimerRef.current = setTimeout(fitGraph, FIT_DEBOUNCE_MS);
+  }, [nodes, fitGraph]);
+  useEffect(() => () => fitTimerRef.current && clearTimeout(fitTimerRef.current), []);
   const [locked, setLocked] = useState(() => {
     try {
       return localStorage.getItem('kubendt.graph.locked') === 'true';
@@ -587,8 +618,6 @@ const InnerGraph = ({
           setEdgeContextMenu(null);
           setInterfaceContextMenu(null);
         }}
-        fitView
-        fitViewOptions={{ padding: 0.15 }}
         nodeTypes={nodeTypes}
       >
         <MiniMapOverlay nodes={nodes} selectedNodeId={selectedNodeInfo?.id} />
@@ -612,12 +641,7 @@ const InnerGraph = ({
           >
             <MinusIcon className="app-icon" aria-hidden="true" />
           </button>
-          <button
-            type="button"
-            className="graph-control-btn"
-            title="Fit view"
-            onClick={() => fitView({ padding: 0.15, duration: 600 })}
-          >
+          <button type="button" className="graph-control-btn" title="Fit view" onClick={fitGraph}>
             <MaximizeIcon className="app-icon" aria-hidden="true" />
           </button>
           <button
