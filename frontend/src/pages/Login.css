@@ -3,7 +3,7 @@
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #1f4e79 0%, var(--primary) 100%);
+  background: linear-gradient(135deg, var(--primary-hover) 0%, var(--brand) 100%);
   padding: 20px;
 }
 
@@ -118,7 +118,7 @@
 }
 
 .login-btn:hover:not(:disabled) {
-  background: #2c5282;
+  background: var(--primary-hover);
 }
 
 .login-btn:disabled {
