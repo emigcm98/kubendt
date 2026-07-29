@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-07-30
+
 ### Added
 
 - Meshnet CNI health awareness. The Home dashboard shows whether the Meshnet dataplane is running, both cluster-wide (a badge next to the node count) and per node (on each node card and in the node detail panel), so a missing or partial install is visible instead of failing silently.
@@ -107,6 +109,7 @@ resources over the Meshnet CNI.
 - Health, readiness and version endpoints, and Swagger docs at `/swagger`.
 - Container images published to GHCR and a Docker Compose deployment.
 
-[Unreleased]: https://github.com/emigcm98/kubendt/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/emigcm98/kubendt/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/emigcm98/kubendt/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/emigcm98/kubendt/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/emigcm98/kubendt/releases/tag/v1.0.0
