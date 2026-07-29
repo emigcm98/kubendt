@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import './PodInfoPanel.css';
 import AlertModal from './AlertModal';
+import InterfaceContextMenu from './InterfaceContextMenu';
+import usePanelClose from './usePanelClose';
 import { API_BASE_URL } from '../config';
 import pcIcon from '../assets/images/nodes/host.svg';
 import routerIcon from '../assets/images/nodes/router.svg';
@@ -57,9 +59,14 @@ const PodInfoPanel = ({
   onClosePanel,
   onRestartPod,
   onDeletePod,
+  closeSignal,
+  loadingInterfaces,
+  setLoadingInterfaces,
+  onUpdateInterface,
   isBusy = false,
 }) => {
   const navigate = useNavigate();
+  const { isClosing, requestClose, handleAnimationEnd } = usePanelClose(onClosePanel, closeSignal);
 
   const [activeTab, setActiveTabRaw] = useState(() => {
     try {
@@ -515,6 +522,54 @@ const PodInfoPanel = ({
     fetchLinks();
   }, [activeTab, namespace, pod.name, driverCaps, loadingDriverCaps]);
 
+  // Right-click an interface to enable/disable it, reusing the graph's context
+  // menu. The menu is portaled to the body since the panel clips its overflow.
+  const [ifaceMenu, setIfaceMenu] = useState(null);
+
+  // Toggle through the same shared loading set and optimistic graph update the
+  // graph edge labels use, so the spinner shows in both places and the graph
+  // reflects the change immediately instead of waiting for the next refresh.
+  const toggleInterfaceState = async (podName, iface, currentIsUp) => {
+    const actionType = currentIsUp ? 'link_down' : 'link_up';
+    const key = `${podName}:${iface}`;
+    setLoadingInterfaces?.((prev) => new Set([...prev, key]));
+    try {
+      await fetch(`${API_BASE_URL}/network/configure/${namespace}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targets: [
+            {
+              pod: podName,
+              actions: [{ type: actionType, iface, options: { persist_history: false } }],
+            },
+          ],
+        }),
+      });
+      const res = await fetch(
+        `${API_BASE_URL}/pods/ips/${namespace}/${podName}?intf=${encodeURIComponent(iface)}`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        const match = data.interfaces?.find((i) => i.interface === iface);
+        if (match) {
+          setInterfaces((prev) =>
+            prev.map((it) => (it.interface === iface ? { ...it, state: match.state } : it))
+          );
+          onUpdateInterface?.(podName, iface, match.state === 'up');
+        }
+      }
+    } catch (err) {
+      console.error('Error toggling interface state:', err);
+    } finally {
+      setLoadingInterfaces?.((prev) => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
+    }
+  };
+
   const fetchQdisc = async (iface) => {
     const hasTC = driverCaps?.some((c) => c.id === 'TCCapable');
     if (!hasTC) return;
@@ -543,11 +598,11 @@ const PodInfoPanel = ({
 
   useEffect(() => {
     const onKey = (e) => {
-      if (e.key === 'Escape') onClosePanel();
+      if (e.key === 'Escape') requestClose();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClosePanel]);
+  }, [requestClose]);
 
   // --- Refrescar qdisc al cambiar interfaz / pod / ns
   useEffect(() => {
@@ -924,7 +979,10 @@ const PodInfoPanel = ({
   return (
     <div className="panel-wrapper">
       {showInteractiveShell && <div className="panel-overlay" />}
-      <div className="pod-info-panel">
+      <div
+        className={`pod-info-panel${isClosing ? ' is-closing' : ''}`}
+        onAnimationEnd={handleAnimationEnd}
+      >
         <button
           className="restart-btn"
           onClick={handleRestart}
@@ -947,7 +1005,7 @@ const PodInfoPanel = ({
             <TrashIcon className="app-icon" />
           </button>
         )}
-        <button className="close-btn" onClick={onClosePanel} title="Close panel">
+        <button className="close-btn" onClick={requestClose} title="Close panel">
           <CloseIcon className="app-icon" />
         </button>
 
@@ -1246,7 +1304,9 @@ const PodInfoPanel = ({
                               return (
                                 <>
                                   <h5>Executor</h5>
-                                  <p className="cap-desc">{driverExecutor || 'kubectl'}</p>
+                                  <p className="cap-desc">
+                                    <code className="cap-code">{driverExecutor || 'kubectl'}</code>
+                                  </p>
                                   <h5>Interface naming</h5>
                                   {driverInterfaceConstraints ? (
                                     <>
@@ -1347,17 +1407,36 @@ const PodInfoPanel = ({
                           key={intf.interface}
                           className={`interface-item ${selectedInterface === intf.interface ? 'selected' : ''}`}
                           onClick={() => setSelectedInterface(intf.interface)}
+                          onContextMenu={(e) => {
+                            e.preventDefault();
+                            const status =
+                              intf.state === 'up'
+                                ? true
+                                : intf.state === 'down'
+                                  ? false
+                                  : undefined;
+                            setIfaceMenu({
+                              x: e.clientX,
+                              y: e.clientY,
+                              iface: intf.interface,
+                              status,
+                            });
+                          }}
                         >
                           <div className="interface-name">
                             {intf.interface}
                             {intf.guestInterface && (
                               <span className="interface-guest-name"> → {intf.guestInterface}</span>
                             )}
-                            {intf.state && (
-                              <span
-                                className={`interface-state-dot ${intf.state === 'up' ? 'state-up' : 'state-down'}`}
-                                title={intf.state}
-                              />
+                            {loadingInterfaces?.has(`${pod.name}:${intf.interface}`) ? (
+                              <span className="interface-state-spinner" title="applying…" />
+                            ) : (
+                              intf.state && (
+                                <span
+                                  className={`interface-state-dot ${intf.state === 'up' ? 'state-up' : 'state-down'}`}
+                                  title={intf.state}
+                                />
+                              )
                             )}
                           </div>
                           <div className="interface-detail">IPv4: {intf.ipv4}</div>
@@ -1639,6 +1718,24 @@ const PodInfoPanel = ({
                 </div>
               </div>
             </div>,
+            document.body
+          )}
+
+        {ifaceMenu &&
+          createPortal(
+            <InterfaceContextMenu
+              x={ifaceMenu.x}
+              y={ifaceMenu.y}
+              pod={pod.name}
+              iface={ifaceMenu.iface}
+              status={ifaceMenu.status}
+              namespace={namespace}
+              apiBase={API_BASE_URL}
+              onClose={() => setIfaceMenu(null)}
+              onToggle={() =>
+                toggleInterfaceState(pod.name, ifaceMenu.iface, ifaceMenu.status === true)
+              }
+            />,
             document.body
           )}
 

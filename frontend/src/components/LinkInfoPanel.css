@@ -8,9 +8,9 @@
 }
 
 .link-info-title-icon {
-  width: 24px;
-  height: 24px;
-  filter: drop-shadow(0 0 6px rgba(0, 0, 0, 0.12));
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
 }
 
 .link-info-body {
@@ -28,47 +28,6 @@
   font-weight: 600;
 }
 
-/* Mini ASCII-ish diagram */
-.link-diagram {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  padding: 0.6rem 0.8rem;
-  margin: 0.6rem 0.8rem;
-  background: #ffffff;
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
-  font-size: 0.82rem;
-  color: var(--text-heading);
-}
-
-.link-diagram-side {
-  font-weight: 700;
-  color: #0d3b66;
-  background: var(--info-bg);
-  border: 1px solid #b8d4ea;
-  border-radius: var(--radius-sm);
-  padding: 2px 6px;
-  max-width: 32%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.link-diagram-iface {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 0.78rem;
-  color: var(--primary);
-}
-
-.link-diagram-wire {
-  color: var(--text-subtle);
-  letter-spacing: -1px;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-}
-
 /* Endpoint cards */
 .link-endpoints {
   display: flex;
@@ -77,28 +36,14 @@
   padding: 0 0.8rem;
 }
 
-.link-endpoints-divider {
-  height: 0;
+/* Plain dashed line between the two endpoint cards. */
+.link-endpoints-connector {
   border-top: 1px dashed var(--border);
-  margin: 0.1rem 0;
-  position: relative;
-}
-
-.link-endpoints-divider::after {
-  content: '↕';
-  position: absolute;
-  top: -10px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--panel-from);
-  color: var(--primary);
-  padding: 0 6px;
-  font-size: 0.85rem;
-  font-weight: 700;
+  margin: 0.4rem 0.2rem;
 }
 
 .link-endpoint {
-  background: #ffffff;
+  background: var(--surface);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
   padding: 0.6rem 0.7rem;
@@ -165,14 +110,14 @@
 
 .link-state-badge.badge-down {
   background: var(--danger-bg);
-  color: #8a2d2d;
+  color: var(--danger-strong);
   border: 1px solid #f0bcb4;
 }
 
 .link-endpoint-detail {
   display: flex;
   gap: 0.5rem;
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   padding: 2px 0;
 }
 
@@ -184,10 +129,11 @@
 
 .link-detail-val {
   flex: 1;
-  color: var(--text-heading);
+  min-width: 0;
+  color: var(--text-body);
   overflow: hidden;
   text-overflow: ellipsis;
-  word-break: break-all;
+  white-space: nowrap;
 }
 
 .link-detail-mono {
@@ -211,19 +157,26 @@
 }
 
 .link-capture-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
   margin-top: 0.5rem;
   width: 100%;
   padding: 5px 8px;
-  background: #eef4fb;
-  border: 1px solid #b8d4ea;
-  color: #0d3b66;
+  background: var(--info-bg);
+  border: 1px solid var(--border);
+  color: var(--primary);
   border-radius: var(--radius-sm);
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.12s ease;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease;
 }
 
 .link-capture-btn:hover {
-  background: #dceafa;
+  background: var(--info-bg);
+  border-color: var(--primary);
 }

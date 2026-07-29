@@ -1,10 +1,12 @@
-.external-info-panel {
-  border-color: var(--border-light);
-}
-
 .external-info-body {
   overflow-y: auto;
   padding: 0.8rem 0;
+}
+
+.external-info-body hr {
+  border: none;
+  border-top: 1px solid var(--border-light);
+  margin: 0.7rem 1rem;
 }
 
 .external-description,
@@ -12,11 +14,11 @@
   padding: 0 1rem;
   font-size: 0.92rem;
   line-height: 1.4;
-  color: #2e3c4a;
+  color: var(--text-body);
 }
 
 .external-hint {
-  color: #546677;
+  color: var(--text-muted);
 }
 
 .external-connected-list {
@@ -30,9 +32,9 @@
   font-size: 0.82rem;
   padding: 0.2rem 0.5rem;
   border-radius: var(--radius-pill);
-  background: #e6eff8;
-  border: 1px solid #c3d5e8;
-  color: #1d4f7a;
+  background: var(--info-bg);
+  border: 1px solid var(--border);
+  color: var(--primary);
 }
 
 .external-notes-title {
@@ -40,7 +42,7 @@
   font-size: 0.82rem;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  color: #506273;
+  color: var(--text-muted);
   font-weight: 600;
 }
 
@@ -51,6 +53,6 @@
 .external-link-row {
   font-family: Consolas, 'Courier New', monospace;
   font-size: 0.8rem;
-  color: #35526b;
+  color: var(--text-body);
   margin: 0.15rem 0;
 }

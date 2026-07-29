@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import './PodInfoPanel.css';
 import './LinkInfoPanel.css';
+import usePanelClose from './usePanelClose';
 import { API_BASE_URL } from '../config';
 import { ReactComponent as PcapIcon } from '../assets/images/icons/pcap.svg';
 import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
@@ -42,12 +43,14 @@ const LinkInfoPanel = ({
   onClosePanel,
   onDeleteLink,
   onStartCapture,
+  closeSignal,
   isBusy = false,
 }) => {
   const [localInfo, setLocalInfo] = useState(null);
   const [peerInfo, setPeerInfo] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const { isClosing, requestClose, handleAnimationEnd } = usePanelClose(onClosePanel, closeSignal);
 
   const sourceNode = nodes.find((n) => n.id === link?.source)?.data;
   const targetNode = nodes.find((n) => n.id === link?.target)?.data;
@@ -59,11 +62,11 @@ const LinkInfoPanel = ({
 
   useEffect(() => {
     const onKey = (e) => {
-      if (e.key === 'Escape') onClosePanel();
+      if (e.key === 'Escape') requestClose();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClosePanel]);
+  }, [requestClose]);
 
   useEffect(() => {
     let aborted = false;
@@ -121,6 +124,13 @@ const LinkInfoPanel = ({
 
   const subnetMatch = sameSubnet(localInfo?.ipv4, peerInfo?.ipv4);
 
+  // "pod:iface ↔ pod:iface" shown as a body attribute (too long for the title).
+  const endpointLabel = (nodeData, iface) => {
+    const base = formatPodLabel(nodeData);
+    return iface ? `${base}:${iface}` : base;
+  };
+  const linkPath = `${endpointLabel(sourceNode, localIntf)} ↔ ${endpointLabel(targetNode, peerIntf)}`;
+
   const renderEndpoint = (side, podName, nodeData, ifaceName, info, isExternal) => {
     const iconKey = nodeData?.type || 'host';
     const icon = ICONS[iconKey] || pcIcon;
@@ -163,11 +173,15 @@ const LinkInfoPanel = ({
             )}
             <div className="link-endpoint-detail">
               <span className="link-detail-key">IPv4</span>
-              <span className="link-detail-val">{info?.ipv4 || '—'}</span>
+              <span className="link-detail-val" title={info?.ipv4 || ''}>
+                {info?.ipv4 || '—'}
+              </span>
             </div>
             <div className="link-endpoint-detail">
               <span className="link-detail-key">MAC</span>
-              <span className="link-detail-val link-detail-mono">{info?.mac || '—'}</span>
+              <span className="link-detail-val link-detail-mono" title={info?.mac || ''}>
+                {info?.mac || '—'}
+              </span>
             </div>
           </>
         )}
@@ -187,7 +201,10 @@ const LinkInfoPanel = ({
 
   return (
     <div className="panel-wrapper">
-      <div className="pod-info-panel link-info-panel">
+      <div
+        className={`pod-info-panel link-info-panel${isClosing ? ' is-closing' : ''}`}
+        onAnimationEnd={handleAnimationEnd}
+      >
         {onDeleteLink && (
           <button
             className="delete-btn link-delete-btn"
@@ -198,7 +215,7 @@ const LinkInfoPanel = ({
             <TrashIcon className="app-icon" />
           </button>
         )}
-        <button className="close-btn" onClick={onClosePanel} title="Close panel">
+        <button className="close-btn" onClick={requestClose} title="Close panel">
           <CloseIcon className="app-icon" />
         </button>
 
@@ -208,6 +225,12 @@ const LinkInfoPanel = ({
         </h3>
 
         <div className="pod-body link-info-body">
+          <div className="pod-line">
+            <span className="pod-label">Path:</span>
+            <span className="pod-value" title={linkPath}>
+              {linkPath}
+            </span>
+          </div>
           <div className="pod-line">
             <span className="pod-label">Type:</span>
             <span className="pod-value">{linkType}</span>
@@ -231,21 +254,9 @@ const LinkInfoPanel = ({
 
           {error && <p className="links-error">{error}</p>}
 
-          <div className="link-diagram">
-            <span className="link-diagram-side" title={link.source}>
-              {formatPodLabel(sourceNode)}
-            </span>
-            <span className="link-diagram-iface">{localIntf || '?'}</span>
-            <span className="link-diagram-wire">━━━━━━</span>
-            <span className="link-diagram-iface">{peerIntf || '?'}</span>
-            <span className="link-diagram-side" title={link.target}>
-              {formatPodLabel(targetNode)}
-            </span>
-          </div>
-
           <div className="link-endpoints">
             {renderEndpoint('a', link.source, sourceNode, localIntf, localInfo, sourceIsExternal)}
-            <div className="link-endpoints-divider" />
+            <div className="link-endpoints-connector" />
             {renderEndpoint('b', link.target, targetNode, peerIntf, peerInfo, targetIsExternal)}
           </div>
         </div>

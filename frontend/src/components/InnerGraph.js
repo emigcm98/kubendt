@@ -120,6 +120,7 @@ const InnerGraph = ({
   setSelectedNodeInfo,
   selectedLink,
   setSelectedLink,
+  onDeselect,
   handleNodesChange,
   onNodeDropRelax,
   hoveredInfo,
@@ -131,6 +132,8 @@ const InnerGraph = ({
   interfacesData,
   fetchTopology,
   onUpdateInterface,
+  loadingInterfaces,
+  setLoadingInterfaces,
   onOpenInteractiveShell,
   onRestartPod,
   onDeleteNode,
@@ -169,7 +172,6 @@ const InnerGraph = ({
   const [contextMenu, setContextMenu] = useState(null);
   const [edgeContextMenu, setEdgeContextMenu] = useState(null);
   const [interfaceContextMenu, setInterfaceContextMenu] = useState(null);
-  const [loadingInterfaces, setLoadingInterfaces] = useState(new Set());
 
   // Remember the lock / repulsion toggles across sessions.
   useEffect(() => {
@@ -536,8 +538,14 @@ const InnerGraph = ({
           });
         }}
         onPaneClick={() => {
-          setSelectedNodeInfo(null);
-          if (setSelectedLink) setSelectedLink(null);
+          // Ask the open panel to play its exit animation instead of nulling
+          // the selection outright. The panel unmounts itself when it ends.
+          if (onDeselect) {
+            onDeselect();
+          } else {
+            setSelectedNodeInfo(null);
+            if (setSelectedLink) setSelectedLink(null);
+          }
           setContextMenu(null);
           setEdgeContextMenu(null);
           setInterfaceContextMenu(null);
