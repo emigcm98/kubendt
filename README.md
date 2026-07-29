@@ -8,7 +8,7 @@
    <a href="https://doi.org/10.5281/zenodo.21276320"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.21276320.svg" alt="DOI" /></a>
 </p>
 
-> Last reviewed: 9 Jul 2026
+> Last reviewed: 29 Jul 2026
 
 **KubeNDT** is a platform for deploying and operating virtual network topologies on Kubernetes.
 
