@@ -2,12 +2,12 @@
   position: relative;
   display: flex;
   align-items: center;
-  background: var(--brand);
-  border-bottom: 3px solid var(--brand-edge);
-  padding: 0.7rem 1rem;
+  background: linear-gradient(to bottom, var(--brand), var(--brand-edge));
+  border-bottom: 2px solid var(--brand-edge);
+  padding: 0.4rem 1rem;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  min-height: 60px;
+  box-shadow: 0 2px 8px rgba(28, 116, 192, 0.25);
+  min-height: 48px;
 }
 
 .navbar-left,
@@ -184,21 +184,28 @@ a.navbar-brand:focus-visible {
 
 /* Delete namespace / Delete history: red tonal (destructive). Targeted by class,
    not position, so it never bleeds onto other bars' buttons. */
-.navbar-button-danger,
+.navbar-button-danger {
+  background: color-mix(in srgb, var(--danger-bg), var(--danger) var(--tonal-btn-tint));
+  color: var(--danger-strong);
+}
+
+/* Delete history: lower-stakes cleanup (just the driver op log), so a neutral
+   fill with red text keeps the destructive cue without a second loud red beside
+   Delete namespace. */
 .navbar-button-namespace-history {
-  background: var(--danger-bg);
+  background: var(--border-light);
   color: var(--danger-strong);
 }
 
 /* File Manager: amber tonal. */
 .navbar-button-files {
-  background: var(--warning-bg);
+  background: color-mix(in srgb, var(--warning-bg), var(--warning) var(--tonal-btn-tint));
   color: var(--warning-strong);
 }
 
 /* Go to graph: teal tonal, matching the topology accent. */
 .navbar-button-graph {
-  background: var(--teal-bg);
+  background: color-mix(in srgb, var(--teal-bg), var(--teal) var(--tonal-btn-tint));
   color: var(--teal);
 }
 

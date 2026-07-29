@@ -19,9 +19,9 @@
   align-items: center;
   gap: 16px;
   padding: 10px 22px;
-  background: var(--brand);
-  border-bottom: 3px solid var(--brand-edge);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  background: linear-gradient(to bottom, var(--brand), var(--brand-edge));
+  border-bottom: 2px solid var(--brand-edge);
+  box-shadow: 0 2px 8px rgba(28, 116, 192, 0.25);
   color: #ffffff;
   min-height: 110px;
 }

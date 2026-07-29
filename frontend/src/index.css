@@ -70,6 +70,11 @@
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-pill: 999px;
+
+  /* Tonal button fill strength: how much of each action's accent color is mixed
+     into its soft background, shared by the graph topbar and the navbar buttons.
+     Higher = stronger fills. */
+  --tonal-btn-tint: 15%;
 }
 
 body {

@@ -242,14 +242,14 @@
 
 /* Import: blue tonal (topology-editing, shares the blue family with Modify). */
 .topbar button.topbar-action-import {
-  background: var(--info-bg);
+  background: color-mix(in srgb, var(--info-bg), var(--primary) var(--tonal-btn-tint));
   border-color: color-mix(in srgb, var(--primary) 30%, transparent);
   color: var(--primary);
 }
 
 /* Clear: red tonal (destructive; red still reads as danger). */
 .topbar button.topbar-action-clear {
-  background: var(--danger-bg);
+  background: color-mix(in srgb, var(--danger-bg), var(--danger) var(--tonal-btn-tint));
   border-color: color-mix(in srgb, var(--danger) 32%, transparent);
   color: var(--danger-strong);
 }
@@ -258,26 +258,31 @@
    icon (icons inherit currentColor) so they read distinctly without being
    loud. */
 .topbar button.topbar-action-modify {
-  background: var(--teal-bg);
+  background: color-mix(in srgb, var(--teal-bg), var(--teal) var(--tonal-btn-tint));
   border-color: color-mix(in srgb, var(--teal) 30%, transparent);
   color: var(--teal);
 }
 
 /* Load network conf: amber tonal. */
 .topbar button.topbar-action-config {
-  background: var(--warning-bg);
+  background: color-mix(in srgb, var(--warning-bg), var(--warning) var(--tonal-btn-tint));
   border-color: var(--warning-border);
   color: var(--warning-strong);
 }
 
 /* Save positions: violet tonal. */
 .topbar-right-buttons button:nth-child(1) {
-  background: var(--violet-bg);
+  background: color-mix(in srgb, var(--violet-bg), var(--violet) var(--tonal-btn-tint));
   border-color: color-mix(in srgb, var(--violet) 30%, transparent);
   color: var(--violet);
 }
 
-/* Export topology: neutral slate (utility action) — inherits the base tonal. */
+/* Export topology: blue tonal, matching Import. */
+.topbar-right-buttons button:nth-child(2) {
+  background: color-mix(in srgb, var(--info-bg), var(--primary) var(--tonal-btn-tint));
+  border-color: color-mix(in srgb, var(--primary) 30%, transparent);
+  color: var(--primary);
+}
 
 .topbar button:active:not(:disabled) {
   transform: translateY(0);
