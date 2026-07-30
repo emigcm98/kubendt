@@ -64,6 +64,12 @@
   line-height: 1.2;
 }
 
+.home-header-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .home-header-title {
   margin: 0;
   font-size: 1.85rem;
@@ -71,6 +77,30 @@
   letter-spacing: 0.4px;
   color: #ffffff;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Running build version. Glassy white chip on the brand header for releases,
+   solid amber for local "dev" builds so they read as not-a-release. */
+.home-version-badge {
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  cursor: default;
+  white-space: nowrap;
+  /* Nudge down to the optical center of the title caps (the line box centers
+     it a touch high because of the descender space). */
+  transform: translateY(2px);
+}
+
+.home-version-badge-dev {
+  color: var(--warning-text);
+  background: var(--warning);
+  border-color: var(--warning-strong);
 }
 
 .home-header-subtitle {

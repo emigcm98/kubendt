@@ -33,6 +33,7 @@ const Home = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [clusterStatus, setClusterStatus] = useState(null);
   const [clusterLoading, setClusterLoading] = useState(false);
+  const [appVersion, setAppVersion] = useState(null);
   const [initialClusterLoading, setInitialClusterLoading] = useState(true);
   const [kubeInfoLoading, setKubeInfoLoading] = useState(false);
   const [kubeInfoError, setKubeInfoError] = useState('');
@@ -182,6 +183,19 @@ const Home = () => {
     }
   };
 
+  // Running build version, shown as a badge next to the title. Best-effort:
+  // if it fails the header just renders without the badge. It never changes
+  // while the app runs, so we fetch it once at mount and don't poll.
+  const fetchAppVersion = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/version`);
+      if (!res.ok) return;
+      setAppVersion(await res.json());
+    } catch {
+      // Keep the header intact if the version endpoint is unreachable.
+    }
+  };
+
   const fetchKubeConfigInfo = async () => {
     setKubeInfoLoading(true);
     setKubeInfoError('');
@@ -281,6 +295,7 @@ const Home = () => {
     fetchClusterStatus();
     fetchKubeConfigInfo();
     fetchNamespaces();
+    fetchAppVersion();
 
     // Refresh every 30 seconds
     const interval = setInterval(() => {
@@ -462,6 +477,23 @@ const Home = () => {
     }
   };
 
+  // "dev" for local builds, "vX.Y.Z" for releases. Commit and build date are
+  // "unknown" on dev, so we drop them and just tag it as a local build.
+  const renderVersionBadge = () => {
+    if (!appVersion?.version) return null;
+    const isDev = appVersion.version === 'dev';
+    const meta = [appVersion.commit, appVersion.build_date].filter((v) => v && v !== 'unknown');
+    const tooltip = isDev ? 'local build' : meta.join(' · ');
+    return (
+      <span
+        className={`home-version-badge${isDev ? ' home-version-badge-dev' : ''}`}
+        title={tooltip || undefined}
+      >
+        {isDev ? 'dev' : `v${appVersion.version}`}
+      </span>
+    );
+  };
+
   return (
     <div className="home-wrapper">
       {/* Slim header, mirrors GitHub link on the left, Open API on the right */}
@@ -483,7 +515,10 @@ const Home = () => {
         <div className="home-header-brand">
           <img src={kubendtLogo} alt="KubeNDT" className="home-header-logo" />
           <div className="home-header-text">
-            <h1 className="home-header-title">KubeNDT</h1>
+            <div className="home-header-title-row">
+              <h1 className="home-header-title">KubeNDT</h1>
+              {renderVersionBadge()}
+            </div>
             <span className="home-header-subtitle">
               Network Digital Twin platform in Kubernetes · by{' '}
               <a href="https://github.com/emigcm98" target="_blank" rel="noopener noreferrer">
