@@ -660,30 +660,30 @@ const Home = () => {
                         <div className="node-name" title={node.name}>
                           {node.name}
                         </div>
-                        <div className="node-header-badges">
-                          <div className={`node-status-indicator ${node.status.toLowerCase()}`}>
-                            {node.status}
-                          </div>
-                          {(() => {
-                            const chip = nodeMeshnetChip(node.meshnet);
-                            return chip ? (
-                              <span
-                                className={`node-meshnet node-meshnet-${chip.cls}`}
-                                title={chip.title}
-                              >
-                                <span className="node-meshnet-dot" aria-hidden="true" />
-                                meshnet
-                              </span>
-                            ) : null;
-                          })()}
-                        </div>
                       </div>
-                      <div className="node-roles">
+                      {/* Meta strip: role, status and meshnet on one row, so
+                          the name gets the full width above it. */}
+                      <div className="node-meta">
                         {node.roles.map((role) => (
                           <span key={role} className="role-badge">
                             {role}
                           </span>
                         ))}
+                        <div className={`node-status-indicator ${node.status.toLowerCase()}`}>
+                          {node.status}
+                        </div>
+                        {(() => {
+                          const chip = nodeMeshnetChip(node.meshnet);
+                          return chip ? (
+                            <span
+                              className={`node-meshnet node-meshnet-${chip.cls}`}
+                              title={chip.title}
+                            >
+                              <span className="node-meshnet-dot" aria-hidden="true" />
+                              meshnet
+                            </span>
+                          ) : null;
+                        })()}
                       </div>
                       <div className="node-metrics">
                         <div className="metric-row">

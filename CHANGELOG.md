@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The running build version is shown as a badge next to the title on the Home dashboard, read from the public `GET /version` endpoint. Releases show `vX.Y.Z`, local builds show `dev`, and hovering reveals the commit and build date.
 
+### Fixed
+
+- Long Kubernetes node names no longer widen their card into a horizontal scroll on the Home cluster status. The node name now fits wrapping to at most two lines with the full name on hover.
+
 ## [1.2.0] - 2026-07-30
 
 ### Added
