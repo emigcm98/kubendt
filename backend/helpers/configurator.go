@@ -94,10 +94,36 @@ func ResolveDriverCommands(driver interface{}, action types.ActionEntry) [][]str
 	return commands
 }
 
+// checkProtectedInterface rejects actions targeting eth0 (the pod's cluster
+// interface) except the SNAT toggles, the supported way to give a topology
+// internet access. Runs before the driver planners so VyOS/XRd are covered too.
+func checkProtectedInterface(action types.ActionEntry) error {
+	const protectedInterface = "eth0"
+	protected := action.Iface == protectedInterface || action.Device == protectedInterface || slices.Contains(action.Ifaces, protectedInterface)
+	if !protected {
+		return nil
+	}
+
+	allowedOnEth0 := map[string]bool{
+		"enable_snat":  true,
+		"disable_snat": true,
+	}
+	if allowedOnEth0[action.Type] {
+		return nil
+	}
+
+	return fmt.Errorf("action '%s' is not allowed on protected interface eth0 (only enable_snat/disable_snat)", action.Type)
+}
+
 // ResolveDriverExecutionPlanForPod resolves commands and the executor name to
 // use for one action on one pod. Drivers may override this via
 // EffectiveActionExecutionPlanResolver.
 func ResolveDriverExecutionPlanForPod(namespace, podName string, driver interface{}, action types.ActionEntry) (string, [][]string, error) {
+	if err := checkProtectedInterface(action); err != nil {
+		log.Printf("❌ %v", err)
+		return "", nil, err
+	}
+
 	if planner, ok := driver.(types.EffectiveActionExecutionPlanResolver); ok {
 		executorName, commands, handled, err := planner.ResolveActionExecutionPlan(namespace, podName, action)
 		if err != nil {
@@ -135,17 +161,8 @@ func ResolveDriverCommandsForPod(namespace, podName string, driver interface{}, 
 		return [][]string{args}, nil
 	}
 
-	protectedInterface := "eth0"
-	protected := action.Iface == protectedInterface || action.Device == protectedInterface || slices.Contains(action.Ifaces, protectedInterface)
-
-	allowedOnEth0 := map[string]bool{
-		"enable_snat":  true,
-		"disable_snat": true,
-	}
-
-	if protected && !allowedOnEth0[action.Type] {
-		log.Printf("❌ Not allowed to apply '%s' on eth0. Protected interface", action.Type)
-		return nil, nil
+	if err := checkProtectedInterface(action); err != nil {
+		return nil, err
 	}
 
 	// L2 actions (switch, hosts, routers)

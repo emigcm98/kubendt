@@ -2,53 +2,65 @@ package executor
 
 import (
 	"fmt"
-	"strings"
 )
 
 // KubectlBase is the template struct for executors that dispatch commands via
 // "kubectl exec". Concrete executor types embed this struct and are registered
-// in the executor registry.
+// in the executor registry. Platform-specific executors (VyOS, XRd) live in
+// their own files (vyos.go, xr.go) together with their dispatch functions and
+// registrations; this file only holds the generic machinery.
 //
 // It mirrors the pattern used by drivers_meta.Meta and capability Base structs.
 type KubectlBase struct {
-	name       string
-	prefix     []string
-	dispatchAs KubectlDispatchMode
+	name     string
+	prefix   []string
+	dispatch DispatchFunc
 }
 
-type KubectlDispatchMode string
+// DispatchFunc turns a Command into the argument list appended after the
+// executor's prefix on the kubectl exec command line. The executor name is
+// passed for error messages only.
+type DispatchFunc func(name string, command Command) ([]string, error)
 
-const (
-	// Generic ────────────────────────────────────────────────────────────────
+// DispatchAsArgs passes Command.Args tokens directly as arguments to the
+// prefix binary (or to kubectl exec if no prefix is set).
+var DispatchAsArgs DispatchFunc = func(name string, command Command) ([]string, error) {
+	switch command.Kind {
+	case CommandKindArgs:
+		return command.Args, nil
+	case CommandKindLine:
+		return nil, fmt.Errorf("executor %q expects args commands, but got line command", name)
+	default:
+		return nil, fmt.Errorf("executor %q got unknown command kind %q", name, command.Kind)
+	}
+}
 
-	// DispatchAsArgs passes Command.Args tokens directly as arguments
-	// to the prefix binary (or to kubectl exec if no prefix is set).
-	DispatchAsArgs KubectlDispatchMode = "args"
+// DispatchAsSingleArg passes the entire Command.Line as a single string
+// argument to the prefix binary (needed for CLIs like xr_cli that expect a string).
+var DispatchAsSingleArg DispatchFunc = func(name string, command Command) ([]string, error) {
+	switch command.Kind {
+	case CommandKindLine:
+		return []string{command.Line}, nil
+	case CommandKindArgs:
+		return nil, fmt.Errorf("executor %q expects line commands, but got args command", name)
+	default:
+		return nil, fmt.Errorf("executor %q got unknown command kind %q", name, command.Kind)
+	}
+}
 
-	// DispatchAsSingleArg passes the entire Command.Line as a single string
-	// argument to the prefix binary (needed for CLIs like xr_cli that expect a string).
-	DispatchAsSingleArg KubectlDispatchMode = "single-arg"
+// BatchableExecutors lists executor names that support batching multiple
+// configure-mode action command sets into a single invocation. When the
+// configurator detects a run of consecutive actions all targeting the same
+// batchable executor, it merges their Args into one Command and executes
+// once, avoiding redundant commit round trips. Platform files add their
+// entries from init().
+var BatchableExecutors = map[string]bool{}
 
-	// XRD ─────────────────────────────────────────────────────────
-
-	// DispatchAsXRApply wraps Command.Args as IOS-XR config lines
-	// inside an xrapply_string call via the ZTP helper (bash -lc).
-	// Each element of Args is a line of the configure block
-	// (e.g. ["interface X", "shutdown"]) and they are sent as an atomic transaction.
-	DispatchAsXRApply KubectlDispatchMode = "xr-apply"
-
-	// VyOS ─────────────────────────────────────────────────────────
-
-	// DispatchAsVyOSApply wraps Command.Args as VyOS configure-mode lines
-	// inside a herestring evaluated by bash -c in the pod. Requires
-	// 'source script-template' to load the VyOS environment before configure.
-	DispatchAsVyOSApply KubectlDispatchMode = "vyos-apply"
-)
-
-// NewKubectlBase creates a KubectlBase with the given name and optional
-// command prefix (e.g. []string{"ssh_qemu"} to route via the qemu wrapper).
-func NewKubectlBase(name string, prefix []string, dispatchAs KubectlDispatchMode) KubectlBase {
-	return KubectlBase{name: name, prefix: prefix, dispatchAs: dispatchAs}
+// NewKubectlBase creates a KubectlBase with the given name, optional command
+// prefix (e.g. []string{"ssh_qemu"} to route via the qemu wrapper) and
+// dispatch function.
+func NewKubectlBase(name string, prefix []string, dispatch DispatchFunc) KubectlBase {
+	return KubectlBase{name: name, prefix: prefix, dispatch: dispatch}
 }
 
 func (b KubectlBase) Name() string { return b.name }
@@ -63,7 +75,10 @@ func (b KubectlBase) ExecCommandAndGet(podName, namespace string, command Comman
 		return "", fmt.Errorf("invalid command for executor %q: %w", b.name, err)
 	}
 
-	execArgs, err := b.toExecArgs(command)
+	if b.dispatch == nil {
+		return "", fmt.Errorf("executor %q has no dispatch function", b.name)
+	}
+	execArgs, err := b.dispatch(b.name, command)
 	if err != nil {
 		return "", err
 	}
@@ -71,74 +86,17 @@ func (b KubectlBase) ExecCommandAndGet(podName, namespace string, command Comman
 	return execViaKubectl(podName, namespace, b.prefix, execArgs, b.name)
 }
 
-func (b KubectlBase) toExecArgs(command Command) ([]string, error) {
-	switch b.dispatchAs {
-	case DispatchAsArgs:
-		switch command.Kind {
-		case CommandKindArgs:
-			return command.Args, nil
-		case CommandKindLine:
-			return nil, fmt.Errorf("executor %q expects args commands, but got line command", b.name)
-		default:
-			return nil, fmt.Errorf("executor %q got unknown command kind %q", b.name, command.Kind)
-		}
-	case DispatchAsSingleArg:
-		switch command.Kind {
-		case CommandKindLine:
-			return []string{command.Line}, nil
-		case CommandKindArgs:
-			return nil, fmt.Errorf("executor %q expects line commands, but got args command", b.name)
-		default:
-			return nil, fmt.Errorf("executor %q got unknown command kind %q", b.name, command.Kind)
-		}
-	case DispatchAsXRApply:
-		switch command.Kind {
-		case CommandKindArgs:
-			// Join config lines with \n (IOS-XR block format) and wrap in xrapply_string.
-			inner := strings.Join(command.Args, "\\n ")
-			script := fmt.Sprintf(
-				"source /pkg/bin/ztp_helper.sh >/dev/null 2>&1; xrapply_string $'%s\\n!'",
-				inner,
-			)
-			return []string{script}, nil
-		default:
-			return nil, fmt.Errorf("executor %q expects args commands, but got %q", b.name, command.Kind)
-		}
-	case DispatchAsVyOSApply:
-		switch command.Kind {
-		case CommandKindArgs:
-			// bash in the pod evaluates the herestring $'...' and passes it as stdin to
-			// vbash through ssh_qemu. 'source script-template' is included to
-			// load the VyOS environment (configure/commit functions) before executing.
-			// Confirmed working; do not use printf|ssh_qemu or vbash -c.
-			lines := []string{
-				"source /opt/vyatta/etc/functions/script-template",
-				"configure",
-			}
-			// Escape single quotes in args so they don't break the $'...' bash ANSI-C
-			// quoting. An unescaped ' inside $'...' would prematurely terminate the
-			// here-string, causing 'commit' and 'exit' to never be sent to vbash, all
-			// configure changes would be silently discarded (no commit).
-			escaped := make([]string, len(command.Args))
-			for i, a := range command.Args {
-				escaped[i] = strings.ReplaceAll(a, "'", `\'`)
-			}
-			lines = append(lines, escaped...)
-			lines = append(lines, "commit", "exit")
-			inner := strings.Join(lines, "\\n")
-			script := fmt.Sprintf("ssh_qemu /bin/vbash -s <<< $'%s'", inner)
-			return []string{script}, nil
-		default:
-			return nil, fmt.Errorf("executor %q expects args commands, but got %q", b.name, command.Kind)
-		}
-	default:
-		return nil, fmt.Errorf("executor %q has invalid dispatch mode %q", b.name, b.dispatchAs)
-	}
+// KubectlExecutor runs commands directly via "kubectl exec" (default).
+// Used by drivers that interact with the pod itself (no guest VM inside).
+type KubectlExecutor struct{ KubectlBase }
+
+func init() {
+	MustRegister(KubectlExecutor{KubectlBase: NewKubectlBase(DefaultExecutorName, nil, DispatchAsArgs)})
 }
 
 // ExecutorMeta is embedded in driver structs to declare the default executor.
 // Drivers can still override per-action via ResolveActionExecutionPlan
-// (e.g. VyOS op-mode → vyos_cli, config-mode → vyos_apply).
+// (e.g. VyOS op-mode → vyos_ssh_cli, config-mode → vyos_api_apply).
 type ExecutorMeta struct {
 	executorName string
 }

@@ -2,21 +2,13 @@
 
 ## Pods missing network interfaces
 
-This is usually Meshnet not running. Without its per-node dataplane the Topology
-CRDs are still created and the pods start, but their extra interfaces never get
-wired, so nothing errors out.
+This is usually Meshnet not running. Without its per-node dataplane the Topology CRDs are still created and the pods start, but their extra interfaces never get wired, so nothing errors out.
 
 KubeNDT surfaces this so you don't have to guess:
 
-- The Home page shows a **Meshnet** badge next to the node count (green when the
-  DaemonSet is ready on every node, amber when some nodes are missing it, red
-  when no meshnet DaemonSet is found).
-- Each node card and the node detail panel show whether a meshnet pod is running
-  on it, so an amber "2/3" badge tells you which node to look at.
-- Any topology change (deploy, add, delete or scale) is blocked with a `412`
-  when meshnet is missing, since it would leave pods unwired or stuck. Pass
-  `?force=true` to proceed anyway. Clearing a topology and deleting the namespace
-  are always allowed, so a full teardown never gets blocked.
+- The Home page shows a **Meshnet** badge next to the node count (green when the DaemonSet is ready on every node, amber when some nodes are missing it, red when no meshnet DaemonSet is found).
+- Each node card and the node detail panel show whether a meshnet pod is running on it, so an amber "2/3" badge tells you which node to look at.
+- Any topology change (deploy, add, delete or scale) is blocked with a `412` when meshnet is missing, since it would leave pods unwired or stuck. Pass `?force=true` to proceed anyway. Clearing a topology and deleting the namespace are always allowed, so a full teardown never gets blocked.
 
 To check by hand:
 
@@ -99,4 +91,4 @@ This is the global in-pod exec deadline. It bounds every single `kubectl exec` a
 - Default is **30 seconds**, dimensioned for first-boot VyOS commits with many subsystems touched (interfaces, NAT, OSPF, DNS, firewall).
 - If your cluster is slow, the K8s API server is under pressure, or your guest images take longer to apply config, raise it via the `KUBECTL_EXEC_TIMEOUT_SECONDS` env var on the backend. Values of 45-60s are reasonable on shared lab clusters.
 - The backend also logs `⚠️ Slow exec ...` when a command succeeds but eats more than 70% of the deadline. Watch those: if you see them frequently, raise the timeout before they start tripping.
-- The SSH layer used by `ssh_qemu` detects dead sessions independently within ~11s (ConnectTimeout 5 + ServerAliveInterval 3 × ServerAliveCountMax 2), so raising this deadline does not delay real failure detection. It only gives more room to genuinely-long commands.
+- The SSH layer used by `ssh_qemu` detects dead sessions independently within ~14s (ConnectTimeout 5 + ServerAliveInterval 3 × ServerAliveCountMax 3), so raising this deadline does not delay real failure detection. It only gives more room to genuinely-long commands. Note that `ssh_qemu` multiplexes connections (ControlMaster/ControlPersist), so only the first command after a quiet period pays the SSH handshake.

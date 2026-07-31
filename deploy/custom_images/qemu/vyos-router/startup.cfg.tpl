@@ -1,8 +1,9 @@
 interfaces {
-    ethernet eth0 {
+    __ETH0_BLOCK__
+    ethernet __MGMT_GUEST_IFACE__ {
         address "__MGMT_VM_IP__"
-        description "management"
-        hw-id "52:54:00:12:34:56"
+        description "kubendt internal management (ssh_qemu)"
+        hw-id "__MGMT_NIC_MAC__"
         offload {
             gro
             gso
@@ -15,6 +16,19 @@ interfaces {
     }
 }
 service {
+    https {
+        api {
+            keys {
+                id kubendt {
+                    key "__API_KEY__"
+                }
+            }
+            rest {
+            }
+        }
+        listen-address "__MGMT_VM_IP_NO_CIDR__"
+        port "443"
+    }
     ssh {
         listen-address "__MGMT_VM_IP_NO_CIDR__"
         port "22"
@@ -43,7 +57,7 @@ service {
 protocols {
     static {
         route 0.0.0.0/0 {
-            next-hop __MGMT_GATEWAY__ {
+            next-hop __DEFAULT_GW__ {
             }
         }
     }

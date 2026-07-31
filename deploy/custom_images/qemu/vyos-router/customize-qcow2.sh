@@ -57,15 +57,40 @@ echo "Injecting kubendt assets into ${QCOW2}"
 echo "  detected VyOS version dir: ${VERSION_DIR}"
 echo "  writing under:              ${RW}"
 
-# Patch grub.cfg to drop the 5s boot-menu timeout. The image has a single
-# entry, the menu is non-interactive in our deployment, so any timeout is
-# pure dead time on every pod start. We download the file, sed it, then
-# re-upload alongside the rest of the uploads in the rw call below.
+# Drop the 5s GRUB boot-menu timeout. The image has a single entry and the
+# menu is non-interactive in our deployment, so any timeout is pure dead
+# time on every pod start. Where the timeout lives depends on the release
+# (older ones keep it in grub.cfg, recent rolling moved it to
+# grub.cfg.d/20-vyos-defaults-autoload.cfg), so patch whichever files exist
+# and actually contain a timeout line.
 TMPDIR=$(mktemp -d)
 trap 'rm -rf "${TMPDIR}"' EXIT
-echo "  patching /boot/grub/grub.cfg: timeout → 0"
-guestfish --ro -a "$QCOW2" -m /dev/sda3 download /boot/grub/grub.cfg "${TMPDIR}/grub.cfg"
-sed -i 's/^set timeout=.*/set timeout=0/' "${TMPDIR}/grub.cfg"
+
+GRUB_UPLOADS=""
+n=0
+for cfg in /boot/grub/grub.cfg /boot/grub/grub.cfg.d/20-vyos-defaults-autoload.cfg; do
+    [ "$(guestfish --ro -a "$QCOW2" -m /dev/sda3 is-file "$cfg")" = "true" ] || continue
+    n=$((n + 1))
+    copy="${TMPDIR}/grub-${n}.cfg"
+    guestfish --ro -a "$QCOW2" -m /dev/sda3 download "$cfg" "$copy"
+    grep -q '^set timeout=' "$copy" || continue
+    echo "  patching ${cfg}: timeout → 0"
+    sed -i 's/^set timeout=.*/set timeout="0"/' "$copy"
+    GRUB_UPLOADS="${GRUB_UPLOADS}upload ${copy} ${cfg}
+"
+done
+
+# Strip hw-id lines from the stock config.boot. At udev coldplug the per-pod
+# seed hasn't been applied yet, and vyos_net_name gives config hw-id mappings
+# absolute priority over the predefined (netmap) name AND treats their names
+# as taken. The stock install-time entry (eth0 ↔ install NIC MAC) would
+# therefore steal "eth0" from the cluster-passthrough NIC and shift every
+# rename. Without hw-id lines the netmap predef always wins. The seed
+# config.boot replaces this file on every boot anyway.
+STOCKCFG="${RW}/opt/vyatta/etc/config/config.boot"
+echo "  stripping hw-id lines from stock config.boot"
+guestfish --ro -a "$QCOW2" -m /dev/sda3 download "${STOCKCFG}" "${TMPDIR}/config.boot"
+sed -i '/^[[:space:]]*hw-id[[:space:]]/d' "${TMPDIR}/config.boot"
 
 # Note: chmod is set on each upload. We don't chown explicitly, the parent
 # /opt/vyatta/etc/config/ already has setgid + group=vyattacfg, so files
@@ -83,7 +108,9 @@ mkdir-p ${RW}/usr/local/bin
 upload kubendt-net-name ${RW}/usr/local/bin/kubendt-net-name
 chmod 0755 ${RW}/usr/local/bin/kubendt-net-name
 
-upload ${TMPDIR}/grub.cfg /boot/grub/grub.cfg
+${GRUB_UPLOADS}
+upload ${TMPDIR}/config.boot ${STOCKCFG}
+chmod 0660 ${STOCKCFG}
 EOF
 
 echo "Done."

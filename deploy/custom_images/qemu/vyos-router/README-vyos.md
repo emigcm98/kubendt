@@ -26,17 +26,22 @@ This guide explains how to create custom QEMU-based network nodes from scratch. 
 │                                                                 │
 │  Pod Network Namespace (Linux kernel network stack)             │
 │  ┌───────────────────────────────────────────────────────────┐  │
+│  │ Primary CNI interface (flannel):                          │  │
+│  │   eth0 (cluster IP, passed through to the guest)          │  │
+│  │                                                           │  │
 │  │ Meshnet-created interfaces:                               │  │
 │  │   eth1 (from Meshnet topology)                            │  │
 │  │   eth2 (from Meshnet topology)                            │  │
 │  │   eth3 (from Meshnet topology)                            │  │
 │  │                                                           │  │
 │  │ TAP devices (created by entrypoint.sh):                       │  │
+│  │   tap0 (connects to QEMU)                                 │  │
 │  │   tap1 (connects to QEMU)                                 │  │
 │  │   tap2 (connects to QEMU)                                 │  │
 │  │   tap3 (connects to QEMU)                                 │  │
 │  │                                                           │  │
 │  │ TC redirect rules (traffic control):                      │  │
+│  │   eth0 redirect to tap0 (L2 passthrough, cluster)         │  │
 │  │   eth1 redirect to tap1 (L2 passthrough)                  │  │
 │  │   eth2 redirect to tap2 (L2 passthrough)                  │  │
 │  │   eth3 redirect to tap3 (L2 passthrough)                  │  │
@@ -49,10 +54,12 @@ This guide explains how to create custom QEMU-based network nodes from scratch. 
 │  │  │  VyOS Guest OS                                     │  │   │
 │  │  │                                                    │  │   │
 │  │  │  Guest Network Stack:                              │  │   │
-│  │  │    eth0 (management, QEMU slirp 192.168.255.0/24)  │  │   │
+│  │  │    eth0 ← TAP0 ← eth0 (pod, cluster IP + def gw)   │  │   │
 │  │  │    eth1 ← TAP1 ← eth1 (pod)                        │  │   │
 │  │  │    eth2 ← TAP2 ← eth2 (pod)                        │  │   │
 │  │  │    eth3 ← TAP3 ← eth3 (pod)                        │  │   │
+│  │  │    eth999 (internal mgmt, QEMU slirp               │  │   │
+│  │  │            192.168.255.0/24, ssh_qemu only)        │  │   │
 │  │  │                                                    │  │   │
 │  │  │  /config/config.boot (applied on startup)          │  │   │
 │  │  │    - IP addresses                                  │  │   │
@@ -73,7 +80,8 @@ This guide explains how to create custom QEMU-based network nodes from scratch. 
 4. **MAC identity mapping**: `entrypoint.sh` reads each pod-side veth MAC and passes it verbatim to QEMU via `-device virtio-net-pci,mac=...`, so guest `ethN` and pod `ethN` carry the **same MAC**. This keeps VyOS' `hw-id` pinning consistent with what udev sees.
 5. **Preconfig Script**: VyOS hook (`vyos-preconfig-bootup.script`) that runs on boot and copies the per-pod `config.boot` from the seed CD-ROM into `/opt/vyatta/etc/config/`. Injected into the qcow2 at image build time, see [Phase 3](#phase-3-create-dockerfile).
 6. **config.boot**: VyOS configuration file generated per-pod by `entrypoint.sh` and delivered to the guest as a seed CD-ROM (carries IPs, hostname, SSH keys, i.e. anything that depends on the specific pod).
-7. **SMBIOS Type 11 netmap + custom udev rule**: a MAC→ifname table passed to the guest via QEMU `-smbios type=11,value=...` so a build-time udev rule (`64-kubendt-net.rules`) can rename data NICs to the desired name *before* VyOS' own naming rule runs. Required for non-consecutive names (`eth10`, holes after a delete, etc.); see [Interface Naming Inside The Guest](#interface-naming-inside-the-guest).
+7. **SMBIOS Type 11 netmap + custom udev rule**: a MAC→ifname table passed to the guest via QEMU `-smbios type=11,value=...` so a build-time udev rule (`64-kubendt-net.rules`) can rename data NICs to the desired name *before* VyOS' own naming rule runs. Required for non-consecutive names (`eth10`, holes after a delete, etc.). See [Interface Naming Inside The Guest](#interface-naming-inside-the-guest).
+8. **Cluster passthrough (eth0)**: the pod's primary CNI interface is passed through like any data NIC (tap0 + TC redirect, same MAC). Its cluster IP and default route move into the VyOS config, so the guest is reachable at the pod IP and can `enable_snat eth0` like the native-container routers. The slirp NIC stays as a loopback-only backend channel, renamed to `eth999`. See [Cluster Passthrough (eth0)](#cluster-passthrough-eth0).
 
 ---
 
@@ -83,6 +91,21 @@ This section walks through building a VyOS router from complete scratch.
 
 ### Phase 1: Create Base VyOS QCOW2 Image
 
+> [!TIP]
+> This whole phase is automated by [`build-vyos-qcow2.sh`](build-vyos-qcow2.sh). VyOS publishes rolling releases as ISO only (there is no qcow2 asset to download), so the interactive installer has to run once, and the script does it for you. It resolves the release tag via the GitHub API, downloads the ISO (cached in `./iso-cache/`, and an ISO already sitting in the current directory or next to the script is reused instead of re-downloaded), then boots it inside a throwaway container and answers every `install image` prompt over the serial console with expect. The result is the same virgin `vyos.qcow2` this walkthrough produces by hand.
+>
+> ```bash
+> ./build-vyos-qcow2.sh                            # latest rolling → ./vyos.qcow2
+> ./build-vyos-qcow2.sh --list                     # what's available, newest first
+> ./build-vyos-qcow2.sh 2026.07.29-0032-rolling    # pin a specific release
+> ./build-vyos-qcow2.sh -o /tmp/vyos.qcow2 -s 20   # custom output path / disk size (GB)
+> ./build-vyos-qcow2.sh --engine docker            # force a container engine
+> ```
+>
+> The build host only needs `curl`, a container engine (**podman or docker**) and ~2 GB of free disk (600 MB ISO + ~700 MB qcow2 + the builder image). QEMU, expect and qemu-utils are installed inside the container, never on the host. With no flags the script probes both engines and picks the first that can actually use `/dev/kvm` (~5 min install). If neither can, it falls back to TCG emulation (30+ min) with a warning. The usual reasons for missing KVM are a user that is not in the `kvm` group, or rootless podman running on the `runc` OCI runtime, since `keep-groups` needs `crun` (rootful docker is unaffected, which is why the probe usually lands there).
+>
+> The manual steps below remain as the reference for what the script does, and as the place to look if a future VyOS release rewords an installer prompt and the expect dialog needs updating.
+
 #### Step 1.1: Download VyOS ISO
 
 ```bash
@@ -91,10 +114,10 @@ mkdir -p ~/vyos-build
 cd ~/vyos-build
 
 # Download any VyOS rolling release
-wget https://github.com/vyos/vyos-nightly-build/releases/download/2026.03.09-0026-rolling/vyos-2026.03.09-0026-rolling-generic-amd64.iso
+wget https://github.com/vyos/vyos-nightly-build/releases/download/2026.07.29-0032-rolling/vyos-2026.07.29-0032-rolling-generic-amd64.iso
 
 # Verify checksum (optional)
-sha256sum vyos-2026.03.09-0026-rolling-generic-amd64.iso
+sha256sum vyos-2026.07.29-0032-rolling-generic-amd64.iso
 ```
 
 #### Step 1.2: Create QCOW2 Disk
@@ -120,7 +143,7 @@ qemu-system-x86_64 \
   -m 2048 \
   -smp 2 \
   -drive file=vyos.qcow2,if=virtio \
-  -drive file=vyos-2026.03.09-0026-rolling-generic-amd64.iso,media=cdrom \
+  -drive file=vyos-2026.07.29-0032-rolling-generic-amd64.iso,media=cdrom \
   -nographic \
   -serial mon:stdio
 ```
@@ -134,7 +157,7 @@ vyos@vyos:~$ install image
 Welcome to VyOS installation!
 This command will install VyOS to your permanent storage.
 Would you like to continue? [y/N] y
-What would you like to name this image? (Default: 2026.03.08-0026-rolling) <Enter>
+What would you like to name this image? (Default: 2026.07.29-0032-rolling) <Enter>
 Please enter a password for the "vyos" user: vyos
 WARNING: Default password used. Consider changing it on next login.
 Please confirm password for the "vyos" user: vyos
@@ -158,7 +181,7 @@ Which file would you like as boot config? (Default: 1) <Enter>
 Once installation completes, shut the VM down (`poweroff` from inside, or `Ctrl-A X` on the QEMU monitor). The resulting `vyos.qcow2` is your **virgin** image, no further manual edits are needed.
 
 > [!IMPORTANT]
-> Everything that used to be added by hand to this qcow2, the preconfig hook, the udev rule for non-sequential interface names, the helper script, is now injected automatically by `customize-qcow2.sh` (a `guestfish` wrapper) during the Docker build (see [Phase 3](#phase-3-create-dockerfile)). Drop `vyos.qcow2` straight into the build context; the customizer stage will produce the final image.
+> Everything that used to be added by hand to this qcow2, the preconfig hook, the udev rule for non-sequential interface names, the helper script, is now injected automatically by `customize-qcow2.sh` (a `guestfish` wrapper) during the Docker build (see [Phase 3](#phase-3-create-dockerfile)). Drop `vyos.qcow2` straight into the build context and the customizer stage will produce the final image.
 
 #### Step 1.4: (Removed) Preconfig Script Injection
 
@@ -169,12 +192,13 @@ This step was previously a manual `vi /config/scripts/vyos-preconfig-bootup.scri
 #### Phase 2: Create Launch Script
 
 The `entrypoint.sh` script is the heart of the operation. It:
-1. Detects pod data interfaces (eth1, eth2, …) and reads each veth's MAC.
-2. Creates a TAP device per interface and wires it to the pod-side veth via `tc` ingress redirects (L2 passthrough).
-3. Generates the per-pod `config.boot` from `startup.cfg.tpl` (hostname, mgmt IP/SSH key, dataplane `ethN { hw-id <MAC> address <IP> … }` blocks).
-4. Wraps the generated `config.boot` in a `cidata`-labelled ISO image (seed CD-ROM) for `vyos-preconfig-bootup.script` to mount and apply at first boot.
-5. Emits the MAC→ifname table to the guest via QEMU SMBIOS Type 11 (one `-smbios type=11,value=kubendt-netmap:<MAC>=<ifname>` arg per data NIC), so the build-time udev rule can rename NICs to non-sequential names like `eth10` before VyOS' own naming rule runs.
-6. Launches QEMU with the customised qcow2, the seed CD-ROM, and one `virtio-net-pci` device per data interface using the pod-side MAC verbatim.
+1. Generates a fresh per-pod management SSH keypair and detects pod data interfaces (eth1, eth2, …), reading each veth's MAC.
+2. Captures `eth0`'s cluster IP, MAC and default gateway for the cluster passthrough, then hands them over to the guest (see [Cluster Passthrough (eth0)](#cluster-passthrough-eth0)).
+3. Creates a TAP device per interface (tap0 for `eth0`, tapN for data NICs) and wires it to the pod-side veth via `tc` ingress redirects (L2 passthrough).
+4. Generates the per-pod `config.boot` from `startup.cfg.tpl` (hostname, cluster `eth0` block + default route, mgmt IP/SSH key, dataplane `ethN { hw-id <MAC> address <IP> … }` blocks).
+5. Wraps the generated `config.boot` in a `cidata`-labelled ISO image (seed CD-ROM) for `vyos-preconfig-bootup.script` to mount and apply at first boot.
+6. Emits the MAC→ifname table to the guest via QEMU SMBIOS Type 11 (one `-smbios type=11,value=kubendt-netmap:<MAC>=<ifname>` arg per NIC, including `eth0` and the slirp NIC's rename to `eth999`), so the build-time udev rule can rename NICs to non-sequential names like `eth10` before VyOS' own naming rule runs.
+7. Launches QEMU with the customised qcow2, the seed CD-ROM, and one `virtio-net-pci` device per passthrough interface using the pod-side MAC verbatim.
 
 The full file (`entrypoint.sh`) sits next to this README, it's the canonical reference for environment variables and the exact flow. The header block:
 
@@ -209,9 +233,11 @@ The build is split into **two stages** so libguestfs only lives in the build env
   - `vyos-preconfig-bootup.script` → `/opt/vyatta/etc/config/scripts/` (the old Phase 1.4 step)
   - `64-kubendt-net.rules` → `/etc/udev/rules.d/` (interface-naming fix, see [Interface Naming Inside The Guest](#interface-naming-inside-the-guest))
   - `kubendt-net-name` → `/usr/local/bin/` (helper called by the udev rule)
+
+  It also applies two small patches to the stock image. The GRUB boot-menu timeout goes to 0 (5 seconds of dead time per pod start, and the file that holds it moved to `grub.cfg.d/20-vyos-defaults-autoload.cfg` in recent releases, so both locations are handled). And the `hw-id` lines are stripped from the stock `config.boot`, because at udev coldplug they take priority over the SMBIOS netmap and would steal `eth0` from the cluster passthrough (see the [troubleshooting entry](#interface-ends-up-as-eth4-or-any-unexpected-name-inside-vyos)).
 - **Stage 2** is the actual runtime image: only QEMU + a handful of tooling, with the customised qcow2 `COPY --from=customizer`. No libguestfs.
 
-> **Why guestfish and not `virt-customize`:** the higher-level `virt-customize` always invokes `inspect-os` first, and libguestfs' inspector does not recognise VyOS' SquashFS+overlayfs layout (the real rootfs lives inside `/boot/<version>/<version>.squashfs`; nothing identifies the OS at the top of any partition). It aborts with `no operating systems were found in the guest image` before it can run any `--upload`. `guestfish` is the lower-level tool, no inspection, you tell it which partition to mount and where to write. `customize-qcow2.sh` is a thin wrapper that auto-detects the per-release version directory and runs the three uploads.
+> **Why guestfish and not `virt-customize`:** the higher-level `virt-customize` always invokes `inspect-os` first, and libguestfs' inspector does not recognise VyOS' SquashFS+overlayfs layout (the real rootfs lives inside `/boot/<version>/<version>.squashfs`, and nothing identifies the OS at the top of any partition). It aborts with `no operating systems were found in the guest image` before it can run any `--upload`. `guestfish` is the lower-level tool, no inspection, you tell it which partition to mount and where to write. `customize-qcow2.sh` is a thin wrapper that auto-detects the per-release version directory and runs the three uploads.
 
 ```dockerfile
 # syntax=docker/dockerfile:1.6
@@ -409,7 +435,25 @@ This identity mapping is important for two reasons:
 1. **TC redirect is L2-transparent.** Frames generated by the guest exit `tapN`, are mirrored back to the pod `ethN` by the ingress filter, and reach peer pods unchanged. Since both sides carry the same MAC, peers see the address they expect.
 2. **VyOS' `hw-id` pinning works.** `entrypoint.sh` writes `ethernet ethN { hw-id <MAC> ... }` in the per-pod `config.boot`, and the build-time udev rule (`64-kubendt-net.rules`) keys its rename on the same MAC. Both refer to the **pod-side MAC**, which is exactly what the guest virtio-net device ends up with, so the chain stays consistent.
 
-The only NIC whose MAC is invented is the management one (`eth0`, MAC `52:54:00:12:34:56`), because it lives on QEMU's user-mode slirp network and never crosses to the pod side.
+The only NIC whose MAC is invented is the internal management one (`eth999`, MAC `52:54:00:12:34:56`), because it lives on QEMU's user-mode slirp network and never crosses to the pod side. Every other NIC, including the `eth0` cluster passthrough, carries the pod-side MAC verbatim.
+
+### Cluster Passthrough (eth0)
+
+The pod's primary CNI interface (`eth0`, flannel) is passed through to the guest with the same tap+TC mechanism as the data NICs, so the guest, not the container, owns the pod's cluster identity.
+
+1. `entrypoint.sh` captures `eth0`'s MAC, IPv4 and default gateway **before** touching anything (deleting the only IPv4 would purge the default route).
+2. The generated `config.boot` gets an `ethernet eth0 { address <podIP> hw-id <podMAC> ... }` block plus a static default route via the pod's own gateway.
+3. The address and route are removed from the pod side and `eth0` is wired to `tap0`. The container keeps only loopback, which is all that `kubectl exec` and the `ssh_qemu` hostfwd need.
+
+What this buys
+
+- The router is **reachable at the pod's cluster IP** from other pods. MACs are identical on both sides, so ARP and conntrack behave as if the guest were the pod, and a Kubernetes `Service` in front works too.
+- `enable_snat eth0` works like on the native-container routers, so a VyOS node can be the twin's internet gateway. The backend guard allows exactly `enable_snat`/`disable_snat` on `eth0` and rejects everything else.
+- Guest DNS/NTP use a real kernel path out of `eth0` instead of slirp's userspace NAT.
+
+PCI slot layout matters here. The guest kernel names NICs in slot order, so the passthrough NIC sits at `0x05` (kernel `eth0`, rename no-op), data NICs keep `0x06+`, and the slirp NIC moves to `0x1e` so its rename to `eth999` never collides. Without the passthrough (no `eth0` or no IPv4 in the pod), slirp takes `0x05` as before and the guest has no `eth0`.
+
+On the security side, the guest's sshd still binds `listen-address 192.168.255.15` (slirp IP), so the management key is not exposed on the cluster network. SSH at the cluster IP is a deliberate user action (`set service ssh listen-address <podIP>`), not a side effect.
 
 ### Interface Naming Inside The Guest
 
@@ -498,15 +542,15 @@ All runtime behaviour of `entrypoint.sh` can be tuned without rebuilding the ima
 |---|---|---|
 | `IMAGE` | `/vyos.qcow2` | Path to the VyOS QCOW2 disk image inside the container. |
 | `RAM_MB` | `1024` | Memory allocated to the QEMU VM (MiB). |
+| `CPU_CORES` | `1` | vCPUs given to the QEMU VM. Bump to e.g. `2`–`4` to speed up boot and configd commits; keep it at or below the pod's CPU limit. |
 | `QEMU_BIN` | `qemu-system-x86_64` | QEMU binary to use. |
 | `NIC_MODEL` | `virtio-net-pci` | QEMU NIC model for all dataplane interfaces. |
 | `BOOTCFG_TEMPLATE` | `/startup.cfg.tpl` | Path to the `config.boot` Jinja-like template inside the container. |
 | `USERNAME` | `vyos` | VyOS login username created in the boot config. |
 | `PASSWORD` | `vyos` | VyOS login password (plain-text; hashed by the entrypoint via `mkpasswd`). |
 | `NAMESERVERS` | `1.1.1.1,8.8.8.8` | Comma-separated list of DNS nameservers written into the boot config. |
-| `MOVE_POD_IPS_TO_GUEST` | `true` | When `true`, any IPv4 address already assigned to a dataplane interface in the pod is removed from the pod and written into the VyOS boot config instead, so the guest owns the address. Set to `false` to leave pod IPs untouched. |
-| `IFACE_SETTLE_SLEEP` | `5` | Seconds to wait after startup before enumerating dataplane interfaces. Increase this on slow nodes where Multus/CNI interfaces are not yet visible when the container starts. |
 | `SSH_FORWARD_PORT` | `2222` | Host port (on `127.0.0.1`) forwarded to the VyOS guest SSH port 22 via QEMU user-mode networking. Must be unique per pod on the same node. |
+| `HTTPS_FORWARD_PORT` | `8443` | Host port (on `127.0.0.1`) forwarded to the VyOS guest HTTP API port 443. Used by the `vyos_api` wrapper. |
 | `MGMT_NET` | `192.168.255.0/24` | QEMU user-mode management network prefix. |
 | `MGMT_GATEWAY` | `192.168.255.2` | Gateway IP within the management network (assigned by QEMU slirp). |
 | `MGMT_VM_IP` | `192.168.255.15/24` | IP assigned to the VyOS guest on the management network. |
@@ -515,9 +559,8 @@ All runtime behaviour of `entrypoint.sh` can be tuned without rebuilding the ima
 ### Commonly tuned variables
 
 - **`RAM_MB`**, increase to `2048` or more for heavyweight workloads or BGP full-table scenarios.
-- **`IFACE_SETTLE_SLEEP`**, increase (e.g. `10`) if dataplane interfaces are occasionally missing at boot on slow or heavily loaded nodes.
+- **`CPU_CORES`**, increase to `2`–`4` for faster boot and configd commits.
 - **`PASSWORD`**, change to a non-default value in production labs to prevent unauthorized serial/SSH access.
-- **`MOVE_POD_IPS_TO_GUEST`**, set to `false` if you are assigning IPs purely via the VyOS boot config template and do not want KubeNDT to touch the pod interface addresses.
 
 ---
 
@@ -525,7 +568,7 @@ All runtime behaviour of `entrypoint.sh` can be tuned without rebuilding the ima
 
 ### Runtime declaration
 
-`VyOSRouterDriver` implements `drivers_meta.RuntimeProvider` and returns `RuntimeQEMU`. That single declaration is what tells the rest of the backend that VyOS pods need the QEMU pod spec (`/dev/kvm` device, privileged mode, the `kubendt-internal-iface-counts` ConfigMap mount, serial shell as default). Users never write `qemu: true` in topology JSON; the runtime is a property of the driver, not of the topology.
+`VyOSRouterDriver` implements `drivers_meta.RuntimeProvider` and returns `RuntimeQEMU`. That single declaration is what tells the rest of the backend that VyOS pods need the QEMU pod spec (`/dev/kvm` device, privileged mode, the `kubendt-internal-iface-counts` ConfigMap mount, serial shell as default). Users never write `qemu: true` in topology JSON. The runtime is a property of the driver, not of the topology.
 
 The same value also propagates to the pod's `kubendt/runtime` and `kubendt/qemu` labels at StatefulSet creation time, and is surfaced via the `runtime` field of `GET /pods/{namespace}` for the frontend.
 
@@ -536,9 +579,9 @@ The same value also propagates to the pod's `kubendt/runtime` and `kubendt/qemu`
 | Property | Value |
 |----------|-------|
 | `Pattern` | `^eth\d+$` |
-| `Reserved` | `eth0` (management) |
+| `Reserved` | `eth0` (cluster passthrough), `eth999` (internal management) |
 
-These constraints are enforced **at the API boundary** by both `DeployNetwork` and `ModifyNetwork`. A topology with `localIntf: "miau"` on a VyOS endpoint, or with `eth0` (which would clash with the management NIC), is rejected with `400 Bad Request` before any pods or topology CRDs are touched. Example error:
+These constraints are enforced **at the API boundary** by both `DeployNetwork` and `ModifyNetwork`. A topology with `localIntf: "miau"` on a VyOS endpoint, or with `eth0` (which would clash with the cluster passthrough NIC), is rejected with `400 Bad Request` before any pods or topology CRDs are touched. Example error:
 
 ```
 link[3].localIntf on node "router-0": name "miau" does not match pattern ^eth\d+$ (e.g. eth1, eth10, eth42)
@@ -549,18 +592,25 @@ This sits on top of the cross-driver Linux kernel rules (IFNAMSIZ ≤ 15, no `/`
 
 ### Executors
 
-The KubeNDT backend uses two executor types for VyOS pods:
+The KubeNDT backend talks to VyOS pods through the guest's **HTTP API** for the hot path and keeps SSH as the rescue path:
 
 | Executor | Name | Use |
 |----------|------|-----|
-| `vyos_cli` | Op-mode commands | `show interfaces`, `show nat source rules`, etc., read-only queries |
-| `vyos_apply` | Configure-mode blocks | `set ...`, `delete ...` commands, wrapped in `configure` / `commit` / `exit` via `vbash` herestring |
+| `vyos_api` | Raw API endpoint | `POST /retrieve` (full config as JSON, feeds interface/NAT/internet reads), `POST /show` |
+| `vyos_api_apply` | Configure batches | driver CLI lines converted to `/configure` JSON ops, one atomic commit per batch against configd's persistent session |
+| `vyos_ssh_cli` | Op-mode via SSH | ad-hoc `show ...` queries and custom actions |
+| `vyos_ssh_apply` | Configure via SSH | legacy/rescue path (`vbash` herestring), no longer used by the action pipeline |
 
-Both route through `ssh_qemu`, a wrapper script inside the pod that SSHes into the QEMU guest.
+The API executors route through `vyos_api`, a curl wrapper inside the pod that POSTs to the guest over a second loopback hostfwd (`127.0.0.1:8443 → guest 443`). The API is enabled in the seed `config.boot` with a per-pod key generated by `entrypoint.sh` (like the SSH keypair, nothing secret is baked into the image), and it listens only on the internal management IP, never on the cluster network. One `/retrieve` call replaces the old `show interfaces` + `show nat source rules` op-mode pair (~1.8 s each), which is what made `GET /namespaces/ips` slow on VyOS-heavy topologies.
+
+The SSH executors route through `ssh_qemu`, the wrapper over the loopback SSH hostfwd. Two details are worth knowing.
+
+- **Per-pod keypair**. The management SSH key is generated by `entrypoint.sh` on every pod start (`ssh-keygen -t ed25519`). The public half rides the seed `config.boot`.
+- **Connection multiplexing**. The wrapper sets `ControlMaster=auto` with `ControlPersist=300`, so the first call establishes the session and subsequent ones reuse it, skipping the SSH handshake. Stale sockets fall back to a direct connection.
 
 ### Action batching
 
-When the `network_conf.json` for a pod triggers multiple configure-mode actions in sequence (e.g. `set_default_route` + `enable_snat`), the backend merges them into a **single `vyos_apply` invocation**, one `configure → commit → exit` round trip for the whole batch. This avoids redundant commit overhead.
+When the `network_conf.json` for a pod triggers multiple configure-mode actions in sequence (e.g. `set_default_route` + `enable_snat`), the backend merges them into a **single `vyos_api_apply` invocation**, one atomic `POST /configure` request (and therefore one commit) for the whole batch. This avoids redundant commit overhead.
 
 ### Available `network_conf.json` actions
 
@@ -597,9 +647,9 @@ Example `network_conf.json` snippet for a router with internet access on `eth3`:
 
 The VyOS driver implements the `NATCapable` interface. This means:
 
-- `enable_snat` / `disable_snat` configure `nat source` rules (MASQUERADE) via `vyos_apply`.
-- `enable_dnat` / `disable_dnat` configure `nat destination` rules (port-forward) via `vyos_apply`.
-- The backend's namespace IP poller calls `show nat source rules` via `vyos_cli` to detect whether a pod has internet access, and populates the `internet` field shown in the UI.
+- `enable_snat` / `disable_snat` configure `nat source` rules (MASQUERADE) via `vyos_api_apply`.
+- `enable_dnat` / `disable_dnat` configure `nat destination` rules (port-forward) via `vyos_api_apply`.
+- The backend's namespace IP poller reads the `nat source` rules from the cached `/retrieve` config JSON to detect whether a pod has internet access, and populates the `internet` field shown in the UI.
 
 Rule numbers are derived deterministically from the interface name to avoid collisions and stay idempotent across re-runs.
 
@@ -676,6 +726,16 @@ ssh_qemu "ls -l /etc/udev/rules.d/64-kubendt-net.rules \
 ssh_qemu "sudo journalctl -b | grep 'predefined interface name'"
 # Expected: one line per data NIC, e.g.
 #   vyos_net_name[...]: predefined interface name for 'e6' is 'eth10'
+
+# The full coldplug rename decisions (per NIC: hw-id lookup, predef, final
+# name) are logged by vyos_net_name to:
+ssh_qemu "sudo cat /run/udev/log/vyatta-net-name.coldplug"
+# If a line says "use hw-id ... in config mapped to ..." the STOCK config.boot
+# inside the qcow2 still contains hw-id entries; they take priority over the
+# netmap predef and shift every rename. customize-qcow2.sh strips them at
+# build time. Rebuild the image if they reappear.
+# If SSH is down (commit failed), reach the guest over the serial console:
+#   kubectl attach -it <pod>    # login with vyos / $PASSWORD
 ```
 
 If the rules file or helper are missing inside the qcow2, the build's customizer stage failed silently, re-run with `--no-cache` and verify `customize-qcow2.sh` ran without errors (look for its `"Injecting kubendt assets into ... detected VyOS version dir: ..."` lines in the build log).
@@ -713,10 +773,10 @@ Building a QEMU-based network node involves:
 
 1. **Creating the virgin image**: OS installation in QCOW2 (Phase 1), no manual edits inside the VM
 2. **Build-time customization**: Stage 1 of the multi-stage Dockerfile runs `customize-qcow2.sh`, a `guestfish` wrapper that detects the VyOS version dir and injects the preconfig hook, the `64-kubendt-net.rules` udev rule, and the `kubendt-net-name` helper into `/boot/<version>/rw/` (the overlayfs upper layer) inside the qcow2
-3. **Per-pod config**: `entrypoint.sh` generates `config.boot` from the actual pod interfaces and ships it via a seed CD-ROM; also emits a MAC→ifname netmap to the guest via QEMU `-smbios type=11` (OEM Strings)
+3. **Per-pod config**: `entrypoint.sh` generates `config.boot` from the actual pod interfaces (including the `eth0` cluster block and the pod's default route) and ships it via a seed CD-ROM, and also emits a MAC→ifname netmap to the guest via QEMU `-smbios type=11` (OEM Strings)
 4. **Early-boot interface rename**: the build-time udev rule consumes the SMBIOS netmap (`/sys/firmware/dmi/entries/11-0/raw`) so non-sequential names (`eth10`, etc.) are renamed correctly *before* VyOS' own rule runs, see [Interface Naming Inside The Guest](#interface-naming-inside-the-guest)
-5. **TAP + TC**: pod eth ↔ TAP ↔ QEMU userspace ↔ guest eth
-6. **API-level validation**: the VyOS driver declares an `InterfaceNameConstraints` of `^eth\d+$` with `eth0` reserved; the backend rejects invalid names at deploy/modify time
+5. **TAP + TC**: pod eth ↔ TAP ↔ QEMU userspace ↔ guest eth, for the data NICs *and* the `eth0` cluster passthrough, so the guest owns the pod's cluster IP and can masquerade twin traffic out of it
+6. **API-level validation**: the VyOS driver declares an `InterfaceNameConstraints` of `^eth\d+$` with `eth0` and `eth999` reserved. The backend rejects invalid names at deploy/modify time
 7. **Containerization**: Stage 2 of the Dockerfile is a slim runtime image with QEMU, the customized qcow2, and the launcher script
 8. **Deployment**: the `VyOSRouterDriver` declares QEMU as its runtime via `drivers_meta.RuntimeProvider`, so KubeNDT applies the QEMU pod spec (KVM device, privileged mode, iface-counts ConfigMap mount, serial shell) automatically. No `qemu` flag in the topology JSON.
 

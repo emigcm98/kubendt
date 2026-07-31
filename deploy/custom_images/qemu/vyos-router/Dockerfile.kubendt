@@ -35,9 +35,12 @@ COPY kubendt-net-name                /work/kubendt-net-name
 COPY vyos-preconfig-bootup.script    /work/vyos-preconfig-bootup.script
 COPY customize-qcow2.sh              /work/customize-qcow2.sh
 
+# rm: libguestfs' supermin appliance (~1 GB under /var/tmp) must not be
+# committed into the layer; has to happen in the same RUN.
 RUN chmod +x /work/customize-qcow2.sh \
     && /work/customize-qcow2.sh /work/vyos.qcow2 \
-    && qemu-img info /work/vyos.qcow2
+    && qemu-img info /work/vyos.qcow2 \
+    && rm -rf /var/tmp/.guestfs-*
 
 # ---------- Stage 2: runtime image ----------------------------------------
 FROM ubuntu:22.04
@@ -54,6 +57,7 @@ RUN apt update && apt install -y \
     coreutils \
     genisoimage \
     openssh-client \
+    curl \
     whois \
     && rm -rf /var/lib/apt/lists/*
 
