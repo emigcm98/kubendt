@@ -22,13 +22,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Removed the `MOVE_POD_IPS_TO_GUEST` and `IFACE_SETTLE_SLEEP` env vars from the VyOS image. Moving IPs to the guest is now always on, and the settle fallback is fixed at 5 s.
 - License declarations unified to AGPL-3.0-or-later (README, `CITATION.cff`, `.zenodo.json` and frontend package metadata previously said AGPL-3.0-only), and the LICENSE text now matches the canonical gnu.org copy byte for byte (https URLs).
 - All Markdown docs now use single-line paragraphs, so they render correctly when pasted into GitHub releases and PRs. Enforced by the root `.prettierrc` (`proseWrap: never`).
+- Traceroute now works from VyOS routers. Guest-VM drivers run the probe inside the guest through a new optional `GuestProbeProvider` driver interface, using the guest routing table, instead of a debug container in a pod netns that has no connectivity. Guest drivers without probe support get a clear error.
+- The capture and traceroute panels now share a tokenized dark palette (`--tool-*` design tokens), collapsing the near-duplicate colors that had drifted between them. Component-specific semantic colors (protocol rows, hop kinds) stay local.
 
 ### Fixed
 
 - Long Kubernetes node names no longer widen their card into a horizontal scroll on the Home cluster status. The node name now fits wrapping to at most two lines with the full name on hover.
 - Actions on the protected eth0 interface (everything except SNAT) are now rejected for VyOS and XRd too. Drivers with a custom execution planner used to bypass the guard entirely.
 - Interface renames inside the VyOS guest no longer race the stock config.boot, whose install-time hw-id entry could hijack eth0 and shift every name at coldplug. hw-id lines are stripped from the image at build time.
-- Traceroute now works from VyOS routers. Guest-VM drivers run the probe inside the guest through a new optional `GuestProbeProvider` driver interface, using the guest routing table, instead of a debug container in a pod netns that has no connectivity. Guest drivers without probe support get a clear error.
 - Traceroute hops through the Kubernetes fabric (pod-network gateways, node IPs) are now tagged as `cluster` hops, with their own icon in the trace panel, and drawn as the way out to the internet instead of being misattributed to the topology's external network node when a router exits through its cluster interface.
 
 ## [1.2.0] - 2026-07-30

@@ -494,7 +494,7 @@ const CapturePanel = ({
     >
       <div className="cap-header" onMouseDown={onHeaderMouseDown}>
         <span className={`cap-dot cap-dot-${state}`} title={statusLabel} />
-        <PcapIcon style={{ color: '#9ecbff' }} />
+        <PcapIcon style={{ color: 'var(--tool-accent)' }} />
         <span className="cap-title">
           <span className="cap-title-pod">{pod}</span>
           <span className="cap-title-iface">· {iface}</span>
