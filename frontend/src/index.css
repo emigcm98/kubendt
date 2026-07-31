@@ -30,6 +30,31 @@
   --menu-hover: rgba(88, 166, 255, 0.15);
   --menu-danger: #ff6b6b;
 
+  /* Tool panels (dark floating tools over the graph: capture, traceroute).
+     One shared palette so the panels read as siblings. Component-specific
+     semantic colors (protocol rows, hop kinds) stay in their stylesheets. */
+  --tool-bg: #121821;
+  --tool-header-bg: #1a2230;
+  --tool-bg-raised: #223049; /* chips, buttons, active segments */
+  --tool-bg-sunken: #1b2532; /* bars, badges, bottom strips */
+  --tool-bg-well: #0d1219; /* inputs and scrollable output areas */
+  --tool-border: #2a3340;
+  --tool-border-strong: #35507a;
+  --tool-text: #eaf0f6;
+  --tool-text-body: #d6dde6;
+  --tool-text-dim: #cdd6df;
+  --tool-text-muted: #8a97a6;
+  --tool-text-subtle: #67748a;
+  --tool-accent: #4fc3f7;
+  --tool-success: #7bd88f;
+  --tool-success-strong: #2e8b57;
+  --tool-success-solid: #1f6f43; /* solid green action (run/play) */
+  --tool-success-solid-hover: #268050;
+  --tool-warning: #f0c674;
+  --tool-danger: #fca5a5;
+  --tool-danger-bg: #2b1416;
+  --tool-danger-border: #5b2230;
+
   /* Text */
   --text-heading: #1a3a5c;
   --text-body: #334155;

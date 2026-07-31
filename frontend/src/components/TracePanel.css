@@ -8,9 +8,9 @@
   max-height: 90vh;
   display: flex;
   flex-direction: column;
-  background: #121821;
-  color: #d6dde6;
-  border: 1px solid #2a3340;
+  background: var(--tool-bg);
+  color: var(--tool-text-body);
+  border: 1px solid var(--tool-border);
   border-radius: var(--radius-md);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
   font-size: 12px;
@@ -32,11 +32,11 @@
   align-items: baseline;
   gap: 8px;
   padding: 3px 10px 4px;
-  border-bottom: 1px solid #202836;
+  border-bottom: 1px solid var(--tool-border);
 }
 
 .trace-hops-head span {
-  color: #67748a;
+  color: var(--tool-text-subtle);
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -53,15 +53,15 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  color: #9fb2c7;
+  color: var(--tool-text-muted);
   margin-bottom: 10px;
 }
 
 .trace-spinner {
   width: 13px;
   height: 13px;
-  border: 2px solid #2a3340;
-  border-top-color: #4fc3f7;
+  border: 2px solid var(--tool-border);
+  border-top-color: var(--tool-accent);
   border-radius: 50%;
   animation: trace-spin 0.7s linear infinite;
 }
@@ -74,14 +74,14 @@
 
 .trace-measuring-bar {
   height: 4px;
-  background: #1b2532;
+  background: var(--tool-bg-sunken);
   border-radius: 2px;
   overflow: hidden;
 }
 
 .trace-measuring-bar > div {
   height: 100%;
-  background: #4fc3f7;
+  background: var(--tool-accent);
   transition: width 0.2s linear;
 }
 
@@ -106,8 +106,8 @@
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
-  background: #1a2230;
-  border-bottom: 1px solid #2a3340;
+  background: var(--tool-header-bg);
+  border-bottom: 1px solid var(--tool-border);
   cursor: move;
 }
 
@@ -116,7 +116,7 @@
   align-items: center;
   gap: 6px;
   font-weight: 600;
-  color: #eaf0f6;
+  color: var(--tool-text);
 }
 
 .trace-title-icon {
@@ -134,21 +134,21 @@
 .trace-status-resolving,
 .trace-status-starting,
 .trace-status-connecting {
-  color: #4fc3f7;
+  color: var(--tool-accent);
 }
 
 .trace-status-done {
-  color: #66bb6a;
+  color: var(--tool-success);
 }
 
 .trace-status-error,
 .trace-status-lost {
-  color: #ef5350;
+  color: var(--tool-danger);
 }
 
 .trace-form {
   padding: 8px 10px;
-  border-bottom: 1px solid #202836;
+  border-bottom: 1px solid var(--tool-border);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -162,14 +162,14 @@
 
 .trace-label {
   width: 38px;
-  color: #8a97a6;
+  color: var(--tool-text-muted);
   flex-shrink: 0;
 }
 
 .trace-source-chip {
-  background: #223049;
-  color: #cfe0f5;
-  border: 1px solid #35507a;
+  background: var(--tool-bg-raised);
+  color: var(--tool-text-dim);
+  border: 1px solid var(--tool-border-strong);
   border-radius: var(--radius-sm);
   padding: 2px 8px;
   font-weight: 600;
@@ -179,9 +179,9 @@
 .trace-select {
   flex: 1;
   min-width: 0;
-  background: #0d1219;
-  color: #e6edf5;
-  border: 1px solid #2a3340;
+  background: var(--tool-bg-well);
+  color: var(--tool-text);
+  border: 1px solid var(--tool-border);
   border-radius: var(--radius-sm);
   padding: 4px 6px;
   font-size: 12px;
@@ -190,7 +190,7 @@
 
 .trace-input:focus,
 .trace-select:focus {
-  border-color: #4fc3f7;
+  border-color: var(--tool-accent);
 }
 
 .trace-method {
@@ -200,14 +200,14 @@
 /* Trace / Metrics segmented toggle. */
 .trace-modeswitch {
   display: inline-flex;
-  border: 1px solid #2a3340;
+  border: 1px solid var(--tool-border);
   border-radius: var(--radius-sm);
   overflow: hidden;
 }
 
 .trace-mode-btn {
-  background: #0d1219;
-  color: #8a97a6;
+  background: var(--tool-bg-well);
+  color: var(--tool-text-muted);
   border: none;
   padding: 4px 10px;
   font-size: 12px;
@@ -215,12 +215,12 @@
 }
 
 .trace-mode-btn + .trace-mode-btn {
-  border-left: 1px solid #2a3340;
+  border-left: 1px solid var(--tool-border);
 }
 
 .trace-mode-active {
-  background: #223049;
-  color: #eaf0f6;
+  background: var(--tool-bg-raised);
+  color: var(--tool-text);
   font-weight: 600;
 }
 
@@ -235,12 +235,12 @@
 .trace-cycles-slider {
   flex: 1;
   min-width: 0;
-  accent-color: #4fc3f7;
+  accent-color: var(--tool-accent);
   cursor: pointer;
 }
 
 .trace-cycles-val {
-  color: #8a97a6;
+  color: var(--tool-text-muted);
   font-family: ui-monospace, monospace;
   flex-shrink: 0;
 }
@@ -256,7 +256,7 @@
 }
 
 .trace-m-loss {
-  color: #7bd88f;
+  color: var(--tool-success);
   width: 40px;
   text-align: left;
 }
@@ -266,7 +266,7 @@
 }
 
 .trace-m-avg {
-  color: #cdd6df;
+  color: var(--tool-text-dim);
   width: 56px;
   text-align: left;
 }
@@ -282,9 +282,9 @@
 }
 
 .trace-btn {
-  background: #223049;
-  color: #d6dde6;
-  border: 1px solid #35507a;
+  background: var(--tool-bg-raised);
+  color: var(--tool-text-body);
+  border: 1px solid var(--tool-border-strong);
   border-radius: var(--radius-sm);
   padding: 4px 8px;
   cursor: pointer;
@@ -302,15 +302,15 @@
 }
 
 .trace-btn-run {
-  background: #1f6f43;
-  border-color: #2e8b57;
-  color: #eafff2;
+  background: var(--tool-success-solid);
+  border-color: var(--tool-success-strong);
+  color: var(--tool-text);
   font-weight: 600;
   padding: 5px 14px;
 }
 
 .trace-btn-run:hover:not(:disabled) {
-  background: #268050;
+  background: var(--tool-success-solid-hover);
 }
 
 .trace-btn-icon {
@@ -319,12 +319,12 @@
   padding: 3px 7px;
   background: transparent;
   border-color: transparent;
-  color: #9fb2c7;
+  color: var(--tool-text-muted);
 }
 
 .trace-btn-icon:hover:not(:disabled) {
-  background: #223049;
-  color: #eaf0f6;
+  background: var(--tool-bg-raised);
+  color: var(--tool-text);
 }
 
 .trace-btn-close {
@@ -336,14 +336,14 @@
 
 .trace-btn-close:hover {
   background: #3a2530;
-  border-color: #5a2b39;
+  border-color: var(--tool-danger-border);
 }
 
 .trace-error {
   padding: 6px 10px;
-  background: #2b1a1e;
-  color: #ff9a9a;
-  border-bottom: 1px solid #4a2730;
+  background: var(--tool-danger-bg);
+  color: var(--tool-danger);
+  border-bottom: 1px solid var(--tool-danger-border);
   font-size: 11px;
   word-break: break-word;
 }
@@ -385,15 +385,15 @@
 /* Numbered traceroute steps read as selectable: their TTL is a little badge
    that lights up green on hover. Switch/relay steps (a plain "-") stay quiet. */
 .trace-hop-num .trace-hop-ttl {
-  background: #223049;
-  color: #cfe0f5;
+  background: var(--tool-bg-raised);
+  color: var(--tool-text-dim);
   border-radius: var(--radius-sm);
   font-weight: 600;
 }
 
 .trace-hop-num.trace-hop-clickable:hover .trace-hop-ttl {
-  background: #2e8b57;
-  color: #eafff2;
+  background: var(--tool-success-strong);
+  color: var(--tool-text);
 }
 
 .trace-hop-active {
@@ -404,14 +404,14 @@
 /* Switch / relay step: a muted badge (same shape as the numbered hops, but a
    dot instead of a number) so it reads as part of the same journey. */
 .trace-hop-relay .trace-hop-ttl {
-  background: #1b2532;
-  color: #5b6675;
+  background: var(--tool-bg-sunken);
+  color: var(--tool-text-subtle);
   border-radius: var(--radius-sm);
   font-weight: 700;
 }
 
 .trace-hop-relay-label {
-  color: #8a97a6;
+  color: var(--tool-text-muted);
   font-style: italic;
 }
 
@@ -421,7 +421,7 @@
   width: 12px;
   flex-shrink: 0;
   text-align: center;
-  color: #6f8296;
+  color: var(--tool-text-subtle);
   font-size: 12px;
   font-weight: 700;
   transition:
@@ -435,14 +435,16 @@
 }
 
 .trace-hop-l2 {
-  background: #2a3340;
-  color: #b7c3d0;
+  background: var(--tool-border);
+  color: var(--tool-text-dim);
   border-radius: 3px;
   padding: 0 4px;
   font-size: 10px;
   font-style: normal;
 }
 
+/* Hop-kind palette, semantic to the trace list (like the capture panel's
+   protocol colours), so it stays local instead of in the shared tokens. */
 .trace-hop-internet-label {
   color: #7fe0ff;
 }
@@ -472,7 +474,7 @@
 
 .trace-hop-ip {
   font-family: ui-monospace, monospace;
-  color: #cdd6df;
+  color: var(--tool-text-dim);
   width: 108px;
   flex-shrink: 0;
 }
@@ -514,31 +516,31 @@
   align-items: center;
   gap: 6px;
   padding: 8px 10px;
-  border-top: 1px solid #2a3340;
-  background: #131a24;
+  border-top: 1px solid var(--tool-border);
+  background: var(--tool-bg-sunken);
 }
 
 .trace-btn-play {
-  background: #1f6f43;
-  border-color: #2e8b57;
-  color: #eafff2;
+  background: var(--tool-success-solid);
+  border-color: var(--tool-success-strong);
+  color: var(--tool-text);
   font-weight: 700;
   padding: 4px 14px;
 }
 
 .trace-btn-play:hover:not(:disabled) {
-  background: #268050;
+  background: var(--tool-success-solid-hover);
 }
 
 .trace-scrubber {
   flex: 1;
   min-width: 0;
-  accent-color: #4fc3f7;
+  accent-color: var(--tool-accent);
   cursor: pointer;
 }
 
 .trace-step-count {
-  color: #8a97a6;
+  color: var(--tool-text-muted);
   font-family: ui-monospace, monospace;
   flex-shrink: 0;
   min-width: 34px;
@@ -548,9 +550,9 @@
 .trace-btn-clear {
   margin-left: 4px;
   flex-shrink: 0;
-  background: #2b1416;
-  border-color: #6e2b34;
-  color: #ff8f8f;
+  background: var(--tool-danger-bg);
+  border-color: var(--tool-danger-border);
+  color: var(--tool-danger);
   font-size: 11px;
   padding: 4px 9px;
 }
@@ -563,11 +565,11 @@
 
 /* Drop rows: red for an explicit ICMP-unreachable, amber for "no reply". */
 .trace-hop-drop {
-  background: #2b1416;
+  background: var(--tool-danger-bg);
 }
 
 .trace-hop-drop-label {
-  color: #ff6b6b;
+  color: var(--tool-danger);
   font-weight: 600;
 }
 
@@ -577,15 +579,15 @@
   padding: 6px 10px;
   text-align: center;
   font-weight: 600;
-  border-top: 1px solid #202836;
+  border-top: 1px solid var(--tool-border);
 }
 
 .trace-verdict-ok {
-  color: #7bd88f;
+  color: var(--tool-success);
   background: rgba(102, 187, 106, 0.1);
 }
 
 .trace-verdict-bad {
-  color: #ff7b7b;
+  color: var(--tool-danger);
   background: rgba(255, 60, 60, 0.1);
 }
