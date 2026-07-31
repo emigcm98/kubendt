@@ -7,7 +7,7 @@ This document describes the branching model used in KubeNDT and how external con
 KubeNDT follows a simple trunk-based model (GitHub Flow):
 
 | Branch | Purpose |
-|--------|---------|
+| --- | --- |
 | `main` | Always stable and deployable. This is what users see and clone. It is protected: no direct pushes, changes land only through reviewed pull requests with green CI. |
 | short-lived branches | One branch per change, branched off `main` and deleted after merge. |
 
@@ -20,6 +20,7 @@ Releases are tagged on `main` using semantic versioning. Git tags carry the lead
 Contributors open pull requests from their fork targeting `main` (as documented in [CONTRIBUTING.md](../CONTRIBUTING.md)). They cannot push to the repository directly, so every external change arrives as a PR.
 
 Your review checklist:
+
 - [ ] CLA confirmation is present in the PR description
 - [ ] Code follows project style
 - [ ] No unrelated changes bundled in

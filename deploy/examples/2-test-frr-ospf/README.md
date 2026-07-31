@@ -1,6 +1,7 @@
 # 2-test-frr-ospf
 
 FRR + OSPF end-to-end scenario to validate dynamic routing workflows in KubeNDT:
+
 - Topology import and deployment
 - Driver-based network configuration
 - FRR daemon configuration from the UI
@@ -12,6 +13,7 @@ FRR + OSPF end-to-end scenario to validate dynamic routing workflows in KubeNDT:
 ![Topology](../../../doc/images/tests/2-test-frr-ospf.png)
 
 This example deploys:
+
 - `host` (4 replicas): `host-0` to `host-3` (Alpine hosts)
 - `web` (1 replica): `web` (`nginxdemos/hello` web server)
 - `router1` (1 replica): `router1` (FRR router)
@@ -19,6 +21,7 @@ This example deploys:
 - `switch` (3 replicas): `switch-0` to `switch-2` (Linux switch nodes)
 
 Logical segments:
+
 - `192.168.1.0/24`: `host-0`, `host-1`, and `router1 eth1`
 - `10.0.0.0/30`: point-to-point link between `router1 eth2` and `router2 eth2`
 - `192.168.2.0/24`: `host-2`, `host-3`, and `router2 eth1`
@@ -42,7 +45,6 @@ Logical segments:
 1. Create namespace
    - Create namespace `frr-ospf` (or any name you prefer).
 
-
 2. Import topology
 
    - Go to the namespace graph view.
@@ -53,7 +55,6 @@ Logical segments:
 
    - Wait until all nodes are running and visible.
 
-
 3. Apply network configuration (including OSPF)
 
    - Click `Load network conf`.
@@ -61,7 +62,6 @@ Logical segments:
    - Select `network_conf.json`.
 
    - Confirm successful actions in the result dialog. This applies IP config, bridges, SNAT, and OSPF configuration on both routers in one step.
-
 
 4. Validate OSPF adjacency and learned routes
 
@@ -88,7 +88,6 @@ Logical segments:
      ```
 
      Expected OSPF-learned route for `192.168.1.0/24`.
-
 
 5. Validate end-to-end connectivity
 

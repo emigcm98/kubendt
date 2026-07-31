@@ -50,8 +50,7 @@ Reconciliation keeps desired and observed state aligned by:
 
 ## Persistence
 
-KubeNDT stores control-plane state in SQLite (var `KUBENDT_DB_PATH`) and
-per-namespace files on disk (var `FILES_BASE_PATH`).
+KubeNDT stores control-plane state in SQLite (var `KUBENDT_DB_PATH`) and per-namespace files on disk (var `FILES_BASE_PATH`).
 
 SQLite tables:
 
@@ -68,39 +67,19 @@ Driver history is used for restart-time replay and cleanup of obsolete operation
 
 ### Cluster scoping
 
-KubeNDT can manage more than one cluster (context switching via `/kube/context`
-and `/kube/config`), and different clusters routinely reuse the same namespace
-names (e.g. `prueba` in two clusters). To keep that data from colliding, all
-per-namespace state is scoped by a **canonical cluster ID**: the `metadata.uid`
-of the cluster's `kube-system` namespace. That UID is created at cluster
-bootstrap, never changes, and is unique per cluster — the same convention used
-by OpenTelemetry (`k8s.cluster.uid`) and kube-state-metrics. It is resolved and
-cached per active context (`kubeclient.CurrentClusterID`) and re-resolved
-whenever the active client changes.
+KubeNDT can manage more than one cluster (context switching via `/kube/context` and `/kube/config`), and different clusters routinely reuse the same namespace names (e.g. `prueba` in two clusters). To keep that data from colliding, all per-namespace state is scoped by a **canonical cluster ID**: the `metadata.uid` of the cluster's `kube-system` namespace. That UID is created at cluster bootstrap, never changes, and is unique per cluster — the same convention used by OpenTelemetry (`k8s.cluster.uid`) and kube-state-metrics. It is resolved and cached per active context (`kubeclient.CurrentClusterID`) and re-resolved whenever the active client changes.
 
 Concretely:
 
-- Every per-namespace table above carries a `cluster_id` column and is keyed by
-  `(cluster_id, namespace, …)`; queries filter by the active cluster's ID.
+- Every per-namespace table above carries a `cluster_id` column and is keyed by `(cluster_id, namespace, …)`; queries filter by the active cluster's ID.
 - Namespace files live under `FILES_BASE_PATH/<cluster_id>/<namespace>/…`.
-- Within a cluster, the namespace **name** remains the identity (KubeNDT cleans
-  up a namespace's data when it is deleted through the UI).
+- Within a cluster, the namespace **name** remains the identity (KubeNDT cleans up a namespace's data when it is deleted through the UI).
 
-Cluster IDs are opaque UUIDs, so a registry maps them back to something
-readable for operators: the `clusters` table and a mirrored
-`FILES_BASE_PATH/clusters.json` map each `cluster_id` to its last-seen context
-name, API server URL, and timestamp. This is written on startup and on every
-context switch/load (`helpers.RecordActiveCluster`). It is purely for
-operability — the cluster ID stays the canonical key everywhere else.
+Cluster IDs are opaque UUIDs, so a registry maps them back to something readable for operators: the `clusters` table and a mirrored `FILES_BASE_PATH/clusters.json` map each `cluster_id` to its last-seen context name, API server URL, and timestamp. This is written on startup and on every context switch/load (`helpers.RecordActiveCluster`). It is purely for operability — the cluster ID stays the canonical key everywhere else.
 
 ### Schema versioning
 
-The schema version is tracked in the SQLite file via `PRAGMA user_version`.
-`applyMigrations` (in `backend/database/database.go`) runs any pending migration
-steps in order and stamps the current version; new databases are created at the
-latest schema directly by `createTables`. The first released schema is version
-`1`, so there is intentionally no migration below it. Future schema changes bump
-`schemaVersion` and add a guarded step to `applyMigrations`.
+The schema version is tracked in the SQLite file via `PRAGMA user_version`. `applyMigrations` (in `backend/database/database.go`) runs any pending migration steps in order and stamps the current version; new databases are created at the latest schema directly by `createTables`. The first released schema is version `1`, so there is intentionally no migration below it. Future schema changes bump `schemaVersion` and add a guarded step to `applyMigrations`.
 
 ## Runtime Types
 

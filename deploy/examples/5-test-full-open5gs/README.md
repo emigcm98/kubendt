@@ -1,6 +1,7 @@
 # 5-test-full-open5gs
 
 Full Open5GS 5G Core deployment with a simulated RAN and UE using UERANSIM, validating end-to-end 5G connectivity with KubeNDT:
+
 - All 5GC control-plane network functions (AMF, SMF, NRF, SCP, AUSF, UDM, UDR, PCF)
 - User Plane Function (UPF) with TUN interfaces for UE traffic
 - MongoDB as the subscriber data store (UDSF node)
@@ -27,7 +28,7 @@ Full Open5GS 5G Core deployment with a simulated RAN and UE using UERANSIM, vali
 Nodes deployed:
 
 | Node | Image | Role |
-|---|---|---|
+| --- | --- | --- |
 | `amf-0` | `docker_open5gs:master` | Access and Mobility Management Function |
 | `smf-0` | `docker_open5gs:master` | Session Management Function |
 | `nrf-0` | `docker_open5gs:master` | Network Repository Function |
@@ -51,7 +52,7 @@ Nodes deployed:
 Network segments:
 
 | Segment | Subnet | Purpose |
-|---|---|---|
+| --- | --- | --- |
 | Control plane | `10.5.0.0/24` | All 5GC NFs + MongoDB, gateway `router-0 eth2` (`.1`) |
 | N4 / UPF control | `10.5.1.0/24` | SMF–UPF N4 interface, `switch-1`, gateway `router-0 eth3` (`.1`) |
 | UPF uplink | `10.5.2.0/24` | UPF `eth2` (`.10`) toward `router-1 eth1` (`.1`), UE data path |
@@ -66,7 +67,7 @@ Network segments:
 ## IP Addressing Summary
 
 | Node | Interface | IP |
-|---|---|---|
+| --- | --- | --- |
 | `amf-0` | `eth1` | `10.5.0.10/24` |
 | `smf-0` | `eth1` | `10.5.0.11/24` |
 | `nrf-0` | `eth1` | `10.5.0.12/24` |
@@ -299,13 +300,13 @@ This uses the `custom` action type to run a `mongosh` command directly in the `u
 
 If you changed `MCC`, `MNC` or `MSISDN` in the topology file, update the IMSI in `subscriber_conf.json` accordingly: `IMSI = MCC + MNC + MSISDN`.
 
-| Field | Value |
-|---|---|
-| IMSI | `999300000000001` |
+| Field               | Value                              |
+| ------------------- | ---------------------------------- |
+| IMSI                | `999300000000001`                  |
 | Subscriber Key (Ki) | `465B5CE8B199B49FAA5F0A2EE238A6BC` |
-| OPc | `E8ED289DEBA952E4283B54E88E6183CA` |
-| APN / DNN | `internet` |
-| SST | `1` (no SD) |
+| OPc                 | `E8ED289DEBA952E4283B54E88E6183CA` |
+| APN / DNN           | `internet`                         |
+| SST                 | `1` (no SD)                        |
 
 #### Option B, Manual via Web UI
 
@@ -333,12 +334,14 @@ kubectl logs -f ue-0 -n <namespace>
 ```
 
 Expected final lines in `gnb-0` logs:
+
 ```
 [sctp] [info] SCTP connection established
 [ngap] [info] NG Setup procedure is successful
 ```
 
 Expected final lines in `ue-0` logs:
+
 ```
 [ue] PDU session established (uesimtun0 is up)
 [ue] Default route -> uesimtun0
@@ -353,22 +356,26 @@ kubectl exec -it ue-0 -n <namespace> -- bash
 ```
 
 **Check the tunnel interface and routing:**
+
 ```bash
 ip addr show uesimtun0          # should have an IP from 192.168.10.0/24
 ip route                        # default route should point to uesimtun0
 ```
 
 **Ping by IP (tests GTP-U path through UPF and SNAT on router-1):**
+
 ```bash
 ping -c 3 8.8.8.8
 ```
 
 **Ping by name (tests DNS resolution through the tunnel):**
+
 ```bash
 ping -c 3 google.com
 ```
 
 **HTTP connectivity:**
+
 ```bash
 curl -s --max-time 5 https://httpbin.org/ip
 ```
@@ -376,6 +383,7 @@ curl -s --max-time 5 https://httpbin.org/ip
 The returned IP should be the external IP of `router-1` (or your NAT gateway), not the UE's `192.168.10.x` address.
 
 **Confirm traffic exits via the tunnel (not eth0):**
+
 ```bash
 ping -c 1 -I uesimtun0 8.8.8.8   # explicit interface, must succeed
 ping -c 1 -I eth1 8.8.8.8        # direct path, will fail if default route is on uesimtun0

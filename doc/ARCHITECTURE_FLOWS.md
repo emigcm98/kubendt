@@ -8,7 +8,7 @@
 REGISTRATION TIME (Backend Startup):
 │
 ├─ RegisterAllDrivers()
-│  ├─ Register(NewBasicHostDriver) 
+│  ├─ Register(NewBasicHostDriver)
 │  │  └─ Extracts Name="BasicHostDriver", Type="host"
 │  │     Stores: registry["BasicHostDriver"] = *BasicHostDriver type
 │  ├─ Register(NewHostDriver)
@@ -69,17 +69,17 @@ DRIVER RESOLUTION (on pod action):
 └─────┬───────────────────────────────────────────────────────────┘
       │
       ├─────────────────────┬──────────────────────┐
-      │                     │                      │              
-  HostDriver           SwitchDriver           RouterDriver        
-  ├─ L2Base            ├─ L2Base              ├─ L2Base            
-  ├─ L3Base            ├─ SwitchBase          ├─ L3Base            
-  ├─ TCBase            ├─ TCBase              ├─ TCBase            
-  │                    │                      ├─ NATBase           
+      │                     │                      │
+  HostDriver           SwitchDriver           RouterDriver
+  ├─ L2Base            ├─ L2Base              ├─ L2Base
+  ├─ L3Base            ├─ SwitchBase          ├─ L3Base
+  ├─ TCBase            ├─ TCBase              ├─ TCBase
+  │                    │                      ├─ NATBase
   │                    │                      └─ [OSPF via direct methods (FRR)]
-  │                    │                                           
-  │  Overrides:        │  Overrides:           Overrides:         
-  │  ReplaceIP()       │  (none typical)       OSPFAddNetwork()   
-  │                    │                       OSPFSetRouterID()  
+  │                    │
+  │  Overrides:        │  Overrides:           Overrides:
+  │  ReplaceIP()       │  (none typical)       OSPFAddNetwork()
+  │                    │                       OSPFSetRouterID()
 ```
 
 ### 1.3 Capability Method Resolution Chain
@@ -210,7 +210,7 @@ ReconcileMissingInterfaces(namespace, nodes, links, maxRounds=2)
 │  │
 │  └─ [Next iteration of round]
 │
-└─ AFTER all rounds: 
+└─ AFTER all rounds:
    ├─ Final validation check
    └─ IF issues persist → RETURN error("reconciliation failed after "+maxRounds+" rounds")
 ```
@@ -436,7 +436,7 @@ Step 2: Query Operation History
   └─ SELECT * FROM driver_operation_history
      WHERE namespace = "test" AND pod_name = "router1-0"
      ORDER BY id ASC
-  
+
   Result:
   ┌────┬───────────┬──────────────────┬───────────────────┬────────────┐
   │ id │ pod_name  │ driver_type      │ action            │ action_json│
@@ -710,10 +710,10 @@ ReplayDriverOperations called for router1-0
 ```go
 type ActionEntry struct {
   Type string // "set_ip", "link_up", "enable_snat", ...
-  
+
   // L2 actions
   Iface string // Interface name: "eth1"
-  
+
   // L3 actions
   CIDR string    // "10.0.0.1/24"
   Gateway string // "10.0.0.254"
@@ -721,17 +721,17 @@ type ActionEntry struct {
   Device string  // Device for routing
   DNSServer string // Nameserver IP
   DNSDomain string // Search domain
-  
+
   // NAT actions
   ExternalPort int    // External port (iptables DNAT)
   InternalPort int    // Internal port
   InternalIP string   // Internal IP
   Protocol string     // "tcp", "udp"
-  
+
   // Bridge actions
   Bridge string  // Bridge name
   Ifaces []string // Multiple interfaces
-  
+
   // TC (qdisc) actions
   TCParams *TCParamEntry // Delay, loss, rate limiting params
 }
@@ -787,6 +787,7 @@ DefaultDriverByType map[string]string      // LogicalType → DefaultName
 ## Summary
 
 This KubeNDT architecture enables:
+
 1. **Pluggable drivers** via generic registration & type assertions
 2. **Resilient recovery** through bounded reconciliation with intelligent restart selection
 3. **State persistence** via operation replay from SQLite
