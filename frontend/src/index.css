@@ -90,6 +90,19 @@
   --violet: #6d28d9;
   --violet-bg: #ece6fb;
 
+  /* Interactive shell (xterm window). Its own family: the terminal keeps the
+     editor-like dark background and neon accent, and the JS reads these so
+     xterm's canvas theme stays in sync. */
+  --term-bg: #1e1e1e;
+  --term-bg-raised: #2d2d2d;
+  --term-bg-card: #1f1f1f;
+  --term-fg: #e0e0e0;
+  --term-border: #444444;
+  --term-accent: #00ff99;
+  --term-accent-hover: #00cc77;
+  --term-danger: #ff4d4d;
+  --term-link: #00aaff;
+
   /* Radii */
   --radius-sm: 6px;
   --radius-md: 8px;

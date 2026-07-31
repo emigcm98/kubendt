@@ -2,13 +2,20 @@
   position: fixed;
   width: 900px;
   height: 550px;
-  background-color: #1e1e1e;
-  color: var(--border-light);
-  border: 1px solid #444;
+  min-width: 480px;
+  min-height: 260px;
+  max-width: 96vw;
+  max-height: 92vh;
+  background-color: var(--term-bg);
+  color: var(--term-fg);
+  border: 1px solid var(--term-border);
   border-radius: var(--radius-md);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
   user-select: none;
   overflow: hidden;
+  /* Drag-resize from the bottom-right corner, like the capture and trace
+     panels. The terminal re-fits itself through its ResizeObserver. */
+  resize: both;
 }
 
 /* Hide the floating window without unmounting it; the WS + xterm session stay alive,
@@ -27,8 +34,8 @@
   justify-content: space-between;
   align-items: center;
   padding: 0 1rem;
-  background: linear-gradient(135deg, #2d2d2d 0%, #1e1e1e 100%);
-  border-bottom: 1px solid #444;
+  background: linear-gradient(135deg, var(--term-bg-raised) 0%, var(--term-bg) 100%);
+  border-bottom: 1px solid var(--term-border);
   border-radius: 8px 8px 0 0;
   cursor: grab;
   user-select: none;
@@ -44,7 +51,7 @@
   align-items: center;
   gap: 0.5rem;
   font-size: 0.95rem;
-  color: var(--border-light);
+  color: var(--term-fg);
   flex: 1;
   white-space: nowrap;
   overflow: hidden;
@@ -53,7 +60,7 @@
 
 .shell-pod-name {
   font-weight: 700;
-  color: #00ff99;
+  color: var(--term-accent);
   font-family: 'Monaco', 'Menlo', monospace;
   font-size: 0.9rem;
 }
@@ -94,27 +101,27 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   padding: 0.3rem 0.7rem;
-  border: 1px solid #444;
+  border: 1px solid var(--term-border);
 }
 
 .shell-modal-close-btn:hover {
   background: rgba(255, 77, 77, 0.1);
-  color: #ff4d4d;
+  color: var(--term-danger);
 }
 
 .shell-modal-minimize-btn:hover {
   background: rgba(255, 200, 0, 0.1);
-  color: #ffc800;
+  color: var(--warning);
 }
 
 .shell-modal-clear-btn:hover {
   background: rgba(0, 255, 153, 0.08);
-  color: #00ff99;
+  color: var(--term-accent);
 }
 
 .shell-modal-reconnect-btn:hover {
   background: rgba(86, 156, 214, 0.12);
-  color: #56a6e4;
+  color: var(--menu-accent);
 }
 
 /* Tiny dot in the title showing socket state */
@@ -133,12 +140,12 @@
 }
 
 .shell-status-open {
-  background: #00ff99;
+  background: var(--term-accent);
   box-shadow: 0 0 6px rgba(0, 255, 153, 0.45);
 }
 
 .shell-status-lost {
-  background: #ff4d4d;
+  background: var(--term-danger);
   box-shadow: 0 0 6px rgba(255, 77, 77, 0.45);
 }
 
@@ -169,12 +176,12 @@
 }
 
 .shell-disconnected-card {
-  background: #1f1f1f;
-  border: 1px solid #ff4d4d;
+  background: var(--term-bg-card);
+  border: 1px solid var(--term-danger);
   border-radius: var(--radius-md);
   padding: 1.4rem 1.8rem;
   text-align: center;
-  color: var(--border-light);
+  color: var(--term-fg);
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
   max-width: 420px;
 }
@@ -182,20 +189,20 @@
 .shell-disconnected-icon {
   width: 2rem;
   height: 2rem;
-  color: #ff4d4d;
+  color: var(--term-danger);
   margin-bottom: 0.3rem;
 }
 
 .shell-disconnected-title {
   font-size: 1.15rem;
   font-weight: 700;
-  color: #ff8080;
+  color: var(--term-danger);
   margin-bottom: 0.4rem;
 }
 
 .shell-disconnected-subtitle {
   font-size: 0.9rem;
-  color: #c5c5c5;
+  color: var(--term-fg);
   margin-bottom: 1rem;
 }
 
@@ -206,9 +213,9 @@
 }
 
 .shell-disconnected-btn {
-  background: #2a2a2a;
-  color: var(--border-light);
-  border: 1px solid #444;
+  background: var(--term-bg-raised);
+  color: var(--term-fg);
+  border: 1px solid var(--term-border);
   padding: 0.45rem 1rem;
   font-size: 0.9rem;
   border-radius: var(--radius-sm);
@@ -219,7 +226,7 @@
 }
 
 .shell-disconnected-btn:hover {
-  background: #353535;
+  background: var(--term-border);
   border-color: var(--text-muted);
 }
 
@@ -247,13 +254,18 @@
   pointer-events: none;
 }
 
+/* Terminal inset: any breathing room goes on .xterm below, the only element
+   whose padding the fit addon measures. On this container it would not work
+   (.xterm is absolutely positioned against the padding box, so it ignores it
+   and the space ends up unused on the right), and on .xterm-screen it clips
+   the last row by an amount that depends on device pixel ratio. */
 .modal-terminal {
   position: absolute;
   top: 50px;
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #1e1e1e;
+  background-color: var(--term-bg);
   border-radius: 0 0 8px 8px;
   font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
   overflow: hidden;
@@ -266,25 +278,24 @@
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 0;
+  padding: 0 0 0 2px;
   margin: 0;
 }
 
 .modal-terminal .xterm-screen {
-  background-color: #1e1e1e;
-  color: var(--border-light);
-  padding: 0.5rem;
+  background-color: var(--term-bg);
+  color: var(--term-fg);
 }
 
 .modal-terminal .xterm-viewport {
-  background-color: #1e1e1e;
+  background-color: var(--term-bg);
 }
 
 .modal-terminal .xterm-rows {
   padding: 0;
 }
 
-/* Mejor selección de texto */
+/* Text selection */
 .modal-terminal .xterm-selection {
   background-color: rgba(255, 255, 255, 0.3);
 }
@@ -294,12 +305,12 @@
 }
 
 .modal-terminal .xterm-cursor-block {
-  background-color: #00ff99;
-  color: #1e1e1e;
+  background-color: var(--term-accent);
+  color: var(--term-bg);
 }
 
 .modal-terminal .xterm-cursor-line {
-  background-color: #00ff99;
+  background-color: var(--term-accent);
 }
 
 /* Scrollbar styling */
@@ -308,22 +319,22 @@
 }
 
 .modal-terminal .xterm-viewport::-webkit-scrollbar-track {
-  background: #1e1e1e;
+  background: var(--term-bg);
 }
 
 .modal-terminal .xterm-viewport::-webkit-scrollbar-thumb {
-  background-color: #00ff99;
+  background-color: var(--term-accent);
   border-radius: var(--radius-sm);
-  border: 1px solid #1e1e1e;
+  border: 1px solid var(--term-bg);
 }
 
 .modal-terminal .xterm-viewport::-webkit-scrollbar-thumb:hover {
-  background-color: #00cc77;
+  background-color: var(--term-accent-hover);
 }
 
 /* Firefox scrollbar */
 .modal-terminal .xterm-viewport {
-  scrollbar-color: #00ff99 #1e1e1e;
+  scrollbar-color: var(--term-accent) var(--term-bg);
   scrollbar-width: thin;
 }
 
@@ -333,8 +344,8 @@
 }
 
 .modal-terminal .xterm-link {
-  color: #00aaff !important;
-  border-bottom: 1px solid #00aaff !important;
+  color: var(--term-link) !important;
+  border-bottom: 1px solid var(--term-link) !important;
   text-decoration: none !important;
   cursor: pointer;
 }

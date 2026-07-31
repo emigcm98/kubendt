@@ -28,6 +28,9 @@ const PodInteractiveShellModal = ({
   const isDraggingRef = useRef(false);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
   const positionRef = useRef({ x: 100 + Math.random() * 200, y: 100 + Math.random() * 200 });
+  // Last size measured while visible, so minimize/restore keeps the window as
+  // the user left it (position lives in positionRef).
+  const sizeRef = useRef(null);
   const sizeConfirmedRef = useRef(false);
   const pendingSizeRef = useRef(null); // Save size to send when WS is open
 
@@ -216,11 +219,19 @@ const PodInteractiveShellModal = ({
     if (isInitializedRef.current) return;
     isInitializedRef.current = true;
 
+    // xterm paints on a canvas, so it needs literal colors. Read them from the
+    // design tokens to keep one source of truth with the CSS.
+    const token = (name, fallback) =>
+      getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+
     term.current = new Terminal({
       cursorBlink: true,
       disableStdin: false,
       fontSize: 15,
-      theme: { background: '#1e1e1e', foreground: '#e0e0e0' },
+      theme: {
+        background: token('--term-bg', '#1e1e1e'),
+        foreground: token('--term-fg', '#e0e0e0'),
+      },
       fontFamily: "'Menlo', 'Monaco', 'Courier New', monospace",
       scrollback: 1000,
     });
@@ -237,6 +248,7 @@ const PodInteractiveShellModal = ({
           if (!term.current || !fitAddon.current) return;
           try {
             fitAddon.current.fit();
+            snapToRowGrid();
             pendingSizeRef.current = {
               type: 'resize',
               size: { cols: term.current.cols, rows: term.current.rows },
@@ -265,11 +277,54 @@ const PodInteractiveShellModal = ({
 
     connect();
 
+    // xterm can only draw whole rows, so whatever height does not fill one is
+    // left blank at the bottom. Trim the window to the row grid (what terminal
+    // emulators do) so the padding stays even. The 2px guard keeps this from
+    // ping-ponging with the ResizeObserver.
+    // Minimized means display:none, so everything measures 0. Measuring then
+    // would shrink the window to its chrome and lose the size. Note offsetParent
+    // is not usable here, it is always null on a position:fixed element.
+    const isHidden = () => !containerRef.current || containerRef.current.offsetHeight === 0;
+
+    const snapToRowGrid = () => {
+      if (!containerRef.current || !terminalRef.current || isHidden()) return;
+      const screen = terminalRef.current.querySelector('.xterm-screen');
+      if (!screen || screen.getBoundingClientRect().height < 1) return;
+      const style = getComputedStyle(terminalRef.current);
+      const chrome =
+        terminalRef.current.offsetTop +
+        parseFloat(style.paddingTop) +
+        parseFloat(style.paddingBottom) +
+        (containerRef.current.offsetHeight - containerRef.current.clientHeight);
+      const target = Math.round(screen.getBoundingClientRect().height + chrome);
+      if (Math.abs(containerRef.current.offsetHeight - target) >= 2) {
+        containerRef.current.style.height = `${target}px`;
+      }
+      sizeRef.current = {
+        width: containerRef.current.offsetWidth,
+        height: containerRef.current.offsetHeight,
+      };
+    };
+
+    // Fit on the next frame so the text follows the drag, and debounce only
+    // the resize message to the pod.
+    let rafId = null;
+    let sendTimer = null;
     const handleResize = () => {
-      if (fitAddon.current && term.current && terminalRef.current) {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        if (!fitAddon.current || !term.current || !terminalRef.current || isHidden()) return;
         try {
           fitAddon.current.fit();
-          if (ws.current?.readyState === WebSocket.OPEN) {
+          snapToRowGrid();
+        } catch (e) {
+          console.warn(`[${podName}] Error fitting on resize:`, e);
+          return;
+        }
+        clearTimeout(sendTimer);
+        sendTimer = setTimeout(() => {
+          if (ws.current?.readyState === WebSocket.OPEN && term.current) {
             ws.current.send(
               JSON.stringify({
                 type: 'resize',
@@ -277,16 +332,26 @@ const PodInteractiveShellModal = ({
               })
             );
           }
-        } catch (e) {
-          console.warn(`[${podName}] Error fitting on resize:`, e);
-        }
-      }
+        }, 120);
+      });
     };
 
     window.addEventListener('resize', handleResize);
 
+    // A window resize event is not the only thing that changes the terminal's
+    // box: browser zoom and display-scaling changes alter the cell size with
+    // the window untouched, which is what left a clipped row on some screens.
+    let ro = null;
+    if (terminalRef.current && typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(handleResize);
+      ro.observe(terminalRef.current);
+    }
+
     return () => {
       window.removeEventListener('resize', handleResize);
+      if (ro) ro.disconnect();
+      if (rafId) cancelAnimationFrame(rafId);
+      clearTimeout(sendTimer);
       // Closing from the minimized-taskbar chip unmounts the modal directly
       // (without going through handleClose). Make sure the WS is closed
       // gracefully here so the backend logs a normal closure instead of
@@ -318,6 +383,11 @@ const PodInteractiveShellModal = ({
   // recalculates its dimensions and the prompt sits correctly.
   useEffect(() => {
     if (minimized) return;
+    // Put back the size it had before minimizing, then re-fit.
+    if (containerRef.current && sizeRef.current) {
+      containerRef.current.style.width = `${sizeRef.current.width}px`;
+      containerRef.current.style.height = `${sizeRef.current.height}px`;
+    }
     const t = setTimeout(() => {
       if (!fitAddon.current || !term.current) return;
       try {
