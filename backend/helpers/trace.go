@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
+	"net"
 	"regexp"
 	"strconv"
 	"strings"
@@ -16,6 +18,7 @@ import (
 	drvreg "kubendt/drivers/registry"
 	"kubendt/kubeclient"
 
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -128,8 +131,10 @@ func BuildTraceCommand(dest, method string) []string {
 }
 
 // TraceHop is one parsed hop, tagged with the topology node it resolves to.
-// Kind is "l3" for a resolved node, "external" for a real IP that belongs to no
-// node (a physical gateway or the internet), or "timeout" for no reply.
+// Kind is "l3" for a resolved node, "cluster" for Kubernetes infrastructure
+// (a pod-CIDR gateway or a node IP, crossed when a router exits through its
+// cluster eth0), "external" for a real IP that belongs to no node (a physical
+// gateway or the internet), or "timeout" for no reply.
 type TraceHop struct {
 	TTL   int     `json:"ttl"`
 	IP    string  `json:"ip,omitempty"`
@@ -164,7 +169,7 @@ type TraceMetrics struct {
 // AnnotateTraceHop resolves an IP to its node and rebuilds the path from prevPod,
 // either a link path through switches or a tunnel when there is no path. Both
 // the traceroute and mtr paths use it so they annotate the same way.
-func AnnotateTraceHop(ip, prevPod string, ipIndex map[string]TraceIPNode, adjacency map[string][]string) (kind, node, iface, segment string, path []string) {
+func AnnotateTraceHop(ip, prevPod string, ipIndex map[string]TraceIPNode, adjacency map[string][]string, cluster *TraceClusterInfo) (kind, node, iface, segment string, path []string) {
 	if n, found := ipIndex[ip]; found {
 		kind = "l3"
 		node = n.Pod
@@ -176,6 +181,10 @@ func AnnotateTraceHop(ip, prevPod string, ipIndex map[string]TraceIPNode, adjace
 			path = []string{prevPod, node}
 			segment = "tunnel"
 		}
+		return
+	}
+	if cluster.Contains(ip) {
+		kind = "cluster"
 		return
 	}
 	kind = "external"
@@ -255,12 +264,22 @@ func ParseMtrReport(b []byte) ([]MtrHub, error) {
 // emit forwards each hop to the browser, the REST one appends to a slice.
 // Cancelling ctx (client disconnect or timeout) aborts the probe.
 func RunTrace(ctx context.Context, namespace, pod, container, dest, method string, metrics bool, cycles int,
-	ipIndex map[string]TraceIPNode, adjacency map[string][]string, emit func(TraceHop)) (string, error) {
+	ipIndex map[string]TraceIPNode, adjacency map[string][]string, cluster *TraceClusterInfo,
+	probeWrapper []string, emit func(TraceHop)) (string, error) {
+
+	// Guest-VM drivers prefix the probe (e.g. ["ssh_qemu", "sudo"]) so it runs
+	// inside the guest instead of the pod netns.
+	wrap := func(argv []string) []string {
+		if len(probeWrapper) == 0 {
+			return argv
+		}
+		return append(append([]string{}, probeWrapper...), argv...)
+	}
 
 	// Metrics mode: one batched mtr report, then annotate each hub.
 	if metrics {
 		var buf bytes.Buffer
-		if err := ExecStreamIntoContainer(ctx, namespace, pod, container, BuildMtrCommand(dest, method, cycles), &buf); err != nil && ctx.Err() == nil {
+		if err := ExecStreamIntoContainer(ctx, namespace, pod, container, wrap(BuildMtrCommand(dest, method, cycles)), &buf); err != nil && ctx.Err() == nil {
 			return "", err
 		}
 		hubs, err := ParseMtrReport(buf.Bytes())
@@ -281,7 +300,7 @@ func RunTrace(ctx context.Context, namespace, pod, container, dest, method strin
 			} else {
 				hop.IP = hub.Host
 				hop.RTT = hub.Avg
-				kind, node, iface, seg, path := AnnotateTraceHop(hub.Host, prevPod, ipIndex, adjacency)
+				kind, node, iface, seg, path := AnnotateTraceHop(hub.Host, prevPod, ipIndex, adjacency, cluster)
 				hop.Kind, hop.Node, hop.Iface, hop.Segment, hop.Path = kind, node, iface, seg, path
 				if kind == "l3" {
 					prevPod = node
@@ -349,7 +368,7 @@ func RunTrace(ctx context.Context, namespace, pod, container, dest, method strin
 				hop.Unreachable = u
 				dropped = true
 			}
-			kind, node, iface, seg, path := AnnotateTraceHop(ip, prevPod, ipIndex, adjacency)
+			kind, node, iface, seg, path := AnnotateTraceHop(ip, prevPod, ipIndex, adjacency, cluster)
 			hop.Kind, hop.Node, hop.Iface, hop.Segment, hop.Path = kind, node, iface, seg, path
 			if kind == "l3" {
 				prevPod = node
@@ -369,7 +388,7 @@ func RunTrace(ctx context.Context, namespace, pod, container, dest, method strin
 		}
 	}()
 
-	execErr := ExecStreamIntoContainer(runCtx, namespace, pod, container, BuildTraceCommand(dest, method), stdoutWriter)
+	execErr := ExecStreamIntoContainer(runCtx, namespace, pod, container, wrap(BuildTraceCommand(dest, method)), stdoutWriter)
 	_ = stdoutWriter.Close()
 	<-streamDone
 
@@ -469,6 +488,62 @@ func BuildTraceIPIndex(namespace string) (map[string]TraceIPNode, error) {
 	}
 	wg.Wait()
 	return idx, nil
+}
+
+// TraceClusterInfo holds the cluster's pod CIDRs and node IPs, so fabric
+// hops (a router exiting through its cluster eth0) are told apart from hops
+// beyond a topology external uplink.
+type TraceClusterInfo struct {
+	nets []*net.IPNet
+	ips  map[string]bool
+}
+
+// Contains reports whether ip belongs to the cluster infrastructure.
+func (c *TraceClusterInfo) Contains(ip string) bool {
+	if c == nil {
+		return false
+	}
+	if c.ips[ip] {
+		return true
+	}
+	parsed := net.ParseIP(ip)
+	if parsed == nil {
+		return false
+	}
+	for _, n := range c.nets {
+		if n.Contains(parsed) {
+			return true
+		}
+	}
+	return false
+}
+
+// BuildTraceClusterInfo collects every node's pod CIDRs and addresses. On
+// API failure it returns an empty info and hops degrade to "external".
+func BuildTraceClusterInfo() *TraceClusterInfo {
+	info := &TraceClusterInfo{ips: map[string]bool{}}
+	nodes, err := kubeclient.Clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		log.Printf("⚠️ Trace: could not list nodes for cluster info: %v (cluster hops will show as external)", err)
+		return info
+	}
+	for _, n := range nodes.Items {
+		cidrs := n.Spec.PodCIDRs
+		if len(cidrs) == 0 && n.Spec.PodCIDR != "" {
+			cidrs = []string{n.Spec.PodCIDR}
+		}
+		for _, c := range cidrs {
+			if _, ipnet, err := net.ParseCIDR(c); err == nil {
+				info.nets = append(info.nets, ipnet)
+			}
+		}
+		for _, a := range n.Status.Addresses {
+			if a.Type == v1.NodeInternalIP || a.Type == v1.NodeExternalIP {
+				info.ips[a.Address] = true
+			}
+		}
+	}
+	return info
 }
 
 // BuildPodAdjacency returns an undirected pod to neighbour-pods map from the

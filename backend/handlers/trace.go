@@ -12,6 +12,7 @@ import (
 
 	"kubendt/helpers"
 	"kubendt/kubeclient"
+	"kubendt/types"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -95,23 +96,45 @@ func TraceWebSocket(c *gin.Context) {
 		}
 	}
 
-	container, reused, err := helpers.EnsureDebugContainer(namespace, pod)
-	if err != nil {
-		log.Printf("❌ Trace: ensure debug container failed for %s/%s: %v", namespace, pod, err)
-		sendCtl(gin.H{"type": "error", "message": err.Error()})
-		return
+	// Guest-VM drivers (VyOS) run the probe inside the guest through their
+	// wrapper. The pod netns has no connectivity there, and the trace must use
+	// the guest routing table anyway. Everyone else gets the debug container.
+	// A guest driver without probe support gets a clean error instead of a
+	// debug container that cannot reach anything.
+	var probeWrapper []string
+	container := ""
+	if drv, _ := helpers.GetDriverForListedPod(podObj); drv != nil {
+		if gp, ok := drv.(types.GuestProbeProvider); ok {
+			probeWrapper = gp.GuestProbeWrapper()
+			container = podObj.Spec.Containers[0].Name
+		} else if podObj.Labels["kubendt/runtime"] == "qemu" {
+			sendCtl(gin.H{"type": "error", "message": "traceroute is not supported on this node type"})
+			return
+		}
 	}
-	log.Printf("🧭 Trace: %s %s from %s/%s to %q (method=%s)",
-		map[bool]string{true: "reusing", false: "injected"}[reused], container, namespace, pod, dest, method)
-	sendCtl(gin.H{"type": "meta", "source": pod, "dest": dest, "method": method, "container": container, "reused": reused})
-
-	if !reused {
-		sendCtl(gin.H{"type": "status", "state": "starting"})
-		if err := helpers.WaitEphemeralRunning(namespace, pod, container, traceStartTimeout); err != nil {
-			log.Printf("❌ Trace: container %s did not start: %v", container, err)
+	if probeWrapper == nil {
+		var reused bool
+		container, reused, err = helpers.EnsureDebugContainer(namespace, pod)
+		if err != nil {
+			log.Printf("❌ Trace: ensure debug container failed for %s/%s: %v", namespace, pod, err)
 			sendCtl(gin.H{"type": "error", "message": err.Error()})
 			return
 		}
+		log.Printf("🧭 Trace: %s %s from %s/%s to %q (method=%s)",
+			map[bool]string{true: "reusing", false: "injected"}[reused], container, namespace, pod, dest, method)
+		sendCtl(gin.H{"type": "meta", "source": pod, "dest": dest, "method": method, "container": container, "reused": reused})
+
+		if !reused {
+			sendCtl(gin.H{"type": "status", "state": "starting"})
+			if err := helpers.WaitEphemeralRunning(namespace, pod, container, traceStartTimeout); err != nil {
+				log.Printf("❌ Trace: container %s did not start: %v", container, err)
+				sendCtl(gin.H{"type": "error", "message": err.Error()})
+				return
+			}
+		}
+	} else {
+		log.Printf("🧭 Trace: in-guest probe from %s/%s to %q (method=%s)", namespace, pod, dest, method)
+		sendCtl(gin.H{"type": "meta", "source": pod, "dest": dest, "method": method, "container": container, "reused": true})
 	}
 
 	// Build the IP-to-node index and the adjacency up front so hops can be
@@ -123,6 +146,7 @@ func TraceWebSocket(c *gin.Context) {
 		ipIndex = map[string]helpers.TraceIPNode{}
 	}
 	adjacency := helpers.BuildPodAdjacency(namespace)
+	cluster := helpers.BuildTraceClusterInfo()
 
 	ctx, cancel := context.WithTimeout(context.Background(), traceRunTimeout)
 	defer cancel()
@@ -139,7 +163,7 @@ func TraceWebSocket(c *gin.Context) {
 
 	// Probe via the shared core, forwarding each hop to the browser as it comes.
 	sendCtl(gin.H{"type": "status", "state": map[bool]string{true: "measuring", false: "tracing"}[metrics]})
-	outcome, runErr := helpers.RunTrace(ctx, namespace, pod, container, dest, method, metrics, cycles, ipIndex, adjacency,
+	outcome, runErr := helpers.RunTrace(ctx, namespace, pod, container, dest, method, metrics, cycles, ipIndex, adjacency, cluster, probeWrapper,
 		func(hop helpers.TraceHop) { sendCtl(traceHopFrame{Type: "hop", TraceHop: hop}) })
 	if runErr != nil && ctx.Err() == nil {
 		log.Printf("❌ Trace stream ended with error (%s): %v", container, runErr)
@@ -183,15 +207,30 @@ func TraceReport(c *gin.Context) {
 		return
 	}
 
-	container, reused, err := helpers.EnsureDebugContainer(namespace, pod)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+	// Same guest-vs-debug-container split as the WebSocket handler.
+	var probeWrapper []string
+	container := ""
+	if drv, _ := helpers.GetDriverForListedPod(podObj); drv != nil {
+		if gp, ok := drv.(types.GuestProbeProvider); ok {
+			probeWrapper = gp.GuestProbeWrapper()
+			container = podObj.Spec.Containers[0].Name
+		} else if podObj.Labels["kubendt/runtime"] == "qemu" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "traceroute is not supported on this node type"})
+			return
+		}
 	}
-	if !reused {
-		if err := helpers.WaitEphemeralRunning(namespace, pod, container, traceStartTimeout); err != nil {
+	if probeWrapper == nil {
+		var reused bool
+		container, reused, err = helpers.EnsureDebugContainer(namespace, pod)
+		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
+		}
+		if !reused {
+			if err := helpers.WaitEphemeralRunning(namespace, pod, container, traceStartTimeout); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
 		}
 	}
 
@@ -200,13 +239,14 @@ func TraceReport(c *gin.Context) {
 		ipIndex = map[string]helpers.TraceIPNode{}
 	}
 	adjacency := helpers.BuildPodAdjacency(namespace)
+	cluster := helpers.BuildTraceClusterInfo()
 
 	ctx, cancel := context.WithTimeout(context.Background(), traceRunTimeout)
 	defer cancel()
 
 	startedAt := time.Now()
 	hops := make([]helpers.TraceHop, 0)
-	outcome, runErr := helpers.RunTrace(ctx, namespace, pod, container, dest, method, metrics, cycles, ipIndex, adjacency,
+	outcome, runErr := helpers.RunTrace(ctx, namespace, pod, container, dest, method, metrics, cycles, ipIndex, adjacency, cluster, probeWrapper,
 		func(hop helpers.TraceHop) { hops = append(hops, hop) })
 	finishedAt := time.Now()
 	if runErr != nil {
