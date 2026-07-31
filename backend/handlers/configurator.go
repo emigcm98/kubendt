@@ -224,7 +224,7 @@ func ConfigureNetwork(c *gin.Context) {
 		}
 
 		// ── EXECUTE PHASE ────────────────────────────────────────────────────
-		// Merge consecutive same-batchable-executor actions (vyos_apply /
+		// Merge consecutive same-batchable-executor actions (vyos_ssh_apply /
 		// xr_apply) into one Command to avoid N configure→commit round trips.
 		i := 0
 		for i < len(plans) {

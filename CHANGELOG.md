@@ -10,10 +10,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - The running build version is shown as a badge next to the title on the Home dashboard, read from the public `GET /version` endpoint. Releases show `vX.Y.Z`, local builds show `dev`, and hovering reveals the commit and build date.
+- VyOS routers now own their pod's cluster IP. The primary CNI interface (eth0) is passed through to the guest VM like the data interfaces, so a VyOS node is reachable at its pod IP and can act as the twin's internet gateway with `enable_snat` on eth0, matching the native-container routers.
+- The backend drives VyOS through the guest's HTTP API. Reads come from a single `POST /retrieve` (config as JSON, briefly cached and deduplicated) and configure actions are merged into one atomic `POST /configure` per batch. Namespace IP polling on VyOS drops from ~2.2 s to ~1.1 s and a 13-action cold commit from 10-20 s to ~7 s. SSH (`ssh_qemu`) remains as the rescue path.
+- `build-vyos-qcow2.sh` builds the virgin VyOS qcow2 unattended. It downloads the chosen rolling ISO (latest by default, `--list` to browse) and answers the installer over the serial console inside a throwaway container, using whichever engine (podman or docker) can reach /dev/kvm.
+- New VyOS image tunables `CPU_CORES` (vCPUs, default 1) and `HTTPS_FORWARD_PORT`.
+
+### Changed
+
+- VyOS management secrets (SSH keypair, HTTP API key) are generated per pod at startup.
+- Faster VyOS boot. GRUB menu timeout is patched to 0 wherever the release keeps it, the ephemeral qcow2 runs with cache=unsafe, ssh_qemu multiplexes SSH sessions, and the readiness probe starts at 30 s. Observed Ready time went from ~95 s to ~75 s with 2 vCPUs.
+- VyOS executors renamed by transport, `vyos_ssh_cli`/`vyos_ssh_apply` (rescue) and `vyos_api`/`vyos_api_apply` (hot path), and the executor package is now organized per platform.
+- Removed the `MOVE_POD_IPS_TO_GUEST` and `IFACE_SETTLE_SLEEP` env vars from the VyOS image. Moving IPs to the guest is now always on, and the settle fallback is fixed at 5 s.
 
 ### Fixed
 
 - Long Kubernetes node names no longer widen their card into a horizontal scroll on the Home cluster status. The node name now fits wrapping to at most two lines with the full name on hover.
+- Actions on the protected eth0 interface (everything except SNAT) are now rejected for VyOS and XRd too. Drivers with a custom execution planner used to bypass the guard entirely.
+- Interface renames inside the VyOS guest no longer race the stock config.boot, whose install-time hw-id entry could hijack eth0 and shift every name at coldplug. hw-id lines are stripped from the image at build time.
 
 ## [1.2.0] - 2026-07-30
 

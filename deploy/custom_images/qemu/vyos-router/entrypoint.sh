@@ -4,12 +4,17 @@ set -euo pipefail
 IMAGE="${IMAGE:-/vyos.qcow2}"
 BOOTCFG_TEMPLATE="${BOOTCFG_TEMPLATE:-/startup.cfg.tpl}"
 RAM_MB="${RAM_MB:-1024}"
+CPU_CORES="${CPU_CORES:-1}"
 QEMU_BIN="${QEMU_BIN:-qemu-system-x86_64}"
 NIC_MODEL="${NIC_MODEL:-virtio-net-pci}"
 
 SSH_FORWARD_PORT="${SSH_FORWARD_PORT:-2222}"
 SSH_PRIVATE_KEY="${SSH_PRIVATE_KEY:-/ssh_key}"
 SSH_PUBLIC_KEY="${SSH_PUBLIC_KEY:-/ssh_key.pub}"
+
+# Guest HTTP API (used by the backend for reads and configure batches)
+HTTPS_FORWARD_PORT="${HTTPS_FORWARD_PORT:-8443}"
+API_KEY_FILE="${API_KEY_FILE:-/run/kubendt/api-key}"
 
 # Management network for QEMU user-mode networking
 MGMT_NET="${MGMT_NET:-192.168.255.0/24}"
@@ -21,6 +26,7 @@ USERNAME="${USERNAME:-vyos}"
 PASSWORD="${PASSWORD:-vyos}"
 NAMESERVERS="${NAMESERVERS:-1.1.1.1,8.8.8.8}"
 ENCRYPTED_PASSWORD=""
+API_KEY=""
 
 # StatefulSet guarantees that the pod's hostname equals the pod name
 # (e.g. "router-0"). Use it as the canonical identifier rather than an
@@ -33,32 +39,36 @@ SEED_DIR="${SEED_DIR:-${WORKDIR}/seed}"
 SEED_ISO="${SEED_ISO:-${WORKDIR}/seed.iso}"
 FINAL_BOOTCFG="${FINAL_BOOTCFG:-${WORKDIR}/config.boot}"
 
-# If true, move dataplane IPv4 addresses from pod ethX to guest ethX
-MOVE_POD_IPS_TO_GUEST="${MOVE_POD_IPS_TO_GUEST:-true}"
-
-# Seconds to wait for dataplane interfaces to be available in the pod
-IFACE_SETTLE_SLEEP="${IFACE_SETTLE_SLEEP:-5}"
-
 write_ssh_private_key() {
   mkdir -p "$(dirname "${SSH_PRIVATE_KEY}")"
 
-  cat > "${SSH_PRIVATE_KEY}" <<'EOF'
------BEGIN OPENSSH PRIVATE KEY-----
-b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
-QyNTUxOQAAACCdDV9sg3z3URmhPzzlKtZ8gPwXStoOCqwTtIyfCbXzjQAAAIhZTR1GWU0d
-RgAAAAtzc2gtZWQyNTUxOQAAACCdDV9sg3z3URmhPzzlKtZ8gPwXStoOCqwTtIyfCbXzjQ
-AAAEDfo/nmfVkNSr40B9ngPrVrji4yKoWNhiRhB865wd8ag50NX2yDfPdRGaE/POUq1nyA
-/BdK2g4KrBO0jJ8JtfONAAAAAAECAwQF
------END OPENSSH PRIVATE KEY-----
-EOF
+  # Fresh keypair per pod start; nothing secret baked into the image. The
+  # public half rides the seed config.boot, so both ends stay in sync.
+  rm -f "${SSH_PRIVATE_KEY}" "${SSH_PRIVATE_KEY}.pub"
+  ssh-keygen -q -t ed25519 -N '' -C "kubendt-mgmt-${POD_NAME}" -f "${SSH_PRIVATE_KEY}"
+
+  if [[ "${SSH_PRIVATE_KEY}.pub" != "${SSH_PUBLIC_KEY}" ]]; then
+    mv "${SSH_PRIVATE_KEY}.pub" "${SSH_PUBLIC_KEY}"
+  fi
 
   chmod 600 "${SSH_PRIVATE_KEY}"
-
-  ssh-keygen -y -f "${SSH_PRIVATE_KEY}" > "${SSH_PUBLIC_KEY}"
   chmod 644 "${SSH_PUBLIC_KEY}"
 
-  echo "[INFO] Wrote management SSH private key to ${SSH_PRIVATE_KEY}"
-  echo "[INFO] Wrote management SSH public key to ${SSH_PUBLIC_KEY}"
+  echo "[INFO] Generated per-pod management SSH keypair at ${SSH_PRIVATE_KEY}(.pub)"
+}
+
+write_api_key() {
+  # Same idea as the SSH keypair: fresh secret per pod start, delivered to
+  # the guest inside the seed config.boot, kept on the container filesystem
+  # for the vyos_api wrapper.
+  mkdir -p "$(dirname "${API_KEY_FILE}")"
+  # head first, tr after: reading /dev/urandom through tr into a truncating
+  # head would die of SIGPIPE under pipefail (exit 141).
+  API_KEY="$(head -c 20 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+  printf '%s' "${API_KEY}" > "${API_KEY_FILE}"
+  chmod 600 "${API_KEY_FILE}"
+
+  echo "[INFO] Generated per-pod HTTP API key at ${API_KEY_FILE}"
 }
 
 cleanup() {
@@ -73,6 +83,9 @@ cleanup() {
     [[ -z "$dev" ]] && continue
     tc qdisc del dev "$dev" ingress 2>/dev/null || true
   done < <(get_data_ifaces || true)
+
+  # eth0 is not a data iface but may carry the cluster-passthrough redirect.
+  tc qdisc del dev eth0 ingress 2>/dev/null || true
 }
 trap cleanup EXIT
 
@@ -142,6 +155,57 @@ generate_nameservers_block() {
   done
 }
 
+# ── eth0 (primary CNI / cluster) passthrough ────────────────────────────────
+# eth0 is passed through to the guest like the data NICs (tap0 + tc), so VyOS
+# owns the cluster IP: reachable from other pods and able to SNAT twin
+# traffic, like the native-container routers. The slirp NIC remains as the
+# ssh_qemu channel only, renamed to eth999 in the guest. See README-vyos.md
+# → "Cluster Passthrough (eth0)".
+ETH0_MAC=""
+ETH0_IPV4=""
+ETH0_GW=""
+
+capture_eth0() {
+  [[ -d /sys/class/net/eth0 ]] || {
+    echo "[WARN] Pod has no eth0; skipping cluster passthrough"
+    return 0
+  }
+
+  ETH0_MAC="$(get_iface_mac eth0)"
+  ETH0_IPV4="$(get_iface_ipv4 eth0)"
+  # Capture the gateway before removing the address (that purges its routes).
+  ETH0_GW="$(ip -4 route show default dev eth0 2>/dev/null | awk '{for (i=1; i<NF; i++) if ($i == "via") {print $(i+1); exit}}')"
+
+  if [[ -z "${ETH0_IPV4}" ]]; then
+    echo "[WARN] Pod eth0 has no IPv4; skipping cluster passthrough"
+    ETH0_MAC=""
+    return 0
+  fi
+
+  echo "[INFO] Cluster passthrough: eth0 ${ETH0_IPV4} (gw ${ETH0_GW:-<none>}) MAC ${ETH0_MAC} will move to the guest"
+}
+
+generate_eth0_block() {
+  local output_file="$1"
+  : > "${output_file}"
+
+  [[ -z "${ETH0_MAC}" ]] && return 0
+
+  {
+    echo "    ethernet eth0 {"
+    echo "        address \"${ETH0_IPV4}\""
+    echo "        description \"KubeNDT cluster (primary CNI)\""
+    echo "        hw-id \"${ETH0_MAC}\""
+    echo "        offload {"
+    echo "            gro"
+    echo "            gso"
+    echo "            sg"
+    echo "            tso"
+    echo "        }"
+    echo "    }"
+  } >> "${output_file}"
+}
+
 generate_interfaces_block() {
   local output_file="$1"
   : > "${output_file}"
@@ -169,7 +233,7 @@ generate_interfaces_block() {
       echo "    }"
     } >> "${output_file}"
 
-    if [[ "${MOVE_POD_IPS_TO_GUEST}" == "true" && -n "${guest_ipv4}" ]]; then
+    if [[ -n "${guest_ipv4}" ]]; then
       remove_iface_ipv4 "${eth_if}" "${guest_ipv4}"
     fi
   done < <(get_data_ifaces)
@@ -178,6 +242,7 @@ generate_interfaces_block() {
 generate_boot_config() {
   local interfaces_tmp="$1"
   local nameservers_tmp="$2"
+  local eth0_tmp="$3"
 
   if [[ ! -f "${BOOTCFG_TEMPLATE}" ]]; then
     echo "[ERROR] Missing template: ${BOOTCFG_TEMPLATE}" >&2
@@ -194,12 +259,20 @@ generate_boot_config() {
   local ssh_pubkey
   local hostname_short
   local mgmt_vm_ip_no_cidr
+  local default_gw
 
   ssh_pubkey="$(awk '{print $2}' "${SSH_PUBLIC_KEY}")"
   hostname_short="$(hostname -s)"
   mgmt_vm_ip_no_cidr="${MGMT_VM_IP%%/*}"
 
+  # Guest default route: the pod's own gateway when the cluster passthrough
+  # is active (so the guest routes exactly like any other pod would), the
+  # slirp gateway otherwise.
+  default_gw="${ETH0_GW:-${MGMT_GATEWAY}}"
+
   sed \
+    -e "/^[[:space:]]*__ETH0_BLOCK__[[:space:]]*$/r ${eth0_tmp}" \
+    -e '/^[[:space:]]*__ETH0_BLOCK__[[:space:]]*$/d' \
     -e "/^[[:space:]]*__INTERFACES_BLOCK__[[:space:]]*$/r ${interfaces_tmp}" \
     -e '/^[[:space:]]*__INTERFACES_BLOCK__[[:space:]]*$/d' \
     -e "/^[[:space:]]*__NAMESERVERS_BLOCK__[[:space:]]*$/r ${nameservers_tmp}" \
@@ -208,9 +281,12 @@ generate_boot_config() {
     -e "s|__USER__|${USERNAME//|/\\|}|g" \
     -e "s|__ENCRYPTED_PASSWORD__|${ENCRYPTED_PASSWORD//|/\\|}|g" \
     -e "s|__SSH_PUBLIC_KEY__|${ssh_pubkey//|/\\|}|g" \
+    -e "s|__API_KEY__|${API_KEY//|/\\|}|g" \
+    -e "s|__MGMT_GUEST_IFACE__|${MGMT_GUEST_IFACE//|/\\|}|g" \
+    -e "s|__MGMT_NIC_MAC__|${MGMT_NIC_MAC//|/\\|}|g" \
     -e "s|__MGMT_VM_IP__|${MGMT_VM_IP//|/\\|}|g" \
     -e "s|__MGMT_VM_IP_NO_CIDR__|${mgmt_vm_ip_no_cidr//|/\\|}|g" \
-    -e "s|__MGMT_GATEWAY__|${MGMT_GATEWAY//|/\\|}|g" \
+    -e "s|__DEFAULT_GW__|${default_gw//|/\\|}|g" \
     "${BOOTCFG_TEMPLATE}" \
     > "${FINAL_BOOTCFG}"
 
@@ -236,32 +312,57 @@ generate_seed_iso() {
 }
 
 create_ssh_qemu_wrapper() {
+  # ControlMaster/ControlPersist: each `kubectl exec` spawns a fresh ssh, but
+  # the mux socket persists in the container, so repeat calls skip the SSH
+  # handshake. auto falls back to a direct connection on a stale socket.
   cat > /usr/local/bin/ssh_qemu <<EOF
 #!/usr/bin/env bash
-exec ssh -i "${SSH_PRIVATE_KEY}" -p "${SSH_FORWARD_PORT}" -o StrictHostKeyChecking=no -o ConnectTimeout=5 -o BatchMode=yes -o ServerAliveInterval=3 -o ServerAliveCountMax=3 "${USERNAME}@127.0.0.1" "\$@"
+exec ssh -i "${SSH_PRIVATE_KEY}" -p "${SSH_FORWARD_PORT}" -o StrictHostKeyChecking=no -o ConnectTimeout=5 -o BatchMode=yes -o ServerAliveInterval=3 -o ServerAliveCountMax=3 -o ControlMaster=auto -o ControlPath=/run/ssh_qemu.ctl -o ControlPersist=300 "${USERNAME}@127.0.0.1" "\$@"
 EOF
 
   chmod +x /usr/local/bin/ssh_qemu
   echo "[INFO] Created helper command: /usr/local/bin/ssh_qemu"
 }
 
-write_ssh_private_key
-create_ssh_qemu_wrapper
+create_vyos_api_wrapper() {
+  # vyos_api <endpoint> [json-data]: POST to the guest HTTP API, print the raw
+  # body. curl fails on HTTP >= 400 keeping the error JSON visible, so failed
+  # commits surface as failed execs. --max-time stays under the 30s exec deadline.
+  cat > /usr/local/bin/vyos_api <<EOF
+#!/usr/bin/env bash
+ep="\$1"; shift || true
+data="\${1:-{\}}"
+exec curl -ksS --fail-with-body --connect-timeout 5 --max-time 25 \\
+  -F data="\${data}" -F key="\$(cat ${API_KEY_FILE})" \\
+  "https://127.0.0.1:${HTTPS_FORWARD_PORT}/\${ep}"
+EOF
 
+  chmod +x /usr/local/bin/vyos_api
+  echo "[INFO] Created helper command: /usr/local/bin/vyos_api"
+}
+
+write_ssh_private_key
+write_api_key
+create_ssh_qemu_wrapper
+create_vyos_api_wrapper
+
+# cache=unsafe: the qcow2 is ephemeral (discarded on pod restart), so skip
+# host fsyncs for faster boot and commits.
 QEMU_ARGS=(
   -enable-kvm
   -m "${RAM_MB}"
+  -smp "${CPU_CORES}"
   -cpu host
-  -drive "file=${IMAGE},if=virtio,format=qcow2"
+  -drive "file=${IMAGE},if=virtio,format=qcow2,cache=unsafe"
   -nographic
   -serial mon:stdio
   -nic none
 )
 
-QEMU_ARGS+=(
-  -netdev "user,id=mgmt0,net=${MGMT_NET},hostfwd=tcp:127.0.0.1:${SSH_FORWARD_PORT}-:22"
-  -device "${NIC_MODEL},netdev=mgmt0,mac=52:54:00:12:34:56,bus=pci.0,addr=0x05"
-)
+# The slirp mgmt NIC is appended later: its PCI slot depends on whether the
+# eth0 passthrough is active (see the PCI layout note below).
+MGMT_NIC_MAC="52:54:00:12:34:56"
+MGMT_GUEST_IFACE="eth999"
 
 # Determine the number of dataplane interfaces this pod is expected to have.
 # kubendt writes per-pod expected counts into the kubendt-internal-iface-counts
@@ -305,14 +406,12 @@ if [[ -r "${IFACE_COUNTS_FILE}" ]]; then
       echo "[WARN] Timed out after ${IFACE_WAIT_MAX}s waiting for ${EXPECTED_IFACES} ifaces (have ${cur_count}). Continuing anyway."
     fi
   else
-    echo "[WARN] ${IFACE_COUNTS_FILE} contents not a number (${EXPECTED_IFACES@Q}), falling back to fixed sleep"
-    echo "[INFO] Waiting ${IFACE_SETTLE_SLEEP}s for dataplane interfaces to settle..."
-    sleep "${IFACE_SETTLE_SLEEP}"
+    echo "[WARN] ${IFACE_COUNTS_FILE} contents not a number (${EXPECTED_IFACES@Q}), falling back to fixed 5s settle sleep"
+    sleep 5
   fi
 else
-  echo "[WARN] ${IFACE_COUNTS_FILE} did not appear within ${IFACE_FILE_WAIT_MAX}s; falling back to fixed sleep"
-  echo "[INFO] Waiting ${IFACE_SETTLE_SLEEP}s for dataplane interfaces to settle..."
-  sleep "${IFACE_SETTLE_SLEEP}"
+  echo "[WARN] ${IFACE_COUNTS_FILE} did not appear within ${IFACE_FILE_WAIT_MAX}s; falling back to fixed 5s settle sleep"
+  sleep 5
 fi
 
 DATA_IFACES=()
@@ -320,9 +419,11 @@ while IFS= read -r line; do
   [[ -n "${line}" ]] && DATA_IFACES+=("${line}")
 done < <(get_data_ifaces)
 
+capture_eth0
+
 echo "[INFO] Found dataplane interfaces: ${DATA_IFACES[*]:-<none>}"
-echo "[INFO] MOVE_POD_IPS_TO_GUEST=${MOVE_POD_IPS_TO_GUEST}"
 echo "[INFO] Management SSH will be forwarded on 127.0.0.1:${SSH_FORWARD_PORT}"
+echo "[INFO] Guest HTTP API will be forwarded on 127.0.0.1:${HTTPS_FORWARD_PORT}"
 echo "[INFO] Management network: ${MGMT_NET}"
 echo "[INFO] Management gateway: ${MGMT_GATEWAY}"
 echo "[INFO] Management VM IP: ${MGMT_VM_IP}"
@@ -335,14 +436,23 @@ mkdir -p "${SEED_DIR}"
 
 INTERFACES_TMP="$(mktemp)"
 NAMESERVERS_TMP="$(mktemp)"
+ETH0_TMP="$(mktemp)"
 
 ENCRYPTED_PASSWORD="$(mkpasswd -m sha-512 -R 656000 -S iQooHUXD1YCIzFZw "${PASSWORD}")"
 
+generate_eth0_block "${ETH0_TMP}"
 generate_interfaces_block "${INTERFACES_TMP}"
 generate_nameservers_block "${NAMESERVERS_TMP}"
-generate_boot_config "${INTERFACES_TMP}" "${NAMESERVERS_TMP}"
+generate_boot_config "${INTERFACES_TMP}" "${NAMESERVERS_TMP}" "${ETH0_TMP}"
 
-rm -f "${INTERFACES_TMP}" "${NAMESERVERS_TMP}"
+rm -f "${INTERFACES_TMP}" "${NAMESERVERS_TMP}" "${ETH0_TMP}"
+
+# Hand the cluster IP over to the guest. The container keeps only loopback,
+# which is all that kubectl exec and the ssh_qemu hostfwd need.
+if [[ -n "${ETH0_MAC}" ]]; then
+  ip route del default dev eth0 2>/dev/null || true
+  remove_iface_ipv4 eth0 "${ETH0_IPV4}"
+fi
 
 echo "[INFO] Generated interface bindings:"
 grep -A10 -B0 '^    ethernet ' "${FINAL_BOOTCFG}" || true
@@ -366,8 +476,46 @@ QEMU_ARGS+=(
 # requires no module.
 echo "[INFO] Building MAC→ifname netmap (SMBIOS Type 11):"
 
-tap_idx=0
 REWIRE_PAIRS=""
+
+# PCI layout. The guest kernel names NICs by slot order, which is what
+# keeps the udev renames collision-free:
+#   0x05        eth0 passthrough (kernel eth0 → rename no-op)
+#   0x06..0x1d  data NICs (kernel eth1.., as before)
+#   0x1e        slirp mgmt NIC (always last → eth999 rename never collides;
+#               caps data NICs at 24)
+# Without the passthrough, slirp takes 0x05 as it always did.
+if [[ -n "${ETH0_MAC}" ]]; then
+  echo "[INFO] Wiring eth0 <-> tap0 (cluster passthrough)"
+  echo "[INFO] eth0 MAC: ${ETH0_MAC}"
+  echo "[INFO] eth0 PCI addr: 0x5"
+
+  wire_iface_to_tap "eth0" "tap0"
+
+  echo "[INFO]     kubendt-netmap:${ETH0_MAC}=eth0"
+
+  REWIRE_PAIRS="eth0:tap0 "
+
+  QEMU_ARGS+=(
+    -netdev "tap,id=p0,ifname=tap0,script=no,downscript=no"
+    -device "${NIC_MODEL},netdev=p0,mac=${ETH0_MAC},bus=pci.0,addr=0x5"
+    -smbios "type=11,value=kubendt-netmap:${ETH0_MAC}=eth0"
+  )
+  MGMT_PCI_ADDR="0x1e"
+else
+  MGMT_PCI_ADDR="0x5"
+fi
+
+# Slirp mgmt NIC: only carries the loopback SSH hostfwd for ssh_qemu;
+# renamed to eth999 in the guest so the eth0 name stays free.
+echo "[INFO]     kubendt-netmap:${MGMT_NIC_MAC}=${MGMT_GUEST_IFACE}"
+QEMU_ARGS+=(
+  -netdev "user,id=mgmt0,net=${MGMT_NET},hostfwd=tcp:127.0.0.1:${SSH_FORWARD_PORT}-:22,hostfwd=tcp:127.0.0.1:${HTTPS_FORWARD_PORT}-:443"
+  -device "${NIC_MODEL},netdev=mgmt0,mac=${MGMT_NIC_MAC},bus=pci.0,addr=${MGMT_PCI_ADDR}"
+  -smbios "type=11,value=kubendt-netmap:${MGMT_NIC_MAC}=${MGMT_GUEST_IFACE}"
+)
+
+tap_idx=0
 for eth_if in "${DATA_IFACES[@]}"; do
   tap_idx=$((tap_idx + 1))
   # Tap name uses the same numeric suffix as the eth it bridges, so that

@@ -1,11 +1,13 @@
 package drivers
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"sort"
 	"strconv"
-	"strings"
+	"sync"
+	"time"
 
 	"kubendt/capabilities/capabilities"
 	drivers_meta "kubendt/drivers/meta"
@@ -16,7 +18,7 @@ import (
 func NewVyOSRouterDriver() *VyOSRouterDriver {
 	return &VyOSRouterDriver{
 		Meta:         drivers_meta.NewMeta("VyOSRouterDriver", "router"),
-		ExecutorMeta: executor.NewExecutorMeta(executor.VyOSCLIExecutorName),
+		ExecutorMeta: executor.NewExecutorMeta(executor.VyOSSSHCLIExecutorName),
 	}
 }
 
@@ -42,35 +44,33 @@ func (VyOSRouterDriver) Runtime() string {
 // vyosIfaceNameRe enforces VyOS' ethernet config schema: only ethN names.
 var vyosIfaceNameRe = regexp.MustCompile(`^eth\d+$`)
 
+// vyosInternalMgmtIface is the guest name of the slirp NIC carrying the
+// backend's ssh_qemu/vyos_api channel. Renamed away from eth0 so the cluster
+// passthrough can take that name; must never surface as a data interface.
+const vyosInternalMgmtIface = "eth999"
+
 // InterfaceNameConstraints reflects what VyOS' configd accepts for
-// `interfaces ethernet <name>`. eth0 is reserved for the management NIC.
+// `interfaces ethernet <name>`. eth0 is reserved for the cluster (primary CNI)
+// passthrough NIC, eth999 for the internal management NIC.
 func (VyOSRouterDriver) InterfaceNameConstraints() drivers_meta.InterfaceNameConstraints {
 	return drivers_meta.InterfaceNameConstraints{
 		Pattern:      vyosIfaceNameRe,
 		PatternHuman: `^eth\d+$ (e.g. eth1, eth10, eth42)`,
-		Reserved:     []string{"eth0"},
+		Reserved:     []string{"eth0", vyosInternalMgmtIface},
 	}
 }
 
-// ReadinessProbeCommands returns an SSH-based readiness probe so the pod is
-// only declared Ready once the QEMU guest is reachable via ssh_qemu.
-//
-// Timings are tuned to VyOS' real boot envelope (~73 s from QEMU launch to
-// SSH up, plus a few seconds in the entrypoint waiting for veths to settle).
-// InitialDelaySeconds skips the period when probing is pointless; once we
-// cross it, a tight PeriodSeconds catches the ready flip fast without
-// burning many failed probes.
-//
-// Envelope: 60 + 5*15 = 135 s before kubelet declares the pod unready,
-// comfortably above the observed boot time but tight enough to surface real
-// failures quickly.
+// ReadinessProbeCommands returns an SSH-based readiness probe: the pod is
+// Ready once the QEMU guest answers over ssh_qemu. Probing starts at 30 s
+// (boot optimisations pulled the envelope below the historical ~73 s) with
+// the same total failure budget as before, 30 + 5*21 = 135 s.
 func (VyOSRouterDriver) ReadinessProbeCommands() types.ReadinessProbeSpec {
 	return types.ReadinessProbeSpec{
 		Command:             []string{"sh", "-c", "ssh_qemu echo ok"},
-		InitialDelaySeconds: 60,
+		InitialDelaySeconds: 30,
 		PeriodSeconds:       5,
 		TimeoutSeconds:      8, // ssh_qemu ConnectTimeout=5, add margin
-		FailureThreshold:    15,
+		FailureThreshold:    21,
 	}
 }
 
@@ -131,39 +131,46 @@ func (VyOSRouterDriver) DisableDNAT(iface string, externalPort int, internalIP s
 	}
 }
 
-// GetSNATInterface consulta `show nat source rules` en el guest VyOS y devuelve
-// la interfaz con MASQUERADE activo, o "" si no hay NAT configurado.
+// GetSNATInterface returns the interface with an active MASQUERADE rule, or
+// "" when no NAT is configured. Read from the cached /retrieve config JSON,
+// which replaced the ~1.8s `show nat source rules` op-mode call.
 func (d *VyOSRouterDriver) GetSNATInterface(namespace, podName string) (string, error) {
-	vyosExec, err := executor.Get(executor.VyOSCLIExecutorName)
+	cfg, err := vyosRetrieveConfig(namespace, podName)
 	if err != nil {
 		return "", err
 	}
-	out, err := vyosExec.ExecCommandAndGet(podName, namespace,
-		executor.NewArgsCommand([]string{"show", "nat", "source", "rules"}))
-	if err != nil {
-		// VyOS returns a non-zero exit when no NAT is configured.
-		if strings.Contains(err.Error(), "NAT is not configured") ||
-			strings.Contains(out, "NAT is not configured") {
-			return "", nil
-		}
-		return "", err
-	}
-	return parseVyOSNATSourceRules(out), nil
+	return vyosSNATInterfaceFromConfig(cfg), nil
 }
 
-// parseVyOSNATSourceRules extracts the first interface with masquerade translation.
-// Formato esperado de `show nat source rules`:
-//
-//	Rule    Source     Destination    Proto    Out-Int    Translation
-//	------  ---------  -------------  -------  ---------  -------------
-//	100     0.0.0.0/0  0.0.0.0/0      any      eth4       masquerade
-func parseVyOSNATSourceRules(output string) string {
-	for _, line := range strings.Split(output, "\n") {
-		fields := strings.Fields(line)
-		for i, f := range fields {
-			if strings.EqualFold(f, "masquerade") && i > 0 {
-				return fields[i-1]
-			}
+// vyosSNATInterfaceFromConfig walks nat.source.rule.* looking for the first
+// rule whose translation address is "masquerade" and returns its outbound
+// interface. Handles both the current schema (outbound-interface { name X })
+// and the pre-1.4 flat form (outbound-interface X).
+func vyosSNATInterfaceFromConfig(cfg map[string]interface{}) string {
+	rules, ok := cfgChild(cfg, "nat", "source", "rule")
+	if !ok {
+		return ""
+	}
+	// Iterate rule numbers in sorted order so the result is deterministic
+	// when several masquerade rules exist.
+	nums := make([]string, 0, len(rules))
+	for n := range rules {
+		nums = append(nums, n)
+	}
+	sort.Strings(nums)
+	for _, n := range nums {
+		rule, ok := rules[n].(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if addr, _ := cfgLeaf(rule, "translation", "address"); addr != "masquerade" {
+			continue
+		}
+		if name, ok := cfgLeaf(rule, "outbound-interface", "name"); ok {
+			return name
+		}
+		if name, ok := cfgLeaf(rule, "outbound-interface"); ok {
+			return name
 		}
 	}
 	return ""
@@ -286,10 +293,9 @@ func (VyOSRouterDriver) OSPFRemoveMTUIgnore(iface string) [][]string {
 
 // ─── ResolveActionExecutionPlan ───────────────────────────────────────────────
 
-// ResolveActionExecutionPlan routes L2 and L3 actions through vyos_apply,
-// which wraps configure-mode commands in a vbash transaction.
-// L2/L3 actions require configure-mode; the default executor (vyos_cli)
-// only supports op-mode.
+// ResolveActionExecutionPlan routes configure-mode actions through
+// vyos_api_apply (one atomic /configure request per batch). The default
+// executor (vyos_ssh_cli) only covers op-mode.
 func (d *VyOSRouterDriver) ResolveActionExecutionPlan(namespace, podName string, action types.ActionEntry) (string, [][]string, bool, error) {
 	// VyOS always uses the same interface names as the pod (identity mapping),
 	// so no name translation is needed.
@@ -304,13 +310,13 @@ func (d *VyOSRouterDriver) ResolveActionExecutionPlan(namespace, podName string,
 		if err != nil {
 			return "", nil, true, err
 		}
-		return executor.VyOSApplyExecutorName, driver.LinkUp(g), true, nil
+		return executor.VyOSAPIApplyExecutorName, driver.LinkUp(g), true, nil
 	case "link_down":
 		g, err := resolveIface(action.Iface)
 		if err != nil {
 			return "", nil, true, err
 		}
-		return executor.VyOSApplyExecutorName, driver.LinkDown(g), true, nil
+		return executor.VyOSAPIApplyExecutorName, driver.LinkDown(g), true, nil
 
 	// L3, interfaces
 	case "set_ip":
@@ -318,37 +324,37 @@ func (d *VyOSRouterDriver) ResolveActionExecutionPlan(namespace, podName string,
 		if err != nil {
 			return "", nil, true, err
 		}
-		return executor.VyOSApplyExecutorName, driver.SetIP(g, action.CIDR), true, nil
+		return executor.VyOSAPIApplyExecutorName, driver.SetIP(g, action.CIDR), true, nil
 	case "replace_ip":
 		g, err := resolveIface(action.Iface)
 		if err != nil {
 			return "", nil, true, err
 		}
-		return executor.VyOSApplyExecutorName, driver.ReplaceIP(g, action.CIDR), true, nil
+		return executor.VyOSAPIApplyExecutorName, driver.ReplaceIP(g, action.CIDR), true, nil
 	case "remove_ip":
 		g, err := resolveIface(action.Iface)
 		if err != nil {
 			return "", nil, true, err
 		}
-		return executor.VyOSApplyExecutorName, driver.RemoveIP(g, action.CIDR), true, nil
+		return executor.VyOSAPIApplyExecutorName, driver.RemoveIP(g, action.CIDR), true, nil
 
 	// L3, rutas y DNS (no dependen de interfaz de datos)
 	case "set_default_route":
-		return executor.VyOSApplyExecutorName, driver.SetDefaultRoute(action.Gateway), true, nil
+		return executor.VyOSAPIApplyExecutorName, driver.SetDefaultRoute(action.Gateway), true, nil
 	case "remove_default_route":
-		return executor.VyOSApplyExecutorName, driver.RemoveDefaultRoute(), true, nil
+		return executor.VyOSAPIApplyExecutorName, driver.RemoveDefaultRoute(), true, nil
 	case "add_static_route":
-		return executor.VyOSApplyExecutorName, driver.AddStaticRoute(action.DstCIDR, action.Gateway, action.Device), true, nil
+		return executor.VyOSAPIApplyExecutorName, driver.AddStaticRoute(action.DstCIDR, action.Gateway, action.Device), true, nil
 	case "remove_static_route":
-		return executor.VyOSApplyExecutorName, driver.RemoveStaticRoute(action.DstCIDR, action.Gateway, action.Device), true, nil
+		return executor.VyOSAPIApplyExecutorName, driver.RemoveStaticRoute(action.DstCIDR, action.Gateway, action.Device), true, nil
 	case "add_dns_nameserver":
-		return executor.VyOSApplyExecutorName, driver.AddDNSNameserver(action.DNSServer), true, nil
+		return executor.VyOSAPIApplyExecutorName, driver.AddDNSNameserver(action.DNSServer), true, nil
 	case "remove_dns_nameserver":
-		return executor.VyOSApplyExecutorName, driver.RemoveDNSNameserver(action.DNSServer), true, nil
+		return executor.VyOSAPIApplyExecutorName, driver.RemoveDNSNameserver(action.DNSServer), true, nil
 	case "add_dns_search":
-		return executor.VyOSApplyExecutorName, driver.AddDNSSearch(action.DNSDomain), true, nil
+		return executor.VyOSAPIApplyExecutorName, driver.AddDNSSearch(action.DNSDomain), true, nil
 	case "remove_dns_search":
-		return executor.VyOSApplyExecutorName, driver.RemoveDNSSearch(action.DNSDomain), true, nil
+		return executor.VyOSAPIApplyExecutorName, driver.RemoveDNSSearch(action.DNSDomain), true, nil
 
 	// NAT
 	case "enable_snat":
@@ -356,67 +362,67 @@ func (d *VyOSRouterDriver) ResolveActionExecutionPlan(namespace, podName string,
 		if err != nil {
 			return "", nil, true, err
 		}
-		return executor.VyOSApplyExecutorName, driver.EnableSNAT(g), true, nil
+		return executor.VyOSAPIApplyExecutorName, driver.EnableSNAT(g), true, nil
 	case "disable_snat":
 		g, err := resolveIface(action.Iface)
 		if err != nil {
 			return "", nil, true, err
 		}
-		return executor.VyOSApplyExecutorName, driver.DisableSNAT(g), true, nil
+		return executor.VyOSAPIApplyExecutorName, driver.DisableSNAT(g), true, nil
 	case "enable_dnat":
 		g, err := resolveIface(action.Iface)
 		if err != nil {
 			return "", nil, true, err
 		}
-		return executor.VyOSApplyExecutorName, driver.EnableDNAT(g, action.ExternalPort, action.InternalIP, action.InternalPort, action.Protocol), true, nil
+		return executor.VyOSAPIApplyExecutorName, driver.EnableDNAT(g, action.ExternalPort, action.InternalIP, action.InternalPort, action.Protocol), true, nil
 	case "disable_dnat":
 		g, err := resolveIface(action.Iface)
 		if err != nil {
 			return "", nil, true, err
 		}
-		return executor.VyOSApplyExecutorName, driver.DisableDNAT(g, action.ExternalPort, action.InternalIP, action.InternalPort, action.Protocol), true, nil
+		return executor.VyOSAPIApplyExecutorName, driver.DisableDNAT(g, action.ExternalPort, action.InternalIP, action.InternalPort, action.Protocol), true, nil
 
 	// OSPF
 	case "ospf_add_network":
-		return executor.VyOSApplyExecutorName, driver.OSPFAddNetwork(action.CIDR, action.OSPFArea), true, nil
+		return executor.VyOSAPIApplyExecutorName, driver.OSPFAddNetwork(action.CIDR, action.OSPFArea), true, nil
 	case "ospf_remove_network":
-		return executor.VyOSApplyExecutorName, driver.OSPFRemoveNetwork(action.CIDR, action.OSPFArea), true, nil
+		return executor.VyOSAPIApplyExecutorName, driver.OSPFRemoveNetwork(action.CIDR, action.OSPFArea), true, nil
 	case "ospf_set_router_id":
-		return executor.VyOSApplyExecutorName, driver.OSPFSetRouterID(action.RouterID), true, nil
+		return executor.VyOSAPIApplyExecutorName, driver.OSPFSetRouterID(action.RouterID), true, nil
 	case "ospf_remove_router_id":
-		return executor.VyOSApplyExecutorName, driver.OSPFRemoveRouterID(), true, nil
+		return executor.VyOSAPIApplyExecutorName, driver.OSPFRemoveRouterID(), true, nil
 	case "ospf_passive_default":
-		return executor.VyOSApplyExecutorName, driver.OSPFPassiveDefault(), true, nil
+		return executor.VyOSAPIApplyExecutorName, driver.OSPFPassiveDefault(), true, nil
 	case "ospf_remove_passive_default":
-		return executor.VyOSApplyExecutorName, driver.OSPFRemovePassiveDefault(), true, nil
+		return executor.VyOSAPIApplyExecutorName, driver.OSPFRemovePassiveDefault(), true, nil
 	case "ospf_no_passive":
 		g, err := resolveIface(action.Iface)
 		if err != nil {
 			return "", nil, true, err
 		}
-		return executor.VyOSApplyExecutorName, driver.OSPFNoPassive(g), true, nil
+		return executor.VyOSAPIApplyExecutorName, driver.OSPFNoPassive(g), true, nil
 	case "ospf_remove_no_passive":
 		g, err := resolveIface(action.Iface)
 		if err != nil {
 			return "", nil, true, err
 		}
-		return executor.VyOSApplyExecutorName, driver.OSPFRemoveNoPassive(g), true, nil
+		return executor.VyOSAPIApplyExecutorName, driver.OSPFRemoveNoPassive(g), true, nil
 	case "ospf_originate_default":
-		return executor.VyOSApplyExecutorName, driver.OSPFOriginateDefault(), true, nil
+		return executor.VyOSAPIApplyExecutorName, driver.OSPFOriginateDefault(), true, nil
 	case "ospf_remove_originate_default":
-		return executor.VyOSApplyExecutorName, driver.OSPFRemoveOriginateDefault(), true, nil
+		return executor.VyOSAPIApplyExecutorName, driver.OSPFRemoveOriginateDefault(), true, nil
 	case "ospf_mtu_ignore":
 		g, err := resolveIface(action.Iface)
 		if err != nil {
 			return "", nil, true, err
 		}
-		return executor.VyOSApplyExecutorName, driver.OSPFMTUIgnore(g), true, nil
+		return executor.VyOSAPIApplyExecutorName, driver.OSPFMTUIgnore(g), true, nil
 	case "ospf_remove_mtu_ignore":
 		g, err := resolveIface(action.Iface)
 		if err != nil {
 			return "", nil, true, err
 		}
-		return executor.VyOSApplyExecutorName, driver.OSPFRemoveMTUIgnore(g), true, nil
+		return executor.VyOSAPIApplyExecutorName, driver.OSPFRemoveMTUIgnore(g), true, nil
 
 	default:
 		return "", nil, false, nil
@@ -425,43 +431,187 @@ func (d *VyOSRouterDriver) ResolveActionExecutionPlan(namespace, podName string,
 
 // ─── EffectiveInterfaceInspector ─────────────────────────────────────────────
 
-// GetEffectiveInterfaces implements types.EffectiveInterfaceInspector.
-// Returns IP, MAC and state for all data interfaces by parsing a single
-// "show interfaces" call. VyOS always uses the same interface names as the
-// pod, so the interface name doubles as the guest interface name.
-func (d *VyOSRouterDriver) GetEffectiveInterfaces(namespace, podName string) ([]map[string]string, error) {
-	vyosExec, err := executor.Get(executor.VyOSCLIExecutorName)
+// vyosConfigCache collapses the bursts of /retrieve calls the poller and the
+// UI issue for the same pod (interfaces, states and NAT all read the same
+// config snapshot). TTL is far below the poller period, so post-commit
+// staleness is invisible in practice.
+const vyosConfigTTL = 2 * time.Second
+
+type vyosConfigEntry struct {
+	cfg map[string]interface{}
+	at  time.Time
+}
+
+var (
+	vyosConfigMu       sync.Mutex
+	vyosConfigCache    = map[string]vyosConfigEntry{}
+	vyosConfigInflight = map[string]chan struct{}{}
+)
+
+// vyosRetrieveConfig fetches the guest's full config as JSON (POST /retrieve
+// via the vyos_api wrapper), cached briefly per pod. Errors are never cached.
+// Concurrent misses are deduplicated via the inflight gate: the poller fires
+// the states and NAT reads in parallel, which would otherwise cost two
+// identical kubectl execs per poll.
+func vyosRetrieveConfig(namespace, podName string) (map[string]interface{}, error) {
+	key := namespace + "/" + podName
+
+	for {
+		vyosConfigMu.Lock()
+		if e, ok := vyosConfigCache[key]; ok && time.Since(e.at) < vyosConfigTTL {
+			vyosConfigMu.Unlock()
+			return e.cfg, nil
+		}
+		wait, inflight := vyosConfigInflight[key]
+		if !inflight {
+			ch := make(chan struct{})
+			vyosConfigInflight[key] = ch
+			vyosConfigMu.Unlock()
+
+			cfg, err := vyosFetchConfig(namespace, podName)
+
+			vyosConfigMu.Lock()
+			delete(vyosConfigInflight, key)
+			close(ch)
+			if err == nil {
+				// Prune expired entries (pods that no longer exist).
+				for k, e := range vyosConfigCache {
+					if time.Since(e.at) >= vyosConfigTTL {
+						delete(vyosConfigCache, k)
+					}
+				}
+				vyosConfigCache[key] = vyosConfigEntry{cfg: cfg, at: time.Now()}
+			}
+			vyosConfigMu.Unlock()
+			return cfg, err
+		}
+		vyosConfigMu.Unlock()
+
+		// Someone else is fetching; wait and re-check. If they failed, the
+		// loop makes us the next fetcher instead of inheriting their error.
+		<-wait
+	}
+}
+
+// vyosFetchConfig is the uncached POST /retrieve round trip.
+func vyosFetchConfig(namespace, podName string) (map[string]interface{}, error) {
+	apiExec, err := executor.Get(executor.VyOSAPIExecutorName)
 	if err != nil {
-		return nil, fmt.Errorf("vyos_cli executor not found: %w", err)
+		return nil, fmt.Errorf("vyos_api executor not found: %w", err)
 	}
 
-	out, err := vyosExec.ExecCommandAndGet(podName, namespace,
-		executor.NewArgsCommand([]string{"show", "interfaces"}))
+	out, err := apiExec.ExecCommandAndGet(podName, namespace,
+		executor.NewArgsCommand([]string{"retrieve", `{"op": "showConfig", "path": []}`}))
 	if err != nil {
 		return nil, err
 	}
 
-	byGuest := parseVyOSBriefTable(out)
+	return parseVyOSAPIEnvelope(out)
+}
+
+// parseVyOSAPIEnvelope unwraps the {"success": ..., "data": ..., "error": ...}
+// envelope every VyOS HTTP API response uses and returns data as a map.
+func parseVyOSAPIEnvelope(raw string) (map[string]interface{}, error) {
+	var envelope struct {
+		Success bool            `json:"success"`
+		Data    json.RawMessage `json:"data"`
+		Error   json.RawMessage `json:"error"`
+	}
+	if err := json.Unmarshal([]byte(raw), &envelope); err != nil {
+		return nil, fmt.Errorf("unparseable VyOS API response: %w (body: %.200s)", err, raw)
+	}
+	if !envelope.Success {
+		return nil, fmt.Errorf("VyOS API error: %s", string(envelope.Error))
+	}
+	cfg := map[string]interface{}{}
+	if err := json.Unmarshal(envelope.Data, &cfg); err != nil {
+		return nil, fmt.Errorf("VyOS API data is not an object: %w", err)
+	}
+	return cfg, nil
+}
+
+// cfgChild walks nested config maps and returns the map at the given path.
+func cfgChild(cfg map[string]interface{}, path ...string) (map[string]interface{}, bool) {
+	cur := cfg
+	for _, key := range path {
+		next, ok := cur[key].(map[string]interface{})
+		if !ok {
+			return nil, false
+		}
+		cur = next
+	}
+	return cur, true
+}
+
+// cfgLeaf returns the string value at the given path. Multi-valued leaves
+// (JSON arrays) yield their first element, matching the single-value
+// semantics of the old text parsers.
+func cfgLeaf(cfg map[string]interface{}, path ...string) (string, bool) {
+	cur := interface{}(cfg)
+	for _, key := range path {
+		m, ok := cur.(map[string]interface{})
+		if !ok {
+			return "", false
+		}
+		cur, ok = m[key]
+		if !ok {
+			return "", false
+		}
+	}
+	switch v := cur.(type) {
+	case string:
+		return v, true
+	case []interface{}:
+		if len(v) > 0 {
+			if s, ok := v[0].(string); ok {
+				return s, true
+			}
+		}
+	}
+	return "", false
+}
+
+// vyosInterfaceEntry builds the UI interface map from one ethernet config
+// node. State is the admin state (`disable` present), authoritative here:
+// carrier on virtio↔tap is always up and link actions toggle exactly this flag.
+func vyosInterfaceEntry(iface string, node map[string]interface{}) map[string]string {
+	entry := map[string]string{
+		"interface":      iface,
+		"guestInterface": iface,
+	}
+	if _, disabled := node["disable"]; disabled {
+		entry["state"] = "down"
+	} else {
+		entry["state"] = "up"
+	}
+	if mac, ok := cfgLeaf(node, "hw-id"); ok {
+		entry["mac"] = mac
+	}
+	if ip, ok := cfgLeaf(node, "address"); ok {
+		entry["ipv4"] = ip
+	}
+	return entry
+}
+
+// GetEffectiveInterfaces implements types.EffectiveInterfaceInspector.
+// Returns IP, MAC and state for all data interfaces from one cached
+// /retrieve call. VyOS always uses the same interface names as the pod, so
+// the interface name doubles as the guest interface name.
+func (d *VyOSRouterDriver) GetEffectiveInterfaces(namespace, podName string) ([]map[string]string, error) {
+	cfg, err := vyosRetrieveConfig(namespace, podName)
+	if err != nil {
+		return nil, err
+	}
+
+	ethernets, _ := cfgChild(cfg, "interfaces", "ethernet")
 
 	var result []map[string]string
-	for iface, details := range byGuest {
-		if iface == "lo" || types.IsPseudoInterface(iface) {
+	for iface, raw := range ethernets {
+		node, ok := raw.(map[string]interface{})
+		if !ok || iface == vyosInternalMgmtIface || types.IsPseudoInterface(iface) {
 			continue
 		}
-		entry := map[string]string{
-			"interface":      iface,
-			"guestInterface": iface,
-		}
-		if v := details["state"]; v != "" {
-			entry["state"] = v
-		}
-		if v := details["mac"]; v != "" {
-			entry["mac"] = v
-		}
-		if v := details["ipv4"]; v != "" {
-			entry["ipv4"] = v
-		}
-		result = append(result, entry)
+		result = append(result, vyosInterfaceEntry(iface, node))
 	}
 
 	sort.Slice(result, func(i, j int) bool {
@@ -474,98 +624,45 @@ func (d *VyOSRouterDriver) GetEffectiveInterfaces(namespace, podName string) ([]
 // Returns the state of a single interface, used for the hover tooltip.
 // VyOS uses the same interface name as the pod, so no name translation is needed.
 func (d *VyOSRouterDriver) GetEffectiveInterface(namespace, podName, podInterface string) (map[string]string, error) {
-	vyosExec, err := executor.Get(executor.VyOSCLIExecutorName)
-	if err != nil {
-		return nil, fmt.Errorf("vyos_cli executor not found: %w", err)
-	}
-
-	out, err := vyosExec.ExecCommandAndGet(podName, namespace,
-		executor.NewArgsCommand([]string{"show", "interfaces"}))
+	cfg, err := vyosRetrieveConfig(namespace, podName)
 	if err != nil {
 		return nil, err
 	}
 
-	byGuest := parseVyOSBriefTable(out)
 	entry := map[string]string{
 		"interface":      podInterface,
 		"guestInterface": podInterface,
 	}
-	if details, ok := byGuest[podInterface]; ok {
-		if v := details["state"]; v != "" {
-			entry["state"] = v
-		}
-		if v := details["mac"]; v != "" {
-			entry["mac"] = v
-		}
-		if v := details["ipv4"]; v != "" {
-			entry["ipv4"] = v
+	if ethernets, ok := cfgChild(cfg, "interfaces", "ethernet"); ok {
+		if node, ok := ethernets[podInterface].(map[string]interface{}); ok {
+			entry = vyosInterfaceEntry(podInterface, node)
 		}
 	}
 	return entry, nil
 }
 
 // GetEffectiveInterfaceStates implements types.EffectiveInterfaceStateInspector.
-// Returns up/down state for all data interfaces via a single "show interfaces"
-// call. VyOS interface names are always identical to pod interface names.
+// Returns up/down state for all data interfaces from the cached /retrieve call.
 func (d *VyOSRouterDriver) GetEffectiveInterfaceStates(namespace, podName string) (map[string]bool, error) {
-	vyosExec, err := executor.Get(executor.VyOSCLIExecutorName)
-	if err != nil {
-		return nil, fmt.Errorf("vyos_cli executor not found: %w", err)
-	}
-
-	out, err := vyosExec.ExecCommandAndGet(podName, namespace,
-		executor.NewArgsCommand([]string{"show", "interfaces"}))
+	cfg, err := vyosRetrieveConfig(namespace, podName)
 	if err != nil {
 		return nil, err
 	}
 
-	byGuest := parseVyOSBriefTable(out)
-	states := make(map[string]bool, len(byGuest))
-	for iface, details := range byGuest {
-		if iface == "eth0" {
+	ethernets, _ := cfgChild(cfg, "interfaces", "ethernet")
+	states := make(map[string]bool, len(ethernets))
+	for iface, raw := range ethernets {
+		// eth0 (cluster passthrough) has no topology link to colour, and the
+		// internal management NIC is not a data interface at all.
+		if iface == "eth0" || iface == vyosInternalMgmtIface {
 			continue
 		}
-		states[iface] = details["state"] == "up"
+		node, ok := raw.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		_, disabled := node["disable"]
+		states[iface] = !disabled
 	}
 	return states, nil
-}
-
-// ─── parsers de salida VyOS CLI ───────────────────────────────────────────────
-
-// parseVyOSBriefTable parses "show interfaces" by fixed column position:
-// Interface(0) IP(1) MAC(2) VRF(3) MTU(4) S/L(5). S/L is "<admin>/<link>"
-// where u=up, D=down, A=admin-down, up only when both are 'u'.
-//
-//	Interface    IP Address         MAC                VRF        MTU  S/L    Description
-//	eth1         10.0.10.1/30       26:7e:60:c9:07:69  default   1500  u/u    KubeNDT eth1
-//	eth2         10.0.0.1/24        82:59:33:ea:8f:fa  default   1500  A/D    KubeNDT eth2
-var vyosBriefTableRe = regexp.MustCompile(
-	`^(eth\S+)\s+(\S+)\s+([0-9a-fA-F]{2}(?::[0-9a-fA-F]{2}){5})\s+\S+\s+\S+\s+([uDA])/([uDA])`,
-)
-
-func parseVyOSBriefTable(output string) map[string]map[string]string {
-	result := map[string]map[string]string{}
-	for _, line := range strings.Split(output, "\n") {
-		m := vyosBriefTableRe.FindStringSubmatch(strings.TrimSpace(line))
-		if len(m) < 6 {
-			continue
-		}
-		iface := m[1]
-		ip := m[2]
-		mac := m[3]
-		adminUp := m[4] == "u"
-		linkUp := m[5] == "u"
-
-		state := "down"
-		if adminUp && linkUp {
-			state = "up"
-		}
-
-		entry := map[string]string{"state": state, "mac": mac}
-		if ip != "-" {
-			entry["ipv4"] = ip
-		}
-		result[iface] = entry
-	}
-	return result
 }

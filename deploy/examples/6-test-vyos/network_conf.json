@@ -70,13 +70,6 @@
                     "cidr": "10.208.11.114/16"
                 },
                 {
-                    "type": "remove_default_route"
-                },
-                {
-                    "type": "set_default_route",
-                    "gateway": "10.208.0.1"
-                },
-                {
                     "type": "add_dns_nameserver",
                     "dns_server": "155.54.210.4"
                 },
@@ -86,7 +79,7 @@
                 },
                 {
                     "type": "enable_snat",
-                    "iface": "eth4"
+                    "iface": "eth0"
                 },
                 {
                     "type": "add_static_route",
