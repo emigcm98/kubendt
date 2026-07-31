@@ -3,6 +3,7 @@ import './TracePanel.css';
 import { WS_BASE_URL, API_BASE_URL } from '../config';
 import { ReactComponent as TraceIcon } from '../assets/images/icons/trace-icon.svg';
 import { ReactComponent as GlobeIcon } from '../assets/images/icons/globe.svg';
+import { ReactComponent as ClusterIcon } from '../assets/images/icons/cluster.svg';
 
 // TracePanel is the remote control for the traceroute visualization. It owns the
 // WebSocket, the hop list and the scrubber (play, step forward, step back). The
@@ -25,7 +26,9 @@ const STATUS_LABEL = {
 };
 
 // Private ranges (RFC1918, CGNAT, link-local, loopback) still count as the way
-// out through the external network. A public address is the internet.
+// out through the external network, unless the trace already left through the
+// cluster fabric (kind "cluster" from the backend). A public address is the
+// internet.
 const isPrivateIp = (ip) => {
   if (!ip) return false;
   const o = ip.split('.').map(Number);
@@ -141,6 +144,7 @@ const TracePanel = ({
     const rows = [];
     let prev = source;
     let usedExternalNode = false;
+    let exitedViaCluster = false;
     for (const h of hops) {
       if (h.kind === 'l3' && h.node) {
         let path = h.path && h.path.length ? h.path : [prev, h.node];
@@ -174,8 +178,24 @@ const TracePanel = ({
           });
         }
         prev = h.node;
+      } else if (h.kind === 'cluster') {
+        // Kubernetes fabric hop (flannel gateway, node IP): the packet left
+        // through a router's cluster eth0, never through the external node.
+        // It sits at the outward internet point from here on.
+        exitedViaCluster = true;
+        wps.push({ pod: '__internet__', seg: 'internet' });
+        rows.push({
+          key: `c${h.ttl}`,
+          step: wps.length - 1,
+          kind: 'cluster',
+          ttl: h.ttl,
+          ip: h.ip,
+          rtt: h.rtt,
+          drop: h.unreachable || undefined,
+          metrics: h.metrics,
+        });
       } else if (h.kind === 'external') {
-        if (isPrivateIp(h.ip)) {
+        if (isPrivateIp(h.ip) && !exitedViaCluster) {
           // Private address past the topology, still the external network.
           // Route to the grey node the first time, then the packet stays there
           // (waypoint stays prev) while the list keeps advancing.
@@ -199,8 +219,9 @@ const TracePanel = ({
             metrics: h.metrics,
           });
         } else {
-          // Public address, the internet. Every public hop is a step and the
-          // packet sits at the outward internet point for all of them.
+          // Public address, or anything past the cluster exit: the internet.
+          // Every hop is a step and the packet sits at the outward internet
+          // point for all of them.
           wps.push({ pod: '__internet__', seg: 'internet' });
           rows.push({
             key: `i${h.ttl}`,
@@ -749,6 +770,13 @@ const TracePanel = ({
                   <span className="trace-hop-ip">{r.ip}</span>
                   <span className="trace-hop-node trace-hop-internet-label">
                     <GlobeIcon className="trace-hop-inline-icon" /> internet
+                  </span>
+                </>
+              ) : r.kind === 'cluster' ? (
+                <>
+                  <span className="trace-hop-ip">{r.ip}</span>
+                  <span className="trace-hop-node trace-hop-cluster-label">
+                    <ClusterIcon className="trace-hop-inline-icon" /> cluster
                   </span>
                 </>
               ) : r.kind === 'external-net' ? (

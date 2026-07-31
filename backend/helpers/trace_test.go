@@ -1,6 +1,9 @@
 package helpers
 
-import "testing"
+import (
+	"net"
+	"testing"
+)
 
 func TestParseTraceHop(t *testing.T) {
 	cases := []struct {
@@ -153,22 +156,35 @@ func TestAnnotateTraceHop(t *testing.T) {
 	}
 
 	// Resolved + topology path through the switch → "link".
-	kind, node, iface, seg, path := AnnotateTraceHop("10.5.0.1", "host-0", idx, adj)
+	kind, node, iface, seg, path := AnnotateTraceHop("10.5.0.1", "host-0", idx, adj, nil)
 	if kind != "l3" || node != "router-0" || iface != "eth2" || seg != "link" ||
 		!equalSlice(path, []string{"host-0", "switch-0", "router-0"}) {
 		t.Errorf("l3/link mismatch: kind=%s node=%s iface=%s seg=%s path=%v", kind, node, iface, seg, path)
 	}
 
 	// Resolved but no topology path from the previous pod → "tunnel".
-	kind, node, _, seg, path = AnnotateTraceHop("10.5.0.1", "gnb", idx, adj)
+	kind, node, _, seg, path = AnnotateTraceHop("10.5.0.1", "gnb", idx, adj, nil)
 	if kind != "l3" || node != "router-0" || seg != "tunnel" || !equalSlice(path, []string{"gnb", "router-0"}) {
 		t.Errorf("tunnel mismatch: kind=%s node=%s seg=%s path=%v", kind, node, seg, path)
 	}
 
 	// Unresolved IP → "external".
-	kind, node, _, _, _ = AnnotateTraceHop("9.9.9.9", "host-0", idx, adj)
+	kind, node, _, _, _ = AnnotateTraceHop("9.9.9.9", "host-0", idx, adj, nil)
 	if kind != "external" || node != "" {
 		t.Errorf("external mismatch: kind=%s node=%s", kind, node)
+	}
+
+	// Unresolved IP inside the cluster infrastructure → "cluster".
+	_, podNet, _ := net.ParseCIDR("10.244.2.0/24")
+	cluster := &TraceClusterInfo{nets: []*net.IPNet{podNet}, ips: map[string]bool{"10.208.103.21": true}}
+	if kind, _, _, _, _ = AnnotateTraceHop("10.244.2.1", "host-0", idx, adj, cluster); kind != "cluster" {
+		t.Errorf("pod-cidr hop should be cluster, got %s", kind)
+	}
+	if kind, _, _, _, _ = AnnotateTraceHop("10.208.103.21", "host-0", idx, adj, cluster); kind != "cluster" {
+		t.Errorf("node-ip hop should be cluster, got %s", kind)
+	}
+	if kind, _, _, _, _ = AnnotateTraceHop("10.208.0.1", "host-0", idx, adj, cluster); kind != "external" {
+		t.Errorf("lan gateway should stay external, got %s", kind)
 	}
 }
 
