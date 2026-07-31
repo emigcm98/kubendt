@@ -5,16 +5,20 @@
 Install the required tools listed in [CONTRIBUTING.md](../CONTRIBUTING.md), then run each component in a separate terminal.
 
 **Backend** (from `backend/`):
+
 ```bash
 go run .
 ```
+
 Runs on http://localhost:8080. Requires Go 1.26+ with CGO, gcc, and libsqlite3-dev.
 
 **Frontend** (from `frontend/`):
+
 ```bash
 npm ci
 npm start
 ```
+
 Runs on http://localhost:3000.
 
 The frontend dev server proxies `/api` requests to the backend at `localhost:8080`.
@@ -35,6 +39,7 @@ Or create a local file and source it (not committed to git):
 CORS_ALLOWED_ORIGINS=http://localhost:3000
 FILES_BASE_PATH=./files
 ```
+
 ```bash
 set -a && source backend/.env.local && set +a
 ```
@@ -74,20 +79,13 @@ File storage and the SQLite database are persisted in named Docker volumes (`kub
 
 #### Authentication
 
-- `KUBENDT_ADMIN_PASSWORD`: admin password for login. If unset, a random one is
-  generated on first run and printed to the logs once (its bcrypt hash is then
-  stored, so it stays stable across restarts).
-- `KUBENDT_AUTH_DISABLED`: set to `true` to run the API **unauthenticated**
-  (dev / trusted network only). A loud warning is logged at startup.
-- `KUBENDT_COOKIE_SECURE`: set to `true` when serving over HTTPS so the session
-  cookie is only sent over TLS (default `false`, since the stock compose serves
-  plain HTTP behind nginx).
+- `KUBENDT_ADMIN_PASSWORD`: admin password for login. If unset, a random one is generated on first run and printed to the logs once (its bcrypt hash is then stored, so it stays stable across restarts).
+- `KUBENDT_AUTH_DISABLED`: set to `true` to run the API **unauthenticated** (dev / trusted network only). A loud warning is logged at startup.
+- `KUBENDT_COOKIE_SECURE`: set to `true` when serving over HTTPS so the session cookie is only sent over TLS (default `false`, since the stock compose serves plain HTTP behind nginx).
 - `KUBENDT_SESSION_IDLE_HOURS`: idle timeout for browser sessions (default `12`).
 - `KUBENDT_SESSION_MAX_HOURS`: absolute session lifetime (default `168` = 7 days).
 
-Programmatic access uses **API tokens** (created in the dashboard or via
-`POST /auth/tokens` with the admin password, optionally with an expiry via
-`expires_in_days`), sent as `Authorization: Bearer <token>`.
+Programmatic access uses **API tokens** (created in the dashboard or via `POST /auth/tokens` with the admin password, optionally with an expiry via `expires_in_days`), sent as `Authorization: Bearer <token>`.
 
 ### Frontend
 

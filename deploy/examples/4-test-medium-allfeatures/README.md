@@ -1,6 +1,7 @@
 # 4-test-medium-allfeatures
 
 Medium-scale scenario that exercises the most common KubeNDT features together in a single deployment:
+
 - OSPF dynamic routing across three FRR routers
 - iperf3 bandwidth testing (internal path and external via DNAT)
 - BIND9 DNS server with a custom zone (`kubendt.local`)
@@ -28,7 +29,7 @@ Medium-scale scenario that exercises the most common KubeNDT features together i
 Nodes deployed:
 
 | Node | Image | Role |
-|---|---|---|
+| --- | --- | --- |
 | `edge-router-0` | `frrouting/frr` | Edge router, SNAT, DNAT, OSPF |
 | `svc-router-0` | `frrouting/frr` | Services router, OSPF |
 | `room-router-0` | `frrouting/frr` | User rooms router, OSPF |
@@ -49,7 +50,7 @@ Nodes deployed:
 ## IP Addressing Summary
 
 | Segment | Subnet | Key hosts |
-|---|---|---|
+| --- | --- | --- |
 | OSPF backbone / DMZ | `10.0.255.0/24` | `edge-router-0 eth2` `.254`, `svc-router-0 eth1` `.253`, `room-router-0 eth1` `.252`, `web-public-0 eth1` `.20`, `iperf-server-0 eth1` `.10` |
 | Services network | `192.168.10.0/24` | `svc-router-0 eth2` `.1`, `iperf-server-1 eth1` `.10`, `dns-server-0 eth1` `.15`, `web-internal-0 eth1` `.20` |
 | Room A | `192.168.0.0/24` | `room-router-0 eth2` `.1`, `user-0` `.10`, `user-1` `.11` |
@@ -62,17 +63,17 @@ Nodes deployed:
 
 `dns-server-0` runs BIND9 with an authoritative zone for `kubendt.local`. Configured records:
 
-| Hostname | A record |
-|---|---|
-| `ns1.kubendt.local` | `192.168.10.15` |
-| `dns-server.kubendt.local` | `192.168.10.15` |
+| Hostname                     | A record        |
+| ---------------------------- | --------------- |
+| `ns1.kubendt.local`          | `192.168.10.15` |
+| `dns-server.kubendt.local`   | `192.168.10.15` |
 | `web-internal.kubendt.local` | `192.168.10.20` |
-| `iperf-svc-1.kubendt.local` | `192.168.10.10` |
-| `web-public.kubendt.local` | `10.0.255.20` |
-| `iperf-dmz-0.kubendt.local` | `10.0.255.10` |
-| `svc-router.kubendt.local` | `192.168.10.1` |
-| `room-router0.kubendt.local` | `192.168.0.1` |
-| `room-router1.kubendt.local` | `192.168.1.1` |
+| `iperf-svc-1.kubendt.local`  | `192.168.10.10` |
+| `web-public.kubendt.local`   | `10.0.255.20`   |
+| `iperf-dmz-0.kubendt.local`  | `10.0.255.10`   |
+| `svc-router.kubendt.local`   | `192.168.10.1`  |
+| `room-router0.kubendt.local` | `192.168.0.1`   |
+| `room-router1.kubendt.local` | `192.168.1.1`   |
 
 All `user-*` nodes are configured with `add_dns_nameserver 192.168.10.15` and `add_dns_search kubendt.local`, so short names like `web-internal` resolve directly.
 
@@ -102,7 +103,7 @@ files/
 These files are mounted into the corresponding nodes at deploy time:
 
 | Namespace path | Mounted into | Purpose |
-|---|---|---|
+| --- | --- | --- |
 | `web_public/index_public.html` | `web-public-0:/usr/share/nginx/html/index.html` | Public web page content |
 | `web_internal/index_internal.html` | `web-internal-0:/usr/share/nginx/html/index.html` | Internal web page content |
 | `dns/named.conf` | `dns-server-0:/etc/bind/named.conf` | BIND9 main config |
@@ -139,6 +140,7 @@ Create a namespace (e.g. `allfeatures` or any name you prefer).
 Go to the **Namespace File Manager** and create the six files listed in the [Files In This Folder](#files-in-this-folder) section, replicating the folder structure.
 
 The easiest approach is to create each file by hand:
+
 - Click **New folder** to create `dns/`, `web_internal/`, and `web_public/`.
 - Inside each folder, click **New file** and paste the content from the corresponding file in the `files/` directory of this example.
 
@@ -282,13 +284,13 @@ The `user-*` nodes have `iproute2-tc` installed and expose the **TCCapable** dri
 2. Switch to the **Links** tab. The tab lists all interfaces of the pod and, for each one, shows a **TC (Qdisc)** section.
 3. Select interface `eth1` (the one connected to the room switch).
 4. If no qdisc is configured the panel shows `No Qdisc configured (noqueue)`.
-   - Choose **tbf** from the *Select Qdisc* dropdown and click **➕ Create**.
+   - Choose **tbf** from the _Select Qdisc_ dropdown and click **➕ Create**.
 5. Fill in the TBF parameters:
-   | Field | Value | Meaning |
-   |---|---|---|
-   | Rate | `1mbit` | Maximum bandwidth: 1 Mbit/s |
-   | Burst | `32kbit` | Token bucket burst size |
-   | Latency | `50ms` | Maximum latency before packets are dropped |
+   | Field   | Value    | Meaning                                    |
+   | ------- | -------- | ------------------------------------------ |
+   | Rate    | `1mbit`  | Maximum bandwidth: 1 Mbit/s                |
+   | Burst   | `32kbit` | Token bucket burst size                    |
+   | Latency | `50ms`   | Maximum latency before packets are dropped |
 6. Click **💾** (Save) to apply. The backend translates this into: `tc qdisc replace dev eth1 root tbf rate 1mbit burst 32kbit latency 50ms`
 7. To remove the shaping later, click **🗑️** (Delete).
 

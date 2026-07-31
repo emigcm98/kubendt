@@ -1,6 +1,7 @@
 # 6-test-vyos
 
 VyOS + OSPF end-to-end scenario to validate QEMU-based router workflows in KubeNDT:
+
 - Topology import and deployment with QEMU-based nodes
 - VyOS router configuration via `VyOSRouterDriver`
 - External uplink attachment (physical VLAN)
@@ -14,11 +15,13 @@ VyOS + OSPF end-to-end scenario to validate QEMU-based router workflows in KubeN
 ![Topology](../../../doc/images/tests/6-test-vyos.png)
 
 This example deploys:
+
 - `host` (4 replicas): `host-0` to `host-3` (Alpine hosts)
 - `web-server` (1 replica): `web-server` (nginx web server)
 - `router` (2 replicas): `router-0` and `router-1` (VyOS routers, QEMU-based)
 
 Logical segments:
+
 - `10.0.0.0/24`: `host-0` and `router-0 eth2`
 - `10.0.1.0/24`: `host-1` and `router-0 eth3`
 - `10.0.10.0/30`: point-to-point link between `router-0 eth1` and `router-1 eth1`
@@ -46,7 +49,7 @@ files/
 It is mounted into the node at deploy time:
 
 | Namespace path | Mounted into | Purpose |
-|---|---|---|
+| --- | --- | --- |
 | `web-server/index.html` | `web-server:/usr/share/nginx/html/index.html` | Web page served by nginx |
 
 > This file must exist in the Namespace File Manager **before** importing the topology. A missing file makes `web-server` serve the default nginx page instead of your content.
@@ -67,17 +70,14 @@ It is mounted into the node at deploy time:
 1. Create namespace
    - Create namespace `vyos` (or any name you prefer).
 
-
 2. Open Namespace File Manager
    - Go to the Namespace File Manager for that namespace.
-
 
 3. Create `web-server/index.html` file
 
    - In the file manager, create a folder `web-server/` and, inside it, a file `index.html`.
 
    - Paste the content from `files/web-server/index.html` in this example (or any HTML you want to serve).
-
 
 4. Import topology
 
@@ -91,13 +91,11 @@ It is mounted into the node at deploy time:
 
    - Nodes can be moved to the preferred position and saved by clicking `Save positions`.
 
-
 5. Edit `network_conf.json` for your environment
 
    - The `replace_ip` action for `router-0 eth4` contains a lab-specific IP (`10.208.11.114/16`). Replace it with the address appropriate for your physical network.
 
    - Similarly, update the `set_default_route` gateway for `router-0` and `add_dns_nameserver` / `add_dns_search` values if needed.
-
 
 6. Apply network configuration
 
@@ -106,7 +104,6 @@ It is mounted into the node at deploy time:
    - Select `network_conf.json`.
 
    - Confirm successful actions in the result dialog. This applies default routes on all hosts, external IP and SNAT on `router-0`, static route, and full OSPF configuration on both routers.
-
 
 7. Validate OSPF adjacency and learned routes
 
@@ -133,7 +130,6 @@ It is mounted into the node at deploy time:
      ```
 
      Expected OSPF-learned routes for `10.0.0.0/24` and `10.0.1.0/24`.
-
 
 8. Validate end-to-end connectivity
 
@@ -163,7 +159,6 @@ It is mounted into the node at deploy time:
 
      Expected: the HTML content of the mounted `index.html`.
 
-
 9. Validate internet access (if external uplink is configured)
 
    - From any `host-*`, run:
@@ -173,7 +168,6 @@ It is mounted into the node at deploy time:
      ```
 
      Expected: successful replies through `router-0` SNAT on `eth4`.
-
 
 10. Validate DNAT port-forward (if external uplink is configured)
 
@@ -190,7 +184,6 @@ It is mounted into the node at deploy time:
       ```bash
       show nat destination rules
       ```
-
 
 ## Troubleshooting
 

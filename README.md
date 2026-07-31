@@ -12,7 +12,7 @@
 
 **KubeNDT** is a platform for deploying and operating virtual network topologies on Kubernetes.
 
-You define your topology as a JSON file  (nodes, links, images, replicas) and KubeNDT deploys it into your cluster and shows it as a live graph in the dashboard. From there you can apply a network configuration (IP addresses, routes, NAT, OSPF, bridging…) across all nodes at once, open a shell into any of them, add or remove nodes on the fly, and monitor interface states in real time. Any container image works as a node. 
+You define your topology as a JSON file (nodes, links, images, replicas) and KubeNDT deploys it into your cluster and shows it as a live graph in the dashboard. From there you can apply a network configuration (IP addresses, routes, NAT, OSPF, bridging…) across all nodes at once, open a shell into any of them, add or remove nodes on the fly, and monitor interface states in real time. Any container image works as a node.
 
 Network configuration is abstracted through a **driver and capability system**: regardless of what image a node runs, the same declarative actions apply. The driver takes care of translating them into the right commands for that node type.
 
@@ -22,9 +22,9 @@ Network configuration is abstracted through a **driver and capability system**: 
 
 Copyright (C) 2026 Emilio García de la Calera Molina
 
-**KubeNDT** is licensed under the GNU Affero General Public License v3.0 only (AGPL-3.0-only).
+**KubeNDT** is licensed under the GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later).
 
-You may use, modify, and distribute this software under the terms of the AGPL-3.0-only license.
+You may use, modify, and distribute this software under the terms of the AGPL-3.0-or-later license.
 
 Commercial licensing may be available in the future.
 
@@ -34,9 +34,7 @@ See the LICENSE file for full details.
 
 ### Third-party assets
 
-KubeNDT bundles a small set of third-party SVG icons in its frontend.
-See [ATTRIBUTION.md](./ATTRIBUTION.md) for the full list of authors,
-collections and licenses (CC BY 4.0, OFL).
+KubeNDT bundles a small set of third-party SVG icons in its frontend. See [ATTRIBUTION.md](./ATTRIBUTION.md) for the full list of authors, collections and licenses (CC BY 4.0, OFL).
 
 ## Key Features
 
@@ -84,6 +82,7 @@ collections and licenses (CC BY 4.0, OFL).
 - Optional: QEMU support for VM-based node types (requires `/dev/kvm`)
 
 **For local development, also install:**
+
 - Go 1.26+ with CGO enabled (requires `gcc` and `libsqlite3-dev`)
 - Node.js 24 LTS
 
@@ -91,21 +90,19 @@ For troubleshooting steps, see [doc/TROUBLESHOOTING.md](doc/TROUBLESHOOTING.md).
 
 ### Run with Docker Compose
 
-This is how you deploy and use KubeNDT. It runs as two containers: the `backend`
-(Go API) and the `frontend` (the React dashboard served by nginx, which also
-reverse-proxies `/api` to the backend). Make sure your kubeconfig is at
-`~/.kube/config`; it is mounted read-only into the backend.
+This is how you deploy and use KubeNDT. It runs as two containers: the `backend` (Go API) and the `frontend` (the React dashboard served by nginx, which also reverse-proxies `/api` to the backend). Make sure your kubeconfig is at `~/.kube/config`; it is mounted read-only into the backend.
 
 **Published images** (nothing to compile). Grab the compose file and run:
+
 ```bash
 curl -O https://raw.githubusercontent.com/emigcm98/kubendt/main/docker-compose.prod.yml
 docker compose -f docker-compose.prod.yml up -d
 ```
-Pin a release with `KUBENDT_TAG=1.0.0` (defaults to `latest`). Image tags are
-plain semver without the leading `v`. Published images are available from the
-first release onward.
+
+Pin a release with `KUBENDT_TAG=1.0.0` (defaults to `latest`). Image tags are plain semver without the leading `v`. Published images are available from the first release onward.
 
 **Build from source** instead:
+
 ```bash
 git clone https://github.com/emigcm98/kubendt.git
 cd kubendt
@@ -114,12 +111,7 @@ docker compose up --build
 
 Either way, open http://localhost in your browser.
 
-**Authentication:** the dashboard and API require login. The provided compose
-files ship a default password **`admin123`**, change it via `KUBENDT_ADMIN_PASSWORD`
-before any real use. If you unset it entirely, a random password is generated
-and printed once in the backend logs. For programmatic access, create an API
-token in the dashboard and send it as `Authorization: Bearer <token>`. See
-[doc/DEPLOYMENT.md](doc/DEPLOYMENT.md#authentication) for all auth variables.
+**Authentication:** the dashboard and API require login. The provided compose files ship a default password **`admin123`**, change it via `KUBENDT_ADMIN_PASSWORD` before any real use. If you unset it entirely, a random password is generated and printed once in the backend logs. For programmatic access, create an API token in the dashboard and send it as `Authorization: Bearer <token>`. See [doc/DEPLOYMENT.md](doc/DEPLOYMENT.md#authentication) for all auth variables.
 
 **Common settings** (in the compose file's `environment:`, or via your shell):
 
@@ -133,26 +125,30 @@ Full reference in [doc/DEPLOYMENT.md](doc/DEPLOYMENT.md#environment-variables-re
 
 ### Local Development (without Docker)
 
-For contributing or hacking on KubeNDT, run the two processes directly in two
-terminals. Clone the repo first:
+For contributing or hacking on KubeNDT, run the two processes directly in two terminals. Clone the repo first:
+
 ```bash
 git clone https://github.com/emigcm98/kubendt.git
 cd kubendt
 ```
 
 **Backend:**
+
 ```bash
 cd backend
 go run .
 ```
+
 Runs on http://localhost:8080.
 
 **Frontend** (new terminal):
+
 ```bash
 cd frontend
 npm ci
 npm start
 ```
+
 Runs on http://localhost:3000.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full list of required tools and versions.
@@ -170,13 +166,12 @@ The full technical details were moved out of this top-level README to keep first
 - Implementation summary: [doc/IMPLEMENTATION_SUMMARY.md](doc/IMPLEMENTATION_SUMMARY.md)
 - Architecture flows and diagrams: [doc/ARCHITECTURE_FLOWS.md](doc/ARCHITECTURE_FLOWS.md)
 
-
 ## Use Cases & Examples
 
 KubeNDT includes **6 reference deployments** in `deploy/examples/`. Start with the scenario that matches your use case:
 
 | Example | Guide | Description | Complexity |
-|---------|-------------|----------|----------|
+| --- | --- | --- | --- |
 | [1-test-small](deploy/examples/1-test-small/) | [1-README](deploy/examples/1-test-small/README.md) | Basic topology with hosts, switches, and routing | ⭐ |
 | [2-test-frr-ospf](deploy/examples/2-test-frr-ospf/) | [2-README](deploy/examples/2-test-frr-ospf/README.md) | FRRouting with OSPF dynamic routing | ⭐⭐ |
 | [3-test-modify-ospf](deploy/examples/3-test-modify-ospf/) | [3-README](deploy/examples/3-test-modify-ospf/README.md) | Full dynamic-modification lifecycle on a routed OSPF topology with FRR and VyOS (scale, add, delete, replay) | ⭐⭐⭐⭐ |
@@ -228,8 +223,7 @@ Files mount as read-only ConfigMaps (or Secrets, when flagged as sensitive). Pod
 
 ## Security
 
-For the security model, deployment hardening and how to report a vulnerability,
-see [SECURITY.md](SECURITY.md).
+For the security model, deployment hardening and how to report a vulnerability, see [SECURITY.md](SECURITY.md).
 
 ## How to Contribute
 
@@ -237,12 +231,7 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) and [CLA.md](CLA.md) before openi
 
 ### Swagger / API Documentation
 
-> **Authentication required.** Every API call (except `/healthz`, `/readyz`,
-> `/version` and `/auth/*`) needs either a browser session or an **API token**.
-> For scripts/CI, create a token (in the dashboard or via
-> `POST /auth/tokens` using the admin password) and send it as
-> `Authorization: Bearer <token>`. Tokens can be given an expiry. See
-> [doc/DEPLOYMENT.md](doc/DEPLOYMENT.md#authentication).
+> **Authentication required.** Every API call (except `/healthz`, `/readyz`, `/version` and `/auth/*`) needs either a browser session or an **API token**. For scripts/CI, create a token (in the dashboard or via `POST /auth/tokens` using the admin password) and send it as `Authorization: Bearer <token>`. Tokens can be given an expiry. See [doc/DEPLOYMENT.md](doc/DEPLOYMENT.md#authentication).
 
 The API is documented with Swagger. Regenerate it after modifying endpoints:
 
@@ -275,6 +264,4 @@ View live at: http://localhost:8080/swagger/index.html
 
 ### QEMU Image Documentation
 
-For complete QEMU/VyOS image creation and integration steps, go directly to:
-**[deploy/custom_images/qemu/vyos-router/README-vyos.md](deploy/custom_images/qemu/vyos-router/README-vyos.md)**
-
+For complete QEMU/VyOS image creation and integration steps, go directly to: **[deploy/custom_images/qemu/vyos-router/README-vyos.md](deploy/custom_images/qemu/vyos-router/README-vyos.md)**

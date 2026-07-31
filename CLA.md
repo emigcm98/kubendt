@@ -8,24 +8,24 @@ By submitting a contribution (code, documentation, patches, or other material) t
 
 2. You grant Emilio García de la Calera Molina, the creator and maintainer of KubeNDT, a perpetual, worldwide, non-exclusive, irrevocable, royalty-free license to:
 
-   * use,
-   * modify,
-   * distribute,
-   * sublicense,
-   * and relicense
+   - use,
+   - modify,
+   - distribute,
+   - sublicense,
+   - and relicense
 
    your contribution as part of KubeNDT or derivative works.
 
 3. This includes the right to distribute KubeNDT under:
 
-   * open source licenses,
-   * commercial licenses,
-   * or dual-licensing models.
+   - open source licenses,
+   - commercial licenses,
+   - or dual-licensing models.
 
 4. You confirm that:
 
-   * your contribution is your original work, or
-   * you have the legal right to submit it.
+   - your contribution is your original work, or
+   - you have the legal right to submit it.
 
 5. You are not assigning copyright to the maintainer. You only grant a broad license to use your contribution, including sublicensing and relicensing.
 

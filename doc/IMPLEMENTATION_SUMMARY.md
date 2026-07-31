@@ -11,6 +11,7 @@ KubeNDT implements network topology management for Kubernetes through five inter
 **Problem Solved**: Network configuration varies by node type (host/switch/router) and deployment model. A plugin-based system allows different implementations without core changes.
 
 **Solution**:
+
 - **Generic Driver Registry**: Reflection-based registration system stores `reflect.Type` for each driver, enables instantiation at runtime
 - **Capability Interfaces**: Drivers advertise capabilities via interface embedding:
   - `L2Capable`: Link layer (up/down)
@@ -22,12 +23,14 @@ KubeNDT implements network topology management for Kubernetes through five inter
 - **Type-Asserted Command Resolution**: `ResolveDriverCommands()` tries each interface in order, returns shell commands
 
 **Concrete Drivers**:
+
 - `BasicHostDriver`, `HostDriver`: L2+L3+TC (HostDriver overrides ReplaceIP for idempotency)
 - `LinuxSwitchDriver`, `OpenVSwitchDriver`: L2+Bridge+TC
 - `LinuxRouterDriver`, `FRRRouterDriver`: L2+L3+NAT+TC (FRR also implements OSPFCapable via vtysh)
 - `VyOSRouterDriver`: L2+L3+NAT+OSPF for QEMU-based VyOS nodes; translates actions into VyOS CLI commands; auto-adds `/dev/kvm` device
 
 **Pod Resolution**:
+
 - Label `kubendt/driver` contains driver name
 - `GetDriverForPod()` fetches pod, reads label, instantiates via `NewByName()`
 - Called before every action, allows driver changes via pod recreation
@@ -39,6 +42,7 @@ KubeNDT implements network topology management for Kubernetes through five inter
 **Problem Solved**: Network interfaces may not appear immediately in pods due to meshnet delays or partial veth attachment. System must detect and recover missing interfaces without manual intervention.
 
 **Solution**:
+
 - **Progressive Multi-Round Recovery**: Calls `ReconcileMissingInterfaces(maxRounds=2)` at deployment end and on-demand
 - **Intelligent Endpoint Restart Selection**:
   - Round 1: Restart only missing endpoint (avoids cascade)
@@ -48,6 +52,7 @@ KubeNDT implements network topology management for Kubernetes through five inter
 - **Post-Restart Recovery**: `ReplayDriverOperationsForPods()` restores all previous operations from SQLite
 
 **Interface Detection**:
+
 - Queries `ip a` output from pod (via kubectl exec)
 - Parses regex to extract interface names
 - Filters eth0, localhost, tap* (protected/irrelevant)
@@ -60,6 +65,7 @@ KubeNDT implements network topology management for Kubernetes through five inter
 ## 3. Deploy & Modify Workflows
 
 **Deployment** (13-step ordered process):
+
 1. Parse & validate JSON (≥2 nodes, ≥1 links)
 2. Validate namespace (enabled, empty topology)
 3. Acquire operation lock (prevents concurrent deploys)
@@ -75,18 +81,21 @@ KubeNDT implements network topology management for Kubernetes through five inter
 13. Reconcile missing interfaces (2 rounds, restarts & replays)
 
 **Modification** (Add/Delete in single request):
+
 - **Delete Phase**: Remove links from Topology CRDs, delete StatefulSets (cascades pods), restart peer pods
 - **Add Phase**: Create new StatefulSets, append links to Topology CRDs, restart affected pods
 - **Soft-Heal** (post-modify): Update pod/topology annotations with timestamps (nudges external controllers, no pod restart)
 - **Operation Replay**: Restarts trigger replay of persisted driver operations
 
 **Topology Delta Computation**:
+
 - Links identified by (source_pod, dest_pod) pair
 - UID (link identifier) deterministic across operations
 - Topology CRD list computed per pod from links
 - Changes detected by comparing Topology.spec.links before/after
 
 **Pod Restart Decision**:
+
 - All pods in affected links restarted (to ensure meshnet picks up link changes)
 - Soft-heal nudges peers of restarted pods (annotation update, no restart)
 
@@ -95,6 +104,7 @@ KubeNDT implements network topology management for Kubernetes through five inter
 ## 4. State Recovery
 
 **Persistence Model**:
+
 - **SQLite database** (`kubendt.db`, configurable path)
 - **Five tables**:
   - `namespace_state`: topology deployment flag per namespace
@@ -104,9 +114,10 @@ KubeNDT implements network topology management for Kubernetes through five inter
   - `node_positions`: frontend visualization coordinates
 
 **Operation History Flow**:
+
 1. `SaveDriverOperation()`: After successful action execution, serialize ActionEntry to JSON and insert into `driver_operation_history`
 2. `ListDriverOperationsForPod()`: Query all operations for a pod, ordered by ID (insertion order)
-3. `ReplayDriverOperationsForPod()`: 
+3. `ReplayDriverOperationsForPod()`:
    - Get driver from pod label
    - For each operation: resolve commands, execute, handle failures
    - Unsupported actions: deleted from DB (pruned)
@@ -114,6 +125,7 @@ KubeNDT implements network topology management for Kubernetes through five inter
    - Successful: count toward replay total
 
 **Pod Restart Recovery**:
+
 - Pod crashes → Kubernetes restarts it (StatefulSet ensures recreation)
 - Meshnet rebuilds network namespace (Topology CRD still present)
 - Reconciliation detects missing interfaces if only partial
@@ -121,6 +133,7 @@ KubeNDT implements network topology management for Kubernetes through five inter
 - Replays all previous operations: `ReplayDriverOperationsForPods()`
 
 **Backend Restart Handling**:
+
 - All operations persisted in SQLite
 - After backend restarts, next modify/deploy operation will replay ops on affected pods
 - Namespace state preserved (allows resume of interrupted operations)
@@ -131,10 +144,12 @@ KubeNDT implements network topology management for Kubernetes through five inter
 ## 5. VM-based Node Adaptation
 
 **QEMU Definition**:
+
 - Derived from the driver: a node is QEMU-based when its resolved driver implements `drivers_meta.RuntimeProvider` and returns `RuntimeQEMU` (e.g. `VyOSRouterDriver`). The topology JSON does NOT carry a `qemu` field.
 - Pod labeled: `kubendt/qemu: "true"` and `kubendt/runtime: "qemu"`
 
 **Detection & Shell Adaptation**:
+
 - `InteractiveShellWebSocket()` checks pods labels
 - `mode="serial"`: Uses k8s attach API (QEMU serial console fallback)
 - `mode="sh"/"bash"`: Uses k8s exec API with shell
@@ -143,7 +158,7 @@ KubeNDT implements network topology management for Kubernetes through five inter
 **Pod Configuration Differences**:
 
 | Feature | Container Pod | QEMU Pod |
-|---------|---------------|----------|
+| --- | --- | --- |
 | Stdin | false | **true** |
 | TTY | false | **true** |
 | Privileged | false (unless router) | **true** |
@@ -153,14 +168,17 @@ KubeNDT implements network topology management for Kubernetes through five inter
 | Boot time | ~2-5s | ~10-30s |
 
 **Shell Execution Difference**:
+
 - Container: exec API with bash/sh command
 - QEMU: attach API for serial console input/output (full TTY)
 
 **Driver Handling**:
+
 - `ResolveDriversForNodes()` allows QEMU nodes to have an explicit driver. Without one, the node is left unmanaged (routing/bridging handled inside the guest VM).
 - With `VyOSRouterDriver`, QEMU-based VyOS nodes receive full driver management: the same declarative actions (IP, routes, NAT, OSPF) are translated into VyOS CLI commands executed inside the container.
 
 **Reconciliation**:
+
 - QEMU pods still participate in interface validation
 - Interfaces detected via `ip a` exec (works same as containers)
 - Restart via pod deletion (no special handling)
@@ -170,30 +188,36 @@ KubeNDT implements network topology management for Kubernetes through five inter
 ## Key Design Patterns
 
 ### 1. Reflection & Generics
+
 - Driver registry uses `reflect.Type` to store and instantiate types at runtime
 - Generic `Register[T Driver](ctor func() T)` ensures type safety at registration
 
 ### 2. Type Assertions for Plugin Architecture
+
 - `ResolveDriverCommands()` tries type assertions in order
 - Driver implements subset of capabilities → right interface supported
 - Fallback: nil if no capability matches action
 
 ### 3. Idempotent Shell Commands
+
 - L3 operations use shell `||` operator to check state first
 - Example: `grep -q || add` (check if exists before adding)
 - Replay of operations is safe: same command = same state
 
 ### 4. Bounded Reconciliation
+
 - Multi-round with exponential sleep (2s, 4s, ...)
 - Deterministic restart selection (avoid restart loops)
 - Error after maxRounds guarantees termination
 
 ### 5. Namespace Operation Lock
+
 - SQLite PRIMARY KEY on namespace prevents concurrent operations
 - Acquired at start, released at end
 - Enables multi-tenant isolation
 
 ### 6. Annotation-Based Soft-Heal
+
 - Pod/Topology annotations updated with timestamp (non-breaking)
 - External controllers watch annotations and react
 - No pod restart needed from backend (meshnet handles change)
@@ -203,7 +227,7 @@ KubeNDT implements network topology management for Kubernetes through five inter
 ## Failure Modes & Resilience
 
 | Failure | Detection | Recovery |
-|---------|-----------|----------|
+| --- | --- | --- |
 | Missing interface (round 1) | `ip a` check | Restart pod, retry |
 | Missing interface (round 2+) | Same | Restart both endpoints, retry |
 | Missing after maxRounds | Final check | Error logged, deploy marked failed |
@@ -218,12 +242,14 @@ KubeNDT implements network topology management for Kubernetes through five inter
 ## Extensibility
 
 ### Adding New Driver
+
 1. Define struct with embedded capability bases: `type MyDriver struct { L2Base; L3Base; ... }`
 2. Implement `Name()` → "MyDriver", `Type()` → "host"|"switch"|"router"
 3. Override any base methods as needed
 4. Register in `RegisterAllDrivers()`: `drivers_registry.Register(NewMyDriver)`
 
 ### Adding New Capability
+
 1. Define interface: `type MyCapable interface { Method(...) [][]string }`
 2. Create base with default implementation: `type MyBase struct { ... }`
 3. Add capability methods to drivers' embedded structs
@@ -231,6 +257,7 @@ KubeNDT implements network topology management for Kubernetes through five inter
 5. Add action mapping in capability constants
 
 ### Adding New Action
+
 1. Extend `types.ActionEntry` with new fields (e.g., `CustomParam string`)
 2. Add action type to relevant capability methods
 3. Update `ResolveDriverCommands()` switch statements
@@ -240,14 +267,14 @@ KubeNDT implements network topology management for Kubernetes through five inter
 
 ## Performance Characteristics
 
-| Operation | Latency | Reason |
-|-----------|---------|--------|
-| Deploy (2 pods, 1 link) | ~45-60s | Reconciliation roundtrips |
-| Modify add (1 node) | ~20-30s | Pod creation, link update, soft-heal |
-| Modify delete (1 node) | ~10-15s | StatefulSet deletion, cleanup |
-| Action execution (set IP) | 1-2s | Exec + shell command |
-| Operation replay (5 ops) | 5-10s | 5 sequential execs |
-| Reconciliation (per round) | ~20-30s | Interface checks, restarts, waits |
+| Operation                  | Latency | Reason                               |
+| -------------------------- | ------- | ------------------------------------ |
+| Deploy (2 pods, 1 link)    | ~45-60s | Reconciliation roundtrips            |
+| Modify add (1 node)        | ~20-30s | Pod creation, link update, soft-heal |
+| Modify delete (1 node)     | ~10-15s | StatefulSet deletion, cleanup        |
+| Action execution (set IP)  | 1-2s    | Exec + shell command                 |
+| Operation replay (5 ops)   | 5-10s   | 5 sequential execs                   |
+| Reconciliation (per round) | ~20-30s | Interface checks, restarts, waits    |
 
 ---
 
@@ -264,6 +291,7 @@ KubeNDT implements network topology management for Kubernetes through five inter
 ## Conclusion
 
 KubeNDT achieves resilient network topology management through:
+
 1. **Plugin architecture** enabling diverse driver implementations
 2. **Progressive reconciliation** recovering from transient network issues
 3. **Persistent operation history** enabling full state recovery after pod restarts
@@ -279,4 +307,3 @@ The implementation emphasizes **idempotency** (safe replay), **determinism** (sa
 - **Detailed Implementation**: See `IMPLEMENTATION_DETAILS.md`
 - **Architecture Flows**: See `ARCHITECTURE_FLOWS.md`
 - **Source Code**: `backend/handlers/`, `backend/helpers/`, `backend/drivers/`, `backend/capabilities/`
-

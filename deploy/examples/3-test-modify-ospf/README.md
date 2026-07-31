@@ -1,6 +1,7 @@
 # 3-test-modify-ospf
 
 End-to-end scenario that exercises the full topology lifecycle of KubeNDT on a heterogeneous routed network running OSPF:
+
 - Initial deployment with two routers of **different families**, one container-based FRR router and one VM-based VyOS router (QEMU), forming an OSPF adjacency over a transit link
 - Scale-up of a host node from 1 to 3 replicas
 - Addition of a new node with its link
@@ -8,7 +9,7 @@ End-to-end scenario that exercises the full topology lifecycle of KubeNDT on a h
 - Deletion of the added node
 - Replay-based recovery after a forced pod restart
 
-This is the reference scenario used in the KubeNDT paper for the dynamic-modification use case. It also demonstrates **driver heterogeneity**: the FRR router and the VyOS router implement the *same* `OSPFCapable` capability interface through two completely different driver implementations (`FRRRouterDriver` via `vtysh`/`kubectl exec`, `VyOSRouterDriver` via SSH configure-mode against the QEMU guest), yet are configured through the identical `ospf_*` action set. See the VyOS driver details in the implementation section of the paper.
+This is the reference scenario used in the KubeNDT paper for the dynamic-modification use case. It also demonstrates **driver heterogeneity**: the FRR router and the VyOS router implement the _same_ `OSPFCapable` capability interface through two completely different driver implementations (`FRRRouterDriver` via `vtysh`/`kubectl exec`, `VyOSRouterDriver` via SSH configure-mode against the QEMU guest), yet are configured through the identical `ospf_*` action set. See the VyOS driver details in the implementation section of the paper.
 
 ## Prerequisites
 
@@ -16,18 +17,18 @@ The VyOS router is a VM-based node and therefore requires a locally built QEMU i
 
 ## Topology Overview
 
-*Initial topology after Phase 1:*
+_Initial topology after Phase 1:_
 
 ![Initial topology](../../../doc/images/tests/3-test-modify-ospf-1.png)
 
-*Topology after Phase 2 (scale-up) and Phase 3 (add):*
+_Topology after Phase 2 (scale-up) and Phase 3 (add):_
 
 ![Topology after scale-up and add](../../../doc/images/tests/3-test-modify-ospf-2.png)
 
 Initial deployment:
 
 | Node | Driver | Image | Replicas |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `ubuntu-host` | `HostDriver` | `ubuntu:20.04` | 1 |
 | `alpine-host` | `BasicHostDriver` | `alpine` | 1 |
 | `switch` | `OpenVSwitchDriver` | `globocom/openvswitch` | 2 |
@@ -37,7 +38,7 @@ Initial deployment:
 Network segments:
 
 | Segment | Subnet | Purpose |
-|---|---|---|
+| --- | --- | --- |
 | LAN A | `10.0.1.0/24` | `ubuntu-host` and any host attached to `switch-0`; `frr-router eth1` (`.1`) is the LAN gateway |
 | LAN B | `10.0.2.0/24` | `alpine-host` replicas attached to `switch-1`; `vyos-router eth1` (`.1`) is the LAN gateway |
 | Transit | `10.0.254.0/30` | Point-to-point link between `frr-router eth2` (`.1`) and `vyos-router eth2` (`.2`); used by OSPF for inter-LAN routing |
@@ -60,7 +61,7 @@ The FRR and VyOS routers establish an OSPF adjacency over the transit link and a
 The scenario is organized as six sequential phases. Each phase has a clear KubeNDT mechanism under test:
 
 | Phase | Action | Mechanism exercised |
-|---|---|---|
+| --- | --- | --- |
 | 1 | Deploy initial topology + apply `network_conf.json` | Driver/capability dispatch (HostDriver, BasicHostDriver, OpenVSwitchDriver, FRRRouterDriver, VyOSRouterDriver), OSPF capability across container and VM drivers, bridge setup |
 | 2 | Apply `modify-phase2-scaleup.json` + `network_conf-phase2.json` | Scale-up of an existing StatefulSet without redeployment, peer-side link upsert, post-scale configuration on new replicas |
 | 3 | Apply `modify-phase3-add.json` + `network_conf-phase3.json` | Add phase of dynamic modification (new node + new link) |

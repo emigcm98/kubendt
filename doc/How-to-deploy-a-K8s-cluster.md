@@ -6,9 +6,7 @@ This document provides a practical and formal procedure to prepare a Kubernetes 
 2. Multi-node local cluster with kind (one control-plane, two workers)
 3. Two-node production-style cluster with kubeadm
 
-The same Meshnet installation method is used in all scenarios. Each option below tells you when to install it, always after the
-cluster is created (see §4.2, §5.3 and §6.4). For reference, the method is
-always:
+The same Meshnet installation method is used in all scenarios. Each option below tells you when to install it, always after the cluster is created (see §4.2, §5.3 and §6.4). For reference, the method is always:
 
 ```bash
 git clone https://github.com/networkop/meshnet-cni.git
@@ -68,8 +66,7 @@ kubectl get nodes -o wide
 
 Verify current context is minikube before proceeding.
 
-> **Why `--extra-config=kubelet.allowed-unsafe-sysctls`?**
-> Some KubeNDT node types (Linux switches, OVS nodes) set `net.ipv4.ip_forward` and `net.ipv6.conf.all.forwarding` via pod security context `sysctls`. Without this flag the kubelet will reject those pods with `SysctlForbidden`.
+> **Why `--extra-config=kubelet.allowed-unsafe-sysctls`?** Some KubeNDT node types (Linux switches, OVS nodes) set `net.ipv4.ip_forward` and `net.ipv6.conf.all.forwarding` via pod security context `sysctls`. Without this flag the kubelet will reject those pods with `SysctlForbidden`.
 
 ### 4.2 Install Meshnet (required)
 
@@ -95,16 +92,9 @@ When the checks pass, the cluster is ready for KubeNDT.
 
 ## 5. Option 2: Multi-node cluster with kind
 
-Use this option for reproducible multi-node local testing. The example below
-creates one control-plane node and two worker nodes. A multi-worker cluster is
-recommended over a single node because it lets you validate that KubeNDT
-topologies work **inter-node**: meshnet stitches links between pods that the
-scheduler places on different workers, so this layout exercises the cross-node
-data plane that a single-node cluster cannot.
+Use this option for reproducible multi-node local testing. The example below creates one control-plane node and two worker nodes. A multi-worker cluster is recommended over a single node because it lets you validate that KubeNDT topologies work **inter-node**: meshnet stitches links between pods that the scheduler places on different workers, so this layout exercises the cross-node data plane that a single-node cluster cannot.
 
-> You can add more workers by appending additional `- role: worker` blocks with
-> the same `kubeadmConfigPatches`. Two workers is the minimum to observe
-> inter-node behaviour.
+> You can add more workers by appending additional `- role: worker` blocks with the same `kubeadmConfigPatches`. Two workers is the minimum to observe inter-node behaviour.
 
 ### 5.1 Create cluster definition
 
@@ -119,7 +109,7 @@ networking:
   # kubeconfig KubeNDT mounts can reach the cluster from its container, and so
   # the API server certificate is valid for that address. kind adds this
   # address to the cert SANs automatically.
-  apiServerAddress: "192.168.1.50"   # replace with your host IP (see note)
+  apiServerAddress: "192.168.1.50" # replace with your host IP (see note)
   apiServerPort: 6443
 nodes:
   - role: control-plane
@@ -147,10 +137,7 @@ nodes:
 
 > The `kubeletExtraArgs` entries are required for KubeNDT switch and router nodes that set `net.ipv4.ip_forward` / `net.ipv6.conf.all.forwarding` as pod-level sysctls. Without them the kubelet rejects those pods with `SysctlForbidden`.
 
-> Replace `apiServerAddress` with your host's LAN IP (find it with
-> `hostname -I` or `ip -4 addr`). Using `127.0.0.1` here makes the generated
-> kubeconfig unreachable from the KubeNDT backend container and produces a
-> certificate that is only valid for localhost.
+> Replace `apiServerAddress` with your host's LAN IP (find it with `hostname -I` or `ip -4 addr`). Using `127.0.0.1` here makes the generated kubeconfig unreachable from the KubeNDT backend container and produces a certificate that is only valid for localhost.
 
 ### 5.2 Create cluster
 
@@ -180,8 +167,7 @@ kubectl get crd | grep -i topologies.networkop.co.uk
 
 ### 5.4 Ready state
 
-When all nodes (control-plane and both workers) are Ready and Meshnet is
-healthy, the cluster is ready for KubeNDT.
+When all nodes (control-plane and both workers) are Ready and Meshnet is healthy, the cluster is ready for KubeNDT.
 
 > Optional: to see per-pod CPU and RAM in the UI, install metrics-server (see §10).
 
@@ -239,8 +225,7 @@ sudo apt-mark hold kubelet kubeadm kubectl
 
 ### 6.1b Allow unsafe sysctls on all nodes
 
-Run on **every node** (control-plane and all workers) before `kubeadm init/join`.
-KubeNDT switch and router pods set `net.ipv4.ip_forward` and `net.ipv6.conf.all.forwarding` via pod security context `sysctls`; the kubelet must explicitly permit them or it will reject those pods with `SysctlForbidden`.
+Run on **every node** (control-plane and all workers) before `kubeadm init/join`. KubeNDT switch and router pods set `net.ipv4.ip_forward` and `net.ipv6.conf.all.forwarding` via pod security context `sysctls`; the kubelet must explicitly permit them or it will reject those pods with `SysctlForbidden`.
 
 Edit `/var/lib/kubelet/config.yaml` and add the following block (if the key does not exist yet, append it at the end of the file):
 

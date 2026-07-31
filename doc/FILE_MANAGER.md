@@ -14,6 +14,7 @@ Pods reference the resource via a `SubPath` `VolumeMount` so the file lands at e
 ## Mount model
 
 Mounts are always **read-only**. Writes from inside the container don't persist:
+
 - The ConfigMap/Secret is rebuilt from disk on every sync, so container-side writes are lost on the next kubelet reconcile.
 - `SubPath` is a static bind mount: updates to the ConfigMap/Secret do NOT propagate to running pods.
 
@@ -36,6 +37,7 @@ CREATE TABLE namespace_file_meta (
 ```
 
 The metadata is namespace-scoped and follows the file through renames and folder operations:
+
 - File deleted → metadata row deleted.
 - File renamed → metadata row updated to the new path.
 - Folder deleted → every metadata row under that prefix is deleted.
@@ -51,15 +53,17 @@ The metadata is namespace-scoped and follows the file through renames and folder
 Each file has a `sensitive` flag (default `false`). The flag is a property of the **file**, stored in `namespace_file_meta`. It controls which Kubernetes resource backs the mount when it is materialised:
 
 | `sensitive` | Backing resource | Visible to `kubectl describe`? | Encrypted at rest? |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `false` (default) | `ConfigMap` | yes (data in plain text) | no by default |
 | `true` | `Secret` (`Opaque`) | yes (base64) | yes if etcd encryption is enabled |
 
 Setting the flag:
+
 - Via the file manager UI (lock icon) or `PUT /file-meta/:namespace/*filename`. Accepts true or false.
 - Via the topology JSON on `deploy-network` or `modify-network`: any mount with `"sensitive": true` upgrades the file's flag before the resource is materialised. Cannot unmark from JSON (`omitempty` makes absent and false indistinguishable).
 
 Switching the flag:
+
 - **Setting sensitive=true on a file currently mounted as ConfigMap**: the file's K8s resource becomes a Secret on the next deploy/modify that materialises this mount. Existing pods keep using the old ConfigMap until they are redeployed. The API response surfaces `redeploy_required: true` and the count of mounting pods so the UI can prompt the user.
 - **Setting sensitive=false on a file currently mounted as Secret**: same story in reverse. Next deploy creates a ConfigMap, existing pods keep the Secret until redeploy.
 
@@ -78,6 +82,7 @@ POST   /file-ops/:namespace/rename           rename a file or folder
 ```
 
 Responses from upload and update include extra hints when KubeNDT detects pods are already mounting the file:
+
 - `resource_synced` (bool): true if the underlying K8s resource (ConfigMap or Secret, depending on the file's sensitive flag) was updated by this operation. Absent if no pod currently mounts the file (nothing to sync).
 - `resource_kind` (string): "ConfigMap" or "Secret", set together with `resource_synced=true` so the UI can show a precise message.
 - `pods_mounting` (int): number of pods that currently mount the file. They need a restart to see the new content.
@@ -87,6 +92,7 @@ Responses from upload and update include extra hints when KubeNDT detects pods a
 ## Garbage collection
 
 When a node is deleted via `modify-network`:
+
 - The node's env ConfigMap (`<node>-env`) is deleted unconditionally. It is per-node, never shared.
 - Every mount resource (ConfigMap or Secret) the node referenced is checked: if no other live StatefulSet in the namespace still references it, the resource is deleted. Otherwise it is kept (some other pod still mounts the file).
 
