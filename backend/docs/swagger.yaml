@@ -1564,12 +1564,11 @@ definitions:
         example: web-server
         type: string
     type: object
-host: localhost:8080
 info:
   contact: {}
-  description: REST API for KubeNDT (Kubernetes Network Digital Twin).
+  description: REST API for KubeNDT.
   title: KubeNDT API
-  version: annotation and never changes between releases.
+  version: "1.0"
 paths:
   /auth/login:
     post:
@@ -3275,6 +3274,4 @@ paths:
       summary: Service version
       tags:
       - system
-schemes:
-- http
 swagger: "2.0"

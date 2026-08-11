@@ -2,10 +2,8 @@ package main
 
 //	@title			KubeNDT API
 //	@version		1.0
-//	@description	REST API for KubeNDT (Kubernetes Network Digital Twin).
-//	@host			localhost:8080
+//	@description	REST API for KubeNDT.
 //	@BasePath		/
-//	@schemes		http
 
 import (
 	"context"
@@ -74,16 +72,16 @@ func main() {
 	capabilities_base.RegisterAllCapabilities()
 	drivers.RegisterAllDrivers()
 
-	// Override Swagger host/basePath from environment (allows serving correctly
-	// both in dev (direct :8080) and production (behind nginx /api/ prefix)).
+	// host and schemes are left blank in the annotations so the spec is not tied
+	// to one deployment. Swagger UI then uses the page's own origin and protocol
+	// (http in dev, https behind nginx). In production SWAGGER_BASE_PATH sets the
+	// /api prefix.
 	if basePath := os.Getenv("SWAGGER_BASE_PATH"); basePath != "" {
 		docs.SwaggerInfo.BasePath = basePath
-		docs.SwaggerInfo.Host = ""
 	}
 
-	// Reflect the build version in the Swagger "Version" badge. SwaggerInfo is
-	// exported for exactly this. Without it the badge is stuck at the static
-	// @version annotation and never changes between releases.
+	// Show the running build version in the Swagger badge instead of the static
+	// annotation value, which never changes between releases.
 	docs.SwaggerInfo.Version = handlers.AppVersion()
 
 	// Create router (gin.New avoids the "already attached" warning from gin.Default)

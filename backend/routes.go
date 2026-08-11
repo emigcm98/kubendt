@@ -162,7 +162,8 @@ func SetupRoutes(router *gin.Engine) {
 		kubeGroup.POST("/config", handlers.LoadKubeConfig)
 	}
 
-	// Swagger UI, GET /swagger/index.html
-	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
+	// Swagger UI at /swagger. Custom index (filter on, no Explore topbar); spec
+	// and assets delegated to gin-swagger.
+	router.GET("/swagger/*any", handlers.SwaggerUI(ginSwagger.WrapHandler(swaggerfiles.Handler)))
 
 }

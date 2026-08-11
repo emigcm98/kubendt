@@ -4675,12 +4675,12 @@ const docTemplate = `{
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "annotation and never changes between releases.",
-	Host:             "localhost:8080",
+	Version:          "1.0",
+	Host:             "",
 	BasePath:         "/",
-	Schemes:          []string{"http"},
+	Schemes:          []string{},
 	Title:            "KubeNDT API",
-	Description:      "REST API for KubeNDT (Kubernetes Network Digital Twin).",
+	Description:      "REST API for KubeNDT.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",
