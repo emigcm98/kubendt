@@ -26,6 +26,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Traceroute now works from VyOS routers. Guest-VM drivers run the probe inside the guest through a new optional `GuestProbeProvider` driver interface, using the guest routing table, instead of a debug container in a pod netns that has no connectivity. Guest drivers without probe support get a clear error.
 - The capture and traceroute panels now share a tokenized dark palette (`--tool-*` design tokens), collapsing the near-duplicate colors that had drifted between them. Component-specific semantic colors (protocol rows, hop kinds) stay local.
 - The interactive shell palette moved to `--term-*` design tokens, and xterm's canvas theme now reads them so CSS and terminal colors cannot drift apart.
+- The Swagger UI now has a working search box that filters endpoints by path, summary or tag (so "deploy" finds `POST /network/deploy-network`), and drops the "Explore" spec-URL bar, which was not a search. The Bearer token also persists across page refreshes.
 
 ### Fixed
 
@@ -34,6 +35,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Interface renames inside the VyOS guest no longer race the stock config.boot, whose install-time hw-id entry could hijack eth0 and shift every name at coldplug. hw-id lines are stripped from the image at build time.
 - Traceroute hops through the Kubernetes fabric (pod-network gateways, node IPs) are now tagged as `cluster` hops, with their own icon in the trace panel, and drawn as the way out to the internet instead of being misattributed to the topology's external network node when a router exits through its cluster interface.
 - The interactive shell no longer clips its last terminal row. Its padding sat on an inner xterm element that the fit addon does not measure, so the rows overflowed the window by a few pixels and cut a row on displays whose cell height crossed the rounding threshold. The terminal also re-fits on zoom and display-scaling changes, not only on window resizes.
+- The Swagger spec no longer pins `host` or `schemes`, so "Try it out" follows the page's own origin and protocol and works on any host and on `https` deployments behind a reverse proxy.
 
 ## [1.2.0] - 2026-07-30
 

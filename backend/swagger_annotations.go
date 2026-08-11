@@ -8,9 +8,8 @@ import "kubendt/types"
 
 // @title           KubeNDT API
 // @version         1.0
-// @description     REST API for KubeNDT, Kubernetes Network Digital Twin.
+// @description     REST API for KubeNDT.
 // @BasePath        /
-// @schemes         http https
 
 // ─── System ──────────────────────────────────────────────────────────────────
 
