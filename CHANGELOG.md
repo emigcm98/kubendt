@@ -27,6 +27,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - The capture and traceroute panels now share a tokenized dark palette (`--tool-*` design tokens), collapsing the near-duplicate colors that had drifted between them. Component-specific semantic colors (protocol rows, hop kinds) stay local.
 - The interactive shell palette moved to `--term-*` design tokens, and xterm's canvas theme now reads them so CSS and terminal colors cannot drift apart.
 - The Swagger UI now has a working search box that filters endpoints by path, summary or tag (so "deploy" finds `POST /network/deploy-network`), and drops the "Explore" spec-URL bar, which was not a search. The Bearer token also persists across page refreshes.
+- Nodes added through a topology modify now settle into the organic force layout next to the neighbours they connect to without overlapping existing nodes, instead of stacking in a fixed vertical grid. Existing nodes keep their positions, and the resulting layout is saved so a reload shows the same arrangement instead of relaying everything out.
 
 ### Fixed
 

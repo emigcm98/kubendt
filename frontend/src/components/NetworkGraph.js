@@ -364,6 +364,132 @@ const generateNodePositionsForce = (pods, links = [], originalNodes = []) => {
   return positions;
 };
 
+// Like generateNodePositionsForce, but keeps the existing nodes pinned and only
+// settles the new ones into the layout, so a modify blends new nodes into the
+// organic arrangement instead of stacking them in a fixed grid. Existing nodes
+// hold their exact positions (fx/fy); each new node is seeded near its pinned
+// link neighbours (or same-name replicas / same-type nodes when it has none, as
+// with a scale-up) and the simulation places it among them, respecting links
+// and avoiding overlaps. `allPods` items are { name, type, baseName };
+// `fixedPositions` maps a pinned node's name to { x, y }.
+const generateNodePositionsForceAnchored = (allPods, links, originalNodes, fixedPositions) => {
+  const newPods = allPods.filter((p) => !fixedPositions[p.name]);
+  if (newPods.length === 0) return {};
+
+  const centroid = (pts) =>
+    pts.length === 0
+      ? null
+      : {
+          x: pts.reduce((a, p) => a + p.x, 0) / pts.length,
+          y: pts.reduce((a, p) => a + p.y, 0) / pts.length,
+        };
+  const center = centroid(Object.values(fixedPositions)) || { x: 0, y: 0 };
+
+  const N = allPods.length;
+  const nameSet = new Set(allPods.map((p) => p.name));
+  const simLinks = (links || [])
+    .map((l) => {
+      const s = nameSet.has(l.node) ? l.node : resolvePodName(l.node, originalNodes);
+      const t = nameSet.has(l.peerNode) ? l.peerNode : resolvePodName(l.peerNode, originalNodes);
+      return { source: s, target: t };
+    })
+    .filter((l) => l.source && l.target && nameSet.has(l.source) && nameSet.has(l.target));
+
+  // Seed each new node near an anchor so the simulation converges next to where
+  // it belongs: pinned link neighbours first, then same-name replicas, then
+  // same-type nodes, then the cluster centre. A small ring offset by index
+  // breaks symmetry deterministically.
+  const seed = {};
+  const anchorOf = {};
+  newPods.forEach((p, i) => {
+    const nbrs = [];
+    for (const l of simLinks) {
+      if (l.source === p.name && fixedPositions[l.target]) nbrs.push(fixedPositions[l.target]);
+      if (l.target === p.name && fixedPositions[l.source]) nbrs.push(fixedPositions[l.source]);
+    }
+    const sameName = allPods
+      .filter((q) => q.baseName === p.baseName && fixedPositions[q.name])
+      .map((q) => fixedPositions[q.name]);
+    const sameType = allPods
+      .filter((q) => q.type === p.type && fixedPositions[q.name])
+      .map((q) => fixedPositions[q.name]);
+    const anchor = centroid(nbrs) || centroid(sameName) || centroid(sameType) || center;
+    anchorOf[p.name] = anchor;
+    const a = (2 * Math.PI * i) / newPods.length;
+    seed[p.name] = { x: anchor.x + 40 * Math.cos(a), y: anchor.y + 40 * Math.sin(a) };
+  });
+
+  const simNodes = allPods.map((p) => {
+    const fixed = fixedPositions[p.name];
+    if (fixed) return { id: p.name, x: fixed.x, y: fixed.y, fx: fixed.x, fy: fixed.y };
+    const anchor = anchorOf[p.name];
+    return { id: p.name, x: seed[p.name].x, y: seed[p.name].y, ax: anchor.x, ay: anchor.y };
+  });
+
+  const charge = Math.max(-1500, -(300 + 20 * N));
+  const linkDistance = Math.min(260, 110 + 3 * N);
+  const sim = forceSimulation(simNodes)
+    .force('charge', forceManyBody().strength(charge))
+    .force(
+      'link',
+      forceLink(simLinks)
+        .id((d) => d.id)
+        .distance(linkDistance)
+        .strength(0.75)
+    )
+    // Stronger separation than the global layout: the anchor pull clusters new
+    // nodes together, so a wider radius and extra iterations keep them from
+    // landing on top of each other or an existing node.
+    .force('collide', forceCollide(NODE_SIZE * 1.15).iterations(2))
+    // Pull each free node toward its own anchor (its neighbours / same-type
+    // cluster), so a node with no links stays by its group instead of drifting
+    // off under repulsion. Pinned nodes ignore this through fx/fy.
+    .force('x', forceX((d) => d.ax ?? center.x).strength(0.15))
+    .force('y', forceY((d) => d.ay ?? center.y).strength(0.15));
+
+  sim.stop();
+  const ticks = Math.min(400, Math.max(150, N * 6));
+  for (let i = 0; i < ticks; i++) sim.tick();
+
+  // forceCollide splits each overlap between both nodes, but pinned nodes can't
+  // move and discard their half, so a new node can stay pressed against one.
+  // Final pass: push every new node fully clear of every other node (pinned
+  // nodes hold, new nodes yield). Deterministic, no randomness.
+  const MIN_DIST = NODE_SIZE * 2;
+  for (let pass = 0; pass < 60; pass++) {
+    let moved = false;
+    for (const a of simNodes) {
+      if (fixedPositions[a.id]) continue;
+      for (const b of simNodes) {
+        if (a === b) continue;
+        let dx = a.x - b.x;
+        let dy = a.y - b.y;
+        let d = Math.hypot(dx, dy);
+        if (d >= MIN_DIST) continue;
+        if (d === 0) {
+          dx = 1;
+          dy = 0;
+          d = 1;
+        }
+        const share = fixedPositions[b.id] ? 1 : 0.5;
+        const push = ((MIN_DIST - d) / d) * share;
+        a.x += dx * push;
+        a.y += dy * push;
+        moved = true;
+      }
+    }
+    if (!moved) break;
+  }
+
+  const byId = new Map(simNodes.map((n) => [n.id, n]));
+  const positions = {};
+  for (const p of newPods) {
+    const n = byId.get(p.name);
+    positions[p.name] = { x: Math.round(n.x), y: Math.round(n.y) };
+  }
+  return positions;
+};
+
 // Tween nodes from the centre (0,0) to their target positions with an
 // ease-out, used to glide imported nodes into their saved layout. Nodes are
 // assumed to start at the origin; the final frame snaps exactly to target.
@@ -706,7 +832,7 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
 
   // Build "creating" placeholder nodes from the submitted JSON so they appear
   // immediately. Positions pinned in positionRef so the post-op fetch doesn't shuffle them.
-  const buildPlaceholderNodes = (newNodeSpecs) => {
+  const buildPlaceholderNodes = (newNodeSpecs, addLinks = []) => {
     if (!Array.isArray(newNodeSpecs) || newNodeSpecs.length === 0) return [];
 
     const existing = (nodesRef.current || []).filter((n) => n.data?.type !== 'external');
@@ -720,18 +846,7 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
       }
     }
 
-    // 2) Gather the "cluster" stats per type (median x, bottom y) so new pods drop
-    //    right into the column they belong to (router / switch / host).
-    const clusterByType = {};
-    for (const n of existing) {
-      const t = n.data?.type;
-      if (!t) continue;
-      if (!clusterByType[t]) clusterByType[t] = { xs: [], maxY: -Infinity };
-      clusterByType[t].xs.push(n.position?.x ?? 0);
-      clusterByType[t].maxY = Math.max(clusterByType[t].maxY, n.position?.y ?? 0);
-    }
-
-    // 3) Build the flat list of placeholder pods (one per replica).
+    // 2) Build the flat list of placeholder pods (one per replica).
     const placeholderPods = [];
     for (const spec of newNodeSpecs) {
       const replicas = spec.replicas || 1;
@@ -742,31 +857,48 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
       }
     }
 
-    // 4) Positions: empty namespace → auto-layout by columns; existing
-    //    topology → stack each new pod below its type's cluster.
+    // 3) Positions: empty namespace → fresh auto-layout; existing topology →
+    //    settle the new pods into the force layout with existing nodes pinned,
+    //    so they blend in instead of stacking in a fixed grid.
     const positions = {};
     if (existing.length === 0) {
       const podsForLayout = placeholderPods.map((p) => ({ name: p.podName, type: p.spec.type }));
       Object.assign(positions, generateNodePositions(podsForLayout));
     } else {
-      const nextYByType = {};
-      const rightmost = Math.max(0, ...existing.map((n) => n.position?.x ?? 0));
-      for (const p of placeholderPods) {
-        const t = p.spec.type;
-        const cluster = clusterByType[t];
-        let baseX;
-        if (cluster && cluster.xs.length > 0) {
-          const sortedXs = [...cluster.xs].sort((a, b) => a - b);
-          baseX = sortedXs[Math.floor(sortedXs.length / 2)];
-          if (nextYByType[t] === undefined) nextYByType[t] = cluster.maxY + 120;
-        } else {
-          // No existing pod of this type, drop the new column to the right.
-          baseX = rightmost + 250;
-          if (nextYByType[t] === undefined) nextYByType[t] = 50;
-        }
-        positions[p.podName] = { x: baseX, y: nextYByType[t] };
-        nextYByType[t] += 120;
+      const fixed = {};
+      for (const n of existing) {
+        const pos = positionRef.current[n.id] || n.position;
+        if (pos) fixed[n.id] = { x: pos.x, y: pos.y };
       }
+      const allPods = [
+        ...existing.map((n) => ({
+          name: n.id,
+          type: n.data?.type,
+          baseName: n.data?.fullInfo?.baseName,
+        })),
+        ...placeholderPods.map((p) => ({
+          name: p.podName,
+          type: p.spec.type,
+          baseName: p.spec.name,
+        })),
+      ];
+      // { name, replicas } list so link endpoints (base names) resolve to pod ids.
+      const replicasByBase = {};
+      for (const n of existing) {
+        const base = n.data?.fullInfo?.baseName;
+        if (base) replicasByBase[base] = (replicasByBase[base] || 0) + 1;
+      }
+      const nodeDefs = Object.entries(replicasByBase).map(([name, replicas]) => ({
+        name,
+        replicas,
+      }));
+      for (const spec of newNodeSpecs)
+        nodeDefs.push({ name: spec.name, replicas: spec.replicas || 1 });
+
+      Object.assign(
+        positions,
+        generateNodePositionsForceAnchored(allPods, addLinks, nodeDefs, fixed)
+      );
     }
 
     // 5) Build the graph node entries and pin positions in positionRef.
@@ -774,7 +906,10 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
     for (const p of placeholderPods) {
       const { spec, podName, replicas, replicaIndex } = p;
       const displayName = replicas === 1 ? spec.name : podName;
-      const position = positionRef.current[podName] || positions[podName] || { x: 0, y: 0 };
+      // Freshly computed position wins over a remembered one: a re-added node
+      // (or a stale leftover from a scale-down) must take the new anchored,
+      // de-overlapped spot instead of reappearing where it was before.
+      const position = positions[podName] || positionRef.current[podName] || { x: 0, y: 0 };
       placeholders.push({
         id: podName,
         type: 'custom',
@@ -1665,6 +1800,18 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
     animateNodesFromTo({ [nodeId]: dropPos }, { [nodeId]: pos }, setNodes, 520);
   };
 
+  // POST a { id: {x, y} } map to the backend and update the saved snapshot.
+  // Shared by the explicit "Save positions" button and the auto-save after a
+  // modify.
+  const persistPositions = async (positionsToSave) => {
+    await fetch(`${API_BASE_URL}/network/positions/${namespace}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(positionsToSave),
+    });
+    setSavedPositions(positionsToSave);
+  };
+
   const handleSavePositions = async () => {
     if (nodes.length === 0) {
       setAlertModal({
@@ -1681,11 +1828,7 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
     const positionsToSave = Object.fromEntries(nodes.map((n) => [n.id, n.position]));
 
     try {
-      await fetch(`${API_BASE_URL}/network/positions/${namespace}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(positionsToSave),
-      });
+      await persistPositions(positionsToSave);
       setAlertModal({
         isOpen: true,
         type: 'success',
@@ -1694,7 +1837,6 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
         onConfirm: () => setAlertModal((prev) => ({ ...prev, isOpen: false })),
         onCancel: () => setAlertModal((prev) => ({ ...prev, isOpen: false })),
       });
-      setSavedPositions(positionsToSave);
     } catch (error) {
       console.error('❌ Error saving positions:', error);
       showError('Error saving positions', 'An error occurred while saving node positions.');
@@ -1854,7 +1996,10 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
       // so buildPlaceholderExternalNodes can rewrite "external" → peerLabel
       // without touching the json sent to the backend.
       const phLinksCopy = (json.links || []).map((l) => ({ ...l }));
-      const phNodes = buildPlaceholderNodes(json.nodes || []);
+      // Pass the links so nodes imported into an existing topology anchor next
+      // to their neighbours. On a fresh import the empty-graph branch ignores
+      // them and the force layout below places everything anyway.
+      const phNodes = buildPlaceholderNodes(json.nodes || [], json.links || []);
       const phExternalNodes = buildPlaceholderExternalNodes(phLinksCopy);
       phNodes.forEach((n) => creatingNodeNamesRef.current.add(n.id));
       const allPhNodes = [...phNodes, ...phExternalNodes];
@@ -2663,7 +2808,9 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
         ...(json.add && Array.isArray(json.add.nodes) ? json.add.nodes : []),
         ...scaleUpPlaceholderSpecs,
       ];
-      const allPlaceholderNodes = buildPlaceholderNodes(combinedPlaceholderSpecs);
+      // Pass add.links so new nodes anchor next to the neighbours they connect to.
+      const addLinks = json.add && Array.isArray(json.add.links) ? json.add.links : [];
+      const allPlaceholderNodes = buildPlaceholderNodes(combinedPlaceholderSpecs, addLinks);
 
       // Deep-copy add.links so buildPlaceholderExternalNodes can rewrite
       // "external" → peerLabel without mutating the JSON the backend
@@ -2784,6 +2931,17 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
 
       const payload = await res.json().catch(() => null);
       await fetchTopology(true);
+      // Drop positions of pods removed by a scale-down so they aren't
+      // re-persisted or reused if the node is scaled up again later.
+      scaleDownPodNames.forEach((n) => delete positionRef.current[n]);
+      // Persist the new layout so a reload shows the same arrangement instead of
+      // re-running the global force over the changed node set. positionRef is
+      // updated synchronously by fetchTopology, so it holds the settled spots.
+      try {
+        await persistPositions({ ...positionRef.current });
+      } catch (e) {
+        console.error('❌ Error auto-saving positions after modify:', e);
+      }
       showOperationSuccessModal(
         'Topology modified',
         payload?.message || 'Network modify applied successfully.',
