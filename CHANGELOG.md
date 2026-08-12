@@ -14,6 +14,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `build-vyos-qcow2.sh` builds the virgin VyOS qcow2 unattended. It downloads the chosen rolling ISO (latest by default, `--list` to browse) and answers the installer over the serial console inside a throwaway container, using whichever engine (podman or docker) can reach /dev/kvm.
 - New VyOS image tunables `CPU_CORES` (vCPUs, default 1) and `HTTPS_FORWARD_PORT`.
 - The interactive shell window can be resized from its bottom-right corner. The terminal reflows as you drag, snaps to whole rows so no blank strip is left at the bottom, and tells the pod its new size. Minimizing and restoring keeps the size and position it had.
+- File Manager can now take files dropped straight from your computer, onto the sidebar (root or a folder) or onto the empty editor. Archives are extracted, other files are uploaded into the target folder, folders over 1 MiB are skipped and folder drops are rejected with a hint to zip them.
+- Empty File Manager namespaces show a real empty state with New file / New folder / Import actions, right-clicking the empty editor opens the same create/import menu, files can be downloaded one at a time from their right-click menu, and the sidebar shows a file count.
+- The File Manager export now opens a dialog to pick the archive format (ZIP or gzipped tar), backed by a new `format` query param on `GET /file-ops/{namespace}/export` (`zip` default, or `tar.gz`).
 
 ### Changed
 
@@ -28,6 +31,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - The interactive shell palette moved to `--term-*` design tokens, and xterm's canvas theme now reads them so CSS and terminal colors cannot drift apart.
 - The Swagger UI now has a working search box that filters endpoints by path, summary or tag (so "deploy" finds `POST /network/deploy-network`), and drops the "Explore" spec-URL bar, which was not a search. The Bearer token also persists across page refreshes.
 - Nodes added through a topology modify now settle into the organic force layout next to the neighbours they connect to without overlapping existing nodes, instead of stacking in a fixed vertical grid. Existing nodes keep their positions, and the resulting layout is saved so a reload shows the same arrangement instead of relaying everything out.
+- The File Manager export and delete-all controls are disabled when there are no files, the File Manager warns before you reload or close the tab with unsaved edits.
+- Importing an archive into a File Manager namespace that already has files now asks for confirmation first, since it can overwrite same-path files.
 
 ### Fixed
 

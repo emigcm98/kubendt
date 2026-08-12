@@ -101,9 +101,17 @@
 
 .file-list .drag-over,
 .nested-list .drag-over {
-  background-color: #b3d9ff !important;
+  background-color: var(--info-bg) !important;
   border: 2px dashed var(--primary);
   box-shadow: inset 0 0 4px rgba(25, 118, 210, 0.3);
+}
+
+/* OS files dragged over the tree root: a dashed frame invites the drop. */
+.file-list.os-drag-over {
+  outline: 2px dashed var(--primary);
+  outline-offset: -4px;
+  background-color: var(--info-bg);
+  border-radius: var(--radius-sm);
 }
 
 .expand-btn {
@@ -131,10 +139,10 @@
 
 /* Amber folders / neutral files in the tree, matching the file-manager palette. */
 .folder-icon {
-  color: #d99a2b;
+  color: var(--warning);
 }
 .file-icon {
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .folder-name,
@@ -151,14 +159,14 @@
 .dirty-dot {
   font-size: 18px;
   line-height: 1;
-  color: #ff6b6b;
+  color: var(--danger);
   user-select: none;
   flex-shrink: 0;
 }
 
 .file-list li.selected .dirty-dot,
 .nested-list li.selected .dirty-dot {
-  color: #ffb3b3 !important;
+  color: var(--danger-bg) !important;
 }
 
 .sensitive-lock {
@@ -260,3 +268,27 @@
    (see Tooltip.js / Tooltip.css). The old CSS-pseudo approach was
    replaced because pseudo-elements are clipped by ancestor overflow
    and trapped inside parent stacking contexts. */
+
+/* File count badge next to the "Files" title. */
+.sidebar-file-count {
+  margin-left: 6px;
+  padding: 1px 7px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--primary);
+  background: var(--info-bg);
+  border-radius: var(--radius-pill);
+  vertical-align: middle;
+}
+
+/* Disabled toolbar actions (nothing to export / delete). A class, not the
+   disabled attribute, so the tooltip still fires on hover. Wins over the
+   danger-button hover so it stays dimmed and doesn't light up. */
+.actions button.is-disabled,
+.actions button.is-disabled:hover,
+.actions .action-btn-danger.is-disabled,
+.actions .action-btn-danger.is-disabled:hover {
+  opacity: 0.4;
+  background: none;
+  cursor: not-allowed;
+}

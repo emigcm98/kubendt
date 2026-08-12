@@ -2,6 +2,7 @@
 package handlers
 
 import (
+	"io"
 	"kubendt/helpers"
 	"log"
 	"net/http"
@@ -274,11 +275,12 @@ func ImportArchive(c *gin.Context) {
 	// Detect file type by extension
 	filename := fileHeader.Filename
 	var importErr error
+	var imported int
 
 	if strings.HasSuffix(filename, ".zip") {
-		importErr = helpers.ExtractZip(namespace, file)
+		imported, importErr = helpers.ExtractZip(namespace, file)
 	} else if strings.HasSuffix(filename, ".tar.gz") || strings.HasSuffix(filename, ".tgz") {
-		importErr = helpers.ExtractTarGz(namespace, file)
+		imported, importErr = helpers.ExtractTarGz(namespace, file)
 	} else {
 		log.Printf("❌ Unsupported file type: %s", filename)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Only .zip, .tar.gz and .tgz are supported"})
@@ -291,8 +293,8 @@ func ImportArchive(c *gin.Context) {
 		return
 	}
 
-	log.Printf("✅ File '%s' imported successfully into namespace '%s'", filename, namespace)
-	c.JSON(http.StatusOK, gin.H{"message": "File imported successfully"})
+	log.Printf("✅ File '%s' imported (%d files) into namespace '%s'", filename, imported, namespace)
+	c.JSON(http.StatusOK, gin.H{"message": "File imported successfully", "imported": imported})
 }
 
 // POST /files/:namespace/rename
@@ -372,16 +374,29 @@ func UpdateFileMeta(c *gin.Context) {
 }
 
 // GET /files/:namespace/export
-func ExportAsZip(c *gin.Context) {
+func ExportArchive(c *gin.Context) {
 	namespace := c.Param("namespace")
+	format := c.DefaultQuery("format", "zip")
 
-	c.Header("Content-Type", "application/zip")
-	c.Header("Content-Disposition", "attachment; filename=\""+namespace+".zip\"")
+	var contentType, ext string
+	var stream func(string, io.Writer) error
+	switch format {
+	case "zip":
+		contentType, ext, stream = "application/zip", "zip", helpers.ExportAsZip
+	case "tar.gz", "tgz":
+		contentType, ext, stream = "application/gzip", "tar.gz", helpers.ExportAsTarGz
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Unsupported format. Use 'zip' or 'tar.gz'."})
+		return
+	}
+
+	c.Header("Content-Type", contentType)
+	c.Header("Content-Disposition", "attachment; filename=\""+namespace+"."+ext+"\"")
 	c.Status(http.StatusOK)
 
 	// Headers are already on the wire; a mid-stream failure truncates the
-	// archive and the client sees an invalid ZIP.
-	if err := helpers.ExportAsZip(namespace, c.Writer); err != nil {
+	// archive and the client sees a corrupt download.
+	if err := stream(namespace, c.Writer); err != nil {
 		log.Printf("❌ Error exporting namespace '%s': %v", namespace, err)
 		return
 	}

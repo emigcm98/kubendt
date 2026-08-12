@@ -44,6 +44,16 @@ const nodeMatchesQuery = (node, query) => {
   return false;
 };
 
+// Count files (not folders) anywhere in the tree, for the header badge.
+const countFiles = (nodes) => {
+  let n = 0;
+  for (const node of nodes || []) {
+    if (node.isDir) n += countFiles(node.children);
+    else n += 1;
+  }
+  return n;
+};
+
 // Parent folder of a file path. Returns null for root-level files.
 const parentFolderOf = (filePath) => {
   if (!filePath) return null;
@@ -54,6 +64,9 @@ const parentFolderOf = (filePath) => {
 
 // localStorage key for persisting the expanded-folders set per namespace.
 const expandedFoldersStorageKey = (ns) => `kubendt.expandedFolders.${ns}`;
+
+// True when a drag carries OS files (upload) rather than an internal tree move.
+const dragHasFiles = (e) => Array.from(e.dataTransfer?.types || []).includes('Files');
 
 function FileSidebar({
   namespace,
@@ -76,6 +89,9 @@ function FileSidebar({
   onToggleSensitive,
   onRequestDeleteFolder,
   onDeleteAllFiles,
+  onDownloadFile,
+  onDropFiles,
+  hasFiles,
 }) {
   // Restore from localStorage on mount; namespace change remounts the
   // component (it's in the URL), so the lazy init is enough.
@@ -90,6 +106,7 @@ function FileSidebar({
   });
   const [draggedNode, setDraggedNode] = useState(null);
   const [dragOverNode, setDragOverNode] = useState(null);
+  const [osDragOverList, setOsDragOverList] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const dragExpandTimerRef = useRef(null);
@@ -148,6 +165,8 @@ function FileSidebar({
     return () => clearTimeout(t);
   }, [selectedFile]);
 
+  const fileCount = useMemo(() => countFiles(files), [files]);
+
   const normalizedQuery = searchQuery.trim().toLowerCase();
 
   const searchExpandedFolders = useMemo(() => {
@@ -192,7 +211,9 @@ function FileSidebar({
   const handleDragOver = (e, node) => {
     e.preventDefault();
     e.stopPropagation();
-    e.dataTransfer.dropEffect = 'move';
+    e.dataTransfer.dropEffect = dragHasFiles(e) ? 'copy' : 'move';
+    // File rows accept an OS-file drop (into their parent) but show no
+    // highlight; only folders highlight as a drop target.
     if (!node.isDir) return;
 
     // Visual highlight (drives the .drag-over class). Uses state because
@@ -229,6 +250,15 @@ function FileSidebar({
     clearTimeout(dragExpandTimerRef.current);
     lastDragOverPathRef.current = null;
     setDragOverNode(null);
+    setOsDragOverList(false);
+
+    // OS files dropped on a row upload into the folder (or the file's parent).
+    if (dragHasFiles(e)) {
+      const folder = targetNode.isDir ? targetNode.path : parentFolderOf(targetNode.path) || '';
+      if (targetNode.isDir) expandFolder(targetNode.path);
+      onDropFiles?.(e.dataTransfer, folder);
+      return;
+    }
 
     if (!draggedNode || !targetNode.isDir) return;
     if (draggedNode.path === targetNode.path) return;
@@ -326,6 +356,7 @@ function FileSidebar({
           }}
           className={`${isHighlighted ? 'selected' : ''} ${node.isDir ? 'folder' : 'file'} ${isDraggedOver ? 'drag-over' : ''}`}
           style={{ marginLeft: `${depth * 16}px` }}
+          title={node.path}
           onClick={(e) => handleRowClick(e, node)}
           onContextMenu={(e) => {
             e.preventDefault();
@@ -400,24 +431,33 @@ function FileSidebar({
   return (
     <div className="sidebar">
       <div className="sidebar-header">
-        <span className="sidebar-title">Files</span>
+        <span className="sidebar-title">
+          Files
+          {fileCount > 0 && <span className="sidebar-file-count">{fileCount}</span>}
+        </span>
         <div className="actions">
           <Tooltip text="Import archive">
             <button aria-label="Import: upload a ZIP or tar.gz archive" onClick={onImport}>
               <BoxIcon className="app-icon icon-import" />
             </button>
           </Tooltip>
-          <Tooltip text="Export ZIP">
-            <button aria-label="Export: download all files as a ZIP archive" onClick={onExport}>
+          <Tooltip text="Export">
+            <button
+              className={hasFiles ? '' : 'is-disabled'}
+              aria-label="Export: download all files as an archive"
+              aria-disabled={!hasFiles}
+              onClick={() => hasFiles && onExport()}
+            >
               <SaveIcon className="app-icon icon-save" />
             </button>
           </Tooltip>
           {onDeleteAllFiles && (
             <Tooltip text="Delete all">
               <button
-                className="action-btn-danger"
+                className={`action-btn-danger${hasFiles ? '' : ' is-disabled'}`}
                 aria-label="Delete all files: permanently removes every file and folder"
-                onClick={onDeleteAllFiles}
+                aria-disabled={!hasFiles}
+                onClick={() => hasFiles && onDeleteAllFiles()}
               >
                 <TrashIcon className="app-icon icon-danger" />
               </button>
@@ -470,12 +510,29 @@ function FileSidebar({
       <div className="sidebar-divider" aria-hidden="true"></div>
 
       <ul
-        className="file-list"
+        className={`file-list${osDragOverList ? ' os-drag-over' : ''}`}
         onContextMenu={(e) => {
           e.preventDefault();
           onContextMenu(e, { type: 'root', path: null });
         }}
         onClick={handleEmptyAreaClick}
+        onDragOver={(e) => {
+          if (dragHasFiles(e)) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+            if (!osDragOverList) setOsDragOverList(true);
+          }
+        }}
+        onDragLeave={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget)) setOsDragOverList(false);
+        }}
+        onDrop={(e) => {
+          setOsDragOverList(false);
+          if (dragHasFiles(e)) {
+            e.preventDefault();
+            onDropFiles?.(e.dataTransfer, '');
+          }
+        }}
       >
         {visibleRoots.map((node) => renderTreeNode(node))}
         {normalizedQuery && visibleRoots.length === 0 && (
@@ -496,6 +553,18 @@ function FileSidebar({
               <button className="context-menu-item" onClick={() => onCreateFolderRoot?.()}>
                 <FolderIcon className="app-icon icon-folder" /> New Folder
               </button>
+              {!hasFiles && (
+                <>
+                  <div className="context-menu-divider"></div>
+                  <button
+                    className="context-menu-item"
+                    title="Import a .zip or .tar.gz archive"
+                    onClick={() => onImport?.()}
+                  >
+                    <BoxIcon className="app-icon icon-import" /> Import archive
+                  </button>
+                </>
+              )}
             </>
           )}
 
@@ -552,6 +621,13 @@ function FileSidebar({
                     onClick={() => onRequestRename?.(contextMenu.path)}
                   >
                     <EditIcon className="app-icon" /> Rename
+                  </button>
+                  <button
+                    className="context-menu-item"
+                    title="Download this file to your computer"
+                    onClick={() => onDownloadFile?.(contextMenu.path)}
+                  >
+                    <SaveIcon className="app-icon" /> Download
                   </button>
                   {onToggleSensitive && (
                     <button
