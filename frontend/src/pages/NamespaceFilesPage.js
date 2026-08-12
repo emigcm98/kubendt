@@ -53,6 +53,12 @@ function NamespaceFilesPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
   const [showRenameModal, setShowRenameModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportFormat, setExportFormat] = useState('zip');
+  const [showOverwriteModal, setShowOverwriteModal] = useState(false);
+  const [pendingArchives, setPendingArchives] = useState([]);
+  // True while OS files are being dragged over the editor/sidebar drop zones.
+  const [draggingFiles, setDraggingFiles] = useState(false);
   const [newFileName, setNewFileName] = useState('');
   const [newFolderName, setNewFolderName] = useState('');
   const [renameSourcePath, setRenameSourcePath] = useState('');
@@ -336,6 +342,17 @@ function NamespaceFilesPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedFile, handleSave]);
 
+  // Warn before leaving (reload / close tab) while edits are unsaved.
+  useEffect(() => {
+    if (unsavedFiles.size === 0) return;
+    const onBeforeUnload = (e) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [unsavedFiles]);
+
   // Default toast duration is 3s. Callers can override it for long
   // informational messages (e.g. "N pods need to be restarted") so the
   // user has time to actually read them.
@@ -437,13 +454,26 @@ function NamespaceFilesPage() {
         body: formData,
       });
 
-      const text = await res.text();
+      const payload = await res.json().catch(() => null);
       if (!res.ok) {
-        throw new Error(text);
+        throw new Error(payload?.error || `HTTP ${res.status}`);
+      }
+
+      // An empty archive extracts nothing: say so instead of a false success.
+      const imported = payload?.imported;
+      if (imported === 0) {
+        setImportStatus(null);
+        setShowImportModal(false);
+        showToast(`${filename} has no files, nothing was imported`, 'warning', 4000);
+        return;
       }
 
       setImportStatus('success');
-      setImportMessage(`${filename} imported successfully`);
+      setImportMessage(
+        typeof imported === 'number'
+          ? `${filename} imported (${imported} file${imported === 1 ? '' : 's'})`
+          : `${filename} imported successfully`
+      );
       setShowImportModal(false);
 
       setTimeout(() => {
@@ -454,6 +484,29 @@ function NamespaceFilesPage() {
       console.error('❌ Error importing archive:', err);
       setImportStatus(null);
       showToast(`Error: ${err.message}`, 'error');
+    }
+  };
+
+  // Import can overwrite files with the same path, so when the namespace
+  // already has files, ask before extracting. Empty namespaces import straight.
+  const beginImport = (archiveFiles) => {
+    const list = Array.from(archiveFiles || []);
+    if (list.length === 0) return;
+    if ((files || []).length > 0) {
+      setPendingArchives(list);
+      setShowImportModal(false);
+      setShowOverwriteModal(true);
+    } else {
+      runImports(list);
+    }
+  };
+
+  const runImports = async (list) => {
+    setShowOverwriteModal(false);
+    setPendingArchives([]);
+    for (const f of list) {
+      // eslint-disable-next-line no-await-in-loop
+      await handleImportArchive(f);
     }
   };
 
@@ -599,9 +652,12 @@ function NamespaceFilesPage() {
     }
   };
 
-  const handleExport = async () => {
+  const confirmExport = async () => {
+    const ext = exportFormat === 'tar.gz' ? 'tar.gz' : 'zip';
     try {
-      const res = await fetch(`${API_BASE_URL}/file-ops/${namespace}/export`);
+      const res = await fetch(
+        `${API_BASE_URL}/file-ops/${namespace}/export?format=${encodeURIComponent(exportFormat)}`
+      );
       if (!res.ok) {
         showToast('Could not export files', 'error');
         return;
@@ -611,18 +667,123 @@ function NamespaceFilesPage() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${namespace}.zip`;
+      a.download = `${namespace}.${ext}`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
+      setShowExportModal(false);
       showToast('Files exported', 'success');
     } catch (err) {
       console.error('❌ Error exporting:', err);
       showToast(`Error: ${err.message}`, 'error');
     }
   };
+
+  // Download a single file to the user's machine.
+  const downloadFile = async (path) => {
+    closeContextMenu();
+    try {
+      const res = await fetch(`${API_BASE_URL}/files/${namespace}/${path}`);
+      if (!res.ok) {
+        showToast('Could not download file', 'error');
+        return;
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = path.split('/').pop() || 'file';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('❌ Error downloading file:', err);
+      showToast(`Error: ${err.message}`, 'error');
+    }
+  };
+
+  const ARCHIVE_RE = /\.(zip|tar\.gz|tgz)$/i;
+  const MAX_FILE_BYTES = 1024 * 1024; // backend caps uploads at 1 MiB
+
+  // Pull the dropped files out of a DataTransfer synchronously (items are only
+  // valid during the event) and flag whether a folder was among them, since
+  // folders can't be uploaded directly.
+  const readDropped = (dataTransfer) => {
+    const files = [];
+    let hadDirectory = false;
+    const items = dataTransfer?.items;
+    if (items && items.length > 0) {
+      for (const it of items) {
+        if (it.kind !== 'file') continue;
+        const entry = it.webkitGetAsEntry?.();
+        if (entry && entry.isDirectory) {
+          hadDirectory = true;
+          continue;
+        }
+        const f = it.getAsFile();
+        if (f) files.push(f);
+      }
+    } else {
+      for (const f of dataTransfer?.files || []) files.push(f);
+    }
+    return { files, hadDirectory };
+  };
+
+  // Handle OS files dropped onto the sidebar or the empty editor. Archives go
+  // through the import extractor; plain files are uploaded as text into the
+  // target folder (root when none).
+  const uploadDroppedFiles = async (dataTransfer, targetFolder = '') => {
+    const { files: dropped, hadDirectory } = readDropped(dataTransfer);
+    setDraggingFiles(false);
+
+    if (hadDirectory) {
+      showToast('Folders cannot be dropped here. Zip them and use Import.', 'warning', 5000);
+    }
+    if (dropped.length === 0) return;
+
+    const tooBig = dropped.filter((f) => f.size > MAX_FILE_BYTES);
+    const usable = dropped.filter((f) => f.size <= MAX_FILE_BYTES);
+    if (tooBig.length > 0) {
+      showToast(
+        `Skipped ${tooBig.length} file${tooBig.length === 1 ? '' : 's'} over 1 MiB`,
+        'warning',
+        5000
+      );
+    }
+
+    const archives = usable.filter((f) => ARCHIVE_RE.test(f.name));
+    const plain = usable.filter((f) => !ARCHIVE_RE.test(f.name));
+
+    let added = 0;
+    for (const f of plain) {
+      try {
+        const text = await f.text();
+        const path = targetFolder ? `${targetFolder}/${f.name}` : f.name;
+        await saveFile({ filename: path, content: text, isNew: true });
+        added += 1;
+      } catch (e) {
+        showToast(`Could not add ${f.name}: ${e.message || e}`, 'error');
+      }
+    }
+
+    if (plain.length > 0) {
+      await fetchFiles();
+      if (added > 0) {
+        showToast(`Added ${added} file${added === 1 ? '' : 's'}`, 'success');
+      }
+    }
+
+    // Archives go through the import flow (which confirms before overwriting).
+    if (archives.length > 0) {
+      beginImport(archives);
+    }
+  };
+
+  // True while the drag carries OS files (not an internal tree move).
+  const dragHasFiles = (e) => Array.from(e.dataTransfer?.types || []).includes('Files');
 
   useEffect(() => {
     document.addEventListener('click', closeContextMenu);
@@ -661,6 +822,15 @@ function NamespaceFilesPage() {
         setShowCreateFolderModal(false);
         return;
       }
+      if (showExportModal) {
+        setShowExportModal(false);
+        return;
+      }
+      if (showOverwriteModal) {
+        setShowOverwriteModal(false);
+        setPendingArchives([]);
+        return;
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -672,6 +842,8 @@ function NamespaceFilesPage() {
     showDeleteAllModal,
     showCreateFileModal,
     showCreateFolderModal,
+    showExportModal,
+    showOverwriteModal,
   ]);
 
   const extractStatus = (msg) => {
@@ -714,7 +886,10 @@ function NamespaceFilesPage() {
           onRequestDeleteFile={requestDeleteFile}
           onRequestDeleteFolder={requestDeleteFolder}
           onToggleSensitive={toggleSensitive}
-          onExport={handleExport}
+          onDownloadFile={downloadFile}
+          onExport={() => setShowExportModal(true)}
+          onDropFiles={uploadDroppedFiles}
+          hasFiles={(files || []).length > 0}
           onCreateFileRoot={() => {
             setTargetFolder('');
             setShowCreateFileModal(true);
@@ -727,7 +902,26 @@ function NamespaceFilesPage() {
           }}
           onDeleteAllFiles={() => setShowDeleteAllModal(true)}
         />
-        <div className="file-editor">
+        <div
+          className={`file-editor${draggingFiles && !selectedFile ? ' file-editor-dropping' : ''}`}
+          onDragOver={(e) => {
+            if (!selectedFile && dragHasFiles(e)) {
+              e.preventDefault();
+              setDraggingFiles(true);
+            }
+          }}
+          onDragLeave={(e) => {
+            if (!selectedFile && !e.currentTarget.contains(e.relatedTarget)) {
+              setDraggingFiles(false);
+            }
+          }}
+          onDrop={(e) => {
+            if (!selectedFile && dragHasFiles(e)) {
+              e.preventDefault();
+              uploadDroppedFiles(e.dataTransfer, '');
+            }
+          }}
+        >
           {saveStatus && (
             <div className={`save-indicator save-${saveStatus}`}>
               {saveStatus === 'saving' ? (
@@ -737,6 +931,12 @@ function NamespaceFilesPage() {
               ) : (
                 '✓ Saved'
               )}
+            </div>
+          )}
+          {draggingFiles && !selectedFile && (
+            <div className="editor-drop-overlay">
+              <BoxIcon className="app-icon" />
+              <span>Drop files to add them</span>
             </div>
           )}
           {selectedFile ? (
@@ -808,8 +1008,51 @@ function NamespaceFilesPage() {
                 </div>
               )}
             </>
+          ) : (files || []).length === 0 ? (
+            <div
+              className="editor-empty"
+              onContextMenu={(e) => handleContextMenu(e, { type: 'root', path: null })}
+            >
+              <FileIcon className="editor-empty-icon" />
+              <div className="editor-empty-title">No files yet</div>
+              <div className="editor-empty-message">
+                Create a file or folder, or drop files here to get started.
+              </div>
+              <div className="editor-empty-actions">
+                <button
+                  className="btn-create"
+                  title="Create a new file"
+                  onClick={() => {
+                    setTargetFolder('');
+                    setShowCreateFileModal(true);
+                  }}
+                >
+                  <FileIcon className="app-icon" /> New file
+                </button>
+                <button
+                  className="btn-neutral"
+                  title="Create a new folder"
+                  onClick={() => {
+                    setTargetFolder('');
+                    setShowCreateFolderModal(true);
+                  }}
+                >
+                  <FolderIcon className="app-icon icon-folder" /> New folder
+                </button>
+                <button
+                  className="btn-neutral"
+                  title="Import a .zip or .tar.gz archive"
+                  onClick={() => setShowImportModal(true)}
+                >
+                  <BoxIcon className="app-icon" /> Import archive
+                </button>
+              </div>
+            </div>
           ) : (
-            <div className="editor-placeholder">
+            <div
+              className="editor-placeholder"
+              onContextMenu={(e) => handleContextMenu(e, { type: 'root', path: null })}
+            >
               <FileIcon className="app-icon" /> Select or create a file to start editing
             </div>
           )}
@@ -934,16 +1177,7 @@ function NamespaceFilesPage() {
                 Delete <strong>all files and folders</strong> in namespace{' '}
                 <strong>'{namespace}'</strong>?
               </p>
-              <p
-                style={{
-                  color: '#d32f2f',
-                  fontWeight: 600,
-                  marginTop: '0.5rem',
-                  fontSize: '0.88rem',
-                }}
-              >
-                This action cannot be undone.
-              </p>
+              <p className="confirm-warning">This action cannot be undone.</p>
             </div>
             <div className="create-file-modal-footer">
               <button className="btn-cancel" onClick={() => setShowDeleteAllModal(false)}>
@@ -1015,7 +1249,7 @@ function NamespaceFilesPage() {
                 style={{ display: 'none' }}
                 onChange={(e) => {
                   if (e.target.files && e.target.files.length > 0) {
-                    handleImportArchive(e.target.files[0]);
+                    beginImport([e.target.files[0]]);
                   }
                   e.target.value = '';
                 }}
@@ -1036,7 +1270,7 @@ function NamespaceFilesPage() {
                   e.stopPropagation();
                   const files = e.dataTransfer.files;
                   if (files && files.length > 0) {
-                    handleImportArchive(files[0]);
+                    beginImport([files[0]]);
                   }
                 }}
                 onDragOver={(e) => {
@@ -1066,6 +1300,85 @@ function NamespaceFilesPage() {
             <div className="import-modal-footer">
               <button className="btn-cancel" onClick={() => setShowImportModal(false)}>
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal to export as an archive */}
+      {showExportModal && (
+        <div className="create-file-modal-overlay" onClick={() => setShowExportModal(false)}>
+          <div className="create-file-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="create-file-modal-header">
+              <SaveIcon className="app-icon" /> Export files
+            </div>
+            <div className="create-file-modal-body">
+              <label htmlFor="export-format">Format</label>
+              <select
+                id="export-format"
+                className="export-format-select"
+                title="Choose the archive format"
+                value={exportFormat}
+                onChange={(e) => setExportFormat(e.target.value)}
+                autoFocus
+              >
+                <option value="zip">ZIP (.zip)</option>
+                <option value="tar.gz">Gzipped tar (.tar.gz)</option>
+              </select>
+              {unsavedFiles.size > 0 && (
+                <p className="export-unsaved-note">
+                  {unsavedFiles.size} file{unsavedFiles.size === 1 ? ' has' : 's have'} unsaved
+                  changes. The export uses the last saved version, save first to include them.
+                </p>
+              )}
+            </div>
+            <div className="create-file-modal-footer">
+              <button className="btn-cancel" onClick={() => setShowExportModal(false)}>
+                Cancel
+              </button>
+              <button className="btn-create" onClick={confirmExport}>
+                <SaveIcon className="app-icon" /> Export
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: confirm import into a non-empty namespace */}
+      {showOverwriteModal && (
+        <div
+          className="create-file-modal-overlay"
+          onClick={() => {
+            setShowOverwriteModal(false);
+            setPendingArchives([]);
+          }}
+        >
+          <div className="create-file-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="create-file-modal-header">
+              <BoxIcon className="app-icon icon-import" /> Import into a non-empty namespace
+            </div>
+            <div className="create-file-modal-body">
+              <p className="confirm-message">
+                Importing{' '}
+                {pendingArchives.length === 1
+                  ? 'this archive'
+                  : `these ${pendingArchives.length} archives`}{' '}
+                may overwrite files that share the same path. Files with different names are kept.
+              </p>
+            </div>
+            <div className="create-file-modal-footer">
+              <button
+                className="btn-cancel"
+                onClick={() => {
+                  setShowOverwriteModal(false);
+                  setPendingArchives([]);
+                }}
+              >
+                Cancel
+              </button>
+              <button className="btn-create" onClick={() => runImports(pendingArchives)}>
+                <BoxIcon className="app-icon" /> Import anyway
               </button>
             </div>
           </div>

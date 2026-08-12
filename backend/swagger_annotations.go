@@ -462,17 +462,20 @@ func swaggerImportArchive() {}
 //	@Router       /file-ops/{namespace}/rename [post]
 func swaggerRenameFile() {}
 
-// swaggerExportAsZip godoc
+// swaggerExportArchive godoc
 //
-//	@Summary      Export as ZIP
-//	@Description  Downloads all files for a namespace as a .zip archive.
+//	@Summary      Export as archive
+//	@Description  Downloads all files for a namespace as an archive. The format is chosen with the `format` query param.
 //	@Tags         files
 //	@Produce      application/zip
-//	@Param        namespace  path      string  true  "Namespace name"
-//	@Success      200        {file}    binary  "ZIP archive"
+//	@Produce      application/gzip
+//	@Param        namespace  path      string  true   "Namespace name"
+//	@Param        format     query     string  false  "Archive format"  Enums(zip, tar.gz)  default(zip)
+//	@Success      200        {file}    binary  "Archive download"
+//	@Failure      400        {object}  types.ErrorResponse
 //	@Failure      500        {object}  types.ErrorResponse
 //	@Router       /file-ops/{namespace}/export [get]
-func swaggerExportAsZip() {}
+func swaggerExportArchive() {}
 
 // ─── Drivers ──────────────────────────────────────────────────────────────────
 

@@ -33,6 +33,7 @@
   padding: 1rem;
   background: white;
   overflow: hidden;
+  position: relative;
 }
 
 .cm-editor {
@@ -89,7 +90,7 @@
   color: var(--text-subtle);
   border: 2px dashed var(--border-light);
   border-radius: var(--radius-lg);
-  background-color: #f8f8f8;
+  background-color: var(--panel-from);
   margin: 1rem;
 }
 
@@ -97,7 +98,7 @@
   margin-left: 8px;
   font-size: 22px;
   line-height: 1;
-  color: #ff6b6b;
+  color: var(--danger);
   vertical-align: middle;
 }
 
@@ -389,12 +390,12 @@
 }
 
 .import-status-importing {
-  background-color: #3b82f6;
+  background-color: var(--primary);
   color: white;
 }
 
 .import-status-success {
-  background-color: #10b981;
+  background-color: var(--success-accent);
   color: white;
   animation: slideOutRight 3s ease-out forwards;
 }
@@ -584,4 +585,133 @@
   font-size: 0.85em;
   margin-right: 0.25em;
   user-select: none;
+}
+
+/* === Empty-repo state (no files yet) === */
+.editor-empty {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+  border: 2px dashed var(--border-light);
+  border-radius: var(--radius-lg);
+  background-color: var(--panel-from);
+  margin: 1rem;
+  padding: 2rem;
+}
+
+.editor-empty-icon {
+  width: 3rem;
+  height: 3rem;
+  color: var(--text-subtle);
+}
+
+.editor-empty-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-heading);
+}
+
+.editor-empty-message {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  max-width: 42ch;
+}
+
+.editor-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+  justify-content: center;
+}
+
+.editor-empty-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.editor-empty-actions .btn-create {
+  background-color: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.editor-empty-actions .btn-create:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+.editor-empty-actions .btn-neutral {
+  background-color: var(--surface);
+  color: var(--text-heading);
+}
+
+.editor-empty-actions .btn-neutral:hover {
+  background-color: var(--panel-to);
+  transform: translateY(-1px);
+}
+
+/* === OS-file drop overlay on the editor === */
+.editor-drop-overlay {
+  position: absolute;
+  inset: 0.5rem;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--info-bg) 92%, transparent);
+  border: 2px dashed var(--primary);
+  border-radius: var(--radius-lg);
+  pointer-events: none;
+}
+
+.editor-drop-overlay .app-icon {
+  width: 2.2rem;
+  height: 2.2rem;
+}
+
+/* === Export format modal === */
+.export-format-select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  background: var(--surface);
+  color: var(--text-body);
+}
+
+.export-unsaved-note {
+  margin: 12px 0 0;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  color: var(--warning-text);
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-border);
+  border-radius: var(--radius-sm);
+}
+
+/* === Delete-all warning === */
+.confirm-warning {
+  color: var(--danger);
+  font-weight: 600;
+  margin-top: 0.5rem;
+  font-size: 0.88rem;
 }

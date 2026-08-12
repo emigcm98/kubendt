@@ -385,16 +385,17 @@ func DeleteFolder(namespace, folderPath string) error {
 	return nil
 }
 
-// ExtractZip extracts a .zip file into the namespace
-func ExtractZip(namespace string, zipFile multipart.File) error {
+// ExtractZip extracts a .zip into the namespace and returns how many regular
+// files were written (0 means the archive held no files).
+func ExtractZip(namespace string, zipFile multipart.File) (int, error) {
 	basePath, err := namespaceFilesDir(namespace)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	// Create base directory if needed
 	if err := os.MkdirAll(basePath, 0755); err != nil {
-		return fmt.Errorf("could not create base folder: %w", err)
+		return 0, fmt.Errorf("could not create base folder: %w", err)
 	}
 
 	// Read zip file bytes
@@ -409,17 +410,18 @@ func ExtractZip(namespace string, zipFile multipart.File) error {
 			break
 		}
 		if err != nil {
-			return fmt.Errorf("error reading zip file: %w", err)
+			return 0, fmt.Errorf("error reading zip file: %w", err)
 		}
 	}
 
 	// Open zip from bytes
 	reader, err := zip.NewReader(strings.NewReader(string(zipBytes)), int64(len(zipBytes)))
 	if err != nil {
-		return fmt.Errorf("error opening zip file: %w", err)
+		return 0, fmt.Errorf("error opening zip file: %w", err)
 	}
 
 	// Extract each file
+	count := 0
 	for _, file := range reader.File {
 		fullPath := filepath.Join(basePath, file.Name)
 
@@ -431,40 +433,41 @@ func ExtractZip(namespace string, zipFile multipart.File) error {
 		// If directory
 		if file.FileInfo().IsDir() {
 			if err := os.MkdirAll(fullPath, 0755); err != nil {
-				return fmt.Errorf("error creating directory: %w", err)
+				return count, fmt.Errorf("error creating directory: %w", err)
 			}
 		} else {
 			// Create parent directory
 			dir := filepath.Dir(fullPath)
 			if err := os.MkdirAll(dir, 0755); err != nil {
-				return fmt.Errorf("error creating parent directory: %w", err)
+				return count, fmt.Errorf("error creating parent directory: %w", err)
 			}
 
 			// Open source zip entry
 			src, err := file.Open()
 			if err != nil {
-				return fmt.Errorf("error opening file inside zip: %w", err)
+				return count, fmt.Errorf("error opening file inside zip: %w", err)
 			}
 			defer src.Close()
 
 			// Create destination file
 			dst, err := os.Create(fullPath)
 			if err != nil {
-				return fmt.Errorf("error creating destination file: %w", err)
+				return count, fmt.Errorf("error creating destination file: %w", err)
 			}
 			defer dst.Close()
 
 			// Copy content
 			if _, err := io.Copy(dst, src); err != nil {
-				return fmt.Errorf("error copying content: %w", err)
+				return count, fmt.Errorf("error copying content: %w", err)
 			}
 
 			// Preserve zip entry permissions
 			os.Chmod(fullPath, file.Mode())
+			count++
 		}
 	}
 
-	return nil
+	return count, nil
 }
 
 // RenameFile renames a file or folder (supports nested paths)
@@ -568,35 +571,109 @@ func ExportAsZip(namespace string, out io.Writer) error {
 	return nil
 }
 
-// ExtractTarGz extracts a .tar.gz file into the namespace
-func ExtractTarGz(namespace string, tarGzFile multipart.File) error {
+// ExportAsTarGz streams the namespace directory as a gzip-compressed tar,
+// preserving the folder structure just like the zip export.
+func ExportAsTarGz(namespace string, out io.Writer) error {
 	basePath, err := namespaceFilesDir(namespace)
 	if err != nil {
 		return err
 	}
 
+	if _, err := os.Stat(basePath); os.IsNotExist(err) {
+		return fmt.Errorf("namespace '%s' does not exist", namespace)
+	}
+
+	gz := gzip.NewWriter(out)
+	tw := tar.NewWriter(gz)
+
+	var addDir func(string, string) error
+	addDir = func(dirPath, prefix string) error {
+		entries, err := os.ReadDir(dirPath)
+		if err != nil {
+			return err
+		}
+
+		for _, entry := range entries {
+			fullPath := filepath.Join(dirPath, entry.Name())
+			tarPath := strings.ReplaceAll(filepath.Join(prefix, entry.Name()), "\\", "/")
+
+			if entry.IsDir() {
+				if err := addDir(fullPath, tarPath); err != nil {
+					return err
+				}
+				continue
+			}
+
+			info, err := entry.Info()
+			if err != nil {
+				return err
+			}
+			if err := tw.WriteHeader(&tar.Header{
+				Name:    tarPath,
+				Mode:    int64(info.Mode().Perm()),
+				Size:    info.Size(),
+				ModTime: info.ModTime(),
+			}); err != nil {
+				return err
+			}
+			src, err := os.Open(fullPath)
+			if err != nil {
+				return err
+			}
+			if _, err := io.Copy(tw, src); err != nil {
+				src.Close()
+				return err
+			}
+			src.Close()
+		}
+		return nil
+	}
+
+	if err := addDir(basePath, ""); err != nil {
+		return fmt.Errorf("error creating tar.gz: %w", err)
+	}
+
+	if err := tw.Close(); err != nil {
+		return fmt.Errorf("error closing tar: %w", err)
+	}
+	if err := gz.Close(); err != nil {
+		return fmt.Errorf("error closing gzip: %w", err)
+	}
+
+	return nil
+}
+
+// ExtractTarGz extracts a .tar.gz/.tgz into the namespace and returns how many
+// regular files were written (0 means the archive held no files).
+func ExtractTarGz(namespace string, tarGzFile multipart.File) (int, error) {
+	basePath, err := namespaceFilesDir(namespace)
+	if err != nil {
+		return 0, err
+	}
+
 	// Create base directory if needed
 	if err := os.MkdirAll(basePath, 0755); err != nil {
-		return fmt.Errorf("could not create base folder: %w", err)
+		return 0, fmt.Errorf("could not create base folder: %w", err)
 	}
 
 	// Open gzip reader
 	gzReader, err := gzip.NewReader(tarGzFile)
 	if err != nil {
-		return fmt.Errorf("error opening gzip: %w", err)
+		return 0, fmt.Errorf("error opening gzip: %w", err)
 	}
 	defer gzReader.Close()
 
 	// Read tar stream
 	tarReader := tar.NewReader(gzReader)
 
+	count := 0
 	for {
 		header, err := tarReader.Next()
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
-			return fmt.Errorf("error reading tar: %w", err)
+			return count, fmt.Errorf("error reading tar: %w", err)
 		}
 
 		fullPath := filepath.Join(basePath, header.Name)
@@ -609,31 +686,32 @@ func ExtractTarGz(namespace string, tarGzFile multipart.File) error {
 		// If directory
 		if header.Typeflag == tar.TypeDir {
 			if err := os.MkdirAll(fullPath, os.FileMode(header.Mode)); err != nil {
-				return fmt.Errorf("error creating directory: %w", err)
+				return count, fmt.Errorf("error creating directory: %w", err)
 			}
 		} else {
 			// Create parent directory
 			dir := filepath.Dir(fullPath)
 			if err := os.MkdirAll(dir, 0755); err != nil {
-				return fmt.Errorf("error creating parent directory: %w", err)
+				return count, fmt.Errorf("error creating parent directory: %w", err)
 			}
 
 			// Create file
 			dst, err := os.Create(fullPath)
 			if err != nil {
-				return fmt.Errorf("error creating file: %w", err)
+				return count, fmt.Errorf("error creating file: %w", err)
 			}
 			defer dst.Close()
 
 			// Copy content
 			if _, err := io.Copy(dst, tarReader); err != nil {
-				return fmt.Errorf("error copying content: %w", err)
+				return count, fmt.Errorf("error copying content: %w", err)
 			}
 
 			// Preserve tar permissions
 			os.Chmod(fullPath, os.FileMode(header.Mode))
+			count++
 		}
 	}
 
-	return nil
+	return count, nil
 }

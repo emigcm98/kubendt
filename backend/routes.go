@@ -118,7 +118,7 @@ func SetupRoutes(router *gin.Engine) {
 	router.POST("/file-ops/:namespace/folder", handlers.CreateFolder)
 	router.POST("/file-ops/:namespace/import", handlers.ImportArchive)
 	router.POST("/file-ops/:namespace/rename", handlers.RenameFile)
-	router.GET("/file-ops/:namespace/export", handlers.ExportAsZip)
+	router.GET("/file-ops/:namespace/export", handlers.ExportArchive)
 
 	// === File Content Routes ===
 	router.GET("/files/:namespace", handlers.ListFiles)

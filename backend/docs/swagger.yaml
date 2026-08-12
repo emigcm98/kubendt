@@ -2102,25 +2102,39 @@ paths:
       - drivers
   /file-ops/{namespace}/export:
     get:
-      description: Downloads all files for a namespace as a .zip archive.
+      description: Downloads all files for a namespace as an archive. The format is
+        chosen with the `format` query param.
       parameters:
       - description: Namespace name
         in: path
         name: namespace
         required: true
         type: string
+      - default: zip
+        description: Archive format
+        enum:
+        - zip
+        - tar.gz
+        in: query
+        name: format
+        type: string
       produces:
       - application/zip
+      - application/gzip
       responses:
         "200":
-          description: ZIP archive
+          description: Archive download
           schema:
             type: file
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/types.ErrorResponse'
-      summary: Export as ZIP
+      summary: Export as archive
       tags:
       - files
   /file-ops/{namespace}/folder:

@@ -775,14 +775,15 @@ const docTemplate = `{
         },
         "/file-ops/{namespace}/export": {
             "get": {
-                "description": "Downloads all files for a namespace as a .zip archive.",
+                "description": "Downloads all files for a namespace as an archive. The format is chosen with the ` + "`" + `format` + "`" + ` query param.",
                 "produces": [
-                    "application/zip"
+                    "application/zip",
+                    "application/gzip"
                 ],
                 "tags": [
                     "files"
                 ],
-                "summary": "Export as ZIP",
+                "summary": "Export as archive",
                 "parameters": [
                     {
                         "type": "string",
@@ -790,13 +791,30 @@ const docTemplate = `{
                         "name": "namespace",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "enum": [
+                            "zip",
+                            "tar.gz"
+                        ],
+                        "type": "string",
+                        "default": "zip",
+                        "description": "Archive format",
+                        "name": "format",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "ZIP archive",
+                        "description": "Archive download",
                         "schema": {
                             "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "500": {
