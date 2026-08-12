@@ -34,6 +34,7 @@ import './NetworkGraph.css';
 import { NODE_SIZE } from './CustomNode';
 import ResultDialog from './ResultDialog';
 import AlertModal from './AlertModal';
+import DeleteExtrasCheckboxes from './DeleteExtrasCheckboxes';
 import ErrorModal from './ErrorModal';
 import { API_BASE_URL } from '../config';
 
@@ -2485,7 +2486,8 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
     const inventory = `This will remove ${podCount} pod${podCount === 1 ? '' : 's'} and ${linkCount} link${linkCount === 1 ? '' : 's'}.`;
     setAlertModal({
       isOpen: true,
-      type: 'confirm',
+      type: 'warning',
+      danger: true,
       title: 'Clear Topology',
       message: `Delete all KubeNDT topology resources in namespace '${namespace}'? ${inventory} The namespace will be kept.`,
       confirmText: 'Clear topology',
@@ -3857,6 +3859,7 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
       <AlertModal
         isOpen={alertModal.isOpen}
         type={alertModal.type}
+        danger={alertModal.danger}
         title={alertModal.title}
         message={alertModal.message}
         onConfirm={alertModal.onConfirm}
@@ -3866,34 +3869,18 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
         extraContent={(() => {
           if (alertModal.showPositionCheckbox) {
             return (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={clearPositionsChecked}
-                    onChange={(e) => {
-                      setClearPositionsChecked(e.target.checked);
-                      clearPositionsRef.current = e.target.checked;
-                    }}
-                  />
-                  Also delete saved node positions
-                </label>
-                <label
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={clearFilesChecked}
-                    onChange={(e) => {
-                      setClearFilesChecked(e.target.checked);
-                      clearFilesRef.current = e.target.checked;
-                    }}
-                  />
-                  Also delete namespace files (file manager)
-                </label>
-              </div>
+              <DeleteExtrasCheckboxes
+                positionsChecked={clearPositionsChecked}
+                onPositionsChange={(v) => {
+                  setClearPositionsChecked(v);
+                  clearPositionsRef.current = v;
+                }}
+                filesChecked={clearFilesChecked}
+                onFilesChange={(v) => {
+                  setClearFilesChecked(v);
+                  clearFilesRef.current = v;
+                }}
+              />
             );
           }
           const hasTiming = !!alertModal.timingData;

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import NamespaceFilesNavbar from '../components/NamespaceFilesNavbar';
 import FileSidebar from '../components/FileSidebar';
+import AlertModal from '../components/AlertModal';
 import './NamespaceFilesPage.css';
 import ErrorPage from './ErrorPage';
 import { API_BASE_URL } from '../config';
@@ -11,7 +12,6 @@ import { ReactComponent as LockIcon } from '../assets/images/icons/lock.svg';
 import { ReactComponent as EyeIcon } from '../assets/images/icons/eye.svg';
 import { ReactComponent as FileIcon } from '../assets/images/icons/file.svg';
 import { ReactComponent as FolderIcon } from '../assets/images/icons/folder.svg';
-import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
 import { ReactComponent as EditIcon } from '../assets/images/icons/edit.svg';
 
 import CodeMirror from '@uiw/react-codemirror';
@@ -1140,62 +1140,47 @@ function NamespaceFilesPage() {
       )}
 
       {/* Modal to confirm delete */}
-      {showDeleteModal && deleteTarget && (
-        <div className="create-file-modal-overlay" onClick={() => setShowDeleteModal(false)}>
-          <div className="create-file-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="create-file-modal-header">
-              <TrashIcon className="app-icon" /> Confirm Delete
-            </div>
-            <div className="create-file-modal-body">
-              <p className="confirm-message">
-                {deleteTarget.type === 'folder'
-                  ? `Delete folder '${deleteTarget.path}' and all its contents?`
-                  : `Delete file '${deleteTarget.path}'?`}
-              </p>
-            </div>
-            <div className="create-file-modal-footer">
-              <button className="btn-cancel" onClick={() => setShowDeleteModal(false)}>
-                Cancel
-              </button>
-              <button className="btn-danger" onClick={confirmDelete}>
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <AlertModal
+        isOpen={showDeleteModal && !!deleteTarget}
+        type="warning"
+        danger
+        title={deleteTarget?.type === 'folder' ? 'Delete folder' : 'Delete file'}
+        message={
+          deleteTarget?.type === 'folder' ? (
+            <>
+              Delete folder <strong>'{deleteTarget?.path}'</strong> and all its contents?
+            </>
+          ) : (
+            <>
+              Delete file <strong>'{deleteTarget?.path}'</strong>?
+            </>
+          )
+        }
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={confirmDelete}
+        onCancel={() => setShowDeleteModal(false)}
+      />
 
-      {/* Modal: confirm delete ALL files */}
-      {showDeleteAllModal && (
-        <div className="create-file-modal-overlay" onClick={() => setShowDeleteAllModal(false)}>
-          <div className="create-file-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="create-file-modal-header">
-              <TrashIcon className="app-icon" /> Delete All Files
-            </div>
-            <div className="create-file-modal-body">
-              <p className="confirm-message">
-                Delete <strong>all files and folders</strong> in namespace{' '}
-                <strong>'{namespace}'</strong>?
-              </p>
-              <p className="confirm-warning">This action cannot be undone.</p>
-            </div>
-            <div className="create-file-modal-footer">
-              <button className="btn-cancel" onClick={() => setShowDeleteAllModal(false)}>
-                Cancel
-              </button>
-              <button
-                className="btn-danger"
-                onClick={() => {
-                  setShowDeleteAllModal(false);
-                  handleDeleteAllFiles();
-                }}
-              >
-                <TrashIcon className="app-icon" /> Delete all
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <AlertModal
+        isOpen={showDeleteAllModal}
+        type="warning"
+        danger
+        title="Delete all files"
+        message={
+          <>
+            Delete <strong>all files and folders</strong> in namespace{' '}
+            <strong>'{namespace}'</strong>?
+          </>
+        }
+        confirmText="Delete all"
+        cancelText="Cancel"
+        onConfirm={() => {
+          setShowDeleteAllModal(false);
+          handleDeleteAllFiles();
+        }}
+        onCancel={() => setShowDeleteAllModal(false)}
+      />
 
       {/* Modal to rename file/folder */}
       {showRenameModal && (
@@ -1346,44 +1331,21 @@ function NamespaceFilesPage() {
       )}
 
       {/* Modal: confirm import into a non-empty namespace */}
-      {showOverwriteModal && (
-        <div
-          className="create-file-modal-overlay"
-          onClick={() => {
-            setShowOverwriteModal(false);
-            setPendingArchives([]);
-          }}
-        >
-          <div className="create-file-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="create-file-modal-header">
-              <BoxIcon className="app-icon icon-import" /> Import into a non-empty namespace
-            </div>
-            <div className="create-file-modal-body">
-              <p className="confirm-message">
-                Importing{' '}
-                {pendingArchives.length === 1
-                  ? 'this archive'
-                  : `these ${pendingArchives.length} archives`}{' '}
-                may overwrite files that share the same path. Files with different names are kept.
-              </p>
-            </div>
-            <div className="create-file-modal-footer">
-              <button
-                className="btn-cancel"
-                onClick={() => {
-                  setShowOverwriteModal(false);
-                  setPendingArchives([]);
-                }}
-              >
-                Cancel
-              </button>
-              <button className="btn-create" onClick={() => runImports(pendingArchives)}>
-                <BoxIcon className="app-icon" /> Import anyway
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <AlertModal
+        isOpen={showOverwriteModal}
+        type="confirm"
+        title="Import into a non-empty namespace"
+        message={`Importing ${
+          pendingArchives.length === 1 ? 'this archive' : `these ${pendingArchives.length} archives`
+        } may overwrite files that share the same path. Files with different names are kept.`}
+        confirmText="Import anyway"
+        cancelText="Cancel"
+        onConfirm={() => runImports(pendingArchives)}
+        onCancel={() => {
+          setShowOverwriteModal(false);
+          setPendingArchives([]);
+        }}
+      />
 
       {/* Import status indicator */}
       {importStatus && (
