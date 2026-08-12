@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Modal from 'react-modal';
 import AlertModal from '../components/AlertModal';
+import DeleteExtrasCheckboxes from '../components/DeleteExtrasCheckboxes';
 import ErrorModal from '../components/ErrorModal';
 import K8sNodeInfoPanel from '../components/K8sNodeInfoPanel';
 import ApiTokensModal from '../components/ApiTokensModal';
@@ -1162,122 +1163,31 @@ const Home = () => {
         </div>
       </Modal>
 
-      <Modal
+      <AlertModal
         isOpen={!!deleteTarget}
-        onRequestClose={() => !deletingNamespace && setDeleteTarget(null)}
-        className="delete-confirm-modal"
-        overlayClassName="delete-confirm-overlay"
-        shouldCloseOnEsc={!deletingNamespace}
-        shouldCloseOnOverlayClick={!deletingNamespace}
-      >
-        <div className="modal-header">
-          <h2>
-            <WarningIcon className="app-icon" aria-hidden="true" /> Confirm Namespace Deletion
-          </h2>
-          <button
-            className="modal-close-btn"
-            onClick={() => setDeleteTarget(null)}
-            disabled={deletingNamespace}
-          >
-            <CloseIcon className="app-icon" />
-          </button>
-        </div>
-
-        <div className="modal-body">
-          <p>
-            Are you sure you want to delete the namespace <strong>'{deleteTarget?.name}'</strong>?
-          </p>
-          <p style={{ color: '#d32f2f', fontWeight: 600, marginTop: '1rem' }}>
-            This action cannot be undone.
-          </p>
-          <div
-            style={{
-              marginTop: '12px',
-              paddingTop: '10px',
-              borderTop: '1px solid #eee',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '8px',
-            }}
-          >
-            <label
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                fontSize: '0.88rem',
-                color: '#444',
-                cursor: 'pointer',
-                userSelect: 'none',
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={deletePositionsChecked}
-                onChange={(e) => setDeletePositionsChecked(e.target.checked)}
-                style={{
-                  width: '15px',
-                  height: '15px',
-                  accentColor: '#d32f2f',
-                  cursor: 'pointer',
-                  flexShrink: 0,
-                }}
-              />
-              Also delete saved node positions
-            </label>
-            <label
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                fontSize: '0.88rem',
-                color: '#444',
-                cursor: 'pointer',
-                userSelect: 'none',
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={deleteFilesChecked}
-                onChange={(e) => setDeleteFilesChecked(e.target.checked)}
-                style={{
-                  width: '15px',
-                  height: '15px',
-                  accentColor: '#d32f2f',
-                  cursor: 'pointer',
-                  flexShrink: 0,
-                }}
-              />
-              Also delete namespace files (file manager)
-            </label>
-          </div>
-        </div>
-
-        <div className="modal-footer">
-          <button
-            className="modal-btn modal-btn-cancel"
-            onClick={() => setDeleteTarget(null)}
-            disabled={deletingNamespace}
-          >
-            Cancel
-          </button>
-          <button
-            className="modal-btn modal-btn-confirm modal-btn-danger"
-            onClick={handleConfirmDeleteNamespace}
-            disabled={deletingNamespace}
-          >
-            {deletingNamespace ? (
-              <>
-                <LoadingIcon className="app-icon" aria-hidden="true" /> Deleting…
-              </>
-            ) : (
-              <>
-                <TrashIcon className="app-icon" aria-hidden="true" /> Delete namespace
-              </>
-            )}
-          </button>
-        </div>
-      </Modal>
+        type="warning"
+        danger
+        title="Delete namespace"
+        message={
+          <>
+            Delete the namespace <strong>'{deleteTarget?.name}'</strong>?
+          </>
+        }
+        confirmText="Delete namespace"
+        cancelText="Cancel"
+        loading={deletingNamespace}
+        loadingText="Deleting…"
+        onConfirm={handleConfirmDeleteNamespace}
+        onCancel={() => !deletingNamespace && setDeleteTarget(null)}
+        extraContent={
+          <DeleteExtrasCheckboxes
+            positionsChecked={deletePositionsChecked}
+            onPositionsChange={setDeletePositionsChecked}
+            filesChecked={deleteFilesChecked}
+            onFilesChange={setDeleteFilesChecked}
+          />
+        }
+      />
 
       <ErrorModal
         isOpen={errorMessage !== ''}

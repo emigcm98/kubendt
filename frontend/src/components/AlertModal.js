@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ReactComponent as SuccessIcon } from '../assets/images/icons/success.svg';
 import { ReactComponent as ErrorIcon } from '../assets/images/icons/error.svg';
 import { ReactComponent as WarningIcon } from '../assets/images/icons/warning.svg';
@@ -17,7 +17,23 @@ const AlertModal = ({
   confirmText = 'Accept',
   cancelText = 'Cancel',
   extraContent,
+  // Destructive confirm: red confirm button + an irreversible-action note.
+  danger = false,
+  dangerNote = 'This action cannot be undone.',
+  // While an async action runs: spinner in the confirm button, both disabled.
+  loading = false,
+  loadingText = 'Working…',
 }) => {
+  // Close on Esc (never while an action is running).
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const onKey = (e) => {
+      if (e.key === 'Escape' && !loading && onCancel) onCancel();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, loading, onCancel]);
+
   if (!isOpen) return null;
 
   const messageLines =
@@ -46,7 +62,7 @@ const AlertModal = ({
   };
 
   return (
-    <div className="alert-modal-overlay" onClick={onCancel}>
+    <div className="alert-modal-overlay" onClick={loading ? undefined : onCancel}>
       <div className="alert-modal-container" onClick={(e) => e.stopPropagation()}>
         <div className="alert-modal-header">
           <div className={`alert-modal-icon alert-modal-icon-${type}`}>
@@ -57,39 +73,53 @@ const AlertModal = ({
           </div>
         </div>
 
-        {message && (
+        {(message || danger || extraContent) && (
           <div className="alert-modal-body">
-            {messageLines.length <= 1 ? (
-              <p className="alert-modal-message">{message}</p>
-            ) : (
-              <>
-                <p className="alert-modal-message">{messageLines[0]}</p>
-                {messageLines.slice(1).map((line, idx) => (
-                  <p
-                    key={`${line}-${idx}`}
-                    className="alert-modal-message alert-modal-message-secondary"
-                  >
-                    {line}
-                  </p>
-                ))}
-              </>
-            )}
+            {messageLines.length <= 1
+              ? message && <p className="alert-modal-message">{message}</p>
+              : (() => (
+                  <>
+                    <p className="alert-modal-message">{messageLines[0]}</p>
+                    {messageLines.slice(1).map((line, idx) => (
+                      <p
+                        key={`${line}-${idx}`}
+                        className="alert-modal-message alert-modal-message-secondary"
+                      >
+                        {line}
+                      </p>
+                    ))}
+                  </>
+                ))()}
+            {danger && <p className="alert-modal-danger-note">{dangerNote}</p>}
             {extraContent && <div className="alert-modal-extra">{extraContent}</div>}
           </div>
         )}
 
         {type !== 'loading' && (
           <div className="alert-modal-actions">
-            {onCancel && type === 'confirm' && (
-              <button className="alert-modal-btn alert-modal-btn-cancel" onClick={onCancel}>
+            {onCancel && (type === 'confirm' || danger) && (
+              <button
+                className="alert-modal-btn alert-modal-btn-cancel"
+                onClick={onCancel}
+                disabled={loading}
+              >
                 {cancelText}
               </button>
             )}
             <button
-              className={`alert-modal-btn alert-modal-btn-${type === 'confirm' ? 'confirm' : 'primary'}`}
+              className={`alert-modal-btn alert-modal-btn-${
+                danger ? 'danger' : type === 'confirm' ? 'confirm' : 'primary'
+              }`}
               onClick={onConfirm}
+              disabled={loading}
             >
-              {confirmText}
+              {loading ? (
+                <span className="alert-modal-btn-loading">
+                  <LoadingIcon className="alert-modal-btn-spinner" /> {loadingText}
+                </span>
+              ) : (
+                confirmText
+              )}
             </button>
           </div>
         )}

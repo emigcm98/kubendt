@@ -980,6 +980,8 @@
   max-width: 520px;
   padding: 0;
   outline: none;
+  /* Clip the header gradient to the rounded corners (was poking out square). */
+  overflow: hidden;
 }
 
 .modal-header {

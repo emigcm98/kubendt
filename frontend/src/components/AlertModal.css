@@ -12,7 +12,7 @@
 }
 
 .alert-modal-container {
-  background: #ffffff;
+  background: var(--surface);
   border-radius: var(--radius-lg);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
   width: 90%;
@@ -20,6 +20,8 @@
   padding: 0;
   outline: none;
   overflow: hidden;
+  /* Never inherit a page's text-align (e.g. Home centers its content). */
+  text-align: left;
 }
 
 .alert-modal-header {
@@ -28,7 +30,7 @@
   gap: 12px;
   padding: 16px;
   border-bottom: 1px solid var(--border-light);
-  background-color: #f9fafb;
+  background-color: var(--panel-from);
 }
 
 .alert-modal-icon {
@@ -91,7 +93,7 @@
 }
 
 .alert-modal-title {
-  color: #000000;
+  color: var(--text-heading);
   font-size: 1rem;
   font-weight: 700;
   margin: 0;
@@ -109,8 +111,8 @@
 }
 
 .alert-modal-message-secondary {
-  background: #f6f8fb;
-  border: 1px solid #e3e8ef;
+  background: var(--panel-from);
+  border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
   color: var(--text-body);
   font-size: 0.9rem;
@@ -126,6 +128,9 @@
   margin-top: 12px;
   padding-top: 10px;
   border-top: 1px solid var(--border-light);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .alert-modal-extra label {
@@ -133,7 +138,7 @@
   align-items: center;
   gap: 8px;
   font-size: 0.88rem;
-  color: #444;
+  color: var(--text-body);
   cursor: pointer;
   user-select: none;
 }
@@ -151,7 +156,7 @@
   gap: 8px;
   padding: 12px 16px;
   border-top: 1px solid var(--border-light);
-  background-color: #fafafa;
+  background-color: var(--panel-to);
   justify-content: flex-end;
 }
 
@@ -186,6 +191,43 @@
 .alert-modal-btn-cancel {
   background: var(--border-light);
   color: var(--text-body);
+}
+
+.alert-modal-btn-danger {
+  background: var(--danger);
+  color: #fff;
+  border-color: var(--danger);
+}
+
+.alert-modal-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.alert-modal-btn:disabled:hover {
+  transform: none;
+  filter: none;
+  box-shadow: none;
+}
+
+.alert-modal-btn-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.alert-modal-btn-spinner {
+  width: 15px;
+  height: 15px;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Irreversible-action note under the message on a destructive confirm. */
+.alert-modal-danger-note {
+  margin: 10px 0 0;
+  color: var(--danger);
+  font-weight: 600;
+  font-size: 0.9rem;
 }
 
 /* ── Timing widget (shown inside alert-modal-extra) ─────────────────────── */
@@ -232,14 +274,14 @@
   align-items: center;
   justify-content: space-between;
   padding: 4px 10px 4px 13px;
-  background: #f6f8fb;
+  background: var(--panel-from);
   border-radius: var(--radius-sm);
   border-left: 2px solid #d0d8e8;
 }
 
 .am-timing-phase-label {
   font-size: 0.82rem;
-  color: #667080;
+  color: var(--text-muted);
   text-transform: capitalize;
 }
 
@@ -265,7 +307,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #7a5a00;
+  color: var(--warning-text);
   margin-bottom: 6px;
 }
 
@@ -280,7 +322,7 @@
 
 .am-warnings-item {
   font-size: 0.85rem;
-  color: #523a00;
+  color: var(--warning-text);
   line-height: 1.35;
   display: flex;
   align-items: flex-start;
