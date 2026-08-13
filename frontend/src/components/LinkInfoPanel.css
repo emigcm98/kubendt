@@ -18,6 +18,12 @@
   padding: 0.8rem 0;
 }
 
+/* Link labels (Path, Type, UID, Subnet) are short, so the shared 96px label
+   column leaves a big gap before the value. Tighten it to fit "Subnet:". */
+.link-info-body .pod-label {
+  flex-basis: 62px;
+}
+
 .link-subnet.subnet-ok {
   color: var(--success);
   font-weight: 600;
@@ -156,13 +162,19 @@
   font-size: 0.8rem;
 }
 
+.link-endpoint-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 0.5rem;
+}
+
 .link-capture-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.35rem;
-  margin-top: 0.5rem;
-  width: 100%;
+  flex: 1 1 0;
+  min-width: 0;
   padding: 5px 8px;
   background: var(--info-bg);
   border: 1px solid var(--border);
@@ -177,6 +189,31 @@
 }
 
 .link-capture-btn:hover {
+  background: var(--info-bg);
+  border-color: var(--primary);
+}
+
+.link-tc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 5px 8px;
+  background: var(--info-bg);
+  border: 1px solid var(--border);
+  color: var(--primary);
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease;
+}
+
+.link-tc-btn:hover {
   background: var(--info-bg);
   border-color: var(--primary);
 }

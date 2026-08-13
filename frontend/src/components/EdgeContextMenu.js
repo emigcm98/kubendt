@@ -3,6 +3,7 @@ import './ContextMenu.css';
 import { ReactComponent as PcapIcon } from '../assets/images/icons/pcap.svg';
 import { ReactComponent as InfoIcon } from '../assets/images/icons/info.svg';
 import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
+import { ReactComponent as SlidersIcon } from '../assets/images/icons/sliders.svg';
 
 const EdgeContextMenu = ({
   x,
@@ -15,6 +16,8 @@ const EdgeContextMenu = ({
   onDelete,
   onCaptureSource,
   onCaptureTarget,
+  onTCSource,
+  onTCTarget,
 }) => {
   const menuRef = useRef(null);
   const leaveTimerRef = useRef(null);
@@ -126,6 +129,24 @@ const EdgeContextMenu = ({
           </span>
           <span className="graph-context-menu-label">
             Capture on {targetLabel || edge.target}:{edge.data?.peerIntf || '?'}
+          </span>
+        </div>
+      )}
+
+      {onTCSource && (
+        <div className="graph-context-menu-item" onClick={() => handleOptionClick(onTCSource)}>
+          <SlidersIcon className="graph-context-menu-icon" />
+          <span className="graph-context-menu-label">
+            Traffic control on {sourceLabel || edge.source}:{edge.data?.localIntf || '?'}
+          </span>
+        </div>
+      )}
+
+      {onTCTarget && (
+        <div className="graph-context-menu-item" onClick={() => handleOptionClick(onTCTarget)}>
+          <SlidersIcon className="graph-context-menu-icon" />
+          <span className="graph-context-menu-label">
+            Traffic control on {targetLabel || edge.target}:{edge.data?.peerIntf || '?'}
           </span>
         </div>
       )}

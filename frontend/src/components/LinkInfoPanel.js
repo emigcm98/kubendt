@@ -4,6 +4,7 @@ import './LinkInfoPanel.css';
 import usePanelClose from './usePanelClose';
 import { API_BASE_URL } from '../config';
 import { ReactComponent as PcapIcon } from '../assets/images/icons/pcap.svg';
+import { ReactComponent as SlidersIcon } from '../assets/images/icons/sliders.svg';
 import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
 import { ReactComponent as LinkIcon } from '../assets/images/icons/link.svg';
 import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
@@ -43,6 +44,7 @@ const LinkInfoPanel = ({
   onClosePanel,
   onDeleteLink,
   onStartCapture,
+  onStartTC,
   closeSignal,
   isBusy = false,
 }) => {
@@ -137,6 +139,7 @@ const LinkInfoPanel = ({
     const stateKnown = info?.state === 'up' || info?.state === 'down';
     const isUp = info?.state === 'up';
     const canCapture = !isExternal && onStartCapture && podName && ifaceName;
+    const canTC = !isExternal && onStartTC && podName && ifaceName;
 
     return (
       <div className={`link-endpoint link-endpoint-${side}`}>
@@ -186,14 +189,27 @@ const LinkInfoPanel = ({
           </>
         )}
 
-        {canCapture && (
-          <button
-            className="link-capture-btn"
-            onClick={() => onStartCapture(podName, ifaceName)}
-            title={`Capture packets on ${podName}:${ifaceName}`}
-          >
-            <PcapIcon /> Capture
-          </button>
+        {(canCapture || canTC) && (
+          <div className="link-endpoint-actions">
+            {canCapture && (
+              <button
+                className="link-capture-btn"
+                onClick={() => onStartCapture(podName, ifaceName)}
+                title={`Capture packets on ${podName}:${ifaceName}`}
+              >
+                <PcapIcon /> Capture
+              </button>
+            )}
+            {canTC && (
+              <button
+                className="link-tc-btn"
+                onClick={() => onStartTC(podName, ifaceName)}
+                title={`Traffic control on ${podName}:${ifaceName}`}
+              >
+                <SlidersIcon /> Traffic control
+              </button>
+            )}
+          </div>
         )}
       </div>
     );

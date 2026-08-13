@@ -27,6 +27,7 @@ backend/kubendt.db
 # misc
 .DS_Store
 /docs/
+.claude/
 
 # deploy
 *.tar
