@@ -7,8 +7,8 @@ authors:
   - family-names: "García de la Calera Molina"
     given-names: "Emilio"
     orcid: "https://orcid.org/0000-0002-6644-6641"
-version: "1.2.0"
-date-released: "2026-07-30"
+version: "1.3.0"
+date-released: "2026-08-13"
 license: AGPL-3.0-or-later
 repository-code: "https://github.com/emigcm98/kubendt"
 url: "https://kubendt.org"

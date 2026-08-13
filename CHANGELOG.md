@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-08-13
+
 ### Added
 
 - The running build version is shown as a badge next to the title on the Home dashboard, read from the public `GET /version` endpoint. Releases show `vX.Y.Z`, local builds show `dev`, and hovering reveals the commit and build date.
@@ -110,7 +112,8 @@ Initial public release. KubeNDT deploys and operates virtual network topologies 
 - Health, readiness and version endpoints, and Swagger docs at `/swagger`.
 - Container images published to GHCR and a Docker Compose deployment.
 
-[Unreleased]: https://github.com/emigcm98/kubendt/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/emigcm98/kubendt/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/emigcm98/kubendt/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/emigcm98/kubendt/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/emigcm98/kubendt/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/emigcm98/kubendt/releases/tag/v1.0.0
