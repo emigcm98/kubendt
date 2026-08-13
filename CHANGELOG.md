@@ -34,6 +34,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - The File Manager export and delete-all controls are disabled when there are no files, the File Manager warns before you reload or close the tab with unsaved edits.
 - Importing an archive into a File Manager namespace that already has files now asks for confirmation first, since it can overwrite same-path files.
 - Destructive confirmations (clear topology, delete namespace, delete history, delete file or folder, delete all files) now share one modal with a consistent look: warning icon, a red confirm button, an "action cannot be undone" note, and Esc-to-close.
+- Traffic control (tc/qdisc) is applied and read on any pod, using the pod's own `tc` when present and falling back to an ephemeral toolbox container for node images that ship none. Shaping no longer depends on the node image bundling `tc`.
 
 ### Fixed
 
@@ -43,6 +44,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Traceroute hops through the Kubernetes fabric (pod-network gateways, node IPs) are now tagged as `cluster` hops, with their own icon in the trace panel, and drawn as the way out to the internet instead of being misattributed to the topology's external network node when a router exits through its cluster interface.
 - The interactive shell no longer clips its last terminal row. Its padding sat on an inner xterm element that the fit addon does not measure, so the rows overflowed the window by a few pixels and cut a row on displays whose cell height crossed the rounding threshold. The terminal also re-fits on zoom and display-scaling changes, not only on window resizes.
 - The Swagger spec no longer pins `host` or `schemes`, so "Try it out" follows the page's own origin and protocol and works on any host and on `https` deployments behind a reverse proxy.
+- Reading a netem qdisc no longer mistakes the internal seed value for the interface jitter when a delay was set without one.
 
 ## [1.2.0] - 2026-07-30
 

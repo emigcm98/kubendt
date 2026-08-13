@@ -124,6 +124,17 @@ func ResolveDriverExecutionPlanForPod(namespace, podName string, driver interfac
 		return "", nil, err
 	}
 
+	// Traffic shaping is universal: tc runs in the pod netns, so it resolves the
+	// same for every driver and executes via the tc_universal executor (the
+	// pod's own tc, or an ephemeral toolbox for images that ship none).
+	if action.Type == "add_qdisc" || action.Type == "del_qdisc" {
+		commands, err := ResolveDriverCommandsForPod(namespace, podName, driver, action)
+		if err != nil {
+			return "", nil, err
+		}
+		return executor.TCUniversalExecutorName, commands, nil
+	}
+
 	if planner, ok := driver.(types.EffectiveActionExecutionPlanResolver); ok {
 		executorName, commands, handled, err := planner.ResolveActionExecutionPlan(namespace, podName, action)
 		if err != nil {
@@ -217,31 +228,28 @@ func ResolveDriverCommandsForPod(namespace, podName string, driver interface{}, 
 		}
 	}
 
-	// TC actions (tc / qdisc, all pods)
-	if tc, ok := driver.(capabilities.TCCapable); ok {
-
-		switch action.Type {
-		case "add_qdisc":
-
-			if action.TCParams == nil {
-				log.Println("❌ TCParams not defined in add_qdisc_netem action")
-				return nil, nil
-			} else if action.TCParams.Qdisc == "" {
-				log.Println("❌ Qdisc not specified")
-				return nil, nil
-			}
-			validQdiscs := map[string]bool{"netem": true, "tbf": true}
-			if !validQdiscs[action.TCParams.Qdisc] {
-				log.Printf("❌ Qdisc '%s' not allowed. Supported: [netem, tbf]", action.TCParams.Qdisc)
-				return nil, nil
-			}
-
-			params := buildTCParamsFromStruct(action.TCParams)
-			return tc.AddQdisc(action.Iface, action.TCParams.Qdisc, params), nil
-
-		case "del_qdisc":
-			return tc.DelQdisc(action.Iface), nil
+	// TC actions (traffic shaping) are universal: tc runs in the pod netns, so
+	// any pod can be shaped without a driver capability. The command builder
+	// stays shared; execution is routed to the tc_universal executor by
+	// ResolveDriverExecutionPlanForPod.
+	switch action.Type {
+	case "add_qdisc":
+		if action.TCParams == nil {
+			log.Println("❌ TCParams not defined in add_qdisc action")
+			return nil, nil
+		} else if action.TCParams.Qdisc == "" {
+			log.Println("❌ Qdisc not specified")
+			return nil, nil
 		}
+		validQdiscs := map[string]bool{"netem": true, "tbf": true}
+		if !validQdiscs[action.TCParams.Qdisc] {
+			log.Printf("❌ Qdisc '%s' not allowed. Supported: [netem, tbf]", action.TCParams.Qdisc)
+			return nil, nil
+		}
+		params := buildTCParamsFromStruct(action.TCParams)
+		return capabilities.TCBase{}.AddQdisc(action.Iface, action.TCParams.Qdisc, params), nil
+	case "del_qdisc":
+		return capabilities.TCBase{}.DelQdisc(action.Iface), nil
 	}
 
 	// Switch actions (linux switch + ovswitch)
