@@ -1136,8 +1136,9 @@ func ParseQdiscShowToMap(output string) (map[string]interface{}, error) {
 
 	// 6) netem: delay [jitter], loss, duplicate, corrupt, seed, limit
 	if qdiscType == "netem" {
-		// delay X [Y]
-		if m := regexp.MustCompile(`\bdelay\s+([0-9a-zA-Z.]+)(?:\s+([0-9a-zA-Z.]+))?`).FindStringSubmatch(line); len(m) >= 2 {
+		// delay X [jitter]. The jitter token must start with a digit so trailing
+		// keywords like "seed" or "loss" are not mistaken for a jitter value.
+		if m := regexp.MustCompile(`\bdelay\s+([0-9a-zA-Z.]+)(?:\s+([0-9][0-9a-zA-Z.]*))?`).FindStringSubmatch(line); len(m) >= 2 {
 			res["delay"] = m[1]
 			if len(m) >= 3 && m[2] != "" {
 				res["jitter"] = m[2]

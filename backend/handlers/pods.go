@@ -302,8 +302,9 @@ func ShowQdisc(c *gin.Context) {
 		return
 	}
 
-	// It executes: tc qdisc show dev <iface>
-	stdout, stderr, err := helpers.ExecInPod(namespace, podName, []string{"tc", "qdisc", "show", "dev", iface})
+	// Runs `tc qdisc show dev <iface>` in the pod netns, via the pod's own tc or
+	// an ephemeral toolbox when the image ships none (same path as apply).
+	stdout, stderr, err := helpers.RunTC(namespace, podName, []string{"tc", "qdisc", "show", "dev", iface})
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
