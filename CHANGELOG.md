@@ -36,6 +36,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Destructive confirmations (clear topology, delete namespace, delete history, delete file or folder, delete all files) now share one modal with a consistent look: warning icon, a red confirm button, an "action cannot be undone" note, and Esc-to-close.
 - Traffic control (tc/qdisc) is applied and read on any pod, using the pod's own `tc` when present and falling back to an ephemeral toolbox container for node images that ship none. Shaping no longer depends on the node image bundling `tc`.
 - Traffic control now lives in its own floating panel, a peer of the packet capture and traceroute windows, instead of an inline editor in the node panel. Can be opened by right-clicking a link, from the link info panel, or from a node's Links tab, which now shows the shaping status and an Open button.
+- Traffic control is no longer a driver capability. The `TCCapable` interface is gone and the driver capabilities API no longer lists it, since shaping now works the same on every node.
 
 ### Fixed
 

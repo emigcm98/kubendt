@@ -276,25 +276,21 @@ Expected: successful replies routed through `edge-router-0` SNAT.
 
 ### 13. Apply traffic shaping (TC) and observe bandwidth drop
 
-The `user-*` nodes have `iproute2-tc` installed and expose the **TCCapable** driver capability, so traffic shaping can be applied directly from the UI without touching the shell.
+The `user-*` nodes have `iproute2-tc` installed, so traffic shaping can be applied straight from the UI without touching the shell. Shaping works on any node now, not just these.
 
-#### How to apply TC from the Pod Info Panel
+#### How to apply TC
 
-1. Click on any `user-*` node in the topology graph to open its **Pod Info Panel**.
-2. Switch to the **Links** tab. The tab lists all interfaces of the pod and, for each one, shows a **TC (Qdisc)** section.
-3. Select interface `eth1` (the one connected to the room switch).
-4. If no qdisc is configured the panel shows `No Qdisc configured (noqueue)`.
-   - Choose **tbf** from the _Select Qdisc_ dropdown and click **➕ Create**.
-5. Fill in the TBF parameters:
+1. Right-click the link between a `user-*` node and its room switch and choose **Traffic control on user-…:eth1**. A shaping panel opens. You can also open it from the node's **Pod Info Panel → Links** tab with **Open traffic control**.
+2. Pick **tbf** and fill in the parameters:
    | Field   | Value    | Meaning                                    |
    | ------- | -------- | ------------------------------------------ |
    | Rate    | `1mbit`  | Maximum bandwidth: 1 Mbit/s                |
    | Burst   | `32kbit` | Token bucket burst size                    |
    | Latency | `50ms`   | Maximum latency before packets are dropped |
-6. Click **💾** (Save) to apply. The backend translates this into: `tc qdisc replace dev eth1 root tbf rate 1mbit burst 32kbit latency 50ms`
-7. To remove the shaping later, click **🗑️** (Delete).
+3. Click **Apply**. The backend runs `tc qdisc replace dev eth1 root tbf rate 1mbit burst 32kbit latency 50ms`.
+4. To remove it later, open the panel again and click **Remove**.
 
-> The same flow works on any other pod that implements **TCCapable** (FRR routers, OVS switches, Linux switches). Select the appropriate interface for the segment you want to rate-limit.
+> The same flow works on any node. Pick the interface for the segment you want to rate-limit.
 
 #### Verify the bandwidth drop with iperf3
 
@@ -314,7 +310,7 @@ Expected output (abridged):
 
 The bitrate is now capped at ≈ 1 Mbit/s instead of the unconstrained value.
 
-To restore full bandwidth, go back to the **Links** tab in the Pod Info Panel and click **🗑️** to delete the qdisc, then re-run iperf3 to confirm the rate returns to normal.
+To restore full bandwidth, open the traffic control panel again and click **Remove**, then re-run iperf3 to confirm the rate returns to normal.
 
 #### Equivalent `network_conf.json` action
 

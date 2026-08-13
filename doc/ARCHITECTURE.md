@@ -33,9 +33,10 @@ Drivers encode node behavior and can combine capability bases:
 - `L2Capable`
 - `L3Capable`
 - `SwitchCapable`
-- `TCCapable`
 - `NATCapable`
 - `OSPFCapable`
+
+Traffic control is not a driver capability. It runs on any pod through the pod's own `tc`, with an ephemeral toolbox container as fallback, so every node can be shaped.
 
 The same action type can use different executors depending on driver/runtime constraints (for example guest CLI wrappers in QEMU-based platforms).
 

@@ -125,20 +125,6 @@ var methodRegistry = map[string]MethodMetadata{
 		},
 	},
 
-	// TC Methods
-	"AddQdisc": {
-		Name: "AddQdisc",
-		Params: []ParameterInfo{
-			{Name: "iface", Type: "string"},
-			{Name: "qdiscType", Type: "string"},
-			{Name: "params", Type: "[]string"},
-		},
-	},
-	"DelQdisc": {
-		Name:   "DelQdisc",
-		Params: []ParameterInfo{{Name: "iface", Type: "string"}},
-	},
-
 	// NAT Methods
 	"EnableSNAT": {
 		Name:   "EnableSNAT",

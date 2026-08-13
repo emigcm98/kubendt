@@ -73,7 +73,6 @@ DRIVER RESOLUTION (on pod action):
   HostDriver           SwitchDriver           RouterDriver
   ├─ L2Base            ├─ L2Base              ├─ L2Base
   ├─ L3Base            ├─ SwitchBase          ├─ L3Base
-  ├─ TCBase            ├─ TCBase              ├─ TCBase
   │                    │                      ├─ NATBase
   │                    │                      └─ [OSPF via direct methods (FRR)]
   │                    │
@@ -108,10 +107,8 @@ Input: action = {Type: "set_ip", Iface: "eth1", CIDR: "10.0.0.1/24"}
 │  ├─ ... (other NAT methods)
 │  └─ else continue
 │
-├─ TCCapable? (driver.(capabilities.TCCapable))
-│  ├─ "add_qdisc" → AddQdisc()
-│  ├─ "del_qdisc" → DelQdisc()
-│  └─ else continue
+├─ Traffic control (add_qdisc/del_qdisc) is not a branch here. It is resolved
+│  for any pod before this chain and runs through the tc_universal executor
 │
 ├─ SwitchCapable? (driver.(capabilities.SwitchCapable))
 │  ├─ "setup_bridge" → SetupBridge()

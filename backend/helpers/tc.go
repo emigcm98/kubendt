@@ -87,3 +87,17 @@ func isBinaryNotFound(err error, stderr string) bool {
 	return strings.Contains(s, "executable file not found") ||
 		strings.Contains(s, "no such file or directory")
 }
+
+// buildAddQdiscCommand emits the tc CLI that installs a root qdisc on an
+// interface. Shaping is universal, so the command is the same for every node
+// and lives here rather than on a driver capability.
+func buildAddQdiscCommand(iface, qdiscType string, params []string) [][]string {
+	cmd := []string{"tc", "qdisc", "replace", "dev", iface, "root", qdiscType}
+	cmd = append(cmd, params...)
+	return [][]string{cmd}
+}
+
+// buildDelQdiscCommand emits the tc CLI that removes the root qdisc.
+func buildDelQdiscCommand(iface string) [][]string {
+	return [][]string{{"tc", "qdisc", "del", "dev", iface, "root"}}
+}
