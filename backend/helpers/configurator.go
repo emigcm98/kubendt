@@ -436,12 +436,13 @@ func buildTCParamsFromStruct(p *types.TCParamEntry) []string {
 			return args
 		}
 
-		// Burst: no negativo, valor razonable (1–100000kbit)
+		// Burst: read the leading number regardless of the unit suffix (kb, Kb,
+		// kbit or a bare byte count) so a valid burst is not dropped. tc accepts
+		// the value verbatim, so only the range check needs the number.
 		if p.Burst != "" {
-			val := strings.TrimSuffix(p.Burst, "Kb")
-			n, _ := strconv.Atoi(val)
+			n := leadingInt(p.Burst)
 			if n < 1 || n > 100000 {
-				log.Printf("⚠️ Ignoring invalid burst: %s (out of range 1–100000Kb)", p.Burst)
+				log.Printf("⚠️ Ignoring invalid burst: %s (out of range 1–100000)", p.Burst)
 				p.Burst = ""
 			}
 		}
@@ -462,4 +463,16 @@ func buildTCParamsFromStruct(p *types.TCParamEntry) []string {
 	}
 
 	return args
+}
+
+// leadingInt returns the leading integer of s, ignoring any unit suffix, so
+// "32kb", "32Kb", "32kbit" and "32" all give 32. Returns 0 when s has no
+// leading digit.
+func leadingInt(s string) int {
+	i := 0
+	for i < len(s) && s[i] >= '0' && s[i] <= '9' {
+		i++
+	}
+	n, _ := strconv.Atoi(s[:i])
+	return n
 }
