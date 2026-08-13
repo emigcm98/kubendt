@@ -247,9 +247,9 @@ func ResolveDriverCommandsForPod(namespace, podName string, driver interface{}, 
 			return nil, nil
 		}
 		params := buildTCParamsFromStruct(action.TCParams)
-		return capabilities.TCBase{}.AddQdisc(action.Iface, action.TCParams.Qdisc, params), nil
+		return buildAddQdiscCommand(action.Iface, action.TCParams.Qdisc, params), nil
 	case "del_qdisc":
-		return capabilities.TCBase{}.DelQdisc(action.Iface), nil
+		return buildDelQdiscCommand(action.Iface), nil
 	}
 
 	// Switch actions (linux switch + ovswitch)

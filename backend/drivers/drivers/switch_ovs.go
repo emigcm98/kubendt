@@ -9,7 +9,6 @@ type OpenVSwitchDriver struct {
 	drivers_meta.Meta
 	capabilities.L2Base
 	capabilities.SwitchBase // embedded but methods are overridden below
-	capabilities.TCBase
 }
 
 func NewOpenVSwitchDriver() *OpenVSwitchDriver {
@@ -20,7 +19,6 @@ func NewOpenVSwitchDriver() *OpenVSwitchDriver {
 
 var _ capabilities.L2Capable = (*OpenVSwitchDriver)(nil)
 var _ capabilities.SwitchCapable = (*OpenVSwitchDriver)(nil)
-var _ capabilities.TCCapable = (*OpenVSwitchDriver)(nil)
 
 // --- OVS-specific overrides ---
 

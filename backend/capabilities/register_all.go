@@ -32,14 +32,6 @@ func RegisterAllCapabilities() {
 		caps.SwitchMethods,
 	)
 
-	// TCCapable
-	cap_registry.RegisterCapability[caps.TCCapable](
-		"TCCapable",
-		"Traffic Control (TC)",
-		"Management of traffic control settings.",
-		caps.TCMethods,
-	)
-
 	// NATCapable
 	cap_registry.RegisterCapability[caps.NATCapable](
 		"NATCapable",

@@ -48,7 +48,6 @@ Registry Pattern:
 - `L2Capable`: LinkUp(iface), LinkDown(iface)
 - `L3Capable`: SetIP, ReplaceIP, RemoveIP, SetDefaultRoute, RemoveDefaultRoute, Add/RemoveStaticRoute, Add/RemoveDNSNameserver, Add/RemoveDNSSearch
 - `NATCapable`: EnableSNAT, DisableSNAT, EnableDNAT, DisableDNAT
-- `TCCapable`: AddQdisc, DelQdisc (qdisc = tc traffic control)
 - `SwitchCapable`: SetupBridge, TeardownBridge, Add/RemoveInterfaceToBridge
 - `OSPFCapable`: OSPFAddNetwork, OSPFRemoveNetwork, OSPFSetRouterID, OSPFRemoveRouterID, OSPFPassiveDefault, OSPFRemovePassiveDefault, OSPFNoPassive, OSPFRemoveNoPassive, OSPFOriginateDefault, OSPFRemoveOriginateDefault, OSPFMTUIgnore, OSPFRemoveMTUIgnore
 
@@ -56,9 +55,10 @@ Registry Pattern:
 
 - `L2Base`: Returns `[][]string` with `ip link set <iface> up|down`
 - `L3Base`: IP addr, route, DNS operations with idempotent shell commands
-- `TCBase`: netem (network emulation) and tbf (token bucket filter) qdisc builders
 - `SwitchBase`: Linux bridge commands (brctl)
 - `NATBase`: iptables SNAT/DNAT rules
+
+Traffic control has no capability base. Its `tc` command builder is universal and lives in `helpers`, and shaping runs on any pod through the pod's own `tc` or a toolbox fallback.
 
 **Embedding Pattern**:
 
@@ -67,7 +67,6 @@ type HostDriver struct {
   drivers_meta.Meta          // Provides Name(), Type()
   capabilities.L2Base        // Embedded, provides LinkUp/LinkDown
   capabilities.L3Base        // Embedded, provides IP operations
-  capabilities.TCBase        // Embedded, provides AddQdisc/DelQdisc
 }
 ```
 
@@ -94,7 +93,6 @@ Drivers can override methods (e.g., HostDriver overrides ReplaceIP with idempote
    - L2Capable: routes link_up, link_down
    - L3Capable: routes IP operations
    - NATCapable: routes SNAT/DNAT
-   - TCCapable: routes qdisc operations
    - SwitchCapable: routes bridge operations
    - OSPFCapable: routes ospf_add_network, ospf_set_router_id, ospf_passive_default, ospf_no_passive, ospf_mtu_ignore, ospf_originate_default, and their remove variants
 4. Returns `[][]string` where each inner slice is a complete command (e.g., `["ip", "addr", "add", "10.0.0.1/24", "dev", "eth1"]`)

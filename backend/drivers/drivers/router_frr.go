@@ -11,7 +11,6 @@ type FRRRouterDriver struct {
 	drivers_meta.Meta
 	capabilities.L2Base
 	capabilities.L3Base
-	capabilities.TCBase
 	capabilities.NATBase
 }
 
@@ -23,7 +22,6 @@ func NewFRRRouterDriver() *FRRRouterDriver {
 
 var _ capabilities.L2Capable = (*FRRRouterDriver)(nil)
 var _ capabilities.L3Capable = (*FRRRouterDriver)(nil)
-var _ capabilities.TCCapable = (*FRRRouterDriver)(nil)
 var _ capabilities.NATCapable = (*FRRRouterDriver)(nil)
 var _ capabilities.OSPFCapable = (*FRRRouterDriver)(nil)
 

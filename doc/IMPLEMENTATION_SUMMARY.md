@@ -17,16 +17,16 @@ KubeNDT implements network topology management for Kubernetes through five inter
   - `L2Capable`: Link layer (up/down)
   - `L3Capable`: IP operations (address, routing, DNS)
   - `NATCapable`: NAT rules (SNAT/DNAT via iptables)
-  - `TCCapable`: Traffic control (netem/tbf qdisc)
   - `SwitchCapable`: Bridge operations (brctl)
   - `OSPFCapable`: OSPF routing protocol (FRR vtysh, configures running process directly)
+- **Traffic control** is not a driver capability. It runs on any pod through the pod's own `tc`, falling back to an ephemeral toolbox container for images without it, so every node can be shaped
 - **Type-Asserted Command Resolution**: `ResolveDriverCommands()` tries each interface in order, returns shell commands
 
 **Concrete Drivers**:
 
-- `BasicHostDriver`, `HostDriver`: L2+L3+TC (HostDriver overrides ReplaceIP for idempotency)
-- `LinuxSwitchDriver`, `OpenVSwitchDriver`: L2+Bridge+TC
-- `LinuxRouterDriver`, `FRRRouterDriver`: L2+L3+NAT+TC (FRR also implements OSPFCapable via vtysh)
+- `BasicHostDriver`, `HostDriver`: L2+L3 (HostDriver overrides ReplaceIP for idempotency)
+- `LinuxSwitchDriver`, `OpenVSwitchDriver`: L2+Bridge
+- `LinuxRouterDriver`, `FRRRouterDriver`: L2+L3+NAT (FRR also implements OSPFCapable via vtysh)
 - `VyOSRouterDriver`: L2+L3+NAT+OSPF for QEMU-based VyOS nodes; translates actions into VyOS CLI commands; auto-adds `/dev/kvm` device
 
 **Pod Resolution**:

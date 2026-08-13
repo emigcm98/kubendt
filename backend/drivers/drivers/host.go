@@ -5,12 +5,11 @@ import (
 	drivers_meta "kubendt/drivers/meta"
 )
 
-// HostDriver: L2 + L3 + TC, con un override de ReplaceIP como ejemplo
+// HostDriver: L2 + L3, con un override de ReplaceIP como ejemplo
 type HostDriver struct {
 	drivers_meta.Meta
 	capabilities.L2Base
 	capabilities.L3Base
-	capabilities.TCBase
 }
 
 func NewHostDriver() *HostDriver {
@@ -21,7 +20,6 @@ func NewHostDriver() *HostDriver {
 
 var _ capabilities.L2Capable = (*HostDriver)(nil)
 var _ capabilities.L3Capable = (*HostDriver)(nil)
-var _ capabilities.TCCapable = (*HostDriver)(nil)
 
 // OVERRIDE: ReplaceIP con idempotencia extra (ejemplo)
 func (HostDriver) ReplaceIP(iface, cidr string) [][]string {

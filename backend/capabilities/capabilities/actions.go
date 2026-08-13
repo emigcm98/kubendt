@@ -9,7 +9,6 @@ func ActionCapability(actionType string) (capability string, known bool) {
 		"L2":     L2Methods,
 		"L3":     L3Methods,
 		"Switch": SwitchMethods,
-		"TC":     TCMethods,
 		"NAT":    NATMethods,
 		"OSPF":   OSPFMethods,
 	} {
