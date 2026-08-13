@@ -602,30 +602,29 @@
   color: var(--text-muted);
 }
 
-.qdisc-panel {
-  text-align: left;
-  width: 100%;
+/* Links tab: traffic-control status + button to open the floating TCPanel */
+.tc-links-panel {
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
+  text-align: left;
 }
 
-/* Header with title + status badge */
-.qdisc-head {
+.tc-links-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
 }
 
-.qdisc-head-title {
+.tc-links-title {
   font-size: 0.9rem;
   font-weight: 700;
   color: var(--text-heading);
   letter-spacing: 0.01em;
 }
 
-.qdisc-status {
+.tc-links-status {
   font-size: 0.72rem;
   font-weight: 700;
   padding: 3px 9px;
@@ -634,199 +633,41 @@
   border: 1px solid transparent;
 }
 
-.qdisc-status.on {
+.tc-links-status.on {
   background: var(--success-bg);
   color: #1e7e34;
   border-color: #b7e1c2;
 }
 
-.qdisc-status.draft {
-  background: var(--warning-bg);
-  color: #b06a00;
-  border-color: #f3d9a6;
-}
-
-.qdisc-status.off {
+.tc-links-status.off {
   background: #eef1f5;
   color: var(--text-muted);
   border-color: #d4dce5;
 }
 
-/* Feedback banner after apply / remove */
-.qdisc-feedback {
-  font-size: 0.82rem;
-  font-weight: 600;
-  padding: 0.45rem 0.6rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid transparent;
-  animation: qdisc-feedback-in 0.2s ease-out both;
-}
-
-.qdisc-feedback.ok {
-  background: var(--success-bg);
-  color: #1e7e34;
-  border-color: #b7e1c2;
-}
-
-.qdisc-feedback.error {
-  background: var(--danger-bg);
-  color: #c0392b;
-  border-color: #f5c6c0;
-}
-
-@keyframes qdisc-feedback-in {
-  from {
-    opacity: 0;
-    transform: translateY(-3px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.qdisc-loading {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-}
-
-/* Short per-qdisc description */
-.qdisc-desc {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  line-height: 1.4;
-  margin: 0 0 0.5rem 0;
-}
-
-.qdisc-config {
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-}
-
-.qdisc-config label {
-  display: flex;
-  justify-content: space-between;
+.tc-links-open {
+  display: inline-flex;
   align-items: center;
-  font-size: 0.88rem;
-  color: var(--text-heading);
-}
-
-.qdisc-config input {
-  width: 90px;
-  padding: 4px 6px;
-  margin-left: 0.4rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  font-size: 0.85rem;
-}
-
-.qdisc-config input:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.15);
-}
-
-/* No-qdisc empty state */
-.qdisc-empty {
-  text-align: center;
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-}
-
-.qdisc-empty-text code {
-  background: #eef1f5;
-  padding: 1px 5px;
-  border-radius: var(--radius-sm);
-  font-size: 0.8rem;
-  color: var(--text-heading);
-}
-
-.qdisc-add {
-  display: flex;
   justify-content: center;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.qdisc-select {
-  padding: 0.4rem 0.5rem;
+  gap: 0.4rem;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--primary);
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  font-size: 0.85rem;
-  background-color: #fff;
-  cursor: pointer;
-  color: var(--text-heading);
-}
-
-.qdisc-hint {
-  font-size: 0.76rem;
-  color: #8090a0;
-  line-height: 1.4;
-  margin: 0;
-}
-
-.qdisc-hint strong {
-  color: var(--text-heading);
-}
-
-/* Action buttons (KubeNDT style) */
-.qdisc-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.9rem;
-}
-
-.qdisc-btn {
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
-  padding: 0.4rem 0.9rem;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    background 0.15s,
-    border-color 0.15s,
-    transform 0.1s;
-}
-
-.qdisc-btn:active {
-  transform: translateY(1px);
-}
-
-.qdisc-btn.primary {
   background: var(--primary);
   color: #fff;
-  flex: 1 1 auto;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
 }
 
-.qdisc-btn.primary:hover {
+.tc-links-open:hover {
   background: var(--primary-hover);
 }
 
-.qdisc-btn.danger {
-  background: #fff;
-  color: #c0392b;
-  border-color: #e6b3ad;
-}
-
-.qdisc-btn.danger:hover {
-  background: var(--danger-bg);
-}
-
-.qdisc-btn.ghost {
-  background: #fff;
-  color: var(--text-muted);
-  border-color: var(--border);
-}
-
-.qdisc-btn.ghost:hover {
-  background: #eef1f5;
-  color: var(--text-heading);
+.tc-links-open .app-icon {
+  width: 15px;
+  height: 15px;
 }
 
 .error-text {

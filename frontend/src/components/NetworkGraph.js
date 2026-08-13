@@ -19,6 +19,7 @@ import LinkInfoPanel from './LinkInfoPanel';
 import TopologyInputModal from './TopologyInputModal';
 import PodInteractiveShellModal from './PodInteractiveShellModal';
 import CapturePanel from './CapturePanel';
+import TCPanel from './TCPanel';
 import TracePanel from './TracePanel';
 import { ReactComponent as PcapIcon } from '../assets/images/icons/pcap.svg';
 import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
@@ -690,6 +691,7 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
   const [openShells, setOpenShells] = useState([]); // Array of {id, podName, pod, shellMode, zIndex, minimized}
   const openShellsRef = useRef(openShells);
   const [openCaptures, setOpenCaptures] = useState([]); // Array of {id, pod, iface, zIndex, minimized}
+  const [openTCs, setOpenTCs] = useState([]); // Array of {id, pod, iface, zIndex, minimized}
   const [maxZIndex, setMaxZIndex] = useState(1000);
 
   // Traceroute visualization: one session at a time. traceSession opens the
@@ -1259,6 +1261,40 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
     setMaxZIndex((prev) => prev + 1);
     setOpenCaptures((prev) =>
       prev.map((c) => (c.id === id ? { ...c, minimized: false, zIndex: maxZIndex + 1 } : c))
+    );
+  };
+
+  // Traffic-control panels are per pod interface. Opening the same interface
+  // again focuses the existing window instead of stacking a second editor.
+  const openTC = (pod, iface) => {
+    if (!pod || !iface) return;
+    setMaxZIndex((prev) => prev + 1);
+    setOpenTCs((prev) => {
+      const existing = prev.find((t) => t.pod === pod && t.iface === iface);
+      if (existing) {
+        return prev.map((t) =>
+          t.id === existing.id ? { ...t, minimized: false, zIndex: maxZIndex + 1 } : t
+        );
+      }
+      const id = `tc-${Date.now()}-${Math.random()}`;
+      return [...prev, { id, pod, iface, zIndex: maxZIndex + 1, minimized: false }];
+    });
+  };
+
+  const closeTC = (id) => setOpenTCs((prev) => prev.filter((t) => t.id !== id));
+
+  const bringTCToFront = (id) => {
+    setMaxZIndex((prev) => prev + 1);
+    setOpenTCs((prev) => prev.map((t) => (t.id === id ? { ...t, zIndex: maxZIndex + 1 } : t)));
+  };
+
+  const minimizeTC = (id) =>
+    setOpenTCs((prev) => prev.map((t) => (t.id === id ? { ...t, minimized: true } : t)));
+
+  const restoreTC = (id) => {
+    setMaxZIndex((prev) => prev + 1);
+    setOpenTCs((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, minimized: false, zIndex: maxZIndex + 1 } : t))
     );
   };
 
@@ -3260,6 +3296,7 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
             loadingInterfaces={loadingInterfaces}
             setLoadingInterfaces={setLoadingInterfaces}
             onUpdateInterface={updateInterfaceStatus}
+            onOpenTrafficControl={openTC}
           />
         ))}
 
@@ -3271,6 +3308,7 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
           onClosePanel={() => setSelectedLink(null)}
           onDeleteLink={handleDeleteLink}
           onStartCapture={openCapture}
+          onStartTC={openTC}
           closeSignal={closeSignal}
           isBusy={isBusy}
         />
@@ -3578,6 +3616,7 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
             searchQuery={graphSearchQuery}
             isBusy={isBusy}
             onStartCapture={openCapture}
+            onStartTC={openTC}
             onStartTrace={openTrace}
             trace={traceViz}
           />
@@ -3616,6 +3655,21 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
         />
       ))}
 
+      {/* Render open traffic-control panels */}
+      {openTCs.map((tc) => (
+        <TCPanel
+          key={tc.id}
+          namespace={namespace}
+          pod={tc.pod}
+          iface={tc.iface}
+          zIndex={tc.zIndex}
+          minimized={!!tc.minimized}
+          onClose={() => closeTC(tc.id)}
+          onMinimize={() => minimizeTC(tc.id)}
+          onBringToFront={() => bringTCToFront(tc.id)}
+        />
+      ))}
+
       {/* Traceroute control panel (packet animation renders on the graph) */}
       {traceSession && (
         <TracePanel
@@ -3632,7 +3686,9 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
       )}
 
       {/* Bottom-centered taskbar with chips for minimized shells and captures */}
-      {(openShells.some((s) => s.minimized) || openCaptures.some((c) => c.minimized)) && (
+      {(openShells.some((s) => s.minimized) ||
+        openCaptures.some((c) => c.minimized) ||
+        openTCs.some((t) => t.minimized)) && (
         <div className="shell-taskbar" role="toolbar" aria-label="Minimized windows">
           {openShells
             .filter((s) => s.minimized)
@@ -3679,6 +3735,32 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
                   className="shell-taskbar-chip-close"
                   onClick={() => closeCapture(cap.id)}
                   title="Close capture"
+                >
+                  <CloseIcon className="app-icon" />
+                </button>
+              </div>
+            ))}
+          {openTCs
+            .filter((t) => t.minimized)
+            .map((tc) => (
+              <div key={tc.id} className="shell-taskbar-chip">
+                <button
+                  type="button"
+                  className="shell-taskbar-chip-restore"
+                  onClick={() => restoreTC(tc.id)}
+                  title={`Restore traffic control: ${tc.pod} · ${tc.iface}`}
+                >
+                  <span className="shell-taskbar-chip-icon">
+                    <SlidersIcon />
+                  </span>
+                  <span className="shell-taskbar-chip-name">{tc.pod}</span>
+                  <span className="shell-taskbar-chip-mode">{tc.iface}</span>
+                </button>
+                <button
+                  type="button"
+                  className="shell-taskbar-chip-close"
+                  onClick={() => closeTC(tc.id)}
+                  title="Close traffic control"
                 >
                   <CloseIcon className="app-icon" />
                 </button>

@@ -151,6 +151,7 @@ const InnerGraph = ({
   searchQuery = '',
   isBusy = false,
   onStartCapture,
+  onStartTC,
   onStartTrace,
   trace = null,
 }) => {
@@ -1106,6 +1107,12 @@ const InnerGraph = ({
                 onStartCapture && !tgtExternal && tgtIntf
                   ? () => onStartCapture(edge.target, tgtIntf)
                   : null
+              }
+              onTCSource={
+                onStartTC && !srcExternal && srcIntf ? () => onStartTC(edge.source, srcIntf) : null
+              }
+              onTCTarget={
+                onStartTC && !tgtExternal && tgtIntf ? () => onStartTC(edge.target, tgtIntf) : null
               }
             />
           );

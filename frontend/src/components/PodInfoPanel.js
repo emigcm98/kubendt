@@ -17,6 +17,7 @@ import { ReactComponent as LockIcon } from '../assets/images/icons/lock.svg';
 import { ReactComponent as CopyIcon } from '../assets/images/icons/copy.svg';
 import { ReactComponent as WarningIcon } from '../assets/images/icons/warning.svg';
 import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
+import { ReactComponent as SlidersIcon } from '../assets/images/icons/sliders.svg';
 
 const POD_INFO_TAB_KEY_PREFIX = 'kubendt.podInfoPanel.activeTab.';
 const VALID_TABS = new Set(['summary', 'driver', 'links', 'vars']);
@@ -63,6 +64,7 @@ const PodInfoPanel = ({
   loadingInterfaces,
   setLoadingInterfaces,
   onUpdateInterface,
+  onOpenTrafficControl,
   isBusy = false,
 }) => {
   const navigate = useNavigate();
@@ -91,12 +93,9 @@ const PodInfoPanel = ({
   const [errorLinks, setErrorLinks] = useState(null);
 
   // --- QDISC STATES ---
+  // Read-only qdisc status for the Links tab badge; editing lives in TCPanel.
   const [qdiscData, setQdiscData] = useState(null);
   const [loadingQdisc, setLoadingQdisc] = useState(false);
-  const [qdiscError, setQdiscError] = useState(null);
-  const [feedback, setFeedback] = useState(null); // {type:'ok'|'error', text} banner after apply/remove
-  const [isDraft, setIsDraft] = useState(false); // qdisc created in the UI but not yet applied
-  const [newQdiscType, setNewQdiscType] = useState('netem'); // selector when no qdisc
 
   const [copyFloater, setCopyFloater] = useState(null);
 
@@ -152,24 +151,6 @@ const PodInfoPanel = ({
     confirmText: 'Accept',
     cancelText: 'Cancel',
   });
-
-  // --- Defaults ---
-  const defaultNetem = {
-    qdisc: 'netem',
-    delay: '0ms',
-    jitter: '0ms',
-    loss: '0%',
-    duplicate: '0%',
-    corrupt: '0%',
-    limit: 1000,
-  };
-
-  const defaultTBF = {
-    qdisc: 'tbf',
-    rate: '1mbit',
-    burst: '32Kb',
-    latency: '400ms',
-  };
 
   const displayName = pod.replicaCount > 1 ? pod.name : pod.baseName;
   const runtimeLabel = pod?.runtime === 'qemu' ? 'qemu-based' : 'k8s linux host-based';
@@ -571,30 +552,19 @@ const PodInfoPanel = ({
   };
 
   const fetchQdisc = async (iface) => {
-    const hasTC = driverCaps?.some((c) => c.id === 'TCCapable');
-    if (!hasTC) return;
     setLoadingQdisc(true);
-    setQdiscError(null);
     try {
       const res = await fetch(`${API_BASE_URL}/pods/tc/${namespace}/${pod.name}/${iface}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setQdiscData(data.tcparams || null);
-      setIsDraft(false);
     } catch (err) {
       console.error('❌ Error fetching qdisc:', err);
-      setQdiscError('Error fetching qdisc');
+      setQdiscData(null);
     } finally {
       setLoadingQdisc(false);
     }
   };
-
-  // Auto-dismiss the feedback banner.
-  useEffect(() => {
-    if (!feedback) return;
-    const t = setTimeout(() => setFeedback(null), 4000);
-    return () => clearTimeout(t);
-  }, [feedback]);
 
   useEffect(() => {
     const onKey = (e) => {
@@ -609,370 +579,6 @@ const PodInfoPanel = ({
     if (selectedInterface) fetchQdisc(selectedInterface);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedInterface, namespace, pod.name]);
-
-  // --- Create Qdisc (according to selected type) ---
-  const handleCreateQdisc = () => {
-    setQdiscData(newQdiscType === 'netem' ? defaultNetem : defaultTBF);
-    setIsDraft(true);
-    setFeedback(null);
-  };
-
-  // --- Cancel a draft qdisc (return to the no-qdisc view) ---
-  const handleCancelDraft = () => {
-    setQdiscData(null);
-    setIsDraft(false);
-    setFeedback(null);
-  };
-
-  // --- Front-end validations according to qdisc ---
-  const validateNetem = (qd) => {
-    const errors = [];
-    const delayVal = parseInt(qd.delay) || 0;
-    const jitterVal = parseInt(qd.jitter) || 0;
-    const lossVal = parseFloat(qd.loss) || 0;
-    const dupVal = parseFloat(qd.duplicate) || 0;
-    const corruptVal = parseFloat(qd.corrupt) || 0;
-    const limitVal = parseInt(qd.limit) || 0;
-
-    if (delayVal < 0 || delayVal > 60000) errors.push('Delay must be between 0 and 60000 ms');
-    if (jitterVal < 0 || jitterVal > 10000) errors.push('Jitter must be between 0 and 10000 ms');
-    if (lossVal < 0 || lossVal > 100) errors.push('Loss must be between 0% and 100%');
-    if (dupVal < 0 || dupVal > 100) errors.push('Duplicate must be between 0% and 100%');
-    if (corruptVal < 0 || corruptVal > 100) errors.push('Corrupt must be between 0% and 100%');
-    if (limitVal < 100 || limitVal > 10000) errors.push('Limit must be between 100 and 10000');
-
-    // If there's jitter but no delay, error
-    if (qd.jitter && parseInt(qd.jitter) > 0 && (!qd.delay || parseInt(qd.delay) === 0)) {
-      errors.push('Jitter requires a non-zero Delay');
-    }
-    return errors;
-  };
-
-  const validateTBF = (qd) => {
-    const errors = [];
-    if (!qd.rate || qd.rate.trim() === '') {
-      errors.push('Rate is required (e.g., 10mbit)');
-    }
-    // Latency 1–5000 ms
-    const lat = parseInt(qd.latency) || 0;
-    if (lat < 1 || lat > 5000) errors.push('Latency must be between 1 and 5000 ms');
-    // Burst as text (we allow any suffix, backend validates more)
-    if (!qd.burst || qd.burst.trim() === '') {
-      errors.push('Burst is required (e.g., 32Kb)');
-    }
-    return errors;
-  };
-
-  // --- Apply ---
-  const handleApplyQdisc = async () => {
-    if (!selectedInterface || !qdiscData) return;
-
-    // Validaciones por tipo
-    let errors = [];
-    if (qdiscData.qdisc === 'netem') {
-      errors = validateNetem(qdiscData);
-    } else if (qdiscData.qdisc === 'tbf') {
-      errors = validateTBF(qdiscData);
-    } else {
-      errors = ['Unsupported qdisc type'];
-    }
-
-    if (errors.length > 0) {
-      setFeedback({ type: 'error', text: errors.join('. ') });
-      return;
-    }
-
-    // Send only the editable fields. The fetched qdisc carries read-only
-    // fields (e.g. handle, parent) that the backend rejects with strict JSON.
-    const cleanParams =
-      qdiscData.qdisc === 'netem'
-        ? {
-            qdisc: 'netem',
-            delay: qdiscData.delay,
-            jitter: qdiscData.jitter,
-            loss: qdiscData.loss,
-            duplicate: qdiscData.duplicate,
-            corrupt: qdiscData.corrupt,
-            limit: qdiscData.limit,
-          }
-        : {
-            qdisc: 'tbf',
-            rate: qdiscData.rate,
-            burst: qdiscData.burst,
-            latency: qdiscData.latency,
-          };
-
-    const payload = {
-      targets: [
-        {
-          pod: pod.name,
-          actions: [
-            {
-              type: 'add_qdisc',
-              iface: selectedInterface,
-              tcparams: cleanParams,
-            },
-          ],
-        },
-      ],
-    };
-
-    try {
-      const res = await fetch(`${API_BASE_URL}/network/configure/${namespace}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
-      }
-
-      setIsDraft(false);
-      setFeedback({ type: 'ok', text: `${qdiscData.qdisc} applied to ${selectedInterface}` });
-      fetchQdisc(selectedInterface);
-    } catch (err) {
-      console.error('❌ Error applying qdisc:', err);
-      setFeedback({ type: 'error', text: `Could not apply qdisc: ${err.message}` });
-    }
-  };
-
-  // --- Delete ---
-  const handleDeleteQdisc = async () => {
-    if (!selectedInterface) return;
-    const payload = {
-      targets: [
-        {
-          pod: pod.name,
-          actions: [
-            {
-              type: 'del_qdisc',
-              iface: selectedInterface,
-            },
-          ],
-        },
-      ],
-    };
-    try {
-      const res = await fetch(`${API_BASE_URL}/network/configure/${namespace}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      // Limpia UI a estado "no qdisc"
-      setQdiscData(null);
-      setIsDraft(false);
-      setNewQdiscType('netem');
-      setFeedback({ type: 'ok', text: `Traffic shaping removed from ${selectedInterface}` });
-    } catch (err) {
-      console.error('❌ Error deleting qdisc:', err);
-      setFeedback({ type: 'error', text: `Could not remove qdisc: ${err.message}` });
-    }
-  };
-
-  // --- Render: No Qdisc (selector tipo + create) ---
-  const renderNoQdisc = () => (
-    <div className="qdisc-empty">
-      <p className="qdisc-empty-text">
-        This interface forwards traffic without shaping (<code>noqueue</code>).
-      </p>
-      <div className="qdisc-add">
-        <select
-          id="qdisc-type"
-          className="qdisc-select"
-          value={newQdiscType}
-          onChange={(e) => setNewQdiscType(e.target.value)}
-        >
-          <option value="netem">netem</option>
-          <option value="tbf">tbf</option>
-        </select>
-        <button className="qdisc-btn primary" onClick={handleCreateQdisc}>
-          Add qdisc
-        </button>
-      </div>
-      <p className="qdisc-hint">
-        <strong>netem</strong> emulates delay, jitter and packet loss. <strong>tbf</strong> limits
-        bandwidth.
-      </p>
-    </div>
-  );
-
-  // --- Render: Form according to qdisc ---
-  const renderQdiscForm = () => {
-    if (!qdiscData) return renderNoQdisc();
-
-    switch (qdiscData.qdisc) {
-      case 'netem':
-        return (
-          <div className="qdisc-config">
-            <p className="qdisc-desc">
-              Emulates link impairments: latency, jitter and packet loss, duplication or corruption.
-            </p>
-
-            <label>
-              Delay (ms):
-              <input
-                type="number"
-                min="0"
-                max="60000"
-                value={parseInt(qdiscData.delay) || 0}
-                onChange={(e) => setQdiscData({ ...qdiscData, delay: e.target.value + 'ms' })}
-              />
-            </label>
-
-            <label>
-              Jitter (ms):
-              <input
-                type="number"
-                min="0"
-                max="10000"
-                value={parseInt(qdiscData.jitter) || 0}
-                onChange={(e) => setQdiscData({ ...qdiscData, jitter: e.target.value + 'ms' })}
-              />
-            </label>
-
-            <label>
-              Loss (%):
-              <input
-                type="number"
-                min="0"
-                max="100"
-                step="0.1"
-                value={parseFloat(qdiscData.loss) || 0}
-                onChange={(e) => setQdiscData({ ...qdiscData, loss: e.target.value + '%' })}
-              />
-            </label>
-
-            <label>
-              Duplicate (%):
-              <input
-                type="number"
-                min="0"
-                max="100"
-                step="0.1"
-                value={parseFloat(qdiscData.duplicate) || 0}
-                onChange={(e) => setQdiscData({ ...qdiscData, duplicate: e.target.value + '%' })}
-              />
-            </label>
-
-            <label>
-              Corrupt (%):
-              <input
-                type="number"
-                min="0"
-                max="100"
-                step="0.1"
-                value={parseFloat(qdiscData.corrupt) || 0}
-                onChange={(e) => setQdiscData({ ...qdiscData, corrupt: e.target.value + '%' })}
-              />
-            </label>
-
-            <label>
-              Limit:
-              <input
-                type="number"
-                min="100"
-                max="10000"
-                value={qdiscData.limit || 0}
-                onChange={(e) => setQdiscData({ ...qdiscData, limit: parseInt(e.target.value) })}
-              />
-            </label>
-
-            <div className="qdisc-actions">
-              {isDraft && (
-                <button className="qdisc-btn ghost" onClick={handleCancelDraft}>
-                  Cancel
-                </button>
-              )}
-              <button className="qdisc-btn primary" onClick={handleApplyQdisc}>
-                {isDraft ? 'Apply' : 'Update'}
-              </button>
-              {!isDraft && (
-                <button className="qdisc-btn danger" onClick={handleDeleteQdisc}>
-                  Remove
-                </button>
-              )}
-              <button
-                className="qdisc-btn ghost"
-                title="Reload current settings"
-                onClick={() => fetchQdisc(selectedInterface)}
-              >
-                Refresh
-              </button>
-            </div>
-          </div>
-        );
-
-      case 'tbf':
-        return (
-          <div className="qdisc-config">
-            <p className="qdisc-desc">
-              Token Bucket Filter: caps the egress bandwidth of this interface.
-            </p>
-
-            <label>
-              Rate (Mbit):
-              <input
-                type="number"
-                min="1"
-                max="100000"
-                value={parseInt(qdiscData.rate) || 0}
-                onChange={(e) => setQdiscData({ ...qdiscData, rate: e.target.value + 'Mbit' })}
-              />
-            </label>
-
-            <label>
-              Burst (kbit):
-              <input
-                type="number"
-                min="1"
-                max="100000"
-                value={parseInt(qdiscData.burst) || 0}
-                onChange={(e) => setQdiscData({ ...qdiscData, burst: e.target.value + 'kb' })}
-              />
-            </label>
-
-            <label>
-              Latency (ms):
-              <input
-                type="number"
-                min="1"
-                max="5000"
-                value={parseInt(qdiscData.latency) || 0}
-                onChange={(e) => setQdiscData({ ...qdiscData, latency: e.target.value + 'ms' })}
-              />
-            </label>
-
-            <div className="qdisc-actions">
-              {isDraft && (
-                <button className="qdisc-btn ghost" onClick={handleCancelDraft}>
-                  Cancel
-                </button>
-              )}
-              <button className="qdisc-btn primary" onClick={handleApplyQdisc}>
-                {isDraft ? 'Apply' : 'Update'}
-              </button>
-              {!isDraft && (
-                <button className="qdisc-btn danger" onClick={handleDeleteQdisc}>
-                  Remove
-                </button>
-              )}
-              <button
-                className="qdisc-btn ghost"
-                title="Reload current settings"
-                onClick={() => fetchQdisc(selectedInterface)}
-              >
-                Refresh
-              </button>
-            </div>
-          </div>
-        );
-
-      default:
-        return renderNoQdisc();
-    }
-  };
 
   if (!pod) return null;
 
@@ -1446,63 +1052,34 @@ const PodInfoPanel = ({
                     )}
                   </div>
 
-                  {/* Lower half: details (qdisc or message if no TCCapable) */}
+                  {/* Lower half: traffic-control status + open the editor panel */}
                   <div className="interface-details">
-                    {(() => {
-                      const hasTC = driverCaps?.some((c) => c.id === 'TCCapable');
-
-                      if (!selectedInterface) {
-                        return (
-                          <p className="no-selection">Select an interface to view more details</p>
-                        );
-                      }
-                      if (loadingDriverCaps) {
-                        return <p className="links-loading">Checking driver capabilities...</p>;
-                      }
-                      if (errorDriverCaps) {
-                        return <p className="links-error">{errorDriverCaps}</p>;
-                      }
-                      if (!hasTC) {
-                        return (
-                          <p className="no-interfaces">
-                            Unable to manage TC on this pod. Capability <strong>TCCapable</strong>{' '}
-                            is not available for driver <strong>{driverDisplay}</strong>.
-                          </p>
-                        );
-                      }
-                      // Has TCCapable → qdisc UI
-                      return (
-                        <div className="details-scroll">
-                          <div className="qdisc-panel">
-                            <div className="qdisc-head">
-                              <span className="qdisc-head-title">Traffic control</span>
-                              <span
-                                className={`qdisc-status ${qdiscData ? (isDraft ? 'draft' : 'on') : 'off'}`}
-                              >
-                                {qdiscData
-                                  ? isDraft
-                                    ? `${qdiscData.qdisc} · draft`
-                                    : `${qdiscData.qdisc} · active`
-                                  : 'No shaping'}
-                              </span>
-                            </div>
-                            {feedback && (
-                              <div className={`qdisc-feedback ${feedback.type}`}>
-                                {feedback.type === 'ok' ? (
-                                  '✓ '
-                                ) : (
-                                  <WarningIcon className="app-icon" />
-                                )}{' '}
-                                {feedback.text}
-                              </div>
-                            )}
-                            {loadingQdisc && <p className="qdisc-loading">Loading qdisc…</p>}
-                            {qdiscError && <p className="error-text">{qdiscError}</p>}
-                            {!loadingQdisc && renderQdiscForm()}
-                          </div>
+                    {!selectedInterface ? (
+                      <p className="no-selection">Select an interface to view more details</p>
+                    ) : (
+                      <div className="tc-links-panel">
+                        <div className="tc-links-head">
+                          <span className="tc-links-title">Traffic control</span>
+                          <span className={`tc-links-status ${qdiscData ? 'on' : 'off'}`}>
+                            {loadingQdisc
+                              ? 'checking…'
+                              : qdiscData
+                                ? `${qdiscData.qdisc} · active`
+                                : 'No shaping'}
+                          </span>
                         </div>
-                      );
-                    })()}
+                        <button
+                          className="tc-links-open"
+                          onClick={() =>
+                            onOpenTrafficControl &&
+                            onOpenTrafficControl(pod.name, selectedInterface)
+                          }
+                        >
+                          <SlidersIcon className="app-icon" />
+                          Open traffic control
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
