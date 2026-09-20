@@ -538,7 +538,6 @@ func ModifyNetwork(c *gin.Context) {
 			log.Printf("⚠️ Modify reconcile: could not get current nodes: %v", nodesErr)
 		} else {
 			log.Printf("🔁 Modify: running post-add interface reconciliation for %d new link(s)...", len(request.Add.Links))
-			time.Sleep(2 * time.Second) // let pods/topology CRD updates settle before checking interfaces
 			if reconcileErr := helpers.ReconcileMissingInterfaces(namespace, currentNodes, request.Add.Links, 2); reconcileErr != nil {
 				log.Printf("⚠️ Modify reconcile: %v", reconcileErr)
 			}
@@ -881,10 +880,9 @@ func DeployNetwork(c *gin.Context) {
 	nodeRunningDur := time.Since(nodeWaitAt)
 	reconcileAt := time.Now()
 
-	// Small delay to allow pods to fully stabilize after K8s reports Ready
-	log.Println("⏳ Waiting 5s for pods to stabilize before interface validation...")
-	time.Sleep(5 * time.Second)
-	// 10. Reconcile missing interfaces (auto-healing con resetTopologyStatusForRestart)
+	// 10. Validate that every link's interfaces exist and heal what is
+	// missing. The validation itself re-checks before restarting anything, so
+	// no settle delay is needed here.
 	if err := helpers.ReconcileMissingInterfaces(namespace, request.Nodes, request.Links, 2); err != nil {
 		log.Printf("⚠️ Reconcile ended with remaining issues: %v", err)
 		// Decide: return 500 or just warn. I would warn, not fail deploy.

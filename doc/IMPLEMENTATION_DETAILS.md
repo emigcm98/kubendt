@@ -250,7 +250,7 @@ FOR round = 1 TO maxRounds:
     - Non-QEMU pods: NET_ADMIN capability
     - Routers/switches: ip_forward sysctl = 1
 
-12. Wait for pods ready (180s timeout)
+12. Wait for pods ready (watch on pod events, 180s timeout)
 
 13. Reconcile missing interfaces (bounded, 2 rounds)
     - Detects and recovers missing network interfaces

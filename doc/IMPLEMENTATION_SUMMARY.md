@@ -77,7 +77,7 @@ KubeNDT implements network topology management for Kubernetes through five inter
 9. Create Topology CRDs (per pod, meshnet watches)
 10. Create ConfigMaps (from mount file specifications)
 11. Create StatefulSets (with labels, devices, security context)
-12. Wait for pods ready (180s timeout, readiness probe: `command -v ip`)
+12. Wait for pods ready (watch on pod events, 180s timeout, readiness probe: `command -v ip`)
 13. Reconcile missing interfaces (2 rounds, restarts & replays)
 
 **Modification** (Add/Delete in single request):
