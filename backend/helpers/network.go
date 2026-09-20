@@ -8,7 +8,6 @@ import (
 	"math/rand"
 	"regexp"
 	"strings"
-	"time"
 
 	drivers_meta "kubendt/drivers/meta"
 	drivers_registry "kubendt/drivers/registry"
@@ -16,7 +15,6 @@ import (
 	"kubendt/types"
 
 	v1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -278,124 +276,6 @@ func fatalPodImageError(pod *v1.Pod) (reason, detail string, bad bool) {
 		}
 	}
 	return "", "", false
-}
-
-// WaitForPodsReady waits until all pods for all nodes are Running and Ready.
-func WaitForPodsReady(namespace string, nodes []types.NodeSpec) error {
-	timeout := time.After(180 * time.Second)
-	ticker := time.Tick(5 * time.Second)
-
-	for {
-		select {
-		case <-timeout:
-			return fmt.Errorf("timeout waiting for pods to become Ready")
-
-		case <-ticker:
-			var readyStats []string
-			var notReadyStats []string
-			allReady := true
-
-			for _, node := range nodes {
-				labelSelector := fmt.Sprintf("app=%s", node.Name)
-				podList, err := kubeclient.Clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
-					LabelSelector: labelSelector,
-				})
-				if err != nil {
-					log.Printf("❌ Error listing pods for %s: %v", node.Name, err)
-					allReady = false
-					break
-				}
-
-				expected := node.Replicas
-				runningReady := 0
-
-				for _, pod := range podList.Items {
-					// Fail fast on unrecoverable image errors instead of
-					// waiting out the whole timeout.
-					if reason, detail, bad := fatalPodImageError(&pod); bad {
-						return fmt.Errorf("node '%s': pod '%s' cannot start due to an image error (%s)%s", node.Name, pod.Name, reason, detail)
-					}
-					if pod.Status.Phase == v1.PodRunning {
-						for _, cond := range pod.Status.Conditions {
-							if cond.Type == v1.PodReady && cond.Status == v1.ConditionTrue {
-								runningReady++
-								break
-							}
-						}
-					}
-				}
-
-				stat := fmt.Sprintf("'%s' %d/%d", node.Name, runningReady, expected)
-				if runningReady < expected {
-					notReadyStats = append(notReadyStats, stat+" ⏳")
-					allReady = false
-				} else {
-					readyStats = append(readyStats, stat+" ✅")
-				}
-			}
-
-			allStats := append(readyStats, notReadyStats...)
-			log.Printf("📊 Nodes status: %s", strings.Join(allStats, ", "))
-
-			if allReady {
-				log.Println("✅ All pods are Running and Ready.")
-				return nil
-			}
-		}
-	}
-}
-
-func WaitForPodsReadyByName(namespace string, podNames []string) error {
-	timeout := time.After(180 * time.Second)
-	ticker := time.NewTicker(5 * time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-timeout:
-			return fmt.Errorf("timeout waiting for pods to be Ready: %v", podNames)
-
-		case <-ticker.C:
-			allReady := true
-			var readyStats []string
-			var notReadyStats []string
-
-			for _, podName := range podNames {
-				pod, err := kubeclient.Clientset.CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
-				if apierrors.IsNotFound(err) {
-					notReadyStats = append(notReadyStats, fmt.Sprintf("'%s' (recreating) ⏳", podName))
-					allReady = false
-					continue
-				}
-				if err != nil {
-					log.Printf("❌ Error getting pod %s: %v", podName, err)
-					notReadyStats = append(notReadyStats, fmt.Sprintf("'%s' (error) ⏳", podName))
-					allReady = false
-					continue
-				}
-
-				if r, detail, bad := fatalPodImageError(pod); bad {
-					return fmt.Errorf("pod '%s' cannot start due to an image error (%s)%s", podName, r, detail)
-				}
-
-				ok, reason := isPodReady(pod)
-				if ok {
-					readyStats = append(readyStats, fmt.Sprintf("'%s' ✅", podName))
-				} else {
-					notReadyStats = append(notReadyStats, fmt.Sprintf("'%s' (%s) ⏳", podName, reason))
-					allReady = false
-				}
-			}
-
-			allStats := append(readyStats, notReadyStats...)
-			log.Printf("📊 Pods status: %s", strings.Join(allStats, ", "))
-
-			if allReady {
-				log.Printf("✅ All restarted pods are Running/Ready: %v", podNames)
-				return nil
-			}
-		}
-	}
 }
 
 // validIfaceRe: 1-15 chars, no '/', ':' or whitespace (Linux IFNAMSIZ rules).

@@ -53,6 +53,14 @@ func ReconcileMissingInterfaces(namespace string, nodes []types.NodeSpec, links 
 		missingCountByPod := make(map[string]int)
 		issues := collectLinkIssues(namespace, desired, missingCountByPod)
 
+		// A Ready pod normally has every interface already (CNI ADD finishes
+		// before its container starts), so a miss right after Ready is more
+		// likely a race than a broken link. Re-check the affected links a few
+		// times before restarting anything, restarts are the expensive path.
+		if round == 1 && len(issues) > 0 {
+			issues = recheckLinkIssues(namespace, desired, issues, missingCountByPod)
+		}
+
 		if len(issues) == 0 {
 			log.Printf("✅ Reconciliation: all expected interfaces are present.")
 			return nil
@@ -200,6 +208,45 @@ func ReconcileMissingInterfaces(namespace string, nodes []types.NodeSpec, links 
 }
 
 /* --------------------------- issue collection --------------------------- */
+
+// recheckLinkIssues re-validates only the links that just failed, up to
+// linkRecheckAttempts times one second apart, and returns whatever is still
+// missing. missingCountByPod is rebuilt from the last pass so the restart
+// choice below sees current numbers.
+func recheckLinkIssues(namespace string, desired []desiredLink, issues []linkIssue, missingCountByPod map[string]int) []linkIssue {
+	const linkRecheckAttempts = 3
+
+	pairKey := func(a, b string) string {
+		if a > b {
+			a, b = b, a
+		}
+		return a + "|" + b
+	}
+	failing := make(map[string]struct{}, len(issues))
+	for _, is := range issues {
+		failing[pairKey(is.PodA, is.PodB)] = struct{}{}
+	}
+	subset := make([]desiredLink, 0, len(issues))
+	for _, dl := range desired {
+		if _, hit := failing[pairKey(dl.PodA, dl.PodB)]; hit {
+			subset = append(subset, dl)
+		}
+	}
+
+	for attempt := 1; attempt <= linkRecheckAttempts; attempt++ {
+		time.Sleep(time.Second)
+		for k := range missingCountByPod {
+			delete(missingCountByPod, k)
+		}
+		issues = collectLinkIssues(namespace, subset, missingCountByPod)
+		if len(issues) == 0 {
+			log.Printf("✅ Reconciliation: interfaces showed up on re-check %d/%d, nothing to restart.", attempt, linkRecheckAttempts)
+			return nil
+		}
+		log.Printf("⏳ Reconciliation: %d link(s) still missing interfaces after re-check %d/%d", len(issues), attempt, linkRecheckAttempts)
+	}
+	return issues
+}
 
 func collectLinkIssues(namespace string, desired []desiredLink, missingCountByPod map[string]int) []linkIssue {
 	// Deterministic processing order (stable display keys and bucket indices)

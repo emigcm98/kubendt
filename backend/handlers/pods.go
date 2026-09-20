@@ -172,9 +172,6 @@ func RestartPod(c *gin.Context) {
 
 	nudgePodAndTopology("soft", podName)
 
-	// Give meshnet a short window to process nudges.
-	time.Sleep(1500 * time.Millisecond)
-
 	log.Printf("✅ Pod %s restarted successfully in namespace %s", podName, namespace)
 	c.JSON(http.StatusOK, gin.H{
 		"message":             fmt.Sprintf("Pod %s restarted successfully", podName),

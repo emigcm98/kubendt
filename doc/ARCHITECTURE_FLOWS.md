@@ -559,9 +559,10 @@ User
   │         │    └─→ Create StatefulSet              [pods spawn]
   │         │
   │         └─→ WaitForPodsReady (180s timeout)
-  │                ├─→ Poll pods until Ready=true
+  │                ├─→ Watch pod events until Ready=true
   │                └─→ ReconcileMissingInterfaces
   │                     ├─→ Query interfaces per pod
+  │                     ├─→ Re-check misses (3x over 3s) before acting
   │                     ├─→ Restart broken pods
   │                     └─→ Replay operations
   │

@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Changed
 
 - The default readiness probe (`command -v ip`) no longer waits 5 s before its first run and probes every 2 s instead of 5. A container that starts in a second is Ready in about a second, where before it took 5 to 10 s. Nodes that install tools at startup stay NotReady and are re-probed until `ip` appears, as before. The failure threshold is raised to 30 so that a minute of transient exec failures under load is needed before a healthy pod flips back to NotReady. Drivers that ship their own probe (VyOS) are unchanged.
+- Deploy, modify and restart no longer poll for pod readiness every 5 s. The backend now watches pod events and reacts the moment the kubelet reports Ready, which removes a 5 s floor and up to 5 s of detection lag from every operation. The fixed settle sleeps that followed (5 s after deploy, 2 s after a modify add, 1.5 s after a restart) are gone too. Instead, the interface validation re-checks a link that looks broken a few times over 3 s before restarting a pod, so the common case costs nothing and a genuinely late interface still heals.
 
 ## [1.3.0] - 2026-08-13
 
