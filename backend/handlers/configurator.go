@@ -87,6 +87,14 @@ func ConfigureNetwork(c *gin.Context) {
 		// driverErr is checked per-action in the plan phase below.
 		driver, driverErr := helpers.GetDriverForPod(namespace, podName)
 
+		// History older than the pod belongs to a previous incarnation and must
+		// not make an action look already applied. Without the timestamp we fall
+		// back to matching by payload alone.
+		podCreated, podErr := helpers.PodCreationTime(namespace, podName)
+		if podErr != nil {
+			log.Printf("⚠️ Could not read creation time of pod '%s': %v (duplicate check by payload only)", podName, podErr)
+		}
+
 		var driverType string
 		var driverExecutor executor.CommandExecutor
 		var driverExecutorName string
@@ -173,14 +181,14 @@ func ConfigureNetwork(c *gin.Context) {
 			}
 
 			if p.flags.Persist {
-				alreadyPersisted, existsErr := helpers.DriverOperationExists(namespace, podName, driverType, action)
+				alreadyPersisted, existsErr := helpers.DriverOperationAppliedSince(namespace, podName, driverType, action, podCreated)
 				if existsErr != nil {
 					p.err = existsErr
 					plans = append(plans, p)
 					continue
 				}
 				if alreadyPersisted {
-					p.skipReason = "duplicate operation: already persisted with same payload"
+					p.skipReason = "duplicate operation: already applied to this pod with the same payload"
 					plans = append(plans, p)
 					continue
 				}

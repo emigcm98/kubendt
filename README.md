@@ -216,6 +216,7 @@ KubeNDT is actively developed. The following limitations are known:
 
 - **Current behavior**: Operations applied through KubeNDT configuration API (`network/configure`) are persisted per pod and replayed when KubeNDT recreates the pod (the Restart action, a modify that restarts a peer, the heal pass). Since Meshnet also recreates the interfaces of the pod's neighbours, the neighbours' persisted operations that touch those interfaces (bridge membership, addresses, qdiscs) are re-applied as well. Manual changes done directly inside pods (ad-hoc shell commands not sent through the API) are not tracked. This is deliberate, only changes made via drivers are replayed.
 - **Not covered**: a pod recreated behind KubeNDT's back, for example with `kubectl delete pod` or a kubelet eviction, comes back with the CRD-declared addresses only. Nothing watches the cluster between operations. Use the Restart action (or `PATCH /pods/restart/{namespace}/{pod}`) when you want the history replayed.
+- **History lifetime**: the history is dropped when KubeNDT deletes the namespace, clears the topology or deletes a node. If a namespace disappears behind KubeNDT's back and a new one takes its name, anything recorded before the new namespace was created is dropped on the next deploy, and configure only treats an action as already applied when it was applied to the pod that exists now.
 - **Workaround**: Apply changes through KubeNDT API, mounted config files, or startup scripts when persistence is required.
 
 ### Pod shutdown

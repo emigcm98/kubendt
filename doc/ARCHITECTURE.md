@@ -65,6 +65,8 @@ SQLite tables:
 
 Driver history is replayed when KubeNDT recreates a pod (restart, modify, heal pass), and the neighbours of that pod get the operations that touch the interface Meshnet recreated re-applied too, since a veth dies with the old netns and a VXLAN device is rebuilt on the next CNI ADD. Recreations that do not go through KubeNDT (a raw `kubectl delete pod`, an eviction) are not replayed. The history is also pruned of operations the current driver no longer supports.
 
+A history row is keyed by cluster, namespace and pod name, and `executed_at` says when that payload was last applied: re-applying an action replaces its row, and a successful replay refreshes the timestamp. Configure skips an action as a duplicate only if a matching row is newer than the target pod's creation, so rows left by an earlier incarnation never mask a missing configuration. Rows older than the Namespace object itself are dropped at deploy time and on namespace creation, since they can only come from a same-named namespace that was deleted outside KubeNDT.
+
 ### Cluster scoping
 
 KubeNDT can manage more than one cluster (context switching via `/kube/context` and `/kube/config`), and different clusters routinely reuse the same namespace names (e.g. `prueba` in two clusters). To keep that data from colliding, all per-namespace state is scoped by a **canonical cluster ID**: the `metadata.uid` of the cluster's `kube-system` namespace. That UID is created at cluster bootstrap, never changes, and is unique per cluster — the same convention used by OpenTelemetry (`k8s.cluster.uid`) and kube-state-metrics. It is resolved and cached per active context (`kubeclient.CurrentClusterID`) and re-resolved whenever the active client changes.

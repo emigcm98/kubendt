@@ -610,6 +610,15 @@ func DeployNetwork(c *gin.Context) {
 		return
 	}
 
+	// History older than the namespace object belongs to a same-named
+	// namespace that was deleted behind our back. Drop it before it can make
+	// configure skip actions or replay push a dead topology onto new pods.
+	if purged, err := helpers.PurgeStaleDriverOperations(namespace); err != nil {
+		log.Printf("⚠️ Could not check for stale operation history in '%s': %v", namespace, err)
+	} else if purged > 0 {
+		log.Printf("🧹 Dropped %d stale operation(s) recorded before namespace '%s' was created", purged, namespace)
+	}
+
 	// Meshnet gate: refuse to deploy when the CNI dataplane is missing, since
 	// the Topology CRD would be created but its links never wired (a silent
 	// failure). Only "missing" blocks. "degraded" (a pod restarting) and
