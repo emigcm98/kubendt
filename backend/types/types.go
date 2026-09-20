@@ -185,6 +185,12 @@ type NodeSpec struct {
 	// killed. Bounds restart, delete and scale-down latency. Defaults to
 	// DefaultTerminationGracePeriodSeconds, must be >= 1 when set.
 	TerminationGracePeriodSeconds int64 `json:"terminationGracePeriodSeconds,omitempty" example:"2"`
+	// NodeSelector keeps the pod on workers carrying these labels, e.g. a
+	// KVM-capable worker for a QEMU node. NodeName pins it to one worker by
+	// name and bypasses the scheduler. Both apply to every replica of the
+	// node, and both are validated against the cluster before deploying.
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+	NodeName     string            `json:"nodeName,omitempty" example:"k8s-worker1"`
 }
 
 // Structure for a network link (CRD Topology) in the JSON request

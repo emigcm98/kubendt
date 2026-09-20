@@ -360,6 +360,8 @@ func CreateNetworkStatefulSet(namespace string, node types.NodeSpec, validMounts
 		Containers:                    []v1.Container{container},
 		Volumes:                       volumes,
 		TerminationGracePeriodSeconds: ptr.To(gracePeriod),
+		NodeSelector:                  node.NodeSelector,
+		NodeName:                      node.NodeName,
 	}
 
 	// if type==router, qemu, has devices, or is explicitly requested, activate privileges

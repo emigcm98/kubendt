@@ -1176,6 +1176,18 @@ definitions:
       name:
         example: router1
         type: string
+      nodeName:
+        example: k8s-worker1
+        type: string
+      nodeSelector:
+        additionalProperties:
+          type: string
+        description: |-
+          NodeSelector keeps the pod on workers carrying these labels, e.g. a
+          KVM-capable worker for a QEMU node. NodeName pins it to one worker by
+          name and bypasses the scheduler. Both apply to every replica of the
+          node, and both are validated against the cluster before deploying.
+        type: object
       privileged:
         example: true
         type: boolean

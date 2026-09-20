@@ -4151,6 +4151,17 @@ const docTemplate = `{
                     "type": "string",
                     "example": "router1"
                 },
+                "nodeName": {
+                    "type": "string",
+                    "example": "k8s-worker1"
+                },
+                "nodeSelector": {
+                    "description": "NodeSelector keeps the pod on workers carrying these labels, e.g. a\nKVM-capable worker for a QEMU node. NodeName pins it to one worker by\nname and bypasses the scheduler. Both apply to every replica of the\nnode, and both are validated against the cluster before deploying.",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
                 "privileged": {
                     "type": "boolean",
                     "example": true

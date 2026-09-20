@@ -220,6 +220,7 @@ FOR round = 1 TO maxRounds:
    - Non-QEMU → assign defaults or validate explicit drivers
 
 7. Normalize replicas (0→1, cap at 128) and terminationGracePeriodSeconds (unset→2, must be >= 1)
+   - Validate nodeName / nodeSelector against the cluster's nodes (one list per request, 400 on a miss)
 
 8. Prepare link UIDs
    - Generate or retrieve unique UIDs per link from link_uid_registry
@@ -246,6 +247,7 @@ FOR round = 1 TO maxRounds:
       kubendt/qemu: "true" | "false"         (same source as runtime, kept for backwards compat with handlers/shell.go)
     - Annotation: k8s.v1.cni.cncf.io/networks = meshnet
     - terminationGracePeriodSeconds from the node (default 2 s, not the Kubernetes 30 s)
+    - nodeSelector / nodeName from the node, when set
     - QEMU pods: Stdin=true, TTY=true, /dev/kvm added, Privileged=true
     - Non-QEMU pods: NET_ADMIN capability
     - Routers/switches: ip_forward sysctl = 1
