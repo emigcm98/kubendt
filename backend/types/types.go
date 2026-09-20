@@ -89,6 +89,80 @@ const MaxReplicas = 128
 // only delays the SIGKILL and every pod-recreating operation by ~30 s.
 const DefaultTerminationGracePeriodSeconds int64 = 2
 
+// OperationTimeline is the per-pod lifecycle record attached to deploy,
+// modify and restart responses. It exists so the platform's own cost can be
+// told apart from the substrate's: the Kubernetes stamps are read from the
+// Pod object as Kubernetes wrote them, the observed ones are the backend's
+// clock. Pods progress in parallel, so the total is a critical path, not the
+// sum of the phases.
+type OperationTimeline struct {
+	// When the backend started handling the request, RFC3339 with ms.
+	RequestStartedAt string `json:"request_started_at" example:"2026-09-20T12:47:47.120Z"`
+	// Backend phases in ms since request_started_at. Only the ones that
+	// apply to the operation are present.
+	BackendMs BackendPhasesMs `json:"backend_ms"`
+	Pods      []PodTimeline   `json:"pods"`
+}
+
+// BackendPhasesMs holds the duration of each backend phase in milliseconds.
+type BackendPhasesMs struct {
+	// Input validation and driver resolution (deploy).
+	Validation *int64 `json:"validation,omitempty" example:"12"`
+	// Topology CRDs, ConfigMaps and StatefulSets created (deploy).
+	ResourceCreation *int64 `json:"resource_creation,omitempty" example:"470"`
+	// Everything before pods start being deleted (restart) or before the
+	// wait begins (modify): topology updates, peer cleanup, delete calls.
+	Prepare *int64 `json:"prepare,omitempty" example:"1180"`
+	// From the first pod delete/create until every affected pod is Ready.
+	WaitReady *int64 `json:"wait_ready,omitempty" example:"5300"`
+	// Replay of the persisted operation history on recreated pods.
+	Replay *int64 `json:"replay,omitempty" example:"40"`
+	// Interface validation and healing after the pods are Ready.
+	Heal  *int64 `json:"heal,omitempty" example:"380"`
+	Total int64  `json:"total" example:"6760"`
+}
+
+// PodTimeline is one pod's lifecycle during the operation.
+type PodTimeline struct {
+	Pod string `json:"pod" example:"router1-0"`
+	// Stamps written by Kubernetes on the Pod object, RFC3339, 1 s
+	// resolution. Empty when the cluster does not report a condition.
+	Kubernetes PodKubernetesStamps `json:"kubernetes"`
+	// Transitions as the backend saw them, in ms since request_started_at.
+	// A step that had already happened when the backend started watching
+	// the pod is omitted.
+	Observed PodObservedStamps `json:"observed_ms"`
+}
+
+// PodKubernetesStamps are read from metadata and status of the Pod.
+type PodKubernetesStamps struct {
+	// metadata.creationTimestamp, when the StatefulSet controller created the pod.
+	Created string `json:"created,omitempty" example:"2026-09-20T12:47:51Z"`
+	// PodScheduled condition, a worker was chosen.
+	Scheduled string `json:"scheduled,omitempty" example:"2026-09-20T12:47:51Z"`
+	// PodReadyToStartContainers condition, sandbox created and CNI attachment
+	// done (this is where Meshnet wires the interfaces). Needs Kubernetes 1.29+.
+	SandboxReady string `json:"sandbox_ready,omitempty" example:"2026-09-20T12:47:52Z"`
+	// containerStatuses[0].state.running.startedAt, image pulled and process started.
+	ContainerStarted string `json:"container_started,omitempty" example:"2026-09-20T12:47:52Z"`
+	// Ready condition, the readiness probe passed.
+	Ready string `json:"ready,omitempty" example:"2026-09-20T12:47:53Z"`
+}
+
+// PodObservedStamps are milliseconds since request_started_at on the backend clock.
+type PodObservedStamps struct {
+	// The backend asked Kubernetes to delete the previous pod (restart, modify).
+	DeleteIssued *int64 `json:"delete_issued,omitempty" example:"1180"`
+	// The previous pod object disappeared, termination complete (restart, modify).
+	OldPodGone       *int64 `json:"old_pod_gone,omitempty" example:"4210"`
+	Scheduled        *int64 `json:"scheduled,omitempty" example:"4300"`
+	SandboxReady     *int64 `json:"sandbox_ready,omitempty" example:"5100"`
+	ContainerStarted *int64 `json:"container_started,omitempty" example:"5900"`
+	// The pod became Ready and the backend's watch delivered it. Against
+	// kubernetes.ready this is the platform's detection lag.
+	ReadySeen *int64 `json:"ready_seen,omitempty" example:"6480"`
+}
+
 // Structure for a Node (Statefulset pod) in the JSON request
 type NodeSpec struct {
 	Name      string `json:"name" example:"router1"`

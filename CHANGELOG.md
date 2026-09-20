@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Added
 
 - Nodes accept an optional `terminationGracePeriodSeconds` in the topology JSON (deploy and modify add). KubeNDT now defaults it to 2 s instead of inheriting the Kubernetes default of 30 s, since emulated nodes are stateless (their configuration is replayed after a restart) and the usual `sh -c "... && sleep infinity"` entrypoint ignores SIGTERM, so the pod was killed after the full 30 s anyway. Every operation that recreates a pod (restart, delete node or link, scale down) gets faster by roughly that amount. Measured on an FRR router: restart went from ~43.6 s to ~18.6 s. Set it higher per node for workloads that need an orderly shutdown.
+- Deploy, modify and restart responses carry a new `timeline` block next to `took_time`. For every pod the operation created or recreated it lists the lifecycle stamps Kubernetes wrote on the Pod (created, scheduled, sandbox and CNI ready, container started, Ready) and, in milliseconds on the backend clock, when the backend issued the delete, saw the old pod disappear, and saw each transition and Ready. `backend_ms` breaks down the backend's own phases (validation, resource creation, wait, replay, heal). Together they separate KubeNDT's overhead from the substrate's, per pod and with Kubernetes as the source of the pod-side numbers. See `doc/TIMING.md`.
 
 ### Changed
 

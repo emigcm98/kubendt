@@ -149,6 +149,7 @@ type RestartPodResponseDoc struct {
 	ReplayedOperations int                   `json:"replayed_operations" example:"2"`
 	Replay             DriverReplayStatsDoc  `json:"replay"`
 	TookTime           RestartTimingResponse `json:"took_time"`
+	Timeline           OperationTimeline     `json:"timeline"`
 }
 
 // InterfaceDetail holds IP/MAC info for a single interface.
@@ -251,6 +252,7 @@ type WarningDoc struct {
 type DeployNetworkResponse struct {
 	Message  string               `json:"message" example:"Network infrastructure deployed successfully"`
 	TookTime DeployTimingResponse `json:"took_time"`
+	Timeline OperationTimeline    `json:"timeline"`
 	Warnings []WarningDoc         `json:"warnings"`
 }
 
@@ -295,6 +297,7 @@ type ModifyTimingResponse struct {
 type ModifyNetworkResponse struct {
 	Message        string               `json:"message" example:"network-modify applied successfully"`
 	TookTime       ModifyTimingResponse `json:"took_time"`
+	Timeline       OperationTimeline    `json:"timeline"`
 	DeletedNodes   []string             `json:"deleted_nodes"`
 	RestartedPods  []string             `json:"restarted_pods"`
 	ScaledUpPods   []string             `json:"scaled_up_pods"`

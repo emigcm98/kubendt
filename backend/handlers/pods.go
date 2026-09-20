@@ -111,6 +111,7 @@ func ListPods(c *gin.Context) {
 }
 
 func RestartPod(c *gin.Context) {
+	requestStart := time.Now()
 	namespace := c.Param("namespace")
 	podRef := c.Param("podName")
 	podName, err := helpers.ResolvePodReference(namespace, podRef)
@@ -151,10 +152,17 @@ func RestartPod(c *gin.Context) {
 		return
 	}
 
+	// RestartPod returns right after the delete call, so this is when the
+	// old pod was asked to go.
+	deleteIssued := time.Since(requestStart)
+	waitAt := time.Now()
+
 	// After manual restart, run only soft-heal nudges (no hard reconcile / extra restarts).
-	if waitErr := helpers.WaitForPodsReadyByName(namespace, []string{podName}); waitErr != nil {
+	timelines, waitErr := helpers.WaitForPodsReadyTimeline(namespace, []string{podName}, requestStart)
+	if waitErr != nil {
 		log.Printf("⚠️ Pod '%s' restarted but not fully ready before reconcile: %v", podName, waitErr)
 	}
+	waitDur := time.Since(waitAt)
 	podRestartDur := time.Since(startedAt)
 	replayAt := time.Now()
 
@@ -182,6 +190,13 @@ func RestartPod(c *gin.Context) {
 			"pod_restart": fmt.Sprintf("%.2fs", podRestartDur.Seconds()),
 			"replay":      fmt.Sprintf("%.2fs", replayDur.Seconds()),
 		},
+		"timeline": helpers.BuildOperationTimeline(requestStart, timelines,
+			map[string]int64{podName: deleteIssued.Milliseconds()},
+			types.BackendPhasesMs{
+				Prepare:   helpers.MsPtr(deleteIssued),
+				WaitReady: helpers.MsPtr(waitDur),
+				Replay:    helpers.MsPtr(replayDur),
+			}),
 	})
 }
 

@@ -8,7 +8,7 @@
    <a href="https://doi.org/10.5281/zenodo.21276320"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.21276320.svg" alt="DOI" /></a>
 </p>
 
-> Last reviewed: 29 Jul 2026
+> Last reviewed: 20 Sep 2026
 
 **KubeNDT** is a platform for deploying and operating virtual network topologies on Kubernetes.
 
@@ -165,6 +165,7 @@ The full technical details were moved out of this top-level README to keep first
 - Deep implementation notes: [doc/IMPLEMENTATION_DETAILS.md](doc/IMPLEMENTATION_DETAILS.md)
 - Implementation summary: [doc/IMPLEMENTATION_SUMMARY.md](doc/IMPLEMENTATION_SUMMARY.md)
 - Architecture flows and diagrams: [doc/ARCHITECTURE_FLOWS.md](doc/ARCHITECTURE_FLOWS.md)
+- Operation timelines (per-pod lifecycle stamps in API responses): [doc/TIMING.md](doc/TIMING.md)
 
 ## Use Cases & Examples
 
