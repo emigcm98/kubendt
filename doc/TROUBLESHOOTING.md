@@ -1,5 +1,7 @@
 # Troubleshooting
 
+For what the platform recovers from on its own and what needs a hand, see [FAILURE_MODEL.md](FAILURE_MODEL.md).
+
 ## Pods missing network interfaces
 
 This is usually Meshnet not running. Without its per-node dataplane the Topology CRDs are still created and the pods start, but their extra interfaces never get wired, so nothing errors out.
