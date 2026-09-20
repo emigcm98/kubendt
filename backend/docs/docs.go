@@ -4347,6 +4347,30 @@ const docTemplate = `{
                 }
             }
         },
+        "types.PeerReplayStatsDoc": {
+            "type": "object",
+            "properties": {
+                "failed": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "peers": {
+                    "description": "Neighbours that had operations re-applied.",
+                    "type": "integer",
+                    "example": 1
+                },
+                "qemu_rewired": {
+                    "description": "Guest-VM neighbours whose TC redirect to the recreated interface was rewired instead.",
+                    "type": "integer",
+                    "example": 0
+                },
+                "reapplied": {
+                    "description": "Persisted operations re-run on neighbours because they touch an interface Meshnet recreated.",
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
         "types.PodDriverHistoryResponseDoc": {
             "type": "object",
             "properties": {
@@ -4664,6 +4688,9 @@ const docTemplate = `{
                 "message": {
                     "type": "string",
                     "example": "Pod router1-0 restarted successfully"
+                },
+                "peer_replay": {
+                    "$ref": "#/definitions/types.PeerReplayStatsDoc"
                 },
                 "replay": {
                     "$ref": "#/definitions/types.DriverReplayStatsDoc"

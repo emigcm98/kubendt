@@ -28,7 +28,7 @@ func (OpenVSwitchDriver) SetupBridge(bridge string, ifaces []string) [][]string 
 		{"ip", "link", "set", bridge, "up"},
 	}
 	for _, iface := range ifaces {
-		cmds = append(cmds, []string{"ovs-vsctl", "add-port", bridge, iface})
+		cmds = append(cmds, []string{"ovs-vsctl", "--may-exist", "add-port", bridge, iface})
 	}
 	return cmds
 }
@@ -41,7 +41,7 @@ func (OpenVSwitchDriver) TeardownBridge(bridge string) [][]string {
 
 func (OpenVSwitchDriver) AddInterfaceToBridge(iface, bridge string) [][]string {
 	return [][]string{
-		{"ovs-vsctl", "add-port", bridge, iface},
+		{"ovs-vsctl", "--may-exist", "add-port", bridge, iface},
 	}
 }
 

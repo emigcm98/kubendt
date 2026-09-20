@@ -176,6 +176,8 @@ func RestartPod(c *gin.Context) {
 		})
 		return
 	}
+	// The neighbours' interfaces facing this pod were recreated too.
+	peerStats := helpers.ReapplyPeerInterfaceState(namespace, []string{podName})
 	replayDur := time.Since(replayAt)
 
 	nudgePodAndTopology("soft", podName)
@@ -185,6 +187,7 @@ func RestartPod(c *gin.Context) {
 		"message":             fmt.Sprintf("Pod %s restarted successfully", podName),
 		"replayed_operations": replayStats.Replayed,
 		"replay":              replayStats,
+		"peer_replay":         peerStats,
 		"took_time": gin.H{
 			"total":       fmt.Sprintf("%.2fs", time.Since(startedAt).Seconds()),
 			"pod_restart": fmt.Sprintf("%.2fs", podRestartDur.Seconds()),

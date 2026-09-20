@@ -143,11 +143,23 @@ type RestartTimingResponse struct {
 	Replay     string `json:"replay" example:"0.95s"`
 }
 
+// PeerReplayStatsDoc summarizes the re-apply of neighbour interface state after a restart.
+type PeerReplayStatsDoc struct {
+	// Neighbours that had operations re-applied.
+	Peers int `json:"peers" example:"1"`
+	// Persisted operations re-run on neighbours because they touch an interface Meshnet recreated.
+	Reapplied int `json:"reapplied" example:"1"`
+	Failed    int `json:"failed" example:"0"`
+	// Guest-VM neighbours whose TC redirect to the recreated interface was rewired instead.
+	QemuRewired int `json:"qemu_rewired" example:"0"`
+}
+
 // RestartPodResponseDoc is returned by PATCH /pods/restart/:namespace/:podName.
 type RestartPodResponseDoc struct {
 	Message            string                `json:"message" example:"Pod router1-0 restarted successfully"`
 	ReplayedOperations int                   `json:"replayed_operations" example:"2"`
 	Replay             DriverReplayStatsDoc  `json:"replay"`
+	PeerReplay         PeerReplayStatsDoc    `json:"peer_replay"`
 	TookTime           RestartTimingResponse `json:"took_time"`
 	Timeline           OperationTimeline     `json:"timeline"`
 }
