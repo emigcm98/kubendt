@@ -2,7 +2,7 @@
   "nodes": [
     {
       "name": "pc",
-      "image": "alpine",
+      "image": "alpine:3.24.2",
       "type": "host",
       "replicas": 4,
       "commands": [
@@ -23,7 +23,7 @@
     },
     {
       "name": "server",
-      "image": "alpine",
+      "image": "alpine:3.24.2",
       "type": "host",
       "driver": "BasicHostDriver",
       "replicas": 1,
@@ -42,18 +42,18 @@
     },
     {
       "name": "r1",
-      "image": "frrouting/frr",
+      "image": "quay.io/frrouting/frr:10.7.1",
       "type": "router",
       "driver": "FRRRouterDriver",
       "commands": [
         "sh",
         "-c",
-        "echo hostname r1 > /etc/frr/vtysh.conf && chown frr:frr /etc/frr/vtysh.conf && /usr/lib/frr/zebra -d && /usr/lib/frr/ospfd -d && sleep infinity"
+        "apk add --no-cache iptables && sed -i 's/^ospfd=no/ospfd=yes/' /etc/frr/daemons && touch /etc/frr/frr.conf /etc/frr/vtysh.conf && chown frr:frr /etc/frr/frr.conf /etc/frr/vtysh.conf && exec /sbin/tini -- /usr/lib/frr/docker-start"
       ]
     },
     {
       "name": "sw",
-      "image": "ubuntu",
+      "image": "ubuntu:26.04",
       "type": "switch",
       "replicas": 2,
       "commands": [
@@ -64,7 +64,7 @@
     },
     {
       "name": "ovs",
-      "image": "globocom/openvswitch",
+      "image": "globocom/openvswitch:latest",
       "driver" : "OpenVSwitchDriver",
       "type": "switch",
       "replicas": 1,

@@ -153,7 +153,7 @@ Each NF node mounts its own `<nf>.yaml` and `<nf>_init.sh` from the correspondin
 
 ## Notable Characteristics
 
-- All 5GC network functions use the `ghcr.io/herlesupreeth/docker_open5gs:master` image. Each NF is configured via environment variables (IPs, MCC/MNC, etc.) and its own YAML config file, both provided at deploy time.
+- All 5GC network functions use the `ghcr.io/herlesupreeth/docker_open5gs:master` image. That repository publishes no version tags, so the exact digest a run used is worth recording when results matter (`kubectl get pods -o jsonpath='{.items[*].status.containerStatuses[*].imageID}'`). Each NF is configured via environment variables (IPs, MCC/MNC, etc.) and its own YAML config file, both provided at deploy time.
 - `udsf-0` runs MongoDB and acts as the data store for UDR and PCF. It is named `udsf` to fit the topology naming convention but it is a plain MongoDB instance.
 - `udm-0` consumes two keys (`udm/curve25519-1.key`, `udm/secp256r1-2.key`) used by Open5GS to decrypt the SUCI sent by the UE during 5G registration. The topology JSON declares these two mounts with `"sensitive": true`, so they are materialised as `Secret`s instead of `ConfigMap`s. Other Open5GS files stay as ConfigMaps.
 - `upf-0` requires the `/dev/net/tun` device to create TUN interfaces (`ogstun` for internet APN, `ogstun2` for IMS APN). The node spec includes a device mount for this.

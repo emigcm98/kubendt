@@ -41,7 +41,7 @@ const captureSleeperSeconds = "86400"
 // Docker Hub, so capture works with zero image-building. Override with the
 // KUBENDT_CAPTURE_IMAGE env var (e.g. an air-gapped mirror or the slim image
 // under deploy/custom_images/capture/).
-const DefaultCaptureImage = "nicolaka/netshoot:latest"
+const DefaultCaptureImage = "nicolaka/netshoot:v0.16"
 
 var (
 	ifaceNameRe        = regexp.MustCompile(`^[A-Za-z0-9._-]{1,32}$`)
