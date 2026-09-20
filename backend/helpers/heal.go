@@ -33,7 +33,13 @@ type linkIssue struct {
 	DisplayKey string // stable string for sorting/logging
 }
 
-func ReconcileMissingInterfaces(namespace string, nodes []types.NodeSpec, links []types.LinkSpec, maxRounds int) error {
+// HealMissingInterfaces is the bounded heal pass that runs after a deploy or a
+// modify. It checks that every declared link has its interface present in
+// both pods and, when one is missing, restarts the affected endpoint and
+// replays its operation history, for at most maxRounds rounds. It is not a
+// controller loop: nothing watches the cluster in between operations, the
+// pass is triggered by the backend, does a fixed amount of work and returns.
+func HealMissingInterfaces(namespace string, nodes []types.NodeSpec, links []types.LinkSpec, maxRounds int) error {
 	if maxRounds <= 0 {
 		maxRounds = 2
 	}
@@ -42,12 +48,12 @@ func ReconcileMissingInterfaces(namespace string, nodes []types.NodeSpec, links 
 	desired := buildDesiredResolvedLinks(nodes, links)
 
 	if len(desired) == 0 {
-		log.Printf("ℹ️ Reconciliation: no links to validate.")
+		log.Printf("ℹ️ Heal: no links to validate.")
 		return nil
 	}
 
 	for round := 1; round <= maxRounds; round++ {
-		log.Printf("🔁 Reconciliation %d/%d: validating expected interfaces (by links, restart 1 endpoint per link)...", round, maxRounds)
+		log.Printf("🔁 Heal pass %d/%d: validating expected interfaces (by links, restart 1 endpoint per link)...", round, maxRounds)
 
 		// 1) Collect missing per pod (count) + per link (pretty logs)
 		missingCountByPod := make(map[string]int)
@@ -62,7 +68,7 @@ func ReconcileMissingInterfaces(namespace string, nodes []types.NodeSpec, links 
 		}
 
 		if len(issues) == 0 {
-			log.Printf("✅ Reconciliation: all expected interfaces are present.")
+			log.Printf("✅ Heal: all expected interfaces are present.")
 			return nil
 		}
 
@@ -148,9 +154,9 @@ func ReconcileMissingInterfaces(namespace string, nodes []types.NodeSpec, links 
 		}
 
 		if len(toRestartSet) == 0 {
-			log.Printf("⏳ Reconciliation: there are broken links but no stable pods to restart in this round.")
+			log.Printf("⏳ Heal: there are broken links but no stable pods to restart in this round.")
 			sleep := time.Duration(2*round) * time.Second
-			log.Printf("⏳ Reconciliation: waiting %s before retrying...", sleep)
+			log.Printf("⏳ Heal: waiting %s before retrying...", sleep)
 			time.Sleep(sleep)
 			continue
 		}
@@ -162,49 +168,49 @@ func ReconcileMissingInterfaces(namespace string, nodes []types.NodeSpec, links 
 		}
 		sort.Strings(toRestart)
 
-		log.Printf("🧯 Reconciliation: restarting %d pods (due to broken links; on unilateral failures both endpoints are restarted): %v", len(toRestart), toRestart)
+		log.Printf("🧯 Heal: restarting %d pods (due to broken links; on unilateral failures both endpoints are restarted): %v", len(toRestart), toRestart)
 
 		for _, pod := range toRestart {
-			log.Printf("💥 Reconciliation: restarting pod=%s type=%s missing_total=%d", pod, podTypeOrUnknown(podType, pod), missingCountByPod[pod])
+			log.Printf("💥 Heal: restarting pod=%s type=%s missing_total=%d", pod, podTypeOrUnknown(podType, pod), missingCountByPod[pod])
 			for _, why := range restartWhy[pod] {
 				log.Printf("   • %s", why)
 			}
 			if err := RestartPod(namespace, pod); err != nil {
-				log.Printf("❌ Reconciliation: failed restarting pod=%s: %v", pod, err)
+				log.Printf("❌ Heal: failed restarting pod=%s: %v", pod, err)
 			}
 		}
 
 		if err := WaitForPodsReadyByName(namespace, toRestart); err != nil {
-			log.Printf("❌ Reconciliation: error waiting for Ready after restarts: %v", err)
+			log.Printf("❌ Heal: error waiting for Ready after restarts: %v", err)
 		}
 
 		if err := ReplayDriverOperationsForPods(namespace, toRestart); err != nil {
-			log.Printf("❌ Reconciliation: failed replaying persisted driver operations after restarts: %v", err)
+			log.Printf("❌ Heal: failed replaying persisted driver operations after restarts: %v", err)
 		}
 
 		if round == maxRounds {
-			log.Printf("🔎 Reconciliation: final validation after restarts (ronda %d/%d)...", round, maxRounds)
+			log.Printf("🔎 Heal: final validation after restarts (round %d/%d)...", round, maxRounds)
 
 			// Re-check issues with a fresh counter map
 			finalMissingCount := make(map[string]int)
 			finalIssues := collectLinkIssues(namespace, desired, finalMissingCount)
 
 			if len(finalIssues) == 0 {
-				log.Printf("✅ Reconciliation: OK after restarts. No missing interfaces.")
+				log.Printf("✅ Heal: OK after restarts. No missing interfaces.")
 				return nil
 			}
 
-			log.Printf("⚠️ Reconciliation: issues still remain after restarts.")
+			log.Printf("⚠️ Heal: issues still remain after restarts.")
 			logLinkIssuesPretty(finalIssues)
-			return fmt.Errorf("reconciliation: interfaces are still missing after %d rounds", maxRounds)
+			return fmt.Errorf("heal: interfaces are still missing after %d rounds", maxRounds)
 		}
 
 		sleep := time.Duration(2*round) * time.Second
-		log.Printf("⏳ Reconciliation: waiting %s before next validation...", sleep)
+		log.Printf("⏳ Heal: waiting %s before next validation...", sleep)
 		time.Sleep(sleep)
 	}
 
-	return fmt.Errorf("reconciliation: interfaces are still missing after %d rounds", maxRounds)
+	return fmt.Errorf("heal: interfaces are still missing after %d rounds", maxRounds)
 }
 
 /* --------------------------- issue collection --------------------------- */
@@ -240,10 +246,10 @@ func recheckLinkIssues(namespace string, desired []desiredLink, issues []linkIss
 		}
 		issues = collectLinkIssues(namespace, subset, missingCountByPod)
 		if len(issues) == 0 {
-			log.Printf("✅ Reconciliation: interfaces showed up on re-check %d/%d, nothing to restart.", attempt, linkRecheckAttempts)
+			log.Printf("✅ Heal: interfaces showed up on re-check %d/%d, nothing to restart.", attempt, linkRecheckAttempts)
 			return nil
 		}
-		log.Printf("⏳ Reconciliation: %d link(s) still missing interfaces after re-check %d/%d", len(issues), attempt, linkRecheckAttempts)
+		log.Printf("⏳ Heal: %d link(s) still missing interfaces after re-check %d/%d", len(issues), attempt, linkRecheckAttempts)
 	}
 	return issues
 }
@@ -321,7 +327,7 @@ func collectLinkIssues(namespace string, desired []desiredLink, missingCountByPo
 			continue
 		}
 		if !shouldCountAsMissing(r.reason) {
-			log.Printf("ℹ️ Reconciliation: skipping %s/%s (reason: %s)", r.pod, r.iface, r.reason)
+			log.Printf("ℹ️ Heal: skipping %s/%s (reason: %s)", r.pod, r.iface, r.reason)
 			continue
 		}
 		missingCountByPod[r.pod]++
@@ -368,7 +374,7 @@ func collectLinkIssues(namespace string, desired []desiredLink, missingCountByPo
 }
 
 func logLinkIssuesPretty(issues []linkIssue) {
-	log.Printf("🧩 Reconciliation: links with issues (grouped by pairs):")
+	log.Printf("🧩 Heal: links with issues (grouped by pairs):")
 
 	// Group by unordered pair
 	group := make(map[string][]linkIssue)

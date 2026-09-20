@@ -132,12 +132,12 @@ Output: [["ip", "addr", "add", "10.0.0.1/24", "dev", "eth1"]]
 
 ---
 
-## 2. Reconciliation Flow Diagram
+## 2. Heal Pass Flow Diagram
 
-### 2.1 Multi-Round Reconciliation Algorithm
+### 2.1 Multi-Round Heal Algorithm
 
 ```
-ReconcileMissingInterfaces(namespace, nodes, links, maxRounds=2)
+HealMissingInterfaces(namespace, nodes, links, maxRounds=2)
 │
 ├─ Build DesiredLinks from input
 │  └─ For each link: {PodA, IfA, PodB, IfB}
@@ -209,7 +209,7 @@ ReconcileMissingInterfaces(namespace, nodes, links, maxRounds=2)
 │
 └─ AFTER all rounds:
    ├─ Final validation check
-   └─ IF issues persist → RETURN error("reconciliation failed after "+maxRounds+" rounds")
+   └─ IF issues persist → RETURN error("heal failed after "+maxRounds+" rounds")
 ```
 
 ---
@@ -274,7 +274,7 @@ ReconcileMissingInterfaces(namespace, nodes, links, maxRounds=2)
         │
         ↓
  ┌──────────────────────────────────────┐
- │ Reconcile Missing Interfaces         │
+ │ Heal Missing Interfaces         │
  │ - Progressive multi-round recovery   │
  │ - Restarts pods as needed            │
  │ - Replays driver operations          │
@@ -359,7 +359,7 @@ POD RESTART (failure/manual restart):
       ↓
   Interfaces appear (similar to creation)
       ↓
-  Reconciliation detects via "ip a" in pod
+  The heal pass detects via "ip a" in pod
       ↓
   If missing → recursive restart
       ↓
@@ -426,7 +426,7 @@ POD RESTART (failure/manual restart):
 
 ```
 Step 1: Pod Restart Detected
-  └─ Reconciliation detects missing interface
+  └─ The heal pass detects missing interface
      → Restarts pod (delete + StatefulSet recreates)
 
 Step 2: Query Operation History
@@ -498,7 +498,7 @@ Shell API               exec (kubectl exec)        attach (serial)
 ────────────────────────────────────────────────────────────────
 Network Interfaces      veth pairs from meshnet    veth + inside VM routing
 IP Configuration        Applied via driver ops     Inside VM (manual)
-Reconciliation          Validates interfaces       Validates interfaces
+Heal pass          Validates interfaces       Validates interfaces
 ────────────────────────────────────────────────────────────────
 Boot Time               ~2-10 seconds              ~30-60 seconds
 Use Case                Lightweight network        Full VM with routing
@@ -560,7 +560,7 @@ User
   │         │
   │         └─→ WaitForPodsReady (180s timeout)
   │                ├─→ Watch pod events until Ready=true
-  │                └─→ ReconcileMissingInterfaces
+  │                └─→ HealMissingInterfaces
   │                     ├─→ Query interfaces per pod
   │                     ├─→ Re-check misses (3x over 3s) before acting
   │                     ├─→ Restart broken pods
@@ -632,10 +632,10 @@ Meshnet (watching Topology updates)
 
 ## 8. Error Handling Flows
 
-### 8.1 Missing Interface Recovery (Reconciliation Failure Path)
+### 8.1 Missing Interface Recovery (Heal Failure Path)
 
 ```
-Reconciliation starts
+Heal pass starts
     │
     ├─ Round 1: Detect eth1 missing on router1-0
     │   ├─ Restart router1-0
@@ -659,7 +659,7 @@ Reconciliation starts
     │   │    reason: ["interface-missing", "interface-missing"],
     │   │    podTypes: ["router", "router"]}
     │   │
-    │   └─ RETURN error("reconciliation: interfaces still missing after 2 rounds")
+    │   └─ RETURN error("heal: interfaces still missing after 2 rounds")
     │
     ├─ Caller decides:
     │   ├─ Option 1: Return 500 to user (deploy failed)
@@ -787,7 +787,7 @@ DefaultDriverByType map[string]string      // LogicalType → DefaultName
 This KubeNDT architecture enables:
 
 1. **Pluggable drivers** via generic registration & type assertions
-2. **Resilient recovery** through bounded reconciliation with intelligent restart selection
+2. **Resilient recovery** through a bounded heal pass with intelligent restart selection
 3. **State persistence** via operation replay from SQLite
 4. **Mixed workloads** supporting both lightweight containers and full VMs
 5. **Non-destructive updates** via soft-heal mechanism (annotation nudges)

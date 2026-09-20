@@ -37,13 +37,13 @@ KubeNDT implements network topology management for Kubernetes through five inter
 
 ---
 
-## 2. Reconciliation Mechanism
+## 2. Heal Pass Mechanism
 
 **Problem Solved**: Network interfaces may not appear immediately in pods due to meshnet delays or partial veth attachment. System must detect and recover missing interfaces without manual intervention.
 
 **Solution**:
 
-- **Progressive Multi-Round Recovery**: Calls `ReconcileMissingInterfaces(maxRounds=2)` at deployment end and on-demand
+- **Progressive Multi-Round Recovery**: Calls `HealMissingInterfaces(maxRounds=2)` at deployment end and on-demand
 - **Intelligent Endpoint Restart Selection**:
   - Round 1: Restart only missing endpoint (avoids cascade)
   - Round 2+: Restart both endpoints (clears meshnet skip state)
@@ -78,7 +78,7 @@ KubeNDT implements network topology management for Kubernetes through five inter
 10. Create ConfigMaps (from mount file specifications)
 11. Create StatefulSets (with labels, devices, security context)
 12. Wait for pods ready (watch on pod events, 180s timeout, readiness probe: `command -v ip`)
-13. Reconcile missing interfaces (2 rounds, restarts & replays)
+13. Heal missing interfaces (2 rounds, restarts & replays)
 
 **Modification** (Add/Delete in single request):
 
@@ -128,7 +128,7 @@ KubeNDT implements network topology management for Kubernetes through five inter
 
 - Pod crashes → Kubernetes restarts it (StatefulSet ensures recreation)
 - Meshnet rebuilds network namespace (Topology CRD still present)
-- Reconciliation detects missing interfaces if only partial
+- The heal pass detects missing interfaces if only partial
 - Restarts pod again if needed
 - Replays all previous operations: `ReplayDriverOperationsForPods()`
 
@@ -177,7 +177,7 @@ KubeNDT implements network topology management for Kubernetes through five inter
 - `ResolveDriversForNodes()` allows QEMU nodes to have an explicit driver. Without one, the node is left unmanaged (routing/bridging handled inside the guest VM).
 - With `VyOSRouterDriver`, QEMU-based VyOS nodes receive full driver management: the same declarative actions (IP, routes, NAT, OSPF) are translated into VyOS CLI commands executed inside the container.
 
-**Reconciliation**:
+**Heal pass**:
 
 - QEMU pods still participate in interface validation
 - Interfaces detected via `ip a` exec (works same as containers)
@@ -204,7 +204,7 @@ KubeNDT implements network topology management for Kubernetes through five inter
 - Example: `grep -q || add` (check if exists before adding)
 - Replay of operations is safe: same command = same state
 
-### 4. Bounded Reconciliation
+### 4. Bounded Heal Pass
 
 - Multi-round with exponential sleep (2s, 4s, ...)
 - Deterministic restart selection (avoid restart loops)
@@ -233,7 +233,7 @@ KubeNDT implements network topology management for Kubernetes through five inter
 | Missing after maxRounds | Final check | Error logged, deploy marked failed |
 | Operation unsupported by driver | Replay detects nil | Prune entry from history |
 | Operation execution failure | Exec returns error | Prune entry (assume manual fix) |
-| Pod restart (crash) | Reconciliation | Auto-restart + replay operations |
+| Pod restart (crash) | Heal pass | Auto-restart + replay operations |
 | Concurrent deploys | Lock conflict | Return 409 Conflict, reject second deploy |
 | Missing ConfigMap file | Deploy phase | Warn, skip mount, continue |
 
@@ -267,14 +267,14 @@ KubeNDT implements network topology management for Kubernetes through five inter
 
 ## Performance Characteristics
 
-| Operation                  | Latency | Reason                               |
-| -------------------------- | ------- | ------------------------------------ |
-| Deploy (2 pods, 1 link)    | ~45-60s | Reconciliation roundtrips            |
-| Modify add (1 node)        | ~20-30s | Pod creation, link update, soft-heal |
-| Modify delete (1 node)     | ~10-15s | StatefulSet deletion, cleanup        |
-| Action execution (set IP)  | 1-2s    | Exec + shell command                 |
-| Operation replay (5 ops)   | 5-10s   | 5 sequential execs                   |
-| Reconciliation (per round) | ~20-30s | Interface checks, restarts, waits    |
+| Operation                 | Latency | Reason                               |
+| ------------------------- | ------- | ------------------------------------ |
+| Deploy (2 pods, 1 link)   | ~45-60s | Heal pass roundtrips                 |
+| Modify add (1 node)       | ~20-30s | Pod creation, link update, soft-heal |
+| Modify delete (1 node)    | ~10-15s | StatefulSet deletion, cleanup        |
+| Action execution (set IP) | 1-2s    | Exec + shell command                 |
+| Operation replay (5 ops)  | 5-10s   | 5 sequential execs                   |
+| Heal pass (per round)     | ~20-30s | Interface checks, restarts, waits    |
 
 ---
 
@@ -293,7 +293,7 @@ KubeNDT implements network topology management for Kubernetes through five inter
 KubeNDT achieves resilient network topology management through:
 
 1. **Plugin architecture** enabling diverse driver implementations
-2. **Progressive reconciliation** recovering from transient network issues
+2. **Progressive heal pass** recovering from transient network issues
 3. **Persistent operation history** enabling full state recovery after pod restarts
 4. **Hybrid container/VM support** via configuration differences and label-based detection
 5. **Non-destructive updates** via soft-heal mechanism (annotation nudges)

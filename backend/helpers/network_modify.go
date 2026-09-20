@@ -133,7 +133,7 @@ func ApplyAddToExistingTopology(namespace string, request types.DeployRequest, e
 
 	// Topology CRDs BEFORE StatefulSets, Meshnet's CNI ADD needs them to
 	// exist when the pod sandbox is created, otherwise interfaces fall through
-	// to a post-hoc reconciler run.
+	// to a post-hoc heal pass.
 	for _, node := range request.Nodes {
 		if err := CreateTopologyObject(namespace, node, request.Links, allNodes); err != nil {
 			return nil, nil, nil, fmt.Errorf("error creating topology for %s: %w", node.Name, err)
@@ -149,7 +149,7 @@ func ApplyAddToExistingTopology(namespace string, request types.DeployRequest, e
 
 	// Pre-inject peer skip entries. Without them the new pod's CNI ADD waits
 	// for a peer veth that never comes (peer doesn't re-fire ADD) and we
-	// fall back to a ~40s reconciliation restart per pair. Writing
+	// fall back to a ~40s heal restart per pair. Writing
 	// {link_uid, new_pod_name} into peer.status.skipped beforehand tells
 	// meshnet "the new pod will create the veth" so the link lands in one pass.
 	for _, node := range request.Nodes {

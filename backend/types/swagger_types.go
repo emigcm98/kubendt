@@ -234,7 +234,9 @@ type DeployTimingResponse struct {
 	Total            string `json:"total" example:"51.43s"`
 	ResourceCreation string `json:"resource_creation" example:"0.24s"`
 	NodeRunning      string `json:"node_running" example:"45.01s"`
-	Reconciliation   string `json:"reconciliation" example:"6.18s"`
+	// Duration of the post-deploy heal pass (interface validation and repair).
+	// Key kept for compatibility, same figure as timeline.backend_ms.heal.
+	Reconciliation string `json:"reconciliation" example:"6.18s"`
 }
 
 // WarningDoc describes a non-fatal incident surfaced in deploy/modify responses.
@@ -290,7 +292,8 @@ type NetworkModifyRequestDoc struct {
 type ModifyTimingResponse struct {
 	Total            string `json:"total" example:"5.23s"`
 	ModifyOperations string `json:"modify_operations" example:"3.12s"`
-	Reconciliation   string `json:"reconciliation" example:"2.11s"`
+	// Duration of the post-modify heal pass. Key kept for compatibility, same as timeline.backend_ms.heal.
+	Reconciliation string `json:"reconciliation" example:"2.11s"`
 }
 
 // ModifyNetworkResponse is returned by POST /network/modify-network/:ns.

@@ -495,7 +495,7 @@ func ModifyNetwork(c *gin.Context) {
 	}
 
 	// Fast post-modify soft-heal: nudge Pod + Topology updates for impacted pods
-	// and their direct peers, avoiding expensive global reconcile rounds.
+	// and their direct peers, avoiding expensive global heal rounds.
 	nudgedSet := make(map[string]struct{})
 	for _, pod := range restartedPods {
 		nudgedSet[pod] = struct{}{}
@@ -541,24 +541,24 @@ func ModifyNetwork(c *gin.Context) {
 	}
 
 	modifyOpsDur := time.Since(startedAt)
-	reconcileAt := time.Now()
+	healAt := time.Now()
 
-	// Post-modify reconcile: for link-only adds, Topology CRD updates and annotation
+	// Post-modify heal: for link-only adds, Topology CRD updates and annotation
 	// nudges don't trigger CNI ADD. Restart one endpoint per new link so veth pairs
 	// are created via CNI ADD.
 	if hasAdd && len(request.Add.Links) > 0 {
 		currentNodes, nodesErr := helpers.GetExistingNodes(namespace)
 		if nodesErr != nil {
-			log.Printf("⚠️ Modify reconcile: could not get current nodes: %v", nodesErr)
+			log.Printf("⚠️ Modify heal: could not get current nodes: %v", nodesErr)
 		} else {
-			log.Printf("🔁 Modify: running post-add interface reconciliation for %d new link(s)...", len(request.Add.Links))
-			if reconcileErr := helpers.ReconcileMissingInterfaces(namespace, currentNodes, request.Add.Links, 2); reconcileErr != nil {
-				log.Printf("⚠️ Modify reconcile: %v", reconcileErr)
+			log.Printf("🔁 Modify: running post-add interface heal pass for %d new link(s)...", len(request.Add.Links))
+			if healErr := helpers.HealMissingInterfaces(namespace, currentNodes, request.Add.Links, 2); healErr != nil {
+				log.Printf("⚠️ Modify heal: %v", healErr)
 			}
 		}
 	}
 
-	reconciliationDur := time.Since(reconcileAt)
+	healDur := time.Since(healAt)
 
 	if _, err := helpers.SyncNamespaceTopologyState(namespace); err != nil {
 		log.Printf("⚠️ Could not refresh topology state after modify in namespace '%s': %v", namespace, err)
@@ -572,13 +572,14 @@ func ModifyNetwork(c *gin.Context) {
 		"took_time": gin.H{
 			"total":             fmt.Sprintf("%.2fs", time.Since(startedAt).Seconds()),
 			"modify_operations": fmt.Sprintf("%.2fs", modifyOpsDur.Seconds()),
-			"reconciliation":    fmt.Sprintf("%.2fs", reconciliationDur.Seconds()),
+			// Key kept for API compatibility, this is the heal pass (timeline.backend_ms.heal).
+			"reconciliation": fmt.Sprintf("%.2fs", healDur.Seconds()),
 		},
 		"timeline": helpers.BuildOperationTimeline(startedAt, timelines, deleteIssued, types.BackendPhasesMs{
 			Prepare:   helpers.MsPtr(prepareDur),
 			WaitReady: helpers.MsPtr(waitDur),
 			Replay:    replayDur,
-			Heal:      helpers.MsPtr(reconciliationDur),
+			Heal:      helpers.MsPtr(healDur),
 		}),
 		"deleted_nodes":    deletedNodes,
 		"restarted_pods":   restartedPods,
@@ -908,17 +909,17 @@ func DeployNetwork(c *gin.Context) {
 	log.Println("✅ All nodes are in Running state.")
 
 	nodeRunningDur := time.Since(nodeWaitAt)
-	reconcileAt := time.Now()
+	healAt := time.Now()
 
 	// 10. Validate that every link's interfaces exist and heal what is
 	// missing. The validation itself re-checks before restarting anything, so
 	// no settle delay is needed here.
-	if err := helpers.ReconcileMissingInterfaces(namespace, request.Nodes, request.Links, 2); err != nil {
-		log.Printf("⚠️ Reconcile ended with remaining issues: %v", err)
+	if err := helpers.HealMissingInterfaces(namespace, request.Nodes, request.Links, 2); err != nil {
+		log.Printf("⚠️ Heal pass ended with remaining issues: %v", err)
 		// Decide: return 500 or just warn. I would warn, not fail deploy.
 	}
 
-	reconciliationDur := time.Since(reconcileAt)
+	healDur := time.Since(healAt)
 
 	if err := helpers.SetNamespaceHasTopology(namespace, true); err != nil {
 		log.Printf("⚠️ Could not persist topology state for namespace '%s': %v", namespace, err)
@@ -933,13 +934,14 @@ func DeployNetwork(c *gin.Context) {
 			"total":             fmt.Sprintf("%.2fs", time.Since(startedAt).Seconds()),
 			"resource_creation": fmt.Sprintf("%.2fs", resourceCreationDur.Seconds()),
 			"node_running":      fmt.Sprintf("%.2fs", nodeRunningDur.Seconds()),
-			"reconciliation":    fmt.Sprintf("%.2fs", reconciliationDur.Seconds()),
+			// Key kept for API compatibility, this is the heal pass (timeline.backend_ms.heal).
+			"reconciliation": fmt.Sprintf("%.2fs", healDur.Seconds()),
 		},
 		"timeline": helpers.BuildOperationTimeline(startedAt, timelines, nil, types.BackendPhasesMs{
 			Validation:       helpers.MsPtr(resourcesAt.Sub(startedAt)),
 			ResourceCreation: helpers.MsPtr(resourceCreationDur),
 			WaitReady:        helpers.MsPtr(nodeRunningDur),
-			Heal:             helpers.MsPtr(reconciliationDur),
+			Heal:             helpers.MsPtr(healDur),
 		}),
 		"warnings": warnings,
 	})
