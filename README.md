@@ -215,6 +215,10 @@ KubeNDT is actively developed. The following limitations are known:
 - **Current behavior**: Operations applied through KubeNDT configuration API (`network/configure`) are intentionally persisted per pod and replayed after restart/reconcile, but manual changes done directly inside pods (for example ad-hoc shell commands not sent through KubeNDT API) are not tracked for replay. This is done deliberately to preserve only changes made via drivers.
 - **Workaround**: Apply changes through KubeNDT API, mounted config files, or startup scripts when persistence is required.
 
+### Pod shutdown
+
+Nodes get a 2 s termination grace period instead of the Kubernetes default of 30 s. Emulated nodes are stateless (their configuration is replayed after a restart) and the usual `sh -c "... && sleep infinity"` entrypoint ignores SIGTERM, so the longer wait only delayed restarts, deletions and scale-downs. If a node runs something that needs an orderly shutdown, set `terminationGracePeriodSeconds` on that node in the topology JSON.
+
 ### Mounted files (namespace file manager)
 
 Files mount as read-only ConfigMaps (or Secrets, when flagged as sensitive). Pods need a restart to see edits because of how Kubernetes handles `SubPath` mounts. Size cap is 1 MiB, UTF-8 text only. See [doc/FILE_MANAGER.md](doc/FILE_MANAGER.md) for the full model, the `sensitive` flag behaviour, the API surface and what to know before storing sensitive data.

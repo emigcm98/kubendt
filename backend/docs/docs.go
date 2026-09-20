@@ -4118,6 +4118,11 @@ const docTemplate = `{
                     "type": "string",
                     "example": "sh"
                 },
+                "terminationGracePeriodSeconds": {
+                    "description": "Seconds Kubernetes waits for the pod to exit on SIGTERM before it is\nkilled. Bounds restart, delete and scale-down latency. Defaults to\nDefaultTerminationGracePeriodSeconds, must be \u003e= 1 when set.",
+                    "type": "integer",
+                    "example": 2
+                },
                 "type": {
                     "type": "string",
                     "example": "router"

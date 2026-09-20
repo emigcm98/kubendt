@@ -72,7 +72,7 @@ KubeNDT implements network topology management for Kubernetes through five inter
 4. Check topology state (must be empty)
 5. Validate node types (host|switch|router)
 6. **Resolve drivers** (assign defaults, validate explicit drivers)
-7. Normalize replicas (0→1, cap at 16)
+7. Normalize replicas (0→1, cap at 128) and terminationGracePeriodSeconds (unset→2, must be >= 1)
 8. Prepare link UIDs (deterministic, stored in registry)
 9. Create Topology CRDs (per pod, meshnet watches)
 10. Create ConfigMaps (from mount file specifications)

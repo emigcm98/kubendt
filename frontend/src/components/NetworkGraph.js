@@ -60,6 +60,7 @@ const NODE_SPEC_FIELDS = new Set([
   'mounts',
   'devices',
   'driver',
+  'terminationGracePeriodSeconds',
 ]);
 const LINK_SPEC_FIELDS = new Set([
   'localIntf',
@@ -111,6 +112,19 @@ const validateNodeSpecFields = (node, label) => {
   }
   if (node.privileged !== undefined && typeof node.privileged !== 'boolean') {
     throw new Error(`${label}: 'privileged' must be a boolean.`);
+  }
+  if (
+    node.terminationGracePeriodSeconds !== undefined &&
+    node.terminationGracePeriodSeconds !== null
+  ) {
+    if (
+      !Number.isInteger(node.terminationGracePeriodSeconds) ||
+      node.terminationGracePeriodSeconds < 1
+    ) {
+      throw new Error(
+        `${label}: 'terminationGracePeriodSeconds' must be an integer >= 1 (got ${JSON.stringify(node.terminationGracePeriodSeconds)}).`
+      );
+    }
   }
   for (const f of ['shellMode', 'driver']) {
     if (node[f] !== undefined && node[f] !== null && typeof node[f] !== 'string') {
