@@ -1300,6 +1300,26 @@ definitions:
         example: "2026-09-20T12:47:47.120Z"
         type: string
     type: object
+  types.PeerReplayStatsDoc:
+    properties:
+      failed:
+        example: 0
+        type: integer
+      peers:
+        description: Neighbours that had operations re-applied.
+        example: 1
+        type: integer
+      qemu_rewired:
+        description: Guest-VM neighbours whose TC redirect to the recreated interface
+          was rewired instead.
+        example: 0
+        type: integer
+      reapplied:
+        description: Persisted operations re-run on neighbours because they touch
+          an interface Meshnet recreated.
+        example: 1
+        type: integer
+    type: object
   types.PodDriverHistoryResponseDoc:
     properties:
       namespace:
@@ -1538,6 +1558,8 @@ definitions:
       message:
         example: Pod router1-0 restarted successfully
         type: string
+      peer_replay:
+        $ref: '#/definitions/types.PeerReplayStatsDoc'
       replay:
         $ref: '#/definitions/types.DriverReplayStatsDoc'
       replayed_operations:

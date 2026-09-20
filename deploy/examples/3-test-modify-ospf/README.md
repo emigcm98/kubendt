@@ -144,13 +144,9 @@ The topology returns to its original 6-pod base deployment (`ubuntu-host-0`, `al
 
 ### 7. Phase 6: forced pod restart and replay
 
-Force a restart of a router to exercise the replay-based recovery mechanism. Restarting the **VyOS** router is the more demanding case, since the whole guest reboots and KubeNDT replays the recorded actions through the SSH configure-mode executor:
+Force a restart of a router to exercise the replay-based recovery mechanism. Use the **Restart** action on the node (or `PATCH /pods/restart/modify-ospf/vyos-router-0`), not a raw `kubectl delete pod`: replay only runs for recreations KubeNDT orchestrates, a pod deleted behind its back comes up with the CRD-declared addresses and nothing else. Restarting the **VyOS** router is the more demanding case, since the whole guest reboots and KubeNDT replays the recorded actions through the VyOS HTTP API executor.
 
-```bash
-kubectl delete pod vyos-router-0 -n modify-ospf
-```
-
-Wait for the new `vyos-router-0` pod to reach `Running` and for the guest to finish booting. Then verify, from the VyOS console, that the interface addresses and the OSPF configuration were restored automatically from the per-pod operation history:
+Wait for the restart to complete (the guest takes over a minute to boot). Then verify, from the VyOS console, that the interface addresses and the OSPF configuration were restored automatically from the per-pod operation history:
 
 ```bash
 # from inside the new vyos-router guest (operational mode)
@@ -158,17 +154,16 @@ show interfaces
 show ip ospf neighbor      # frr-router must be Full again
 ```
 
-The same recovery applies to the FRR router (replayed via `kubectl exec`):
+The same recovery applies to the FRR router (replayed via `kubectl exec`). Restart it from the UI or with `PATCH /pods/restart/modify-ospf/frr-router-0`, then:
 
 ```bash
-kubectl delete pod frr-router-0 -n modify-ospf
-# then, inside the new frr-router-0:
+# inside the new frr-router-0:
 ip a show eth1             # 10.0.1.1/24 must be present
 ip a show eth2             # 10.0.254.1/30 must be present
 vtysh -c "show ip ospf neighbor"   # vyos-router must be Full again
 ```
 
-No manual reconfiguration is required in either case. Cross-LAN reachability between hosts on LAN A and LAN B is restored as soon as the OSPF adjacency comes back up.
+No manual reconfiguration is required in either case. The switch ports facing the restarted router are re-attached to their bridges as part of the same replay, and cross-LAN reachability between hosts on LAN A and LAN B is restored as soon as the OSPF adjacency comes back up.
 
 ## Notable Characteristics
 

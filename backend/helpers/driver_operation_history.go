@@ -262,6 +262,29 @@ func ReplayDriverOperationsForPod(namespace, podName string) (int, error) {
 	return stats.Replayed, err
 }
 
+// replayExecAttempts is how many times a failing replay command is tried
+// before its operation is treated as permanently broken and pruned. Right
+// after a restart the pod is Ready but its daemons may still be coming up
+// (ovsdb, the VyOS HTTP API answering 502), and pruning history on that race
+// destroys the very state replay exists to restore.
+const replayExecAttempts = 4
+
+// execWithReplayRetry runs fn until it succeeds, gives up after
+// replayExecAttempts with a growing pause in between, and returns transient
+// transport errors immediately so the caller can abort and keep the history.
+func execWithReplayRetry(fn func() error) error {
+	var err error
+	for attempt := 1; attempt <= replayExecAttempts; attempt++ {
+		if err = fn(); err == nil || isTransientExecError(err) {
+			return err
+		}
+		if attempt < replayExecAttempts {
+			time.Sleep(time.Duration(2*attempt) * time.Second)
+		}
+	}
+	return err
+}
+
 func ReplayDriverOperationsForPodWithStats(namespace, podName string) (DriverReplayStats, error) {
 	ops, err := ListDriverOperationsForPod(namespace, podName)
 	if err != nil {
@@ -389,7 +412,10 @@ func ReplayDriverOperationsForPodWithStats(namespace, podName string) (DriverRep
 				}
 			}
 			batchCmd := executor.NewArgsCommand(allArgs)
-			_, execErr := item.execInst.ExecCommandAndGet(podName, namespace, batchCmd)
+			execErr := execWithReplayRetry(func() error {
+				_, err := item.execInst.ExecCommandAndGet(podName, namespace, batchCmd)
+				return err
+			})
 
 			if execErr != nil {
 				if isTransientExecError(execErr) {
@@ -422,7 +448,8 @@ func ReplayDriverOperationsForPodWithStats(namespace, podName string) (DriverRep
 		log.Printf("🔁 Replaying persisted operation id=%d type=%s for pod %s/%s", item.op.ID, item.op.ActionType, namespace, podName)
 		pruneStale := false
 		for _, cmd := range executor.CommandsFromLegacyForExecutor(item.commands, item.execName) {
-			if execErr := item.execInst.ExecCommand(podName, namespace, cmd); execErr != nil {
+			execErr := execWithReplayRetry(func() error { return item.execInst.ExecCommand(podName, namespace, cmd) })
+			if execErr != nil {
 				if isTransientExecError(execErr) {
 					log.Printf("⏳ Transient executor error replaying op id=%d for %s/%s, aborting replay (ops preserved): %v",
 						item.op.ID, namespace, podName, execErr)

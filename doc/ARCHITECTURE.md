@@ -63,7 +63,7 @@ SQLite tables:
 - `clusters` — registry of known clusters (see below)
 - `auth_config`, `sessions`, `api_tokens`
 
-Driver history is used for restart-time replay and cleanup of obsolete operations.
+Driver history is replayed when KubeNDT recreates a pod (restart, modify, heal pass), and the neighbours of that pod get the operations that touch the interface Meshnet recreated re-applied too, since a veth dies with the old netns and a VXLAN device is rebuilt on the next CNI ADD. Recreations that do not go through KubeNDT (a raw `kubectl delete pod`, an eviction) are not replayed. The history is also pruned of operations the current driver no longer supports.
 
 ### Cluster scoping
 

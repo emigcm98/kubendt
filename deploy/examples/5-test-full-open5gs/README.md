@@ -249,10 +249,10 @@ Both should be in `UP` state with an address from `192.168.10.0/24` and `192.168
 Open a shell on `nrf-0` and query the NRF REST API to check which NFs have registered:
 
 ```bash
-curl -s http://10.5.0.12:7777/nnrf-nfm/v1/nf-instances | python3 -m json.tool | grep nfType
+curl -s --http2-prior-knowledge http://10.5.0.12:7777/nnrf-nfm/v1/nf-instances | python3 -m json.tool
 ```
 
-Expected: entries for `AMF`, `SMF`, `AUSF`, `UDM`, `UDR`, `PCF`, and `UPF`.
+Expected: one `nf-instances/<id>` link per registered NF (AMF, SMF, AUSF, UDM, UDR, PCF, UPF). The SBI speaks HTTP/2 without TLS, so plain `curl` gets an empty reply and `--http2-prior-knowledge` is required.
 
 Alternatively, open the WebUI (step 9) which shows all registered NFs in the dashboard.
 

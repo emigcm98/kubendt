@@ -187,6 +187,7 @@ func HealMissingInterfaces(namespace string, nodes []types.NodeSpec, links []typ
 		if err := ReplayDriverOperationsForPods(namespace, toRestart); err != nil {
 			log.Printf("❌ Heal: failed replaying persisted driver operations after restarts: %v", err)
 		}
+		ReapplyPeerInterfaceState(namespace, toRestart)
 
 		if round == maxRounds {
 			log.Printf("🔎 Heal: final validation after restarts (round %d/%d)...", round, maxRounds)
