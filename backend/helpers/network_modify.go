@@ -70,6 +70,9 @@ func ApplyAddToExistingTopology(namespace string, request types.DeployRequest, e
 		if err := ResolveDriversForNodes(request.Nodes); err != nil {
 			return nil, nil, nil, fmt.Errorf("VALIDATION:%s", err.Error())
 		}
+		if err := ValidateNodePlacement(request.Nodes); err != nil {
+			return nil, nil, nil, fmt.Errorf("VALIDATION:%s", err.Error())
+		}
 	}
 
 	allNodes := make([]types.NodeSpec, 0, len(existingNodes)+len(request.Nodes))
@@ -324,6 +327,8 @@ func GetExistingNodes(namespace string) ([]types.NodeSpec, error) {
 			Driver:                        sts.Spec.Template.Labels["kubendt/driver"],
 			Qemu:                          sts.Spec.Template.Labels["kubendt/qemu"] == "true" || sts.Spec.Template.Labels["kubendt/runtime"] == "qemu",
 			TerminationGracePeriodSeconds: gracePeriod,
+			NodeSelector:                  sts.Spec.Template.Spec.NodeSelector,
+			NodeName:                      sts.Spec.Template.Spec.NodeName,
 		})
 	}
 

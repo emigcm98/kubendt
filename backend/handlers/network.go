@@ -785,6 +785,15 @@ func DeployNetwork(c *gin.Context) {
 		}
 	}
 
+	// 5a. Placement constraints are checked against the cluster now. A bad
+	// nodeName or selector would otherwise leave pods Pending until the
+	// readiness wait times out and rolls everything back.
+	if err := helpers.ValidateNodePlacement(request.Nodes); err != nil {
+		log.Printf("❌ %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	// 5b. Ensure each link has a stable UID for this whole deploy request.
 	// This avoids generating different UIDs per endpoint when creating per-pod Topology CRDs.
 	request.Links = helpers.SanitizeLinksForQemuNodes(request.Links, request.Nodes)
@@ -1185,18 +1194,28 @@ func GetNetwork(c *gin.Context) {
 			privileged = *container.SecurityContext.Privileged
 		}
 
+		// Only echo the grace period when it differs from the default, so an
+		// exported topology stays as terse as the one that was imported.
+		var gracePeriod int64
+		if g := sts.Spec.Template.Spec.TerminationGracePeriodSeconds; g != nil && *g != types.DefaultTerminationGracePeriodSeconds {
+			gracePeriod = *g
+		}
+
 		nodes = append(nodes, types.NodeSpec{
-			Name:       name,
-			Image:      container.Image,
-			Type:       podType,
-			ShellMode:  shellMode,
-			Qemu:       isQemu,
-			Privileged: privileged,
-			Commands:   container.Command,
-			Env:        envVars,
-			Mounts:     mounts,
-			Replicas:   replicas,
-			Driver:     driver,
+			Name:                          name,
+			Image:                         container.Image,
+			Type:                          podType,
+			ShellMode:                     shellMode,
+			Qemu:                          isQemu,
+			Privileged:                    privileged,
+			Commands:                      container.Command,
+			Env:                           envVars,
+			Mounts:                        mounts,
+			Replicas:                      replicas,
+			Driver:                        driver,
+			TerminationGracePeriodSeconds: gracePeriod,
+			NodeSelector:                  sts.Spec.Template.Spec.NodeSelector,
+			NodeName:                      sts.Spec.Template.Spec.NodeName,
 		})
 	}
 

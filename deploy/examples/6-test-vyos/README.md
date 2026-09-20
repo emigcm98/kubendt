@@ -57,6 +57,7 @@ It is mounted into the node at deploy time:
 ## Notable Characteristics
 
 - Both `router-0` and `router-1` use the `VyOSRouterDriver`, which automatically runs them as full VyOS VMs inside the pod (the driver declares QEMU as its runtime, no extra flag needed).
+- The VyOS pods need `/dev/kvm` on the worker they land on. If only some of your workers have it, keep the routers on those with a `nodeSelector`: label the KVM workers once (`kubectl label node <worker> kubendt/kvm=true` wherever `ls /dev/kvm` succeeds) and add `"nodeSelector": {"kubendt/kvm": "true"}` to the `router` node. With the selector in place a cluster with no labelled Ready worker is rejected up front with a `400` naming the selector, instead of the QEMU pods failing later in `ContainerCreating`. The scheduler still spreads the two replicas over the matching workers as it sees fit. The example ships without the selector because every worker in a typical lab has KVM.
 - Only `router-0` has an external uplink (`eth4`). The link is labeled **"External Network"** in the topology. This refers to the **host's external network** (the physical underlay network that the Kubernetes worker nodes are connected to). In your environment the subnet and gateway will differ. `router-1` is purely internal and has no external uplink.
 - `router-0` enables `SNAT` on `eth4`, acting as the upstream edge router for all downstream subnets.
 - `router-1` uses `router-0` (`10.0.10.1`) as its default gateway.

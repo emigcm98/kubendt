@@ -220,6 +220,10 @@ KubeNDT is actively developed. The following limitations are known:
 
 Nodes get a 2 s termination grace period instead of the Kubernetes default of 30 s. Emulated nodes are stateless (their configuration is replayed after a restart) and the usual `sh -c "... && sleep infinity"` entrypoint ignores SIGTERM, so the longer wait only delayed restarts, deletions and scale-downs. If a node runs something that needs an orderly shutdown, set `terminationGracePeriodSeconds` on that node in the topology JSON.
 
+### Pod placement
+
+Nodes accept `nodeSelector` (labels a worker must carry, e.g. `{"kubendt/kvm": "true"}` for QEMU nodes) and `nodeName` (one worker, by name) in the topology JSON. Both are checked against the cluster before deploying, so a typo or an unlabelled cluster fails fast with a `400` instead of pods sitting Pending. Placement lives in the StatefulSet template and applies to every replica of the node: with `nodeSelector` the scheduler still spreads replicas over the matching workers, with `nodeName` all of them land on that one worker. To pin instances to different workers, declare them as separate nodes. Where the two ends of a link land decides how Meshnet realizes it, veth on the same worker or VXLAN across workers, so pinning also makes that choice part of the specification. Kubernetes does not know which workers have `/dev/kvm`, so the label has to be put there, by hand or by a labeler of your choice.
+
 ### Mounted files (namespace file manager)
 
 Files mount as read-only ConfigMaps (or Secrets, when flagged as sensitive). Pods need a restart to see edits because of how Kubernetes handles `SubPath` mounts. Size cap is 1 MiB, UTF-8 text only. See [doc/FILE_MANAGER.md](doc/FILE_MANAGER.md) for the full model, the `sensitive` flag behaviour, the API surface and what to know before storing sensitive data.

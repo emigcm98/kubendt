@@ -61,6 +61,8 @@ const NODE_SPEC_FIELDS = new Set([
   'devices',
   'driver',
   'terminationGracePeriodSeconds',
+  'nodeSelector',
+  'nodeName',
 ]);
 const LINK_SPEC_FIELDS = new Set([
   'localIntf',
@@ -126,9 +128,17 @@ const validateNodeSpecFields = (node, label) => {
       );
     }
   }
-  for (const f of ['shellMode', 'driver']) {
+  for (const f of ['shellMode', 'driver', 'nodeName']) {
     if (node[f] !== undefined && node[f] !== null && typeof node[f] !== 'string') {
       throw new Error(`${label}: '${f}' must be a string.`);
+    }
+  }
+  if (node.nodeSelector !== undefined && node.nodeSelector !== null) {
+    if (
+      !isPlainObject(node.nodeSelector) ||
+      !Object.values(node.nodeSelector).every((v) => typeof v === 'string')
+    ) {
+      throw new Error(`${label}: 'nodeSelector' must be an object with string values.`);
     }
   }
   if (node.commands !== undefined && node.commands !== null) {
