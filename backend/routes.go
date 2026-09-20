@@ -106,6 +106,8 @@ func SetupRoutes(router *gin.Engine) {
 		netGroup.POST("/modify-network/:namespace", handlers.ModifyNetwork)
 		// Get Network deployment
 		netGroup.GET("/get-network/:namespace", handlers.GetNetwork)
+		// Links as realized on the cluster (veth / vxlan / external)
+		netGroup.GET("/links/:namespace", handlers.GetLinks)
 		// Save node positions
 		netGroup.POST("/positions/:namespace", handlers.SaveNodePositions)
 		// Get node positions

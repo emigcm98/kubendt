@@ -133,6 +133,14 @@ const LinkInfoPanel = ({
   };
   const linkPath = `${endpointLabel(sourceNode, localIntf)} ↔ ${endpointLabel(targetNode, peerIntf)}`;
 
+  // How Meshnet wired this link, from GET /network/links. Absent for edges the
+  // backend has not reported yet. The worker of each end is shown in its
+  // endpoint block below.
+  const realizationText =
+    { veth: 'veth pair', vxlan: 'VXLAN tunnel', external: 'host uplink', pending: 'pending' }[
+      link?.data?.realization
+    ] || null;
+
   const renderEndpoint = (side, podName, nodeData, ifaceName, info, isExternal) => {
     const iconKey = nodeData?.type || 'host';
     const icon = ICONS[iconKey] || pcIcon;
@@ -168,6 +176,12 @@ const LinkInfoPanel = ({
           <div className="link-endpoint-detail link-endpoint-loading">…</div>
         ) : (
           <>
+            {link?.data?.workers?.[podName] && (
+              <div className="link-endpoint-detail">
+                <span className="link-detail-key">worker</span>
+                <span className="link-detail-val">{link.data.workers[podName]}</span>
+              </div>
+            )}
             {info?.guestInterface && (
               <div className="link-endpoint-detail">
                 <span className="link-detail-key">guest</span>
@@ -251,6 +265,12 @@ const LinkInfoPanel = ({
             <span className="pod-label">Type:</span>
             <span className="pod-value">{linkType}</span>
           </div>
+          {realizationText && (
+            <div className="pod-line">
+              <span className="pod-label">Realization:</span>
+              <span className="pod-value">{realizationText}</span>
+            </div>
+          )}
           {link.data?.uid !== undefined && link.data?.uid !== null && (
             <div className="pod-line">
               <span className="pod-label">UID:</span>

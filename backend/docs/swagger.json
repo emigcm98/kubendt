@@ -1901,6 +1901,47 @@
                 }
             }
         },
+        "/network/links/{namespace}": {
+            "get": {
+                "description": "Lists every link in the namespace as it exists on the cluster, with the worker behind each endpoint and how Meshnet realized it: veth when both pods share a worker, vxlan across workers, external for host uplinks, pending while an endpoint is not scheduled yet.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "network"
+                ],
+                "summary": "Get link realization",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.LinksStatusResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/network/modify-network/{namespace}": {
             "post": {
                 "description": "Adds or removes nodes/links from an existing topology. Any change (add, delete or scale) returns 412 when the Meshnet CNI is not detected, since it restarts or creates pods that need rewiring. Bypass with force=true. Only clearing a topology is exempt.",
@@ -3249,6 +3290,67 @@
                 "uid": {
                     "type": "integer",
                     "example": 1
+                }
+            }
+        },
+        "types.LinkStatus": {
+            "type": "object",
+            "properties": {
+                "localIntf": {
+                    "type": "string",
+                    "example": "eth2"
+                },
+                "localIp": {
+                    "type": "string",
+                    "example": "10.0.0.1/30"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "N3"
+                },
+                "node": {
+                    "type": "string",
+                    "example": "router1-0"
+                },
+                "nodeWorker": {
+                    "type": "string",
+                    "example": "k8s-worker1"
+                },
+                "peerIntf": {
+                    "type": "string",
+                    "example": "eth2"
+                },
+                "peerIp": {
+                    "type": "string",
+                    "example": "10.0.0.2/30"
+                },
+                "peerNode": {
+                    "type": "string",
+                    "example": "router2-0"
+                },
+                "peerWorker": {
+                    "type": "string",
+                    "example": "k8s-worker2"
+                },
+                "realization": {
+                    "description": "veth when both pods share a worker, vxlan when they do not, external for\nhost uplinks, pending while an endpoint has no worker yet.",
+                    "type": "string",
+                    "example": "vxlan"
+                },
+                "uid": {
+                    "type": "integer",
+                    "example": 5122263
+                }
+            }
+        },
+        "types.LinksStatusResponse": {
+            "type": "object",
+            "properties": {
+                "links": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.LinkStatus"
+                    }
                 }
             }
         },

@@ -163,6 +163,29 @@ type PodObservedStamps struct {
 	ReadySeen *int64 `json:"ready_seen,omitempty" example:"6480"`
 }
 
+// LinkStatus is a link as it exists on the cluster, with the worker behind
+// each endpoint and how Meshnet realized it. Returned by GET /network/links.
+type LinkStatus struct {
+	Name       string `json:"name,omitempty" example:"N3"`
+	UID        *int   `json:"uid,omitempty" example:"5122263"`
+	Node       string `json:"node" example:"router1-0"`
+	LocalIntf  string `json:"localIntf" example:"eth2"`
+	LocalIP    string `json:"localIp,omitempty" example:"10.0.0.1/30"`
+	PeerNode   string `json:"peerNode" example:"router2-0"`
+	PeerIntf   string `json:"peerIntf" example:"eth2"`
+	PeerIP     string `json:"peerIp,omitempty" example:"10.0.0.2/30"`
+	NodeWorker string `json:"nodeWorker,omitempty" example:"k8s-worker1"`
+	PeerWorker string `json:"peerWorker,omitempty" example:"k8s-worker2"`
+	// veth when both pods share a worker, vxlan when they do not, external for
+	// host uplinks, pending while an endpoint has no worker yet.
+	Realization string `json:"realization" example:"vxlan"`
+}
+
+// LinksStatusResponse is returned by GET /network/links/:namespace.
+type LinksStatusResponse struct {
+	Links []LinkStatus `json:"links"`
+}
+
 // Structure for a Node (Statefulset pod) in the JSON request
 type NodeSpec struct {
 	Name      string `json:"name" example:"router1"`
