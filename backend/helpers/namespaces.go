@@ -154,6 +154,11 @@ func CreateNamespace(namespace string) error {
 	if err != nil {
 		return fmt.Errorf("could not create namespace %s: %w", namespace, err)
 	}
+	// A brand new namespace cannot have applied operations. Anything on
+	// record under this name is left over from a predecessor.
+	if err := DeleteNamespaceDriverOperationHistory(namespace); err != nil {
+		log.Printf("⚠️ Could not clear leftover operation history for new namespace %s: %v", namespace, err)
+	}
 
 	// Create files directory associated with namespace
 	if err := CreateNamespaceFileDir(namespace); err != nil {

@@ -1039,6 +1039,15 @@ func GetPodStatus(pod *v1.Pod) (bool, string) {
 }
 
 // isPodReady checks termination timestamp, phase, and Ready condition.
+// PodCreationTime returns when the current incarnation of the pod was created.
+func PodCreationTime(namespace, podName string) (time.Time, error) {
+	pod, err := kubeclient.Clientset.CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
+	if err != nil {
+		return time.Time{}, err
+	}
+	return pod.CreationTimestamp.Time, nil
+}
+
 func isPodReady(pod *v1.Pod) (bool, string) {
 	if pod.DeletionTimestamp != nil {
 		return false, "terminating"

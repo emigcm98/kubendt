@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -13,6 +14,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type PersistedDriverOperation struct {
@@ -77,6 +80,15 @@ func SaveDriverOperation(namespace, podName, driverType string, action types.Act
 		return fmt.Errorf("error serializing action %q: %w", action.Type, err)
 	}
 
+	// Re-applying an action replaces its earlier row instead of stacking a
+	// duplicate, so executed_at always says when this payload was last applied
+	// and replay runs it once, at its latest position.
+	if _, err := DB.Exec(
+		`DELETE FROM driver_operation_history WHERE cluster_id = ? AND namespace = ? AND pod_name = ? AND driver_type = ? AND action_type = ? AND action_json = ?`,
+		clusterID, namespace, podName, driverType, action.Type, string(actionJSON),
+	); err != nil {
+		return fmt.Errorf("error replacing earlier driver operation history row: %w", err)
+	}
 	_, err = DB.Exec(
 		`INSERT INTO driver_operation_history (cluster_id, namespace, pod_name, driver_type, action_type, action_json, executed_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		clusterID,
@@ -94,48 +106,112 @@ func SaveDriverOperation(namespace, podName, driverType string, action types.Act
 	return nil
 }
 
-func DriverOperationExists(namespace, podName, driverType string, action types.ActionEntry) (bool, error) {
+// parseExecutedAt reads the timestamp column. Go writes RFC3339Nano, rows from
+// the earliest releases may carry SQLite's CURRENT_TIMESTAMP layout.
+func parseExecutedAt(s string) (time.Time, bool) {
+	for _, layout := range []string{time.RFC3339Nano, time.RFC3339, "2006-01-02 15:04:05"} {
+		if t, err := time.Parse(layout, s); err == nil {
+			return t.UTC(), true
+		}
+	}
+	return time.Time{}, false
+}
+
+// DriverOperationAppliedSince reports whether the same operation is in the
+// history with a timestamp at or after since. Configure passes the target
+// pod's creation time: an entry older than the pod was applied to a previous
+// incarnation, or to an earlier namespace of the same name, and says nothing
+// about the pod that exists now. Rows whose timestamp cannot be parsed count
+// as applied, the conservative reading.
+func DriverOperationAppliedSince(namespace, podName, driverType string, action types.ActionEntry, since time.Time) (bool, error) {
 	if DB == nil {
 		return false, fmt.Errorf("database not initialized")
 	}
-
 	clusterID, err := kubeclient.CurrentClusterID()
 	if err != nil {
 		return false, err
 	}
-
 	actionJSON, err := json.Marshal(action)
 	if err != nil {
 		return false, fmt.Errorf("error serializing action %q: %w", action.Type, err)
 	}
-
-	var exists int
-	err = DB.QueryRow(
-		`SELECT 1
-		 FROM driver_operation_history
-		 WHERE cluster_id = ?
-		   AND namespace = ?
-		   AND pod_name = ?
-		   AND driver_type = ?
-		   AND action_type = ?
-		   AND action_json = ?
-		 LIMIT 1`,
-		clusterID,
-		namespace,
-		podName,
-		driverType,
-		action.Type,
-		string(actionJSON),
-	).Scan(&exists)
-
+	rows, err := DB.Query(
+		`SELECT executed_at FROM driver_operation_history
+		 WHERE cluster_id = ? AND namespace = ? AND pod_name = ? AND driver_type = ? AND action_type = ? AND action_json = ?`,
+		clusterID, namespace, podName, driverType, action.Type, string(actionJSON))
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return false, nil
-		}
-		return false, fmt.Errorf("error checking driver operation history duplicate for pod %s/%s: %w", namespace, podName, err)
+		return false, fmt.Errorf("error checking driver operation history for pod %s/%s: %w", namespace, podName, err)
 	}
+	defer rows.Close()
+	for rows.Next() {
+		var executedAt string
+		if err := rows.Scan(&executedAt); err != nil {
+			return false, err
+		}
+		t, ok := parseExecutedAt(executedAt)
+		if !ok || !t.Before(since) {
+			return true, nil
+		}
+	}
+	return false, rows.Err()
+}
 
-	return true, nil
+// PurgeStaleDriverOperations drops every operation of the namespace recorded
+// before the Namespace object itself was created. Such rows belong to an
+// earlier namespace of the same name that was deleted behind KubeNDT's back,
+// and left alone they make configure skip actions as "already applied" and
+// replay push a dead topology's configuration onto new pods. Returns how many
+// rows went.
+func PurgeStaleDriverOperations(namespace string) (int, error) {
+	ns, err := kubeclient.Clientset.CoreV1().Namespaces().Get(context.TODO(), namespace, metav1.GetOptions{})
+	if err != nil {
+		return 0, fmt.Errorf("could not read namespace %s: %w", namespace, err)
+	}
+	return PurgeDriverOperationsBefore(namespace, ns.CreationTimestamp.Time)
+}
+
+// PurgeDriverOperationsBefore removes the namespace's operations older than t.
+func PurgeDriverOperationsBefore(namespace string, t time.Time) (int, error) {
+	if DB == nil {
+		return 0, fmt.Errorf("database not initialized")
+	}
+	clusterID, err := kubeclient.CurrentClusterID()
+	if err != nil {
+		return 0, err
+	}
+	rows, err := DB.Query(`SELECT id, executed_at FROM driver_operation_history WHERE cluster_id = ? AND namespace = ?`, clusterID, namespace)
+	if err != nil {
+		return 0, fmt.Errorf("error listing driver operation history for %s: %w", namespace, err)
+	}
+	stale := make([]int64, 0)
+	for rows.Next() {
+		var id int64
+		var executedAt string
+		if err := rows.Scan(&id, &executedAt); err != nil {
+			rows.Close()
+			return 0, err
+		}
+		if at, ok := parseExecutedAt(executedAt); ok && at.Before(t) {
+			stale = append(stale, id)
+		}
+	}
+	rows.Close()
+	for _, id := range stale {
+		if err := DeleteDriverOperationHistoryByID(id); err != nil {
+			return 0, err
+		}
+	}
+	return len(stale), nil
+}
+
+// TouchDriverOperation stamps the operation as applied now, used after a
+// successful replay so configure sees it as applied to the current pod.
+func TouchDriverOperation(id int64) error {
+	if DB == nil {
+		return fmt.Errorf("database not initialized")
+	}
+	_, err := DB.Exec(`UPDATE driver_operation_history SET executed_at = ? WHERE id = ?`, time.Now().UTC().Format(time.RFC3339Nano), id)
+	return err
 }
 
 func ListDriverOperationsForPod(namespace, podName string) ([]PersistedDriverOperation, error) {
@@ -436,6 +512,9 @@ func ReplayDriverOperationsForPodWithStats(namespace, podName string) (DriverRep
 			} else {
 				for _, g := range group {
 					replayed++
+					if err := TouchDriverOperation(g.op.ID); err != nil {
+						log.Printf("⚠️ Could not refresh executed_at of op id=%d: %v", g.op.ID, err)
+					}
 					log.Printf("✅ Replayed persisted operation id=%d for pod %s/%s", g.op.ID, namespace, podName)
 				}
 			}
@@ -468,6 +547,9 @@ func ReplayDriverOperationsForPodWithStats(namespace, podName string) (DriverRep
 		}
 		if !pruneStale {
 			replayed++
+			if err := TouchDriverOperation(item.op.ID); err != nil {
+				log.Printf("⚠️ Could not refresh executed_at of op id=%d: %v", item.op.ID, err)
+			}
 			log.Printf("✅ Replayed persisted operation id=%d for pod %s/%s", item.op.ID, namespace, podName)
 		}
 		i++
