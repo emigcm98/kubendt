@@ -44,6 +44,7 @@ KubeNDT bundles a small set of third-party SVG icons in its frontend. See [ATTRI
 - **Multi-instance nodes** via StatefulSets with configurable replicas (e.g., 3 routers running simultaneously)
 - **Virtual networking overlays** powered by Meshnet CNI for custom L2/L3 connectivity
 - **Meshnet health awareness** - the dashboard shows whether the Meshnet dataplane is running (per cluster and per node), and blocks a deploy when it is missing so topologies don't come up with unwired links
+- **Link realization** - the link panel shows whether Meshnet wired a link as a veth pair (both ends on one worker) or a VXLAN tunnel (across workers) and which worker each end runs on, also available through `GET /network/links/{namespace}` for scripts
 - **Modular driver architecture** supporting different node types (hosts, routers, switches) with extensible capabilities
 - **Interactive terminal shell** with WebSocket for real-time pod access
 - **Dynamic network modification** - add/delete nodes and links without redeploying the entire topology

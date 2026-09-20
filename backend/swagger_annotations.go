@@ -274,6 +274,19 @@ func swaggerClearTopology() {}
 //	@Router       /network/modify-network/{namespace} [post]
 func swaggerModifyNetwork() {}
 
+// swaggerGetLinks godoc
+//
+//	@Summary      Get link realization
+//	@Description  Lists every link in the namespace as it exists on the cluster, with the worker behind each endpoint and how Meshnet realized it: veth when both pods share a worker, vxlan across workers, external for host uplinks, pending while an endpoint is not scheduled yet.
+//	@Tags         network
+//	@Produce      json
+//	@Param        namespace  path      string  true  "Namespace name"
+//	@Success      200        {object}  types.LinksStatusResponse
+//	@Failure      404        {object}  types.ErrorResponse
+//	@Failure      500        {object}  types.ErrorResponse
+//	@Router       /network/links/{namespace} [get]
+func swaggerGetLinks() {}
+
 // swaggerGetNetwork godoc
 //
 //	@Summary      Get network topology

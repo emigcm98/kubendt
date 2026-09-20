@@ -1631,15 +1631,30 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
     lastTopologyFetchAtRef.current = now;
 
     try {
-      const [topologyRes, podsRes, ipRes] = await Promise.all([
+      const [topologyRes, podsRes, ipRes, linksRes] = await Promise.all([
         fetch(`${API_BASE_URL}/network/get-network/${namespace}`),
         fetch(`${API_BASE_URL}/pods/${namespace}`),
         fetch(`${API_BASE_URL}/namespaces/ips/${namespace}`),
+        // Realization is decoration, a failure here must not take the graph down.
+        fetch(`${API_BASE_URL}/network/links/${namespace}`).catch(() => null),
       ]);
 
       const topologyData = await checkResponse(topologyRes);
       const podsData = await checkResponse(podsRes);
       const rawInterfacesData = await checkResponse(ipRes);
+      let linkStatusByUid = new Map();
+      if (linksRes && linksRes.ok) {
+        try {
+          const linksData = await linksRes.json();
+          linkStatusByUid = new Map(
+            (linksData.links || [])
+              .filter((l) => l.uid !== undefined && l.uid !== null)
+              .map((l) => [l.uid, l])
+          );
+        } catch {
+          linkStatusByUid = new Map();
+        }
+      }
 
       const normalized = normalizeInterfaces(rawInterfacesData);
       setInterfacesData(normalized);
@@ -1705,7 +1720,23 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
       });
 
       //const newEdges = generateEdges(topologyData.links);
-      const newEdges = generateEdges(topologyData.links || [], allPods, topologyData.nodes || []);
+      const newEdges = generateEdges(
+        topologyData.links || [],
+        allPods,
+        topologyData.nodes || []
+      ).map((e) => {
+        const st = linkStatusByUid.get(e.data?.uid);
+        if (!st) return e;
+        // Workers keyed by pod name, so either side of the link panel can
+        // look up its own regardless of which end the CRD calls "node".
+        const workers = {};
+        if (st.nodeWorker) workers[st.node] = st.nodeWorker;
+        if (st.peerWorker) workers[st.peerNode] = st.peerWorker;
+        return {
+          ...e,
+          data: { ...e.data, realization: st.realization, workers },
+        };
+      });
 
       // Detect newly-created links by comparing UIDs against known set.
       // Skip on the very first fetch for this namespace (initial load shouldn't flash).
