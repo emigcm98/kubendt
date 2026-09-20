@@ -2,7 +2,7 @@
   "nodes": [
     {
       "name": "ubuntu-host",
-      "image": "ubuntu:20.04",
+      "image": "ubuntu:26.04",
       "type": "host",
       "driver": "HostDriver",
       "commands": [
@@ -13,7 +13,7 @@
     },
     {
       "name": "alpine-host",
-      "image": "alpine",
+      "image": "alpine:3.24.2",
       "type": "host",
       "driver": "BasicHostDriver",
       "commands": [
@@ -24,7 +24,7 @@
     },
     {
       "name": "switch",
-      "image": "globocom/openvswitch",
+      "image": "globocom/openvswitch:latest",
       "type": "switch",
       "driver": "OpenVSwitchDriver",
       "replicas": 2,
@@ -36,13 +36,13 @@
     },
     {
       "name": "frr-router",
-      "image": "frrouting/frr",
+      "image": "quay.io/frrouting/frr:10.7.1",
       "type": "router",
       "driver": "FRRRouterDriver",
       "commands": [
         "sh",
         "-c",
-        "echo hostname frr-router > /etc/frr/vtysh.conf && chown frr:frr /etc/frr/vtysh.conf && /usr/lib/frr/zebra -d && /usr/lib/frr/ospfd -d && sleep infinity"
+        "apk add --no-cache iptables && sed -i 's/^ospfd=no/ospfd=yes/' /etc/frr/daemons && touch /etc/frr/frr.conf /etc/frr/vtysh.conf && chown frr:frr /etc/frr/frr.conf /etc/frr/vtysh.conf && exec /sbin/tini -- /usr/lib/frr/docker-start"
       ]
     },
     {

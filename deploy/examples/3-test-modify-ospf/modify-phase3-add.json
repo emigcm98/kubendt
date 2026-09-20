@@ -3,7 +3,7 @@
     "nodes": [
       {
         "name": "debian-host",
-        "image": "debian:12-slim",
+        "image": "debian:13-slim",
         "type": "host",
         "driver": "HostDriver",
         "commands": [

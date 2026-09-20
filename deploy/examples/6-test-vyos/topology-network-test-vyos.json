@@ -2,7 +2,7 @@
   "nodes": [
     {
       "name": "host",
-      "image": "alpine",
+      "image": "alpine:3.24.2",
       "type": "host",
       "driver": "BasicHostDriver",
       "replicas": 4,
@@ -21,7 +21,7 @@
     },
     {
       "name": "web-server",
-      "image": "nginx:alpine",
+      "image": "nginx:1.31.6-alpine",
       "type": "host",
       "mounts": [
         {

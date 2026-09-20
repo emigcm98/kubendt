@@ -16,6 +16,9 @@ This example deploys:
 
 - `host` (4 replicas): `host-0` to `host-3` (Alpine hosts)
 - `web` (1 replica): `web` (`nginxdemos/hello` web server)
+
+Both routers run `quay.io/frrouting/frr:10.7.1` through the image's own init (`watchfrr` under `tini`). The startup command installs `iptables`, which `enable_snat` needs and the image does not ship, and enables `ospfd`. The hostname is the pod name.
+
 - `router1` (1 replica): `router1` (FRR router)
 - `router2` (1 replica): `router2` (FRR router)
 - `switch` (3 replicas): `switch-0` to `switch-2` (Linux switch nodes)

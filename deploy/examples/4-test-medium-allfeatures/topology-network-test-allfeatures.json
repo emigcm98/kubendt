@@ -2,7 +2,7 @@
   "nodes": [
     {
       "name": "user",
-      "image": "alpine",
+      "image": "alpine:3.24.2",
       "type": "host",
       "driver": "HostDriver",
       "replicas": 4,
@@ -17,7 +17,7 @@
     },
     {
       "name": "web-public",
-      "image": "nginx:alpine",
+      "image": "nginx:1.31.6-alpine",
       "type": "host",
       "mounts": [
         {
@@ -28,7 +28,7 @@
     },
     {
       "name": "web-internal",
-      "image": "nginx:alpine",
+      "image": "nginx:1.31.6-alpine",
       "type": "host",
       "mounts": [
         {
@@ -39,7 +39,7 @@
     },
     {
       "name": "dns-server",
-      "image": "internetsystemsconsortium/bind9:9.18",
+      "image": "internetsystemsconsortium/bind9:9.20",
       "type": "host",
       "commands": [
         "sh",
@@ -67,7 +67,7 @@
     },
     {
       "name": "iperf-server",
-      "image": "networkstatic/iperf3",
+      "image": "networkstatic/iperf3:latest",
       "type": "host",
       "replicas": 2,
       "commands": [
@@ -78,40 +78,40 @@
     },
     {
       "name": "edge-router",
-      "image": "frrouting/frr",
+      "image": "quay.io/frrouting/frr:10.7.1",
       "type": "router",
       "driver": "FRRRouterDriver",
       "commands": [
         "sh",
         "-c",
-        "echo hostname edge-router > /etc/frr/vtysh.conf && chown frr:frr /etc/frr/vtysh.conf && /usr/lib/frr/zebra -d && /usr/lib/frr/ospfd -d && sleep infinity"
+        "apk add --no-cache iptables && sed -i 's/^ospfd=no/ospfd=yes/' /etc/frr/daemons && touch /etc/frr/frr.conf /etc/frr/vtysh.conf && chown frr:frr /etc/frr/frr.conf /etc/frr/vtysh.conf && exec /sbin/tini -- /usr/lib/frr/docker-start"
       ]
     },
     {
       "name": "room-router",
-      "image": "frrouting/frr",
+      "image": "quay.io/frrouting/frr:10.7.1",
       "type": "router",
       "driver": "FRRRouterDriver",
       "commands": [
         "sh",
         "-c",
-        "echo hostname room-router > /etc/frr/vtysh.conf && chown frr:frr /etc/frr/vtysh.conf && /usr/lib/frr/zebra -d && /usr/lib/frr/ospfd -d && sleep infinity"
+        "apk add --no-cache iptables && sed -i 's/^ospfd=no/ospfd=yes/' /etc/frr/daemons && touch /etc/frr/frr.conf /etc/frr/vtysh.conf && chown frr:frr /etc/frr/frr.conf /etc/frr/vtysh.conf && exec /sbin/tini -- /usr/lib/frr/docker-start"
       ]
     },
     {
       "name": "svc-router",
-      "image": "frrouting/frr",
+      "image": "quay.io/frrouting/frr:10.7.1",
       "type": "router",
       "driver": "FRRRouterDriver",
       "commands": [
         "sh",
         "-c",
-        "echo hostname svc-router > /etc/frr/vtysh.conf && chown frr:frr /etc/frr/vtysh.conf && /usr/lib/frr/zebra -d && /usr/lib/frr/ospfd -d && sleep infinity"
+        "apk add --no-cache iptables && sed -i 's/^ospfd=no/ospfd=yes/' /etc/frr/daemons && touch /etc/frr/frr.conf /etc/frr/vtysh.conf && chown frr:frr /etc/frr/frr.conf /etc/frr/vtysh.conf && exec /sbin/tini -- /usr/lib/frr/docker-start"
       ]
     },
     {
       "name": "core-sw",
-      "image": "globocom/openvswitch",
+      "image": "globocom/openvswitch:latest",
       "type": "switch",
       "commands": [
         "sh",
@@ -121,7 +121,7 @@
     },
     {
       "name": "dist-sw",
-      "image": "globocom/openvswitch",
+      "image": "globocom/openvswitch:latest",
       "type": "switch",
       "commands": [
         "sh",
@@ -131,7 +131,7 @@
     },
     {
       "name": "dmz-sw",
-      "image": "ubuntu",
+      "image": "ubuntu:26.04",
       "type": "switch",
       "commands": [
         "sh",
@@ -141,7 +141,7 @@
     },
     {
       "name": "svc-sw",
-      "image": "ubuntu",
+      "image": "ubuntu:26.04",
       "type": "switch",
       "commands": [
         "sh",
@@ -152,7 +152,7 @@
     {
       "name": "room-sw",
       "replicas": 2,
-      "image": "ubuntu",
+      "image": "ubuntu:26.04",
       "type": "switch",
       "commands": [
         "sh",

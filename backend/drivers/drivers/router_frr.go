@@ -5,6 +5,7 @@ import (
 
 	"kubendt/capabilities/capabilities"
 	drivers_meta "kubendt/drivers/meta"
+	"kubendt/types"
 )
 
 type FRRRouterDriver struct {
@@ -24,6 +25,25 @@ var _ capabilities.L2Capable = (*FRRRouterDriver)(nil)
 var _ capabilities.L3Capable = (*FRRRouterDriver)(nil)
 var _ capabilities.NATCapable = (*FRRRouterDriver)(nil)
 var _ capabilities.OSPFCapable = (*FRRRouterDriver)(nil)
+var _ types.ReadinessProbeProvider = (*FRRRouterDriver)(nil)
+
+// ReadinessProbeCommands makes the pod Ready only when zebra, and every
+// daemon enabled in /etc/frr/daemons, answer on their vty socket. The
+// default probe (`command -v ip`) passes as soon as the image is up, while
+// the daemons are still starting (or, in the shipped examples, while apk is
+// still installing iptables), and an OSPF or NAT action landing in that gap
+// fails. Daemons started by hand with ospfd=no in the file are not checked,
+// so the old manual startup keeps working.
+func (FRRRouterDriver) ReadinessProbeCommands() types.ReadinessProbeSpec {
+	return types.ReadinessProbeSpec{
+		Command: []string{"sh", "-c",
+			`test -S /var/run/frr/zebra.vty && for d in $(sed -n 's/^\([a-z0-9]*d\)=yes$/\1/p' /etc/frr/daemons); do test -S /var/run/frr/$d.vty || exit 1; done`},
+		InitialDelaySeconds: 0,
+		PeriodSeconds:       2,
+		TimeoutSeconds:      3,
+		FailureThreshold:    30,
+	}
+}
 
 // ─── OSPFCapable ─────────────────────────────────────────────────────────────
 // Uses vtysh FRR syntax to apply configuration directly to the running process.
