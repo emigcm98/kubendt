@@ -759,6 +759,11 @@ func DeployNetwork(c *gin.Context) {
 			log.Printf("⚠️ Node '%s': replicas %d exceed maximum (%d). Forcing to %d.", node.Name, node.Replicas, types.MaxReplicas, types.MaxReplicas)
 			request.Nodes[i].Replicas = types.MaxReplicas
 		}
+		if err := helpers.NormalizeTerminationGracePeriod(&request.Nodes[i]); err != nil {
+			log.Printf("❌ %v", err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 	}
 
 	// 5b. Ensure each link has a stable UID for this whole deploy request.

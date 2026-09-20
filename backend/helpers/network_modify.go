@@ -61,6 +61,9 @@ func ApplyAddToExistingTopology(namespace string, request types.DeployRequest, e
 		case node.Replicas > types.MaxReplicas:
 			request.Nodes[i].Replicas = types.MaxReplicas
 		}
+		if err := NormalizeTerminationGracePeriod(&request.Nodes[i]); err != nil {
+			return nil, nil, nil, fmt.Errorf("VALIDATION:%s", err.Error())
+		}
 	}
 
 	if len(request.Nodes) > 0 {
@@ -309,12 +312,18 @@ func GetExistingNodes(namespace string) ([]types.NodeSpec, error) {
 			replicas = int(*sts.Spec.Replicas)
 		}
 
+		var gracePeriod int64
+		if sts.Spec.Template.Spec.TerminationGracePeriodSeconds != nil {
+			gracePeriod = *sts.Spec.Template.Spec.TerminationGracePeriodSeconds
+		}
+
 		nodes = append(nodes, types.NodeSpec{
-			Name:     name,
-			Replicas: replicas,
-			Type:     sts.Spec.Template.Labels["kubendt/type"],
-			Driver:   sts.Spec.Template.Labels["kubendt/driver"],
-			Qemu:     sts.Spec.Template.Labels["kubendt/qemu"] == "true" || sts.Spec.Template.Labels["kubendt/runtime"] == "qemu",
+			Name:                          name,
+			Replicas:                      replicas,
+			Type:                          sts.Spec.Template.Labels["kubendt/type"],
+			Driver:                        sts.Spec.Template.Labels["kubendt/driver"],
+			Qemu:                          sts.Spec.Template.Labels["kubendt/qemu"] == "true" || sts.Spec.Template.Labels["kubendt/runtime"] == "qemu",
+			TerminationGracePeriodSeconds: gracePeriod,
 		})
 	}
 

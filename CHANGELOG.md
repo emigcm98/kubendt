@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Nodes accept an optional `terminationGracePeriodSeconds` in the topology JSON (deploy and modify add). KubeNDT now defaults it to 2 s instead of inheriting the Kubernetes default of 30 s, since emulated nodes are stateless (their configuration is replayed after a restart) and the usual `sh -c "... && sleep infinity"` entrypoint ignores SIGTERM, so the pod was killed after the full 30 s anyway. Every operation that recreates a pod (restart, delete node or link, scale down) gets faster by roughly that amount. Measured on an FRR router: restart went from ~43.6 s to ~18.6 s. Set it higher per node for workloads that need an orderly shutdown.
+
 ## [1.3.0] - 2026-08-13
 
 ### Added

@@ -341,9 +341,17 @@ func CreateNetworkStatefulSet(namespace string, node types.NodeSpec, validMounts
 		})
 	}
 
+	// Callers normalize this at validation time. The fallback covers NodeSpecs
+	// built elsewhere (e.g. reconstructed from a running StatefulSet).
+	gracePeriod := node.TerminationGracePeriodSeconds
+	if gracePeriod <= 0 {
+		gracePeriod = types.DefaultTerminationGracePeriodSeconds
+	}
+
 	podSpec := v1.PodSpec{
-		Containers: []v1.Container{container},
-		Volumes:    volumes,
+		Containers:                    []v1.Container{container},
+		Volumes:                       volumes,
+		TerminationGracePeriodSeconds: ptr.To(gracePeriod),
 	}
 
 	// if type==router, qemu, has devices, or is explicitly requested, activate privileges

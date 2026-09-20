@@ -82,6 +82,13 @@ type Warning struct {
 // modify and scale validation.
 const MaxReplicas = 128
 
+// DefaultTerminationGracePeriodSeconds is what a node gets when the topology
+// does not set one. Kubernetes would default to 30 s, but emulated nodes are
+// stateless (their configuration is replayed after a restart) and the usual
+// `sh -c "... && sleep infinity"` entrypoint ignores SIGTERM anyway, so waiting
+// only delays the SIGKILL and every pod-recreating operation by ~30 s.
+const DefaultTerminationGracePeriodSeconds int64 = 2
+
 // Structure for a Node (Statefulset pod) in the JSON request
 type NodeSpec struct {
 	Name      string `json:"name" example:"router1"`
@@ -100,6 +107,10 @@ type NodeSpec struct {
 	Mounts     []MountSpec       `json:"mounts,omitempty"`
 	Devices    []DeviceSpec      `json:"devices,omitempty"`
 	Driver     string            `json:"driver,omitempty" example:"frr-router"`
+	// Seconds Kubernetes waits for the pod to exit on SIGTERM before it is
+	// killed. Bounds restart, delete and scale-down latency. Defaults to
+	// DefaultTerminationGracePeriodSeconds, must be >= 1 when set.
+	TerminationGracePeriodSeconds int64 `json:"terminationGracePeriodSeconds,omitempty" example:"2"`
 }
 
 // Structure for a network link (CRD Topology) in the JSON request

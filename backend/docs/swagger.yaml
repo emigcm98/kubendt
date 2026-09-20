@@ -1148,6 +1148,13 @@ definitions:
       shellMode:
         example: sh
         type: string
+      terminationGracePeriodSeconds:
+        description: |-
+          Seconds Kubernetes waits for the pod to exit on SIGTERM before it is
+          killed. Bounds restart, delete and scale-down latency. Defaults to
+          DefaultTerminationGracePeriodSeconds, must be >= 1 when set.
+        example: 2
+        type: integer
       type:
         example: router
         type: string
