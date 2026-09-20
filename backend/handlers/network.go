@@ -421,11 +421,13 @@ func ModifyNetwork(c *gin.Context) {
 
 	// Trigger restarts (RestartPod just disposes of the pod and returns;
 	// the StatefulSet controller recreates it asynchronously).
+	deleteIssued := make(map[string]int64, len(restartedPods))
 	for _, pod := range restartedPods {
 		if err := helpers.RestartPod(namespace, pod); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("could not restart pod %s: %v", pod, err)})
 			return
 		}
+		deleteIssued[pod] = time.Since(startedAt).Milliseconds()
 	}
 
 	// One global wait for everything that was created or restarted in this
@@ -438,25 +440,37 @@ func ModifyNetwork(c *gin.Context) {
 	for p := range restartSet {
 		waitSet[p] = struct{}{}
 	}
+	// Everything up to here (topology updates, peer cleanup, deletes) is
+	// the backend's own preparation work.
+	prepareDur := time.Since(startedAt)
+	var timelines map[string]*types.PodTimeline
+	var waitDur time.Duration
 	if len(waitSet) > 0 {
 		waitList := make([]string, 0, len(waitSet))
 		for p := range waitSet {
 			waitList = append(waitList, p)
 		}
 		sort.Strings(waitList)
-		if err := helpers.WaitForPodsReadyByName(namespace, waitList); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		waitAt := time.Now()
+		tls, waitErr := helpers.WaitForPodsReadyTimeline(namespace, waitList, startedAt)
+		if waitErr != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": waitErr.Error()})
 			return
 		}
+		timelines = tls
+		waitDur = time.Since(waitAt)
 	}
 
 	// Replay persisted driver operations only on the peers we actually
 	// restarted, new pods have no history yet.
+	var replayDur *int64
 	if len(restartedPods) > 0 {
+		replayAt := time.Now()
 		if err := helpers.ReplayDriverOperationsForPods(namespace, restartedPods); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed replaying persisted operations after restart: %v", err)})
 			return
 		}
+		replayDur = helpers.MsPtr(time.Since(replayAt))
 	}
 
 	// === Post-restart QEMU TC rewire ===================================
@@ -560,6 +574,12 @@ func ModifyNetwork(c *gin.Context) {
 			"modify_operations": fmt.Sprintf("%.2fs", modifyOpsDur.Seconds()),
 			"reconciliation":    fmt.Sprintf("%.2fs", reconciliationDur.Seconds()),
 		},
+		"timeline": helpers.BuildOperationTimeline(startedAt, timelines, deleteIssued, types.BackendPhasesMs{
+			Prepare:   helpers.MsPtr(prepareDur),
+			WaitReady: helpers.MsPtr(waitDur),
+			Replay:    replayDur,
+			Heal:      helpers.MsPtr(reconciliationDur),
+		}),
 		"deleted_nodes":    deletedNodes,
 		"restarted_pods":   restartedPods,
 		"scaled_up_pods":   scaledUpPods,
@@ -863,14 +883,15 @@ func DeployNetwork(c *gin.Context) {
 	// 9. Wait until all Pods are ready. The error is already user-facing and
 	// specific (e.g. an image-pull failure names the pod, image and reason), so
 	// surface it rather than a generic timeout message.
-	if err := helpers.WaitForPodsReady(namespace, request.Nodes); err != nil {
-		log.Printf("❌ Pods did not become ready, rolling back created resources: %v", err)
+	timelines, waitErr := helpers.WaitForPodsReadyTimeline(namespace, helpers.PodNamesForNodes(request.Nodes), startedAt)
+	if waitErr != nil {
+		log.Printf("❌ Pods did not become ready, rolling back created resources: %v", waitErr)
 		// A fresh deploy that can't bring all pods up is unusable, so roll back
 		// what was created and leave the namespace clean (positions and files
 		// are kept so the user can fix the input and re-import).
 		helpers.RollbackNamespaceTopology(namespace)
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":      err.Error(),
+			"error":      waitErr.Error(),
 			"rolledBack": true,
 		})
 		return
@@ -905,6 +926,12 @@ func DeployNetwork(c *gin.Context) {
 			"node_running":      fmt.Sprintf("%.2fs", nodeRunningDur.Seconds()),
 			"reconciliation":    fmt.Sprintf("%.2fs", reconciliationDur.Seconds()),
 		},
+		"timeline": helpers.BuildOperationTimeline(startedAt, timelines, nil, types.BackendPhasesMs{
+			Validation:       helpers.MsPtr(resourcesAt.Sub(startedAt)),
+			ResourceCreation: helpers.MsPtr(resourceCreationDur),
+			WaitReady:        helpers.MsPtr(nodeRunningDur),
+			Heal:             helpers.MsPtr(reconciliationDur),
+		}),
 		"warnings": warnings,
 	})
 }

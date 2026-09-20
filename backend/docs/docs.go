@@ -2578,6 +2578,45 @@ const docTemplate = `{
                 }
             }
         },
+        "types.BackendPhasesMs": {
+            "type": "object",
+            "properties": {
+                "heal": {
+                    "description": "Interface validation and healing after the pods are Ready.",
+                    "type": "integer",
+                    "example": 380
+                },
+                "prepare": {
+                    "description": "Everything before pods start being deleted (restart) or before the\nwait begins (modify): topology updates, peer cleanup, delete calls.",
+                    "type": "integer",
+                    "example": 1180
+                },
+                "replay": {
+                    "description": "Replay of the persisted operation history on recreated pods.",
+                    "type": "integer",
+                    "example": 40
+                },
+                "resource_creation": {
+                    "description": "Topology CRDs, ConfigMaps and StatefulSets created (deploy).",
+                    "type": "integer",
+                    "example": 470
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 6760
+                },
+                "validation": {
+                    "description": "Input validation and driver resolution (deploy).",
+                    "type": "integer",
+                    "example": 12
+                },
+                "wait_ready": {
+                    "description": "From the first pod delete/create until every affected pod is Ready.",
+                    "type": "integer",
+                    "example": 5300
+                }
+            }
+        },
         "types.CapabilityEntry": {
             "type": "object",
             "properties": {
@@ -2845,6 +2884,9 @@ const docTemplate = `{
                 "message": {
                     "type": "string",
                     "example": "Network infrastructure deployed successfully"
+                },
+                "timeline": {
+                    "$ref": "#/definitions/types.OperationTimeline"
                 },
                 "took_time": {
                     "$ref": "#/definitions/types.DeployTimingResponse"
@@ -3348,6 +3390,9 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                },
+                "timeline": {
+                    "$ref": "#/definitions/types.OperationTimeline"
                 },
                 "took_time": {
                     "$ref": "#/definitions/types.ModifyTimingResponse"
@@ -4163,6 +4208,30 @@ const docTemplate = `{
                 }
             }
         },
+        "types.OperationTimeline": {
+            "type": "object",
+            "properties": {
+                "backend_ms": {
+                    "description": "Backend phases in ms since request_started_at. Only the ones that\napply to the operation are present.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.BackendPhasesMs"
+                        }
+                    ]
+                },
+                "pods": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.PodTimeline"
+                    }
+                },
+                "request_started_at": {
+                    "description": "When the backend started handling the request, RFC3339 with ms.",
+                    "type": "string",
+                    "example": "2026-09-20T12:47:47.120Z"
+                }
+            }
+        },
         "types.PodDriverHistoryResponseDoc": {
             "type": "object",
             "properties": {
@@ -4289,6 +4358,36 @@ const docTemplate = `{
                 }
             }
         },
+        "types.PodKubernetesStamps": {
+            "type": "object",
+            "properties": {
+                "container_started": {
+                    "description": "containerStatuses[0].state.running.startedAt, image pulled and process started.",
+                    "type": "string",
+                    "example": "2026-09-20T12:47:52Z"
+                },
+                "created": {
+                    "description": "metadata.creationTimestamp, when the StatefulSet controller created the pod.",
+                    "type": "string",
+                    "example": "2026-09-20T12:47:51Z"
+                },
+                "ready": {
+                    "description": "Ready condition, the readiness probe passed.",
+                    "type": "string",
+                    "example": "2026-09-20T12:47:53Z"
+                },
+                "sandbox_ready": {
+                    "description": "PodReadyToStartContainers condition, sandbox created and CNI attachment\ndone (this is where Meshnet wires the interfaces). Needs Kubernetes 1.29+.",
+                    "type": "string",
+                    "example": "2026-09-20T12:47:52Z"
+                },
+                "scheduled": {
+                    "description": "PodScheduled condition, a worker was chosen.",
+                    "type": "string",
+                    "example": "2026-09-20T12:47:51Z"
+                }
+            }
+        },
         "types.PodMetricsResponse": {
             "type": "object",
             "properties": {
@@ -4324,6 +4423,63 @@ const docTemplate = `{
                 "error": {
                     "type": "string",
                     "example": "metrics-server not available or not installed"
+                }
+            }
+        },
+        "types.PodObservedStamps": {
+            "type": "object",
+            "properties": {
+                "container_started": {
+                    "type": "integer",
+                    "example": 5900
+                },
+                "delete_issued": {
+                    "description": "The backend asked Kubernetes to delete the previous pod (restart, modify).",
+                    "type": "integer",
+                    "example": 1180
+                },
+                "old_pod_gone": {
+                    "description": "The previous pod object disappeared, termination complete (restart, modify).",
+                    "type": "integer",
+                    "example": 4210
+                },
+                "ready_seen": {
+                    "description": "The pod became Ready and the backend's watch delivered it. Against\nkubernetes.ready this is the platform's detection lag.",
+                    "type": "integer",
+                    "example": 6480
+                },
+                "sandbox_ready": {
+                    "type": "integer",
+                    "example": 5100
+                },
+                "scheduled": {
+                    "type": "integer",
+                    "example": 4300
+                }
+            }
+        },
+        "types.PodTimeline": {
+            "type": "object",
+            "properties": {
+                "kubernetes": {
+                    "description": "Stamps written by Kubernetes on the Pod object, RFC3339, 1 s\nresolution. Empty when the cluster does not report a condition.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.PodKubernetesStamps"
+                        }
+                    ]
+                },
+                "observed_ms": {
+                    "description": "Transitions as the backend saw them, in ms since request_started_at.\nA step that had already happened when the backend started watching\nthe pod is omitted.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.PodObservedStamps"
+                        }
+                    ]
+                },
+                "pod": {
+                    "type": "string",
+                    "example": "router1-0"
                 }
             }
         },
@@ -4400,6 +4556,9 @@ const docTemplate = `{
                 "replayed_operations": {
                     "type": "integer",
                     "example": 2
+                },
+                "timeline": {
+                    "$ref": "#/definitions/types.OperationTimeline"
                 },
                 "took_time": {
                     "$ref": "#/definitions/types.RestartTimingResponse"

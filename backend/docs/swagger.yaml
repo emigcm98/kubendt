@@ -58,6 +58,39 @@ definitions:
           type: string
         type: array
     type: object
+  types.BackendPhasesMs:
+    properties:
+      heal:
+        description: Interface validation and healing after the pods are Ready.
+        example: 380
+        type: integer
+      prepare:
+        description: |-
+          Everything before pods start being deleted (restart) or before the
+          wait begins (modify): topology updates, peer cleanup, delete calls.
+        example: 1180
+        type: integer
+      replay:
+        description: Replay of the persisted operation history on recreated pods.
+        example: 40
+        type: integer
+      resource_creation:
+        description: Topology CRDs, ConfigMaps and StatefulSets created (deploy).
+        example: 470
+        type: integer
+      total:
+        example: 6760
+        type: integer
+      validation:
+        description: Input validation and driver resolution (deploy).
+        example: 12
+        type: integer
+      wait_ready:
+        description: From the first pod delete/create until every affected pod is
+          Ready.
+        example: 5300
+        type: integer
+    type: object
   types.CapabilityEntry:
     properties:
       description:
@@ -249,6 +282,8 @@ definitions:
       message:
         example: Network infrastructure deployed successfully
         type: string
+      timeline:
+        $ref: '#/definitions/types.OperationTimeline'
       took_time:
         $ref: '#/definitions/types.DeployTimingResponse'
       warnings:
@@ -604,6 +639,8 @@ definitions:
         items:
           type: string
         type: array
+      timeline:
+        $ref: '#/definitions/types.OperationTimeline'
       took_time:
         $ref: '#/definitions/types.ModifyTimingResponse'
       warnings:
@@ -1183,6 +1220,23 @@ definitions:
         example: v1.32.2
         type: string
     type: object
+  types.OperationTimeline:
+    properties:
+      backend_ms:
+        allOf:
+        - $ref: '#/definitions/types.BackendPhasesMs'
+        description: |-
+          Backend phases in ms since request_started_at. Only the ones that
+          apply to the operation are present.
+      pods:
+        items:
+          $ref: '#/definitions/types.PodTimeline'
+        type: array
+      request_started_at:
+        description: When the backend started handling the request, RFC3339 with ms.
+        example: "2026-09-20T12:47:47.120Z"
+        type: string
+    type: object
   types.PodDriverHistoryResponseDoc:
     properties:
       namespace:
@@ -1274,6 +1328,33 @@ definitions:
           $ref: '#/definitions/types.PodInterfaceEntry'
         type: array
     type: object
+  types.PodKubernetesStamps:
+    properties:
+      container_started:
+        description: containerStatuses[0].state.running.startedAt, image pulled and
+          process started.
+        example: "2026-09-20T12:47:52Z"
+        type: string
+      created:
+        description: metadata.creationTimestamp, when the StatefulSet controller created
+          the pod.
+        example: "2026-09-20T12:47:51Z"
+        type: string
+      ready:
+        description: Ready condition, the readiness probe passed.
+        example: "2026-09-20T12:47:53Z"
+        type: string
+      sandbox_ready:
+        description: |-
+          PodReadyToStartContainers condition, sandbox created and CNI attachment
+          done (this is where Meshnet wires the interfaces). Needs Kubernetes 1.29+.
+        example: "2026-09-20T12:47:52Z"
+        type: string
+      scheduled:
+        description: PodScheduled condition, a worker was chosen.
+        example: "2026-09-20T12:47:51Z"
+        type: string
+    type: object
   types.PodMetricsResponse:
     properties:
       available:
@@ -1299,6 +1380,53 @@ definitions:
         type: boolean
       error:
         example: metrics-server not available or not installed
+        type: string
+    type: object
+  types.PodObservedStamps:
+    properties:
+      container_started:
+        example: 5900
+        type: integer
+      delete_issued:
+        description: The backend asked Kubernetes to delete the previous pod (restart,
+          modify).
+        example: 1180
+        type: integer
+      old_pod_gone:
+        description: The previous pod object disappeared, termination complete (restart,
+          modify).
+        example: 4210
+        type: integer
+      ready_seen:
+        description: |-
+          The pod became Ready and the backend's watch delivered it. Against
+          kubernetes.ready this is the platform's detection lag.
+        example: 6480
+        type: integer
+      sandbox_ready:
+        example: 5100
+        type: integer
+      scheduled:
+        example: 4300
+        type: integer
+    type: object
+  types.PodTimeline:
+    properties:
+      kubernetes:
+        allOf:
+        - $ref: '#/definitions/types.PodKubernetesStamps'
+        description: |-
+          Stamps written by Kubernetes on the Pod object, RFC3339, 1 s
+          resolution. Empty when the cluster does not report a condition.
+      observed_ms:
+        allOf:
+        - $ref: '#/definitions/types.PodObservedStamps'
+        description: |-
+          Transitions as the backend saw them, in ms since request_started_at.
+          A step that had already happened when the backend started watching
+          the pod is omitted.
+      pod:
+        example: router1-0
         type: string
     type: object
   types.PodsListResponse:
@@ -1352,6 +1480,8 @@ definitions:
       replayed_operations:
         example: 2
         type: integer
+      timeline:
+        $ref: '#/definitions/types.OperationTimeline'
       took_time:
         $ref: '#/definitions/types.RestartTimingResponse'
     type: object
