@@ -13,7 +13,7 @@ KubeNDT maps a topology model into Kubernetes resources:
 ## Execution Layers
 
 1. API layer (`backend/handlers`): validates requests and orchestrates operations.
-2. Domain/helper layer (`backend/helpers`): applies topology, reconciliation, and pod operations.
+2. Domain/helper layer (`backend/helpers`): applies topology, the heal pass, and pod operations.
 3. Driver layer (`backend/drivers` + `backend/capabilities`): translates actions into executor commands.
 4. Kubernetes layer (`backend/kubeclient`): client-go access to resources.
 
@@ -40,14 +40,13 @@ Traffic control is not a driver capability. It runs on any pod through the pod's
 
 The same action type can use different executors depending on driver/runtime constraints (for example guest CLI wrappers in QEMU-based platforms).
 
-## Reconciliation
+## Heal pass
 
-Reconciliation keeps desired and observed state aligned by:
+After a deploy or a modify, the backend runs a bounded heal pass (`HealMissingInterfaces`) over the links the operation touched. It checks that every declared interface exists in both pods, re-checks a miss a few times over three seconds in case the status has not settled, and only then restarts the endpoint that is missing its interface, waits for it, and replays its persisted operation history. At most two rounds; if interfaces are still missing after that, the operation reports the failure and leaves the pods as they are.
 
-- checking pod readiness,
-- validating link/interface state,
-- nudging topology/pod reconcile loops,
-- replaying persisted driver operations after restart when applicable.
+This is deliberately not a controller loop. Kubernetes readers may expect "reconciliation" to mean a process that watches the cluster and drives it toward a desired state indefinitely. KubeNDT does not do that: nothing runs between operations, the pass is triggered by the backend, does a fixed amount of work and returns. A wiring failure in Meshnet is a one-off event that follows an operation, not a drift that keeps happening, so a bounded repair right after the operation is enough and keeps the backend stateless with respect to the cluster. The two things that do reconcile continuously are Meshnet's own controller and the StatefulSet controller, and the backend nudges the former (annotation updates on Pod and Topology objects) when it wants a link re-evaluated without restarting anything.
+
+The duration of the pass is reported as `timeline.backend_ms.heal`, and under the older `took_time.reconciliation` key that is kept for compatibility.
 
 ## Persistence
 

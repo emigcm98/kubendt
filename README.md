@@ -202,9 +202,9 @@ KubeNDT includes **6 reference deployments** in `deploy/examples/`. Start with t
 
 KubeNDT is actively developed. The following limitations are known:
 
-### Reconciliation & Pod Rescheduling
+### Heal pass & Pod Rescheduling
 
-- **Issue**: If a pod is **rescheduled to a different node** after a deployment failure and both the old and new pod instances remain running, reconciliation may struggle to clean up both instances. It can lead to orphaned pods or stuck topologies.
+- **Issue**: If a pod is **rescheduled to a different node** after a deployment failure and both the old and new pod instances remain running, the heal pass may struggle to clean up both instances. It can lead to orphaned pods or stuck topologies.
 - **Workaround**: Manually delete the orphaned pod or clear the namespace and redeploy.
 
 ### Virtual Machine Drivers
@@ -214,7 +214,7 @@ KubeNDT is actively developed. The following limitations are known:
 
 ### Stateful Pod Configuration
 
-- **Current behavior**: Operations applied through KubeNDT configuration API (`network/configure`) are intentionally persisted per pod and replayed after restart/reconcile, but manual changes done directly inside pods (for example ad-hoc shell commands not sent through KubeNDT API) are not tracked for replay. This is done deliberately to preserve only changes made via drivers.
+- **Current behavior**: Operations applied through KubeNDT configuration API (`network/configure`) are intentionally persisted per pod and replayed after restart/heal, but manual changes done directly inside pods (for example ad-hoc shell commands not sent through KubeNDT API) are not tracked for replay. This is done deliberately to preserve only changes made via drivers.
 - **Workaround**: Apply changes through KubeNDT API, mounted config files, or startup scripts when persistence is required.
 
 ### Pod shutdown

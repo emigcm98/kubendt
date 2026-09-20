@@ -119,11 +119,11 @@ Drivers can override methods (e.g., HostDriver overrides ReplaceIP with idempote
 
 ---
 
-## 2. Reconciliation Mechanism
+## 2. Heal Pass Mechanism
 
 ### 2.1 Multi-Round Recovery Strategy
 
-**File**: `backend/helpers/reconcile.go`, `ReconcileMissingInterfaces(namespace, nodes, links, maxRounds=2)`
+**File**: `backend/helpers/heal.go`, `HealMissingInterfaces(namespace, nodes, links, maxRounds=2)`
 
 **Overview**: Bounded recovery strategy that progressively restarts pods to recover missing interfaces.
 
@@ -164,13 +164,13 @@ FOR round = 1 TO maxRounds:
   - Fewest total missing interfaces (spreads restarts)
   - Priority to routers/switches over hosts
 
-### 2.3 Reconciliation Triggers
+### 2.3 Heal Pass Triggers
 
 **File**: `backend/handlers/network.go`, `DeployNetwork()` handler
 
 - Called at end of deploy after StatefulSets created and pods ready
-- Mod workflow calls `ReconcileMissingInterfaces` after topology setup
-- Scale-up and Add now pre-declare both sides of every new link in the Topology CRDs AND pre-inject peer skip entries (`injectPeerSkipEntries`) before creating/patching StatefulSets. With both pieces in place the new pod's first CNI ADD materialises the veth on both ends in a single pass, so the post-modify reconciliation typically passes with zero restarts (see Section 3.2 for the per-phase details).
+- Mod workflow calls `HealMissingInterfaces` after topology setup
+- Scale-up and Add now pre-declare both sides of every new link in the Topology CRDs AND pre-inject peer skip entries (`injectPeerSkipEntries`) before creating/patching StatefulSets. With both pieces in place the new pod's first CNI ADD materialises the veth on both ends in a single pass, so the post-modify heal pass typically passes with zero restarts (see Section 3.2 for the per-phase details).
 
 ### 2.4 Driver Operation Replay
 
@@ -254,7 +254,7 @@ FOR round = 1 TO maxRounds:
 
 12. Wait for pods ready (watch on pod events, 180s timeout)
 
-13. Reconcile missing interfaces (bounded, 2 rounds)
+13. Heal missing interfaces (bounded, 2 rounds)
     - Detects and recovers missing network interfaces
     - Restarts pods as needed
 
@@ -286,7 +286,7 @@ A single modify request can contain any combination of `add`, `delete` and `scal
    - Assign/generate link UIDs (consistent with existing)
    - Create ConfigMaps for new node mounts
 
-3. Declare CRDs FIRST (avoids reconciliation restart):
+3. Declare CRDs FIRST (avoids heal restart):
    - Create Topology CRDs for new pods (new-pod side declared)
    - upsertAppendLinksInTopologies for all add.links (peer side declared)
    - injectPeerSkipEntries on every new pod (writes
@@ -351,7 +351,7 @@ For each scale-up plan (new > current):
      - CreateTopologyForPod for each new pod with relevantLinks
      - upsertAppendLinksInTopologies for the peer side
      - injectPeerSkipEntries on each new pod (same rationale as
-       in Add Phase, avoids the reconciliation restart)
+       in Add Phase, avoids the heal restart)
   4. Patch StatefulSet.Spec.Replicas = new
   5. WaitForPodsReadyByName for the new ordinals only
   6. Return consumedUIDs so the handler strips these links from
@@ -360,14 +360,14 @@ For each scale-up plan (new > current):
      as already in use on the just-materialised pod)
 ```
 
-The scale phases reuse the same Topology / StatefulSet / driver primitives as Add and Delete, so reconciliation, soft-heal and replay all apply uniformly across the four lifecycle operations.
+The scale phases reuse the same Topology / StatefulSet / driver primitives as Add and Delete, so the heal pass, soft-heal and replay all apply uniformly across the four lifecycle operations.
 
 ### 3.3 Soft-Heal Mechanism (Post-Modify)
 
 **File**: `backend/handlers/network.go`, after add/delete
 
 ```
-Soft-heal Phase (non-destructive reconciliation):
+Soft-heal Phase (non-destructive heal):
 1. Collect restarted pods from add/delete operations
 2. Build links from Topology CRDs
 3. Filter links touching restarted pods
@@ -377,7 +377,7 @@ Soft-heal Phase (non-destructive reconciliation):
    - NudgeTopologyReconcile: Update Topology annotation "kubendt/reconcile-at" = current timestamp
 6. No pod restart, no operation replay (just hints to external controllers)
 
-This avoids expensive reconciliation rounds by hinting to meshnet to re-process
+This avoids expensive heal rounds by hinting to meshnet to re-process
 these pods WITHOUT restarting them.
 ```
 
@@ -438,7 +438,7 @@ The schema version is tracked with `PRAGMA user_version` and advanced by `applyM
    - Serializes actionEntry to JSON, inserts into driver_operation_history
    - Idempotent: no dedup, just appends
 
-2. During pod restart (reconciliation):
+2. During pod restart (heal pass):
    - Call `ReplayDriverOperationsForPods(namespace, []podNames)`
    - Lists operations from DB, resolves driver, re-executes commands
    - Handles failures: prunes stale entries
@@ -450,7 +450,7 @@ The schema version is tracked with `PRAGMA user_version` and advanced by `applyM
 1. Kubernetes restarts pod (StatefulSet ensures recreation)
 2. Pod mounts receive Topology CRD (meshnet populates networks)
 3. Network interfaces appear in pod (meshnet creates veth pairs)
-4. Backend reconciliation detects missing interfaces (if partial)
+4. The backend heal pass detects missing interfaces (if partial)
    - Triggers RestartPod (kills + StatefulSet recreates)
 5. Post-restart: ReplayDriverOperationsForPods
    - Reads history from driver_operation_history
@@ -558,9 +558,9 @@ type RuntimeProvider interface {
 
 **Rationale**: the runtime is a property of the driver, not of the topology. The user picks a driver and the driver dictates whether QEMU is needed. This eliminates the previous error class where a topology could declare `qemu: true` with an incompatible driver, and it stops leaking an implementation detail into the public API.
 
-### 5.5 Reconciliation Considerations
+### 5.5 Heal Pass Considerations
 
-**QEMU pods in reconciliation**:
+**QEMU pods in the heal pass**:
 
 - Still participate in interface validation (if links reference them)
 - Interfaces detected via `ip a` exec in the QEMU container
@@ -589,7 +589,7 @@ Create StatefulSets (labels: driver + qemu/runtime derived from driver's Runtime
   ↓
 Wait pods ready (180s)
   ↓
-ReconcileMissingInterfaces (2 rounds, restart+replay ops)
+HealMissingInterfaces (2 rounds, restart+replay ops)
   ↓
 Set namespace_state.has_topology = 1
   ↓
@@ -621,7 +621,7 @@ StatefulSet recreates pod
   ↓
 Meshnet populates networks
   ↓
-Reconciliation detects missing interfaces
+The heal pass detects missing interfaces
   ↓
 Restart pod again (soft-heal)
   ↓
@@ -726,7 +726,7 @@ Interfaces operational
 1. **New Drivers**: Embed capability bases, register with RegisterAllDrivers()
 2. **New Capabilities**: Define interface, create base with default implementation, add type assertions in ResolveDriverCommands()
 3. **New Actions**: Extend types.ActionEntry fields, add mapping in capability Interface & L3/NAT/TC/SwitchMethods maps
-4. **Reconciliation Strategy**: Modify ReconcileMissingInterfaces algorithm (restart logic, retry count)
+4. **Heal Strategy**: Modify HealMissingInterfaces algorithm (restart logic, retry count)
 5. **State Recovery**: Alternative backends possible (Etcd, gRPC) by replacing SQLite DB layer
 
 ## 11. Packet Capture

@@ -157,10 +157,10 @@ func RestartPod(c *gin.Context) {
 	deleteIssued := time.Since(requestStart)
 	waitAt := time.Now()
 
-	// After manual restart, run only soft-heal nudges (no hard reconcile / extra restarts).
+	// After manual restart, run only soft-heal nudges (no hard heal / extra restarts).
 	timelines, waitErr := helpers.WaitForPodsReadyTimeline(namespace, []string{podName}, requestStart)
 	if waitErr != nil {
-		log.Printf("⚠️ Pod '%s' restarted but not fully ready before reconcile: %v", podName, waitErr)
+		log.Printf("⚠️ Pod '%s' restarted but not fully ready before the soft heal: %v", podName, waitErr)
 	}
 	waitDur := time.Since(waitAt)
 	podRestartDur := time.Since(startedAt)

@@ -308,6 +308,9 @@ definitions:
         example: 45.01s
         type: string
       reconciliation:
+        description: |-
+          Duration of the post-deploy heal pass (interface validation and repair).
+          Key kept for compatibility, same figure as timeline.backend_ms.heal.
         example: 6.18s
         type: string
       resource_creation:
@@ -700,6 +703,8 @@ definitions:
         example: 3.12s
         type: string
       reconciliation:
+        description: Duration of the post-modify heal pass. Key kept for compatibility,
+          same as timeline.backend_ms.heal.
         example: 2.11s
         type: string
       total:

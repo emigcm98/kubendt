@@ -45,7 +45,7 @@ go run github.com/swaggo/swag/cmd/swag@v1.16.6 init -g main.go
 - Check `CORS_ALLOWED_ORIGINS` matches frontend origin.
 - In reverse-proxy same-origin deployments, CORS is usually unnecessary.
 
-## Reconciliation loops or failed pods
+## Heal pass loops or failed pods
 
 - Check pod logs:
 

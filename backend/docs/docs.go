@@ -2965,6 +2965,7 @@ const docTemplate = `{
                     "example": "45.01s"
                 },
                 "reconciliation": {
+                    "description": "Duration of the post-deploy heal pass (interface validation and repair).\nKey kept for compatibility, same figure as timeline.backend_ms.heal.",
                     "type": "string",
                     "example": "6.18s"
                 },
@@ -3515,6 +3516,7 @@ const docTemplate = `{
                     "example": "3.12s"
                 },
                 "reconciliation": {
+                    "description": "Duration of the post-modify heal pass. Key kept for compatibility, same as timeline.backend_ms.heal.",
                     "type": "string",
                     "example": "2.11s"
                 },
