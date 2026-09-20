@@ -184,15 +184,23 @@ func buildReadinessProbe(driver any) *v1.Probe {
 			FailureThreshold:    spec.FailureThreshold,
 		}
 	}
+	// No initial delay: the kubelet runs the first probe as soon as the
+	// container starts, so a node that already has `ip` is Ready right away
+	// instead of 5-10 s later. Nodes that still install tools at startup
+	// just stay NotReady and are re-probed every 2 s until it shows up, the
+	// threshold plays no part in that. It only decides how many consecutive
+	// failures flip an already Ready pod back to NotReady, and since `ip`
+	// never disappears the only failures are exec timeouts under load. 30
+	// means a full minute of them before a healthy pod is flagged.
 	return &v1.Probe{
 		ProbeHandler: v1.ProbeHandler{
 			Exec: &v1.ExecAction{
 				Command: []string{"sh", "-c", "command -v ip"},
 			},
 		},
-		InitialDelaySeconds: 5,
-		PeriodSeconds:       5,
-		FailureThreshold:    12,
+		InitialDelaySeconds: 0,
+		PeriodSeconds:       2,
+		FailureThreshold:    30,
 	}
 }
 

@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Nodes accept an optional `terminationGracePeriodSeconds` in the topology JSON (deploy and modify add). KubeNDT now defaults it to 2 s instead of inheriting the Kubernetes default of 30 s, since emulated nodes are stateless (their configuration is replayed after a restart) and the usual `sh -c "... && sleep infinity"` entrypoint ignores SIGTERM, so the pod was killed after the full 30 s anyway. Every operation that recreates a pod (restart, delete node or link, scale down) gets faster by roughly that amount. Measured on an FRR router: restart went from ~43.6 s to ~18.6 s. Set it higher per node for workloads that need an orderly shutdown.
 
+### Changed
+
+- The default readiness probe (`command -v ip`) no longer waits 5 s before its first run and probes every 2 s instead of 5. A container that starts in a second is Ready in about a second, where before it took 5 to 10 s. Nodes that install tools at startup stay NotReady and are re-probed until `ip` appears, as before. The failure threshold is raised to 30 so that a minute of transient exec failures under load is needed before a healthy pod flips back to NotReady. Drivers that ship their own probe (VyOS) are unchanged.
+
 ## [1.3.0] - 2026-08-13
 
 ### Added
