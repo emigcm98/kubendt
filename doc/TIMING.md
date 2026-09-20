@@ -52,6 +52,8 @@ Comparing `kubernetes.ready` with `observed_ms.ready_seen` gives the platform's 
 | Readiness (probe) | `kubernetes.container_started` | `kubernetes.ready` |
 | Detection by KubeNDT | `kubernetes.ready` | `observed_ms.ready_seen` |
 
+`kubernetes.ready` is whatever the node's readiness probe certifies, and that depends on the node type. The default probe only checks that `ip` exists in the container, so for a plain host or router Ready means "the image is up". Drivers whose node has a control daemon that starts later override it so that Ready means "this node accepts configuration": VyOS is Ready when both `ssh_qemu` and the guest's HTTP API answer, Open vSwitch when `ovs-vsctl` can talk to `ovsdb-server`. Compare readiness figures across node types with that in mind.
+
 `sandbox_ready` is the `PodReadyToStartContainers` condition and needs Kubernetes 1.29 or newer. On older clusters the field is empty. `Initialized` is not used as a fallback because the kubelet sets it at scheduling time for pods without init containers, long before the sandbox exists.
 
 One caveat on `sandbox_ready`. A condition's `lastTransitionTime` is the moment the kubelet first reported it, not the moment the sandbox became ready, while `container_started` comes from the container runtime. When a container starts within the same kubelet status sync as the sandbox, the two land in one status update: `observed_ms.sandbox_ready` and `observed_ms.container_started` are then identical, and with 1 s rounding `kubernetes.sandbox_ready` can even read one second after `kubernetes.container_started`. In that case the CNI attachment and the container start cannot be told apart, and the honest figure is `kubernetes.scheduled` to `kubernetes.container_started` for the two together.

@@ -61,16 +61,20 @@ func (VyOSRouterDriver) InterfaceNameConstraints() drivers_meta.InterfaceNameCon
 	}
 }
 
-// ReadinessProbeCommands returns an SSH-based readiness probe: the pod is
-// Ready once the QEMU guest answers over ssh_qemu. Probing starts at 30 s
-// (boot optimisations pulled the envelope below the historical ~73 s) with
-// the same total failure budget as before, 30 + 5*21 = 135 s.
+// ReadinessProbeCommands makes the pod Ready only when both control channels
+// into the guest answer: ssh_qemu (rescue path) and the HTTP API (hot path,
+// what configure and replay use). SSH comes up 7-10 s before the API and
+// nginx answers 502 in between, so probing SSH alone made Ready arrive while
+// the router could not yet be configured. Probing starts at 30 s (boot
+// optimisations pulled the envelope below the historical ~73 s) with the
+// same total failure budget as before, 30 + 5*21 = 135 s.
 func (VyOSRouterDriver) ReadinessProbeCommands() types.ReadinessProbeSpec {
 	return types.ReadinessProbeSpec{
-		Command:             []string{"sh", "-c", "ssh_qemu echo ok"},
+		Command: []string{"sh", "-c",
+			`ssh_qemu echo ok >/dev/null && vyos_api retrieve '{"op":"showConfig","path":["system","host-name"]}' >/dev/null`},
 		InitialDelaySeconds: 30,
 		PeriodSeconds:       5,
-		TimeoutSeconds:      8, // ssh_qemu ConnectTimeout=5, add margin
+		TimeoutSeconds:      12, // ssh ConnectTimeout=5 plus curl --connect-timeout 5, with margin
 		FailureThreshold:    21,
 	}
 }
