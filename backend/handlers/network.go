@@ -474,15 +474,17 @@ func ModifyNetwork(c *gin.Context) {
 
 	// Replay persisted driver operations only on the peers we actually
 	// restarted, new pods have no history yet.
-	var replayDur *int64
+	var replayDur, peerReplayDur *int64
 	if len(restartedPods) > 0 {
 		replayAt := time.Now()
 		if err := helpers.ReplayDriverOperationsForPods(namespace, restartedPods); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed replaying persisted operations after restart: %v", err)})
 			return
 		}
-		helpers.ReapplyPeerInterfaceState(namespace, restartedPods)
 		replayDur = helpers.MsPtr(time.Since(replayAt))
+		peerReplayAt := time.Now()
+		helpers.ReapplyPeerInterfaceState(namespace, restartedPods)
+		peerReplayDur = helpers.MsPtr(time.Since(peerReplayAt))
 	}
 
 	// Fast post-modify soft-heal: nudge Pod + Topology updates for impacted pods
@@ -567,10 +569,11 @@ func ModifyNetwork(c *gin.Context) {
 			"reconciliation": fmt.Sprintf("%.2fs", healDur.Seconds()),
 		},
 		"timeline": helpers.BuildOperationTimeline(startedAt, timelines, deleteIssued, types.BackendPhasesMs{
-			Prepare:   helpers.MsPtr(prepareDur),
-			WaitReady: helpers.MsPtr(waitDur),
-			Replay:    replayDur,
-			Heal:      helpers.MsPtr(healDur),
+			Prepare:    helpers.MsPtr(prepareDur),
+			WaitReady:  helpers.MsPtr(waitDur),
+			Replay:     replayDur,
+			PeerReplay: peerReplayDur,
+			Heal:       helpers.MsPtr(healDur),
 		}),
 		"deleted_nodes":    deletedNodes,
 		"restarted_pods":   restartedPods,

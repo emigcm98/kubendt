@@ -64,6 +64,13 @@ definitions:
         description: Interface validation and healing after the pods are Ready.
         example: 380
         type: integer
+      peer_replay:
+        description: |-
+          Re-application, on the neighbours of the recreated pods, of the operations
+          that touch the interfaces Meshnet recreated with them. Recovery cost of the
+          neighbours, kept apart from the pods' own replay.
+        example: 1800
+        type: integer
       prepare:
         description: |-
           Everything before pods start being deleted (restart) or before the
@@ -71,7 +78,8 @@ definitions:
         example: 1180
         type: integer
       replay:
-        description: Replay of the persisted operation history on recreated pods.
+        description: Replay of the persisted operation history on the recreated pods
+          themselves.
         example: 40
         type: integer
       resource_creation:
@@ -1572,10 +1580,15 @@ definitions:
     type: object
   types.RestartTimingResponse:
     properties:
+      peer_replay:
+        description: Neighbour operations touching the recreated interfaces re-applied.
+        example: 1.80s
+        type: string
       pod_restart:
         example: 40.30s
         type: string
       replay:
+        description: History of the restarted pod replayed on the new pod.
         example: 0.95s
         type: string
       total:

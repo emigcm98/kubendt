@@ -176,9 +176,12 @@ func RestartPod(c *gin.Context) {
 		})
 		return
 	}
-	// The neighbours' interfaces facing this pod were recreated too.
-	peerStats := helpers.ReapplyPeerInterfaceState(namespace, []string{podName})
 	replayDur := time.Since(replayAt)
+	// The neighbours' interfaces facing this pod were recreated too. Timed apart
+	// from the pod's own replay: it is the neighbours' recovery cost.
+	peerReplayAt := time.Now()
+	peerStats := helpers.ReapplyPeerInterfaceState(namespace, []string{podName})
+	peerReplayDur := time.Since(peerReplayAt)
 
 	nudgePodAndTopology("soft", podName)
 
@@ -192,13 +195,15 @@ func RestartPod(c *gin.Context) {
 			"total":       fmt.Sprintf("%.2fs", time.Since(startedAt).Seconds()),
 			"pod_restart": fmt.Sprintf("%.2fs", podRestartDur.Seconds()),
 			"replay":      fmt.Sprintf("%.2fs", replayDur.Seconds()),
+			"peer_replay": fmt.Sprintf("%.2fs", peerReplayDur.Seconds()),
 		},
 		"timeline": helpers.BuildOperationTimeline(requestStart, timelines,
 			map[string]int64{podName: deleteIssued.Milliseconds()},
 			types.BackendPhasesMs{
-				Prepare:   helpers.MsPtr(deleteIssued),
-				WaitReady: helpers.MsPtr(waitDur),
-				Replay:    helpers.MsPtr(replayDur),
+				Prepare:    helpers.MsPtr(deleteIssued),
+				WaitReady:  helpers.MsPtr(waitDur),
+				Replay:     helpers.MsPtr(replayDur),
+				PeerReplay: helpers.MsPtr(peerReplayDur),
 			}),
 	})
 }

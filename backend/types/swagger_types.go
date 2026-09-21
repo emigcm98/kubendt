@@ -140,7 +140,10 @@ type DriverReplayStatsDoc struct {
 type RestartTimingResponse struct {
 	Total      string `json:"total" example:"42.50s"`
 	PodRestart string `json:"pod_restart" example:"40.30s"`
-	Replay     string `json:"replay" example:"0.95s"`
+	// History of the restarted pod replayed on the new pod.
+	Replay string `json:"replay" example:"0.95s"`
+	// Neighbour operations touching the recreated interfaces re-applied.
+	PeerReplay string `json:"peer_replay" example:"1.80s"`
 }
 
 // PeerReplayStatsDoc summarizes the re-apply of neighbour interface state after a restart.

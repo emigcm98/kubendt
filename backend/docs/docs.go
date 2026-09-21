@@ -2627,13 +2627,18 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 380
                 },
+                "peer_replay": {
+                    "description": "Re-application, on the neighbours of the recreated pods, of the operations\nthat touch the interfaces Meshnet recreated with them. Recovery cost of the\nneighbours, kept apart from the pods' own replay.",
+                    "type": "integer",
+                    "example": 1800
+                },
                 "prepare": {
                     "description": "Everything before pods start being deleted (restart) or before the\nwait begins (modify): topology updates, peer cleanup, delete calls.",
                     "type": "integer",
                     "example": 1180
                 },
                 "replay": {
-                    "description": "Replay of the persisted operation history on recreated pods.",
+                    "description": "Replay of the persisted operation history on the recreated pods themselves.",
                     "type": "integer",
                     "example": 40
                 },
@@ -4710,11 +4715,17 @@ const docTemplate = `{
         "types.RestartTimingResponse": {
             "type": "object",
             "properties": {
+                "peer_replay": {
+                    "description": "Neighbour operations touching the recreated interfaces re-applied.",
+                    "type": "string",
+                    "example": "1.80s"
+                },
                 "pod_restart": {
                     "type": "string",
                     "example": "40.30s"
                 },
                 "replay": {
+                    "description": "History of the restarted pod replayed on the new pod.",
                     "type": "string",
                     "example": "0.95s"
                 },
