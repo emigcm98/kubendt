@@ -354,18 +354,26 @@ func ValidateInterfaceConflicts(namespace string, links []types.LinkSpec, allNod
 		}
 	}
 
-	// Seed podUsed with the interfaces already in use according to each
-	// pod's current Topology CRD. podUsed[pod][intf] = struct{}{} means the
-	// iface is claimed (by existing state or by an earlier link in this
-	// request once we get there).
+	// One List of the namespace's Topology objects instead of a Get per pod.
+	// On a fresh namespace the Gets were as many sequential 404s as pods.
+	list, err := kubeclient.DynamicClient.Resource(TopologyGVR).Namespace(namespace).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("could not list topologies to check interface conflicts: %w", err)
+	}
+	return checkInterfaceConflicts(links, allNodes, claimedInterfaces(list.Items, podSet))
+}
+
+// claimedInterfaces maps each pod in podSet to the interfaces its Topology
+// already declares (spec.links[].local_intf). A pod without a Topology has
+// no claims and gets no entry.
+func claimedInterfaces(items []unstructured.Unstructured, podSet map[string]struct{}) map[string]map[string]struct{} {
 	podUsed := make(map[string]map[string]struct{})
-	for podName := range podSet {
-		obj, err := kubeclient.DynamicClient.Resource(TopologyGVR).Namespace(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
-		if err != nil {
-			// Pod has no Topology yet, no existing claims.
+	for i := range items {
+		podName := items[i].GetName()
+		if _, wanted := podSet[podName]; !wanted {
 			continue
 		}
-		specLinks, _, _ := unstructured.NestedSlice(obj.Object, "spec", "links")
+		specLinks, _, _ := unstructured.NestedSlice(items[i].Object, "spec", "links")
 		used := make(map[string]struct{}, len(specLinks))
 		for _, item := range specLinks {
 			lm, ok := item.(map[string]interface{})
@@ -378,7 +386,13 @@ func ValidateInterfaceConflicts(namespace string, links []types.LinkSpec, allNod
 		}
 		podUsed[podName] = used
 	}
+	return podUsed
+}
 
+// checkInterfaceConflicts is the cluster-independent half of
+// ValidateInterfaceConflicts. podUsed[pod][intf] means the iface is claimed,
+// by existing state or by an earlier link in this request once we get there.
+func checkInterfaceConflicts(links []types.LinkSpec, allNodes []types.NodeSpec, podUsed map[string]map[string]struct{}) error {
 	// Helper to claim an iface for a pod (creates the inner map if needed).
 	claim := func(pod, intf string) {
 		if _, ok := podUsed[pod]; !ok {
