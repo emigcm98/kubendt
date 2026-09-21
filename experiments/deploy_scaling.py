@@ -74,11 +74,11 @@ def deploy_once(client, ns, topo, rec, tag, run, conf=None):
                    configure_wall_s=round(wall2, 3), configure_total_s=C.seconds(ct.get("total")),
                    configure_seq_s=C.seconds(ct.get("sequential_equivalent")),
                    configure_actions=(r2.get("successes") if isinstance(r2, dict) else None))
+    st, r, wall = client.timed("DELETE", f"/network/clear-topology/{ns}")
+    row["clear_wall_s"] = round(wall, 3)  # before rec.add, which stores a copy of the row
     rec.add(**row)
     rec.save(f"timeline_{tag}_{run}.json", {"response_took_time": took, "timeline": tl, "pods": stamps,
                                              "phases": [C.pod_phases(p) for p in (tl.get("pods") or [])] or [C.pod_phases(s) for s in stamps]})
-    st, r, wall = client.timed("DELETE", f"/network/clear-topology/{ns}")
-    row["clear_wall_s"] = round(wall, 3)
     C.log(f"[{tag} run {run}] wall {row['wall_s']} s, backend total {row['took_total_s']} s, "
           f"k8s created→last Ready {row['k8s_created_to_last_ready_s']} s, created spread {row['k8s_created_spread_s']} s, "
           f"critical {row.get('critical_pod')}, clear {row['clear_wall_s']} s")

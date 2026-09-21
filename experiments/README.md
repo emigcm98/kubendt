@@ -24,7 +24,7 @@ Every script takes `--runs`, `--out`, `--keep` and `--help`. Namespaces are name
 | `placement_fidelity.py` | Same-worker (veth) against cross-worker (VXLAN) link: MTU, largest DF packet, RTT, loss, TCP throughput and retransmissions, UDP loss and jitter, pod CPU. `--vyos-image` adds the QEMU/TAP path. | `--workers`, `--udp-rate` |
 | `tc_fidelity.py` | netem delay and loss and tbf rate as configured against as measured, with the qdisc read back through the API and a stated tolerance. | `--delays`, `--losses`, `--rates`, `--cross` |
 | `vm_scaling.py` | VyOS VMs against FRR containers, 1 to N routers: deploy time split by phase, readiness (guest boot) and footprint. | `--sizes`, `--node-selector` |
-| `footprint.py` | Steady-state CPU and memory per pod and per namespace from the same samples, plus the backend process or container and the in-cluster helpers. | `--namespace`, `--backend-pid` |
+| `footprint.py` | Steady-state CPU and memory per pod and per namespace from the same samples, plus the backend process or container and the in-cluster helpers. Deploys a topology first when asked, importing a zip of mounts before it. | `--namespace`, `--topology`, `--configure`, `--zip`, `--backend-pid` |
 | `telemetry_overhead.py` | Latency of the endpoints the dashboard polls and backend CPU and memory under N concurrent pollers. | `--namespace`, `--clients`, `--period` |
 | `inventory.py` | Versions, node resources, image digests, compressed and unpacked sizes, entrypoints and readiness probes for a set of topologies or a namespace. | `--topologies`, `--namespace` |
 | `gen_topology.py` | The synthetic topologies the scripts use (sparse, ring, line), importable and as a CLI. | `--shape`, `--sizes` |

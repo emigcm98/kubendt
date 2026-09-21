@@ -125,7 +125,8 @@ def snapshot(client, ns, pod, kind, ifaces):
         s["bridge_ports"] = sorted(out.split())
     if kind == "vyos":
         rc, out = C.kexec(ns, pod, "ssh_qemu /opt/vyatta/bin/vyatta-op-cmd-wrapper show configuration commands 2>/dev/null | grep -E 'protocols ospf|interfaces ethernet eth[1-9]'", timeout=60)
-        s["vyos"] = sorted(set(l.strip() for l in out.splitlines() if l.strip()))
+        # hw-id is the MAC of the interface, which changes with every recreated veth or tap: identity, not configuration
+        s["vyos"] = sorted(set(l.strip() for l in out.splitlines() if l.strip() and " hw-id " not in l))
         s["addrs"] = []  # the pod netns only holds taps, the addresses live in the guest
         s["routes"] = []
     for iface in ifaces:
