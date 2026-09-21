@@ -604,10 +604,15 @@ User
   │         │
   │         ├─→ ApplyAddToExistingTopology        [if add present]
   │         │    ├─→ Validate new nodes don't exist
-  │         │    ├─→ Create StatefulSets
-  │         │    ├─→ Append links to Topology CRDs
-  │         │    ├─→ RestartPods (affected)
-  │         │    └─→ ReplayDriverOperations
+  │         │    ├─→ Append links to Topology CRDs (both ends)
+  │         │    └─→ Create StatefulSets
+  │         │
+  │         ├─→ Restart phase (one for the whole modify):
+  │         │    ├─→ QEMU peers that gained a link
+  │         │    ├─→ one endpoint of each link between two existing pods
+  │         │    │   (Meshnet wires a link only on a CNI ADD)
+  │         │    ├─→ wait for new and restarted pods (timeline)
+  │         │    └─→ ReplayDriverOperations on the restarted ones
   │         │
   │         ├─→ SoftHeal:
   │         │    ├─→ NudgePodReconcile (annotation update)
@@ -619,10 +624,10 @@ User
   │
   └←─ 200 OK {message: "modify applied", restarted_pods: [...]}
 
-Meshnet (watching Topology updates)
+Meshnet (on the CNI ADD of each new or recreated pod)
   │
-  ├─ Detect Topology CRD modified (spec.links changed)
-  │   ├─→ Update veth pair attachments
+  ├─ Read the pod's Topology CRD (spec.links)
+  │   ├─→ Create veth pairs / VXLAN devices
   │   └─→ Notify pod (via annotation watch)
   │
   └─ Non-destructive update (no pod restart required from meshnet side)

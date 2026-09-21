@@ -301,7 +301,12 @@ A single modify request can contain any combination of `add`, `delete` and `scal
 5. Recovery:
    - Restart any existing QEMU peer that gained a new link
      (NICs are fixed at QEMU launch and require re-launch)
-   - Replay driver operations on restarted pods
+   - Restart one endpoint of every link added between two pods that
+     already existed (Meshnet wires a link only on a CNI ADD, so such a
+     link never appears on its own). Chosen with the heal pass's rule,
+     skipped when the other end is a new pod or is being restarted anyway
+   - Replay driver operations on restarted pods; the heal pass then only
+     verifies the new links
 ```
 
 #### Delete Phase: `ApplyDeleteOnExistingTopology()`
