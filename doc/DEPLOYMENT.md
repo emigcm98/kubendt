@@ -72,6 +72,7 @@ File storage and the SQLite database are persisted in named Docker volumes (`kub
 - `FILES_BASE_PATH`: namespace files base folder (default: `files` relative to cwd).
 - `KUBENDT_DB_PATH`: SQLite database path (default: `kubendt.db` in cwd).
 - `KUBECTL_EXEC_TIMEOUT_SECONDS`: max wall-clock seconds for any single in-pod exec (kubectl exec, `ssh_qemu` into a QEMU guest, batched VyOS commits, etc.). Default `30`. Bump it if you run against a slow cluster or busy guests and start seeing "exec timeout" errors from network-configure or modify operations. The SSH layer detects dead sessions independently within ~11s, so this deadline only bounds genuinely-long commands.
+- `KUBENDT_K8S_QPS` / `KUBENDT_K8S_BURST`: client-side rate limit for requests to the Kubernetes API (default `100` requests per second, burst `200`). client-go's own default is 5/10, which queues per-pod operations for tens of seconds on large topologies. Lower them only on a shared API server under pressure; it applies its own priority and fairness on top.
 - `SWAGGER_BASE_PATH`: base path prefix for Swagger UI (e.g. `/api/` when served behind a proxy).
 - `KUBENDT_VERSION`: optional build version metadata.
 - `KUBENDT_COMMIT`: optional build commit metadata.
