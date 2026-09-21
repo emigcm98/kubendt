@@ -35,3 +35,8 @@ backend/kubendt.db
 *.qcow2
 deploy/examples/7-test-xrd/
 deploy/custom_images/ios/
+
+# experiments
+experiments/results/
+experiments/topologies/
+experiments/__pycache__/
