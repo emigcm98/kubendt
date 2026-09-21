@@ -201,6 +201,8 @@ KubeNDT includes **6 reference deployments** in `deploy/examples/`. Start with t
 
 Example images are pinned to version tags (FRR from `quay.io/frrouting/frr`, where the project publishes it). `globocom/openvswitch`, `networkstatic/iperf3` and `docker_open5gs` have no version tags and keep their moving tag. The VyOS image is the one you build with `build-vyos-qcow2.sh`.
 
+The measurement scripts behind the published evaluation, and the regression that runs the six examples end to end, live in [experiments/](experiments/). They need a cluster and are not run in CI.
+
 ## Known Limitations
 
 KubeNDT is actively developed. The following limitations are known:
