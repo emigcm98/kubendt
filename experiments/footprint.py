@@ -53,6 +53,7 @@ def main():
     ap.add_argument("--namespace", required=True)
     ap.add_argument("--topology", help="deploy this topology into the namespace first")
     ap.add_argument("--configure", help="apply this network_conf.json after deploying")
+    ap.add_argument("--zip", help="archive to import into the namespace file manager before deploying (use-case mounts)")
     ap.add_argument("--samples", type=int, default=8)
     ap.add_argument("--interval", type=float, default=15.0, help="seconds between samples (metrics-server resolution is 15 s)")
     ap.add_argument("--backend-pid", type=int, help="local backend process to sample from /proc")
@@ -66,6 +67,10 @@ def main():
 
     if args.topology:
         client.fresh_namespace(ns)
+        if args.zip:
+            ok, r = client.import_zip(ns, args.zip)
+            if not ok:
+                rec.note(f"import {args.zip} failed: {r}")
         st, r, wall = client.deploy(ns, json.load(open(args.topology)))
         C.run_or_die(st, r, "deploy")
         rec.note(f"deployed {args.topology} in {wall:.1f} s")
