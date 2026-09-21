@@ -5,7 +5,8 @@ Deploys a small router topology (FRR router with two hosts), gives the router a
 history of --depth static routes, then restarts it --runs times through the API and
 splits every restart with the timeline: backend preparation, termination of the
 old pod, scheduling, sandbox and CNI attachment, container start, readiness,
-detection by the backend, replay. --grace sets terminationGracePeriodSeconds on the
+detection by the backend, replay of the pod's history, re-application on its
+neighbours. --grace sets terminationGracePeriodSeconds on the
 nodes, so the same run with 30 shows what the Kubernetes default costs."""
 import datetime as dt
 
@@ -45,6 +46,7 @@ def decompose(resp):
         "readiness_s": ph.get("readiness_s"),
         "wait_ready_s": bm.get("wait_ready", 0) / 1000 if bm.get("wait_ready") is not None else None,
         "replay_s": bm.get("replay", 0) / 1000 if bm.get("replay") is not None else None,
+        "peer_replay_s": bm.get("peer_replay", 0) / 1000 if bm.get("peer_replay") is not None else None,
         "backend_total_s": bm.get("total", 0) / 1000 if bm.get("total") is not None else None,
     }
     # Detection lag: when the backend saw Ready minus when Kubernetes stamped it. The
@@ -58,7 +60,7 @@ def decompose(resp):
 
 
 PHASES = ["prepare_s", "termination_s", "scheduling_s", "sandbox_cni_s", "container_start_s", "scheduled_to_started_s", "readiness_s",
-          "detection_lag_s", "replay_s", "backend_total_s", "wall_s"]
+          "detection_lag_s", "replay_s", "peer_replay_s", "backend_total_s", "wall_s"]
 
 
 def main():
@@ -98,7 +100,7 @@ def main():
         C.log(f"run {run}: wall {row['wall_s']} s = prepare {d.get('prepare_s')} + termination {d.get('termination_s')} + "
               f"sched {d.get('scheduling_s')} + sandbox/CNI {d.get('sandbox_cni_s')} + start {d.get('container_start_s')} + "
               f"readiness {d.get('readiness_s')} + detection {d.get('detection_lag_s')} + replay {d.get('replay_s')} "
-              f"(replayed {row['replayed']}/{rs.get('total')}, peers {row['peers']})")
+              f"+ peer replay {d.get('peer_replay_s')} (replayed {row['replayed']}/{rs.get('total')}, peers {row['peers']})")
 
     if not args.keep:
         client.drop_namespace(ns)

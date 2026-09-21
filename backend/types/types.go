@@ -115,8 +115,12 @@ type BackendPhasesMs struct {
 	Prepare *int64 `json:"prepare,omitempty" example:"1180"`
 	// From the first pod delete/create until every affected pod is Ready.
 	WaitReady *int64 `json:"wait_ready,omitempty" example:"5300"`
-	// Replay of the persisted operation history on recreated pods.
+	// Replay of the persisted operation history on the recreated pods themselves.
 	Replay *int64 `json:"replay,omitempty" example:"40"`
+	// Re-application, on the neighbours of the recreated pods, of the operations
+	// that touch the interfaces Meshnet recreated with them. Recovery cost of the
+	// neighbours, kept apart from the pods' own replay.
+	PeerReplay *int64 `json:"peer_replay,omitempty" example:"1800"`
 	// Interface validation and healing after the pods are Ready.
 	Heal  *int64 `json:"heal,omitempty" example:"380"`
 	Total int64  `json:"total" example:"6760"`

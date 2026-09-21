@@ -9,7 +9,7 @@ Deploy, modify and restart responses carry a `timeline` block next to the usual 
 ```json
 "timeline": {
   "request_started_at": "2026-09-20T12:47:47.120Z",
-  "backend_ms": { "prepare": 1180, "wait_ready": 5300, "replay": 40, "total": 6760 },
+  "backend_ms": { "prepare": 1180, "wait_ready": 5300, "replay": 40, "peer_replay": 1800, "total": 6760 },
   "pods": [
     {
       "pod": "r1-0",
@@ -70,7 +70,8 @@ The `delete_*` and `old_pod_gone` fields only appear for pods that were recreate
 | `resource_creation` | yes |  |  | Topology CRDs, ConfigMaps, StatefulSets created |
 | `prepare` |  | yes | yes | Everything before the wait starts: topology updates, peer interface cleanup, delete calls |
 | `wait_ready` | yes | yes | yes | From the wait start until every affected pod is Ready |
-| `replay` |  | if pods restarted | yes | Operation history replayed on recreated pods |
+| `replay` |  | if pods restarted | yes | Operation history of the recreated pods replayed on them |
+| `peer_replay` |  | if pods restarted | yes | On the neighbours of the recreated pods, the persisted operations that touch the interfaces Meshnet recreated (bridge membership, routes, qdiscs) re-applied, and the TC redirect of guest-VM neighbours rewired. It is the neighbours' recovery cost and it grows with their history, not with the recreated pod's, which is why it is kept apart from `replay` |
 | `heal` | yes | yes |  | Interface validation and healing after Ready |
 | `total` | yes | yes | yes | Until the response is built |
 

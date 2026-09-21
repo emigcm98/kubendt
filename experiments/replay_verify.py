@@ -218,7 +218,8 @@ def main():
         row = rec.add(part="verify", target=target, ok=True, wall_s=round(wall, 3), history_ops=n_hist,
                       replayed=rs.get("replayed"), pruned=rs.get("pruned"), replay_total=rs.get("total"),
                       peers=ps.get("peers"), peer_reapplied=ps.get("reapplied"), peer_failed=ps.get("failed"), qemu_rewired=ps.get("qemu_rewired"),
-                      replay_s=(bm.get("replay") or 0) / 1000, wait_ready_s=(bm.get("wait_ready") or 0) / 1000,
+                      replay_s=(bm.get("replay") or 0) / 1000, peer_replay_s=(bm.get("peer_replay") or 0) / 1000,
+                      wait_ready_s=(bm.get("wait_ready") or 0) / 1000,
                       ospf_full_after_s=w_ospf if ok else None, pods_with_diff=len(diffs), diff_pods=",".join(sorted(diffs)),
                       neighbours=",".join(sorted(peers_of.get(target, []))),
                       functional_ok=all(v[0] for v in checks.values()),
@@ -255,9 +256,11 @@ def main():
                 rs = r.get("replay") or {}
                 bm = (r.get("timeline") or {}).get("backend_ms") or {}
                 row = rec.add(part="depth", depth=depth, run=run, ok=rs.get("replayed") == depth, applied=applied, replayed=rs.get("replayed"),
-                              pruned=rs.get("pruned"), replay_s=(bm.get("replay") or 0) / 1000, took_replay_s=C.seconds((r.get("took_time") or {}).get("replay")),
+                              pruned=rs.get("pruned"), replay_s=(bm.get("replay") or 0) / 1000, peer_replay_s=(bm.get("peer_replay") or 0) / 1000,
+                              took_replay_s=C.seconds((r.get("took_time") or {}).get("replay")),
                               wall_s=round(wall, 3), per_action_ms=round((bm.get("replay") or 0) / depth, 1))
-                C.log(f"depth {depth} run {run}: replay {row['replay_s']} s for {row['replayed']} actions ({row['per_action_ms']} ms/action), restart {row['wall_s']} s")
+                C.log(f"depth {depth} run {run}: replay {row['replay_s']} s for {row['replayed']} actions ({row['per_action_ms']} ms/action), "
+                      f"neighbours {row['peer_replay_s']} s, restart {row['wall_s']} s")
 
     if not args.keep:
         client.drop_namespace(ns)
@@ -271,13 +274,15 @@ def main():
         summary["depth_fit"] = {"fixed_s": round(fit[0], 3), "per_action_s": round(fit[1], 4), "r2": round(fit[2], 4)}
     rec.finish(summary)
     C.table([{"target": r["target"], "restart (s)": r.get("wall_s"), "replayed": f"{r.get('replayed')}/{r.get('replay_total')}", "pruned": r.get("pruned"),
-              "peers reapplied": f"{r.get('peer_reapplied')} on {r.get('peers')}", "OSPF Full after (s)": r.get("ospf_full_after_s"),
+              "replay (s)": r.get("replay_s"), "peers reapplied": f"{r.get('peer_reapplied')} on {r.get('peers')}", "neighbours (s)": r.get("peer_replay_s"),
+              "OSPF Full after (s)": r.get("ospf_full_after_s"),
               "pods with state diff": r.get("pods_with_diff"), "functional": "ok" if r.get("functional_ok") else "FAIL"} for r in verify_rows],
-            ["target", "restart (s)", "replayed", "pruned", "peers reapplied", "OSPF Full after (s)", "pods with state diff", "functional"], "state after restart")
+            ["target", "restart (s)", "replayed", "pruned", "replay (s)", "peers reapplied", "neighbours (s)", "OSPF Full after (s)", "pods with state diff", "functional"], "state after restart")
     if depth_rows:
         C.table([{"depth": d, "replay (s)": C.mean_std([r["replay_s"] for r in depth_rows if r["depth"] == d], 3),
-                  "ms/action": C.mean_std([r["per_action_ms"] for r in depth_rows if r["depth"] == d], 0)} for d in xs],
-                ["depth", "replay (s)", "ms/action"], "replay time vs history depth (mixed actions)")
+                  "ms/action": C.mean_std([r["per_action_ms"] for r in depth_rows if r["depth"] == d], 0),
+                  "neighbours (s)": C.mean_std([r["peer_replay_s"] for r in depth_rows if r["depth"] == d], 3)} for d in xs],
+                ["depth", "replay (s)", "ms/action", "neighbours (s)"], "replay time vs history depth (mixed actions), neighbours apart")
         if fit:
             print(f"fit: replay(N) = {fit[0]:.3f} + {fit[1]:.4f} N s (R² = {fit[2]:.4f})")
 
