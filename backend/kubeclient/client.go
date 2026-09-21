@@ -6,6 +6,8 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
 
 	"k8s.io/client-go/dynamic"
@@ -62,7 +64,36 @@ func loadConfig(kubeconfigPath, kubeContext string) (*rest.Config, error) {
 	return rest.InClusterConfig()
 }
 
+// client-go throttles at 5 requests/s (burst 10) unless told otherwise. We
+// issue one or more requests per pod, so a 128-node topology would sit in
+// that queue for tens of seconds during validation and configure alone. The
+// API server has its own priority and fairness, so a generous client budget
+// is safe. KUBENDT_K8S_QPS and KUBENDT_K8S_BURST override the defaults.
+const (
+	defaultK8sQPS   = 100
+	defaultK8sBurst = 200
+)
+
+func applyRateLimits(cfg *rest.Config) {
+	cfg.QPS = float32(envPositiveInt("KUBENDT_K8S_QPS", defaultK8sQPS))
+	cfg.Burst = envPositiveInt("KUBENDT_K8S_BURST", defaultK8sBurst)
+}
+
+func envPositiveInt(name string, def int) int {
+	v := strings.TrimSpace(os.Getenv(name))
+	if v == "" {
+		return def
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil || n <= 0 {
+		log.Printf("⚠️ %s=%q is not a positive integer, using %d", name, v, def)
+		return def
+	}
+	return n
+}
+
 func applyConfig(cfg *rest.Config) error {
+	applyRateLimits(cfg)
 	clientset, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
 		return err
