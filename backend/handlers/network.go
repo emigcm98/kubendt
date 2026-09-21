@@ -185,9 +185,9 @@ func ModifyNetwork(c *gin.Context) {
 
 	// Track peer-restart pressure split by source phase: delete/scale-down need
 	// every touched peer restarted (CNI DEL/ADD does VXLAN cleanup), while
-	// add/scale-up should only restart QEMU peers (non-QEMU pods pick up the
-	// new veth through Meshnet's reconciler, restarting them would conflict
-	// with the just-pushed peer-side veth).
+	// add/scale-up only restart QEMU peers here (their NICs are fixed at launch).
+	// A link between two pods that already exist is handled below, one
+	// endpoint per link, once the QEMU restarts are known.
 	peersToRestartAlways := make(map[string]struct{})
 	peersToRestartIfQemu := make(map[string]struct{})
 	// Pods created during this modify (scale-up + add.nodes). The unified
@@ -402,6 +402,17 @@ func ModifyNetwork(c *gin.Context) {
 	for _, p := range scaledDownPods {
 		delete(restartSet, p)
 	}
+	// Meshnet wires a link only on a CNI ADD, so a link added between two pods
+	// that already run never shows up by itself. Recreate one endpoint per such
+	// link here, in the same restart phase as everything else, so the caller
+	// sees it in restarted_pods and the timeline and the heal pass has nothing
+	// left to do but verify.
+	if hasAdd && len(request.Add.Links) > 0 {
+		for _, p := range helpers.EndpointsToRestartForNewLinks(request.Add.Links, finalNodes, newPodsToWait, restartSet) {
+			restartSet[p] = struct{}{}
+			log.Printf("ℹ️ Modify: recreating %s so Meshnet wires its new link(s)", p)
+		}
+	}
 
 	restartedPods := make([]string, 0, len(restartSet))
 	for p := range restartSet {
@@ -523,15 +534,15 @@ func ModifyNetwork(c *gin.Context) {
 	modifyOpsDur := time.Since(startedAt)
 	healAt := time.Now()
 
-	// Post-modify heal: for link-only adds, Topology CRD updates and annotation
-	// nudges don't trigger CNI ADD. Restart one endpoint per new link so veth pairs
-	// are created via CNI ADD.
+	// Post-modify heal pass over the new links. The endpoints that had to be
+	// recreated were restarted above, so this normally just confirms that
+	// every new interface is there and only repairs if Meshnet missed one.
 	if hasAdd && len(request.Add.Links) > 0 {
 		currentNodes, nodesErr := helpers.GetExistingNodes(namespace)
 		if nodesErr != nil {
 			log.Printf("⚠️ Modify heal: could not get current nodes: %v", nodesErr)
 		} else {
-			log.Printf("🔁 Modify: running post-add interface heal pass for %d new link(s)...", len(request.Add.Links))
+			log.Printf("🔁 Modify: verifying %d new link(s)...", len(request.Add.Links))
 			if healErr := helpers.HealMissingInterfaces(namespace, currentNodes, request.Add.Links, 2); healErr != nil {
 				log.Printf("⚠️ Modify heal: %v", healErr)
 			}
