@@ -33,7 +33,7 @@ Every script takes `--runs`, `--out`, `--keep` and `--help`. Namespaces are name
 
 ## Output
 
-Each run writes `results/<script>/<timestamp>/` with `meta.json` (backend version, repository commit, cluster nodes, arguments), `rows.jsonl` appended as the run goes, `rows.csv` and `summary.json` at the end, `notes.log`, and the raw API responses the run relied on. `results/` is ignored by git. The data behind the paper lives in its artifacts repository, not here.
+Each run writes `results/<script>/<timestamp>/` with `meta.json` (backend version, repository commit, cluster nodes, arguments with any password or token redacted), `rows.jsonl` appended as the run goes, `rows.csv` and `summary.json` at the end, `notes.log`, and the raw API responses the run relied on. `results/` is ignored by git. The data behind the paper lives in its artifacts repository, not here.
 
 ## Reading the numbers
 

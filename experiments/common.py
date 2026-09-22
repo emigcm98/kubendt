@@ -497,6 +497,28 @@ def git_rev():
         return None
 
 
+SECRET_ARGS = ("password", "token")
+
+
+def redact_secrets(args_dict, argv):
+    """meta.json travels with the results, so the credentials given on the command line must not be in it."""
+    if args_dict is not None:
+        args_dict = {k: ("<redacted>" if k in SECRET_ARGS and v else v) for k, v in args_dict.items()}
+    out, hide_next = [], False
+    for a in argv:
+        if hide_next:
+            out.append("<redacted>")
+            hide_next = False
+        elif a in {f"--{k}" for k in SECRET_ARGS}:
+            out.append(a)
+            hide_next = True
+        elif any(a.startswith(f"--{k}=") for k in SECRET_ARGS):
+            out.append(a.split("=", 1)[0] + "=<redacted>")
+        else:
+            out.append(a)
+    return args_dict, out
+
+
 class Recorder:
     """One directory per run under results/<experiment>/<timestamp>/ with meta.json,
     rows.jsonl (appended as the run goes, so a crash keeps what was measured), rows.csv
@@ -509,11 +531,12 @@ class Recorder:
         self.rows = []
         self._jsonl = open(os.path.join(self.dir, "rows.jsonl"), "a")
         self._notes = open(os.path.join(self.dir, "notes.log"), "a")
+        safe_args, safe_argv = redact_secrets(vars(args) if args else None, sys.argv)
         meta = {
             "experiment": experiment,
             "started_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
-            "argv": sys.argv,
-            "args": vars(args) if args else None,
+            "argv": safe_argv,
+            "args": safe_args,
             "kubendt_repo_commit": git_rev(),
             "kubectl_context": CONTEXT,
             "host": socket.gethostname(),
