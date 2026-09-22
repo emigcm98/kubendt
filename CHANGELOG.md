@@ -26,6 +26,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - FRR nodes in the examples start through the image's own init (`watchfrr` under `tini`), which supervises the daemons and stops on SIGTERM. The startup command installs `iptables`, which the Quay image lacks and the NAT actions need, and enables `ospfd`. The hostname is the pod name.
 - FRR nodes are Ready only when zebra and every daemon enabled in `/etc/frr/daemons` answer on their vty socket.
 - Deploy validation reads the namespace's Topology objects once to check for interface conflicts instead of fetching one per pod. On an empty namespace those were as many sequential round trips answering 404 as pods. The whole validation phase now takes about 0.3 s whatever the size.
+- The cluster deployment guide puts the kubelet's `allowedUnsafeSysctls` in the KubeletConfiguration that kubeadm manages (a `kubeadm init --config` file, or the `kubelet-config` ConfigMap plus `kubeadm upgrade node phase kubelet-config` on an existing cluster) instead of a hand edit of `/var/lib/kubelet/config.yaml`, which the next minor upgrade rewrites without the key and leaves switch and router pods in `SysctlForbidden`.
 
 ### Fixed
 
