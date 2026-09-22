@@ -27,8 +27,11 @@ func (L3Base) RemoveDefaultRoute() [][]string {
 	return [][]string{{"ip", "route", "del", "default"}}
 }
 
+// replace rather than add: a replayed or repeated action must not fail with
+// "File exists" when the route is already there, and a new next hop for the
+// same prefix wins, as it does for the default route.
 func (L3Base) AddStaticRoute(dstCIDR, via, dev string) [][]string {
-	cmd := []string{"ip", "route", "add", dstCIDR, "via", via}
+	cmd := []string{"ip", "route", "replace", dstCIDR, "via", via}
 	if dev != "" {
 		cmd = append(cmd, "dev", dev)
 	}
