@@ -44,12 +44,12 @@ func TestL3BaseCommands(t *testing.T) {
 		{
 			"AddStaticRoute with dev",
 			l3.AddStaticRoute("192.168.1.0/24", "10.0.0.254", "eth1"),
-			[][]string{{"ip", "route", "add", "192.168.1.0/24", "via", "10.0.0.254", "dev", "eth1"}},
+			[][]string{{"ip", "route", "replace", "192.168.1.0/24", "via", "10.0.0.254", "dev", "eth1"}},
 		},
 		{
 			"AddStaticRoute without dev",
 			l3.AddStaticRoute("192.168.1.0/24", "10.0.0.254", ""),
-			[][]string{{"ip", "route", "add", "192.168.1.0/24", "via", "10.0.0.254"}},
+			[][]string{{"ip", "route", "replace", "192.168.1.0/24", "via", "10.0.0.254"}},
 		},
 		{
 			"RemoveStaticRoute without dev",
