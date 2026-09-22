@@ -223,30 +223,34 @@ sudo apt-get install -y kubelet kubeadm kubectl
 sudo apt-mark hold kubelet kubeadm kubectl
 ```
 
-### 6.1b Allow unsafe sysctls on all nodes
+### 6.1b Allow unsafe sysctls, cluster wide
 
-Run on **every node** (control-plane and all workers) before `kubeadm init/join`. KubeNDT switch and router pods set `net.ipv4.ip_forward` and `net.ipv6.conf.all.forwarding` via pod security context `sysctls`; the kubelet must explicitly permit them or it will reject those pods with `SysctlForbidden`.
+KubeNDT switch and router pods set `net.ipv4.ip_forward` and `net.ipv6.conf.all.forwarding` through the pod security context. The kubelet must allow them or those pods stay in `SysctlForbidden`.
 
-Edit `/var/lib/kubelet/config.yaml` and add the following block (if the key does not exist yet, append it at the end of the file):
+Put the allowlist in the kubelet configuration that kubeadm manages, not in `/var/lib/kubelet/config.yaml` by hand. kubeadm regenerates that file from the `kubelet-config` ConfigMap on every `kubeadm upgrade node`, so a hand edit is lost with the next minor upgrade.
+
+Pass a configuration file to `kubeadm init` with a `KubeletConfiguration` document:
 
 ```yaml
+# kubeadm.yaml
+apiVersion: kubeadm.k8s.io/v1beta4
+kind: InitConfiguration
+---
+apiVersion: kubelet.config.k8s.io/v1beta1
+kind: KubeletConfiguration
 allowedUnsafeSysctls:
-  - "net.ipv4.ip_forward"
-  - "net.ipv6.conf.all.forwarding"
+  - net.ipv4.ip_forward
+  - net.ipv6.conf.all.forwarding
 ```
 
-Then restart the kubelet:
-
-```bash
-sudo systemctl restart kubelet
-```
+Nodes that join afterwards download this configuration from the cluster, so nothing else is needed on the workers. Section 6.2 uses this file.
 
 ### 6.2 Initialize control-plane
 
-Run only on control-plane:
+Run only on control-plane, with the file from 6.1b:
 
 ```bash
-sudo kubeadm init
+sudo kubeadm init --config kubeadm.yaml
 ```
 
 Configure kubeconfig for your user on control-plane:
@@ -334,28 +338,36 @@ sw-0    0/1     SysctlForbidden   0          0s
 
 Cause: KubeNDT switch and router pods set `net.ipv4.ip_forward` and `net.ipv6.conf.all.forwarding` as pod-level sysctls. The kubelet must be configured to allow them.
 
-Fix for an existing kubeadm cluster, run on every affected worker node:
+Fix for an existing kubeadm cluster: add the allowlist to the cluster's kubelet configuration and let kubeadm write it to every node, so it also survives upgrades.
 
-Edit `/var/lib/kubelet/config.yaml` and add (or append) the following block:
+```bash
+kubectl -n kube-system edit configmap kubelet-config
+```
+
+Add under the `KubeletConfiguration` document:
 
 ```yaml
 allowedUnsafeSysctls:
-  - "net.ipv4.ip_forward"
-  - "net.ipv6.conf.all.forwarding"
+  - net.ipv4.ip_forward
+  - net.ipv6.conf.all.forwarding
 ```
 
-Then restart the kubelet:
+Then on every node, control plane included:
 
 ```bash
+sudo kubeadm upgrade node phase kubelet-config
 sudo systemctl restart kubelet
 ```
 
-Verify the kubelet restarted cleanly:
+Verify the kubelet restarted cleanly and the key is in place:
 
 ```bash
 sudo systemctl status kubelet
+grep -A2 allowedUnsafeSysctls /var/lib/kubelet/config.yaml
 kubectl get nodes -o wide
 ```
+
+After any `kubeadm upgrade`, run that `grep` again on each node. If the allowlist was only in the file, the upgrade dropped it and the pods come back `SysctlForbidden`.
 
 Then delete the failing pods so they are recreated with the updated policy:
 
