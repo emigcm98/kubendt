@@ -3840,20 +3840,20 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
             nodes: [
               {
                 name: 'host',
-                image: 'alpine',
+                image: 'alpine:3.24.2',
                 type: 'host',
                 replicas: 2,
                 commands: ['sh', '-c', 'apk add --no-cache iproute2 && sleep infinity'],
               },
               {
                 name: 'router1',
-                image: 'frrouting/frr',
+                image: 'quay.io/frrouting/frr:10.7.1',
                 type: 'router',
                 driver: 'FRRRouterDriver',
                 commands: [
                   'sh',
                   '-c',
-                  'echo hostname router1 > /etc/frr/vtysh.conf && chown frr:frr /etc/frr/vtysh.conf && /usr/lib/frr/zebra -d && sleep infinity',
+                  "apk add --no-cache iptables && sed -i 's/^ospfd=no/ospfd=yes/' /etc/frr/daemons && touch /etc/frr/frr.conf /etc/frr/vtysh.conf && chown frr:frr /etc/frr/frr.conf /etc/frr/vtysh.conf && exec /sbin/tini -- /usr/lib/frr/docker-start",
                 ],
               },
             ],
@@ -3909,7 +3909,7 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
               nodes: [
                 {
                   name: 'newnode',
-                  image: 'alpine',
+                  image: 'alpine:3.24.2',
                   type: 'host',
                   driver: 'BasicHostDriver',
                   commands: ['sh', '-c', 'apk add --no-cache iproute2 && sleep infinity'],

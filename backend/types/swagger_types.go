@@ -102,7 +102,7 @@ type PodInfo struct {
 	Driver    string `json:"driver" example:"frr-router"`
 	Type      string `json:"type" example:"router"`
 	Namespace string `json:"namespace" example:"prueba"`
-	Image     string `json:"image" example:"frrouting/frr:latest"`
+	Image     string `json:"image" example:"quay.io/frrouting/frr:10.7.1"`
 	Node      string `json:"node" example:"k8s-worker-1"`
 	Status    string `json:"status" example:"Running"`
 	CreatedAt string `json:"createdAt" example:"2026-01-15 10:30:00"`
@@ -448,7 +448,7 @@ type DriverOperationHistoryEntryDoc struct {
 	ActionType string      `json:"action_type" example:"add_static_route"`
 	ExecutedAt string      `json:"executed_at" example:"2026-03-22T11:25:44.113Z"`
 	Action     ActionEntry `json:"action"`
-	Commands   []string    `json:"commands,omitempty" example:"ip route add 10.10.0.0/16 via 10.0.0.1 dev net1"`
+	Commands   []string    `json:"commands,omitempty" example:"ip route replace 10.10.0.0/16 via 10.0.0.1 dev net1"`
 }
 
 // PodDriverHistoryResponseDoc is returned by GET /drivers/history/:namespace/:podName.

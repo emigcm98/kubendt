@@ -7,25 +7,31 @@ Small end-to-end scenario to validate basic KubeNDT workflows:
 - Interactive shell
 - Mounted files (both ConfigMap-backed and Secret-backed)
 - Environment variables configuration in nodes
-- L2/L3 connectivity across hosts, switchs and routers
+- L2/L3 connectivity across hosts, switches and routers
 
 ## Topology Overview
 
 ![Topology](../../../doc/images/tests/1-test-small.png)
 
-This example deploys:
+Nodes deployed:
 
-- `pc` (4 replicas): `pc-0` to `pc-3` (Alpine hosts)
-- `server` (1 replica): `server-0` (Alpine host)
-- `sw` (2 replicas): `sw-0` and `sw-1` (Linux switch nodes)
-- `ovs` (1 replica): `ovs-0` (Open vSwitch node)
-- `r1` (1 replica): `r1-0` (FRR router)
+| Node | Driver | Image | Replicas | Role |
+| --- | --- | --- | --- | --- |
+| `pc` | `BasicHostDriver` | `alpine:3.24.2` | 4 | Alpine hosts, two per LAN; mount `test.sh` and carry `ENV1`/`ENV2` |
+| `server` | `BasicHostDriver` | `alpine:3.24.2` | 1 | Alpine host behind the OVS switch; mounts the Secret-backed `secret.env` |
+| `sw` | `LinuxSwitchDriver` | `ubuntu:26.04` | 2 | Linux bridge switches, one per LAN |
+| `ovs` | `OpenVSwitchDriver` | `globocom/openvswitch:latest` | 1 | Open vSwitch in front of `server` |
+| `r1` | `FRRRouterDriver` | `quay.io/frrouting/frr:10.7.1` | 1 | FRR router joining the three segments, SNAT on `eth0` |
 
-Logical segments:
+Nodes without a `driver` in the topology JSON get the default of their type: `BasicHostDriver` for hosts and `LinuxSwitchDriver` for switches.
 
-- `10.0.1.0/24`: `pc-0`, `pc-1`, and router interface `r1 eth1`
-- `10.0.2.0/24`: `pc-2`, `pc-3`, and router interface `r1 eth2`
-- `10.0.3.0/24`: `server`, and router interface `r1 eth3` through OVS
+Network segments:
+
+| Segment | Subnet | Purpose |
+| --- | --- | --- |
+| LAN 1 | `10.0.1.0/24` | `pc-0` (`.11`) and `pc-1` (`.12`) behind `sw-0`; `r1 eth1` (`.1`) is the gateway |
+| LAN 2 | `10.0.2.0/24` | `pc-2` (`.11`) and `pc-3` (`.12`) behind `sw-1`; `r1 eth2` (`.1`) is the gateway |
+| Server LAN | `10.0.3.0/24` | `server` (`.11`) behind `ovs-0`; `r1 eth3` (`.1`) is the gateway |
 
 ## Files In This Folder
 
@@ -40,96 +46,92 @@ Logical segments:
   - `ENV1`
   - `ENV2`
 - `pc-*` replicas mount `test.sh` as read-only at `/mnt/test.sh` (ConfigMap-backed)
-- `server-0` mounts `secret.env` at `/etc/kubendt/secret.env` (Secret-backed, see Step 4 below)
+- `server-0` mounts `secret.env` at `/etc/kubendt/secret.env` (Secret-backed, see step 4 below)
 - Links include explicit `uid` values for stable link identity
 - Configuration file intentionally uses both reference styles:
   - explicit pod names (`pc-0`, `r1-0`, `sw-0`)
   - single-replica base names (`server`, `ovs`)
+- `r1` runs `quay.io/frrouting/frr:10.7.1` through the image's own init (`watchfrr` under `tini`). The startup command installs `iptables`, which `enable_snat` needs and the image does not ship, and enables `ospfd`. The pod is Ready only when zebra and the enabled daemons answer on their vty socket.
 
 ## Step-By-Step (UI)
 
-1. Create namespace
-   - Create namespace `small` (or any name you prefer).
+### 1. Create namespace
 
-2. Open Namespace File Manager
-   - Go to the Namespace File Manager for that namespace.
+Create a namespace (e.g. `small` or any name you prefer).
 
-3. Create `test.sh` file
+### 2. Open the Namespace File Manager
 
-   - Create a file named `test.sh` in the namespace files area.
+Go to the Namespace File Manager for that namespace.
 
-   - Copy the content provided in `deploy/examples/1-test-small/files/test.sh` and save it:
+### 3. Create `test.sh`
 
-     ```bash
-     #/bin/sh
+- Create a file named `test.sh` in the namespace files area.
+- Copy the content provided in `files/test.sh` and save it:
 
-     echo "My pod is pending and $ENV1"
-     echo "I think I'll just sit here and start $ENV2."
-     ```
+  ```bash
+  #/bin/sh
 
-4. Create `secret.env` file
+  echo "My pod is still pending and $ENV1"
+  echo "I think I'll just sit here and start $ENV2."
+  ```
 
-   - Create a file named `secret.env` in the same namespace files area.
+### 4. Create `secret.env`
 
-   - Copy the content provided in `deploy/examples/1-test-small/files/secret.env` and save it:
+- Create a file named `secret.env` in the same namespace files area.
+- Copy the content provided in `files/secret.env` and save it:
 
-     ```env
-     API_TOKEN=demo-not-a-real-token
-     DB_PASSWORD=demo-not-a-real-password
-     ```
+  ```env
+  API_TOKEN=demo-not-a-real-token
+  DB_PASSWORD=demo-not-a-real-password
+  ```
 
-   > The mount declaration in the topology JSON has `"sensitive": true`, so on import the file is automatically marked sensitive and backed by a Kubernetes `Secret`. No manual toggle needed.
+> The mount declaration in the topology JSON has `"sensitive": true`, so on import the file is automatically marked sensitive and backed by a Kubernetes `Secret`. No manual toggle needed.
 
-5. Import topology
+### 5. Import topology
 
-   - Go back to the namespace graph view.
+- Go back to the namespace graph view.
+- Click **Import topology**.
+- Select `topology-network-test-small.json`.
+- Wait until all nodes are running and visible.
+- Nodes can be moved to the preferred position and saved by clicking **Save positions**.
 
-   - Click `Import topology`.
+### 6. Apply network configuration
 
-   - Select `topology-network-test-small.json`.
+- Click **Load network conf**.
+- Select `network_conf.json`.
+- Confirm successful actions in the result dialog.
 
-   - Wait until all nodes are running and visible.
+### 7. Validate host defaults and bridges
 
-   - Nodes can be moved to the preferred position and saved by clicking `Save positions`.
+- Open a shell on `pc-0` and check the route:
 
-6. Apply network configuration
+  ```bash
+  ip route
+  ```
 
-   - Click `Load network conf`.
+  Expected: default route via `10.0.1.1`.
 
-   - Select `network_conf.json`.
+- Open a shell on `server` and check the route:
 
-   - Confirm successful actions in the result dialog.
+  ```bash
+  ip route
+  ```
 
-7. Validate host defaults and bridges
-   - Open shell on `pc-0` and check route:
+  Expected: default route via `10.0.3.1`.
 
-     ```bash
-     ip route
-     ```
+- Open a shell on `sw-0`, `sw-1` and `ovs-0` and check the bridges:
 
-   Expected default route via `10.0.1.1`.
+  ```bash
+  ip link show br0
+  ```
 
-   - Open shell on `server` and check route:
+  For OVS you can also verify with:
 
-   ```bash
-   ip route
-   ```
+  ```bash
+  ovs-vsctl show
+  ```
 
-   Expected default route via `10.0.3.1`.
-
-   - Open shell on `sw-0`, `sw-1`, and `ovs-0` and check bridges:
-
-   ```bash
-   ip link show br0
-   ```
-
-   For OVS you can also verify with:
-
-   ```bash
-   ovs-vsctl show
-   ```
-
-8. Validate connectivity
+### 8. Validate connectivity
 
 - From `pc-0` to `pc-1` (same subnet):
 
@@ -149,27 +151,27 @@ Logical segments:
   ping -c 3 10.0.3.11
   ```
 
-9. Validate mounted script and env vars
+### 9. Validate the mounted script and the environment variables
 
-- Open shell on any `pc-*` and run:
+- Open a shell on any `pc-*` and run:
 
   ```bash
   printenv
   ```
 
-  Expected output should show values for `ENV1` and `ENV2`.
+  Expected: values for `ENV1` and `ENV2`.
 
-- Open shell on any `pc-*` and run:
+- Open a shell on any `pc-*` and run:
 
   ```bash
   sh /mnt/test.sh
   ```
 
-  Expected output includes values from `ENV1` and `ENV2`.
+  Expected output includes the values of `ENV1` and `ENV2`.
 
-10. Validate the Secret-backed mount on `server-0`
+### 10. Validate the Secret-backed mount on `server-0`
 
-- Open shell on `server-0` and read the mounted file:
+- Open a shell on `server-0` and read the mounted file:
 
   ```bash
   cat /etc/kubendt/secret.env
@@ -197,18 +199,17 @@ Logical segments:
   kubectl get cm,secret -n <namespace> -l kubendt/mount-file=true
   ```
 
-11. Open any `pc-*` panel info and go to the last tab `Files/Vars`. You can get a summary of:
+### 11. Check the `Files/Vars` tab
+
+Open the info panel of any `pc-*` and go to the last tab, `Files/Vars`. It summarises:
 
 - Defined environment variables
-
-- Mounted files (always RO). Sensitive files (like `secret.env` on `server-0`) are flagged with a lock icon.
-
-  Each file can be clicked to show its content on the `File Manager`.
+- Mounted files (always read-only). Sensitive files (like `secret.env` on `server-0`) are flagged with a lock icon. Each file can be clicked to show its content in the File Manager.
 
 ## Troubleshooting
 
 - If inter-subnet ping fails, verify `r1` has all 3 interfaces up.
-- If same-subnet ping fails, verify `br0` exists on `sw-*`/`ovs` and includes expected interfaces.
+- If same-subnet ping fails, verify `br0` exists on `sw-*`/`ovs` and includes the expected interfaces.
 - Script `/mnt/test.sh` should be executed with `sh`, as it is mounted with read-only permissions.
-- If a target name in `network_conf.json` is ambiguous (multi-replica), use explicit `-N` pod name.
+- If a target name in `network_conf.json` is ambiguous (multi-replica), use the explicit `-N` pod name.
 - If `cat /etc/kubendt/secret.env` on `server-0` is missing, the topology was imported before the file existed. Create it, mark sensitive, then redeploy or restart `server-0`.

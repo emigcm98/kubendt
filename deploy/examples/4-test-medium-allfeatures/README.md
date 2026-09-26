@@ -12,7 +12,6 @@ Medium-scale scenario that exercises the most common KubeNDT features together i
 ## Table of Contents
 
 - [Topology Overview](#topology-overview)
-- [IP Addressing Summary](#ip-addressing-summary)
 - [DNS Zone (`kubendt.local`)](#dns-zone-kubendtlocal)
 - [Files In This Folder](#files-in-this-folder)
 - [Notable Characteristics](#notable-characteristics)
@@ -20,44 +19,39 @@ Medium-scale scenario that exercises the most common KubeNDT features together i
 - [Apply Traffic Shaping (TC)](#apply-traffic-shaping-tc-and-observe-bandwidth-drop)
 - [Troubleshooting](#troubleshooting)
 
----
-
 ## Topology Overview
 
 ![Topology](../../../doc/images/tests/4-test-medium-allfeatures.png)
 
 Nodes deployed:
 
-| Node | Image | Role |
-| --- | --- | --- |
-| `edge-router-0` | `frrouting/frr` | Edge router, SNAT, DNAT, OSPF |
-| `svc-router-0` | `frrouting/frr` | Services router, OSPF |
-| `room-router-0` | `frrouting/frr` | User rooms router, OSPF |
-| `core-sw-0` | `globocom/openvswitch` | Core switch (OVS) |
-| `dist-sw-0` | `globocom/openvswitch` | Distribution switch (OVS) |
-| `dmz-sw-0` | `ubuntu` | DMZ switch (Linux bridge) |
-| `svc-sw-0` | `ubuntu` | Services switch (Linux bridge) |
-| `room-sw-0`, `room-sw-1` | `ubuntu` | Room switches (Linux bridge) |
-| `iperf-server-0` | `networkstatic/iperf3` | iperf3 server in DMZ |
-| `iperf-server-1` | `networkstatic/iperf3` | iperf3 server in services network |
-| `web-public-0` | `nginx:alpine` | Public web server in DMZ |
-| `web-internal-0` | `nginx:alpine` | Internal web server in services network |
-| `dns-server-0` | `internetsystemsconsortium/bind9:9.18` | BIND9 authoritative DNS |
-| `user-0` … `user-3` | `alpine` | End-user hosts |
+| Node | Driver | Image | Replicas | Role |
+| --- | --- | --- | --- | --- |
+| `edge-router` | `FRRRouterDriver` | `quay.io/frrouting/frr:10.7.1` | 1 | Edge router: OSPF (originates the default route), SNAT on `eth0`, external uplink with DNAT on `eth1` |
+| `svc-router` | `FRRRouterDriver` | `quay.io/frrouting/frr:10.7.1` | 1 | Services router, OSPF |
+| `room-router` | `FRRRouterDriver` | `quay.io/frrouting/frr:10.7.1` | 1 | User rooms router, OSPF |
+| `core-sw` | `LinuxSwitchDriver` | `globocom/openvswitch:latest` | 1 | Core switch (Linux bridge on the Open vSwitch image) |
+| `dist-sw` | `LinuxSwitchDriver` | `globocom/openvswitch:latest` | 1 | Distribution switch (Linux bridge on the Open vSwitch image) |
+| `dmz-sw` | `LinuxSwitchDriver` | `ubuntu:26.04` | 1 | DMZ switch (Linux bridge) |
+| `svc-sw` | `LinuxSwitchDriver` | `ubuntu:26.04` | 1 | Services switch (Linux bridge) |
+| `room-sw` | `LinuxSwitchDriver` | `ubuntu:26.04` | 2 | Room switches (Linux bridge), one per room |
+| `iperf-server` | `BasicHostDriver` | `networkstatic/iperf3:latest` | 2 | iperf3 servers: `iperf-server-0` in the DMZ, `iperf-server-1` in the services network |
+| `web-public` | `BasicHostDriver` | `nginx:1.31.6-alpine` | 1 | Public web server in the DMZ |
+| `web-internal` | `BasicHostDriver` | `nginx:1.31.6-alpine` | 1 | Internal web server in the services network |
+| `dns-server` | `BasicHostDriver` | `internetsystemsconsortium/bind9:9.20` | 1 | BIND9 authoritative DNS for `kubendt.local` |
+| `user` | `HostDriver` | `alpine:3.24.2` | 4 | End-user hosts, two per room, with `iproute2-tc` for the traffic shaping test |
 
----
+Nodes without a `driver` in the topology JSON get the default of their type: `BasicHostDriver` for hosts and `LinuxSwitchDriver` for switches.
 
-## IP Addressing Summary
+Network segments:
 
-| Segment | Subnet | Key hosts |
+| Segment | Subnet | Purpose |
 | --- | --- | --- |
 | OSPF backbone / DMZ | `10.0.255.0/24` | `edge-router-0 eth2` `.254`, `svc-router-0 eth1` `.253`, `room-router-0 eth1` `.252`, `web-public-0 eth1` `.20`, `iperf-server-0 eth1` `.10` |
 | Services network | `192.168.10.0/24` | `svc-router-0 eth2` `.1`, `iperf-server-1 eth1` `.10`, `dns-server-0 eth1` `.15`, `web-internal-0 eth1` `.20` |
 | Room A | `192.168.0.0/24` | `room-router-0 eth2` `.1`, `user-0` `.10`, `user-1` `.11` |
 | Room B | `192.168.1.0/24` | `room-router-0 eth3` `.1`, `user-2` `.10`, `user-3` `.11` |
 | External uplink | `10.208.x.x/16` | `edge-router-0 eth1` (lab-specific) |
-
----
 
 ## DNS Zone (`kubendt.local`)
 
@@ -76,8 +70,6 @@ Nodes deployed:
 | `room-router1.kubendt.local` | `192.168.1.1`   |
 
 All `user-*` nodes are configured with `add_dns_nameserver 192.168.10.15` and `add_dns_search kubendt.local`, so short names like `web-internal` resolve directly.
-
----
 
 ## Files In This Folder
 
@@ -113,21 +105,18 @@ These files are mounted into the corresponding nodes at deploy time:
 
 > These files must exist in the Namespace File Manager **before** importing the topology. Missing files will cause the affected nodes to fail to start.
 
----
-
 ## Notable Characteristics
 
 - Three FRR routers (`edge-router-0`, `svc-router-0`, `room-router-0`) form a full OSPF area 0 mesh over the `10.0.255.0/24` backbone. `edge-router-0` originates a default route (`ospf_originate_default`) so all nodes reach the internet via it.
-- `edge-router-0 eth1` is the **external uplink**, labeled **"External Network"** in the topology. This interface connects the pod directly to the **host's external network**, the physical underlay that the Kubernetes worker nodes are connected to. The reference lab uses the `10.208.0.0/16` range; the IP and upstream gateway in `network_conf.json` must be adapted to your environment.
-- `edge-router-0` has SNAT on `eth1` for internet access and two DNAT rules on `eth1`:
+- `edge-router-0 eth1` is the **external uplink**, labeled **"External Network"** in the topology. This interface connects the pod directly to the **host's external network**, the physical underlay that the Kubernetes worker nodes are connected to. The reference lab uses the `10.208.0.0/16` range; the IP assigned to it in `network_conf.json` must be adapted to your environment.
+- `edge-router-0` has SNAT on `eth0`, the pod's Kubernetes interface, so every node reaches the internet through the cluster network, and two DNAT rules on the external uplink `eth1`:
   - TCP/UDP `5201` → `iperf-server-0` (`10.0.255.10:5201`) for external iperf3 tests.
   - TCP `80` → `web-public-0` (`10.0.255.20:80`) for external web access.
-- `core-sw-0` and `dist-sw-0` use OVS; `dmz-sw-0`, `svc-sw-0`, `room-sw-*` use a standard Linux bridge (`bridge-utils`).
+- Every switch is bridged by the default `LinuxSwitchDriver` (a Linux bridge set up by `setup_bridge`), because the topology declares no `driver` for them. `core-sw-0` and `dist-sw-0` run on the Open vSwitch image with its daemons started, but OVS is not what bridges them; declare `"driver": "OpenVSwitchDriver"` on those nodes, as example 1 does with `ovs`, to bridge through OVS.
 - `user-*` nodes start with `iproute2-tc` installed (for optional traffic shaping tests).
 - `iperf-server-*` nodes auto-start `iperf3 -s -p 5201` on boot. No manual server startup needed.
 - DNS is fully functional after applying `network_conf.json`: `user-*` nodes can resolve `web-internal` and `web-public` by short name.
-
----
+- FRR routers run `quay.io/frrouting/frr:10.7.1` through the image's own init (`watchfrr` under `tini`). The startup command installs `iptables`, which the NAT actions need and the image does not ship, and enables `ospfd`. A router is Ready only when zebra and the enabled daemons answer on their vty socket.
 
 ## Step-By-Step (UI)
 
@@ -158,13 +147,13 @@ Alternatively, if the File Manager supports zip import, you can zip the `files/`
 ### 4. Edit `network_conf.json` for your environment
 
 - The `replace_ip` action for `edge-router-0 eth1` contains a lab-specific IP (`10.208.11.100/16`). Update it to match your physical network.
-- Update the gateway in `set_default_route` for `edge-router-0` if your upstream gateway differs.
+- `edge-router-0` keeps the default route of its pod (through the cluster network), so there is no upstream gateway to adapt.
 
 ### 5. Apply network configuration
 
 - Click **Load network conf** and select `network_conf.json`.
 - Confirm all actions succeed. This applies:
-  - External IP + SNAT + DNAT on `edge-router-0 eth1`
+  - External IP and DNAT on `edge-router-0 eth1`, SNAT on its `eth0`
   - OSPF on all three routers
   - Default routes on `iperf-server-*`, `web-*`, `dns-server-0`, `user-*` nodes
   - DNS resolver (`192.168.10.15`) and search domain (`kubendt.local`) on `user-*` nodes
@@ -264,7 +253,7 @@ curl http://<edge-router-0-external-ip>
 
 Expected: the HTML content from `web_public/index_public.html`, forwarded by the DNAT rule TCP 80 → `10.0.255.20:80`.
 
-### 12. Validate internet access (requires external uplink)
+### 12. Validate internet access (requires internet access from the cluster network)
 
 From any `user-*` node:
 
@@ -272,7 +261,7 @@ From any `user-*` node:
 ping -c 3 8.8.8.8
 ```
 
-Expected: successful replies routed through `edge-router-0` SNAT.
+Expected: successful replies, translated by `edge-router-0` on `eth0` toward the cluster network. The external uplink is not on this path.
 
 ### 13. Apply traffic shaping (TC) and observe bandwidth drop
 
@@ -340,8 +329,6 @@ If you prefer scripted configuration rather than the UI, the same rule can be ex
 
 To remove it via script, replace `"type": "add_qdisc"` with `"type": "del_qdisc"` (the `tcparams` field is not needed for deletion).
 
----
-
 ## Troubleshooting
 
 - **Node stuck in `Init` / crash loop**: the most common cause is a missing mounted file. Verify all six files from the [Files In This Folder](#files-in-this-folder) table exist in the Namespace File Manager.
@@ -350,4 +337,4 @@ To remove it via script, replace `"type": "add_qdisc"` with `"type": "del_qdisc"
 - **iperf3 internal test fails**: verify `user-*` nodes can reach `192.168.10.0/24` via ping first. If not, check OSPF routes on `room-router-0` and `svc-router-0`.
 - **iperf3 external DNAT fails**: check that the DNAT rule appears in `iptables -t nat -L PREROUTING` on `edge-router-0`. Also confirm `iperf-server-0` has a default route via `10.0.255.254`.
 - **`web-internal` returns default nginx page**: the file `web_internal/index_internal.html` may have been created after the node was started. Restart `web-internal-0` to re-mount the file.
-- **Internet access not working**: verify `edge-router-0` has the correct external IP on `eth1` and that the SNAT rule is active (`iptables -t nat -L POSTROUTING`).
+- **Internet access not working**: verify the SNAT rule on `edge-router-0 eth0` is active (`iptables -t nat -L POSTROUTING`) and that pods in the cluster can reach the internet at all; the external IP on `eth1` only matters for the DNAT tests.

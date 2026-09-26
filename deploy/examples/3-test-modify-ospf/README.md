@@ -25,15 +25,15 @@ _Topology after Phase 2 (scale-up) and Phase 3 (add):_
 
 ![Topology after scale-up and add](../../../doc/images/tests/3-test-modify-ospf-2.png)
 
-Initial deployment:
+Nodes deployed (initial topology):
 
-| Node | Driver | Image | Replicas |
-| --- | --- | --- | --- |
-| `ubuntu-host` | `HostDriver` | `ubuntu:20.04` | 1 |
-| `alpine-host` | `BasicHostDriver` | `alpine` | 1 |
-| `switch` | `OpenVSwitchDriver` | `globocom/openvswitch` | 2 |
-| `frr-router` | `FRRRouterDriver` | `frrouting/frr` (container) | 1 |
-| `vyos-router` | `VyOSRouterDriver` | `localhost/vyos-router:dev` (QEMU VM) | 1 |
+| Node | Driver | Image | Replicas | Role |
+| --- | --- | --- | --- | --- |
+| `ubuntu-host` | `HostDriver` | `ubuntu:26.04` | 1 | Host on LAN A |
+| `alpine-host` | `BasicHostDriver` | `alpine:3.24.2` | 1 | Host on LAN B; scaled to 3 replicas in phase 2 |
+| `switch` | `OpenVSwitchDriver` | `globocom/openvswitch:latest` | 2 | Open vSwitch switches: `switch-0` for LAN A, `switch-1` for LAN B |
+| `frr-router` | `FRRRouterDriver` | `quay.io/frrouting/frr:10.7.1` (container) | 1 | LAN A gateway, OSPF over the transit link |
+| `vyos-router` | `VyOSRouterDriver` | `localhost/vyos-router:dev` (QEMU VM) | 1 | LAN B gateway, OSPF over the transit link |
 
 Network segments:
 
@@ -69,13 +69,25 @@ The scenario is organized as six sequential phases. Each phase has a clear KubeN
 | 5 | Apply `modify-phase5-delete.json` | Delete phase of dynamic modification |
 | 6 | Force `vyos-router-0` (or `frr-router-0`) pod restart | Replay-based recovery: OSPF, IPs and routes restored automatically from per-pod operation history |
 
+## Notable Characteristics
+
+- The scenario combines **five different drivers** in a single topology: `HostDriver`, `BasicHostDriver`, `OpenVSwitchDriver`, `FRRRouterDriver`, and the VM-based `VyOSRouterDriver`. Each modify phase exercises capability dispatch through the resolved driver of the target pod.
+- The FRR and VyOS routers are configured through the **same** `ospf_*` action set, even though one is a container reached via `kubectl exec` and the other is a QEMU guest reached over SSH. This is the clearest demonstration of the driver/capability separation: a single `OSPFCapable` interface, two driver realizations.
+- OSPF networks are announced via the `ospf_add_network` action, dispatched through each router's OSPF capability rather than via raw shell commands.
+- The transit link (`10.0.254.0/30`) is announced into OSPF so that the routers learn each other's LAN prefixes dynamically. No static routes are configured between routers.
+- Each modify phase that introduces new pods is paired with a small post-modify configuration file (`network_conf-phase2.json`, `network_conf-phase3.json`). The original `network_conf.json` is not re-applied; only the deltas required for the new pods are issued.
+- The replay step does not use a dedicated configuration file. It relies entirely on the operation history persisted by KubeNDT during phases 1, 2, and 3.
+- FRR routers run `quay.io/frrouting/frr:10.7.1` through the image's own init (`watchfrr` under `tini`). The startup command installs `iptables`, which the NAT actions need and the image does not ship, and enables `ospfd`. A router is Ready only when zebra and the enabled daemons answer on their vty socket.
+
+For a VyOS-focused scenario that exercises the VM driver's full capability surface (SNAT/DNAT, DNS, external/physical uplink, multiple VyOS routers), see [`6-test-vyos`](../6-test-vyos/README.md).
+
 ## Step-By-Step (UI)
 
 ### 1. Create namespace and deploy
 
 - Create a namespace (e.g. `modify-ospf`).
 - Open the namespace graph view, click `Import topology`, and select `topology-network-test-modify-ospf.json`.
-- Wait until all six pods reach `Running`. The `vyos-router-0` pod reaches `Running` quickly, but the VyOS guest needs additional time to finish booting and apply its boot-time interface configuration; the readiness probe accounts for this.
+- Wait until all six pods are Ready. `vyos-router-0` is `Running` long before it is Ready: the guest has to boot and apply its boot-time interface configuration, and its readiness probe waits until the guest's SSH and HTTP API answer.
 - Click `Load network conf` and select `network_conf.json`.
 
 ### 2. Validate initial deployment and OSPF convergence
@@ -165,21 +177,10 @@ vtysh -c "show ip ospf neighbor"   # vyos-router must be Full again
 
 No manual reconfiguration is required in either case. The switch ports facing the restarted router are re-attached to their bridges as part of the same replay, and cross-LAN reachability between hosts on LAN A and LAN B is restored as soon as the OSPF adjacency comes back up.
 
-## Notable Characteristics
-
-- The scenario combines **five different drivers** in a single topology: `HostDriver`, `BasicHostDriver`, `OpenVSwitchDriver`, `FRRRouterDriver`, and the VM-based `VyOSRouterDriver`. Each modify phase exercises capability dispatch through the resolved driver of the target pod.
-- The FRR and VyOS routers are configured through the **same** `ospf_*` action set, even though one is a container reached via `kubectl exec` and the other is a QEMU guest reached over SSH. This is the clearest demonstration of the driver/capability separation: a single `OSPFCapable` interface, two driver realizations.
-- OSPF networks are announced via the `ospf_add_network` action, dispatched through each router's OSPF capability rather than via raw shell commands.
-- The transit link (`10.0.254.0/30`) is announced into OSPF so that the routers learn each other's LAN prefixes dynamically. No static routes are configured between routers.
-- Each modify phase that introduces new pods is paired with a small post-modify configuration file (`network_conf-phase2.json`, `network_conf-phase3.json`). The original `network_conf.json` is not re-applied; only the deltas required for the new pods are issued.
-- The replay step does not use a dedicated configuration file. It relies entirely on the operation history persisted by KubeNDT during phases 1, 2, and 3.
-
-For a VyOS-focused scenario that exercises the VM driver's full capability surface (SNAT/DNAT, DNS, external/physical uplink, multiple VyOS routers), see [`6-test-vyos`](../6-test-vyos/README.md).
-
 ## Troubleshooting
 
 - If `frr-router` and `vyos-router` never reach the `Full` OSPF state, verify that the transit link is up on both ends (`ip a show eth2` on FRR; `show interfaces` on VyOS) and that the `ospf_add_network` actions were applied successfully on both routers. On FRR, `vtysh -c "show running-config"` should show the `network` statements under `router ospf`; on VyOS, `show configuration commands | match ospf`. A common cause of a stuck `ExStart`/`Exchange` state between heterogeneous routers is an MTU mismatch, confirm `ospf_mtu_ignore` was applied on `eth2` of both routers.
 - If the VyOS guest does not pick up its interface addresses, check that the boot-time configuration was generated (the entrypoint builds a seed ISO from the topology) and that the pod has `/dev/kvm` access; without KVM the guest may fail to boot or boot too slowly for the readiness probe.
-- If a freshly scaled or added host has no default route, confirm that the corresponding `conf-phaseN.json` was applied AFTER the modify request. Operations targeting a pod that does not yet exist are skipped.
+- If a freshly scaled or added host has no default route, confirm that the corresponding `network_conf-phaseN.json` was applied AFTER the modify request. Operations targeting a pod that does not yet exist are skipped.
 - If `alpine-host-1` or `alpine-host-2` does not get an IP on `eth1`, verify that the corresponding link entry exists in `modify-phase2-scaleup.json` and that `switch-1` bridge includes the new interface.
 - If after deleting a router pod the OSPF neighbor never returns to `Full`, check the KubeNDT backend logs for replay results. The expected sequence after restart is: IP assignment on `eth1` and `eth2`, then the `ospf_*` actions on both LAN and transit subnets.
