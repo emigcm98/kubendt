@@ -19,35 +19,31 @@ Full Open5GS 5G Core deployment with a simulated RAN and UE using UERANSIM, vali
 - [Step-By-Step (UI)](#step-by-step-ui)
 - [Troubleshooting](#troubleshooting)
 
----
-
 ## Topology Overview
 
 ![Topology](../../../doc/images/tests/5-test-full-open5gs.png)
 
 Nodes deployed:
 
-| Node | Image | Role |
-| --- | --- | --- |
-| `amf-0` | `docker_open5gs:master` | Access and Mobility Management Function |
-| `smf-0` | `docker_open5gs:master` | Session Management Function |
-| `nrf-0` | `docker_open5gs:master` | Network Repository Function |
-| `scp-0` | `docker_open5gs:master` | Service Communication Proxy |
-| `ausf-0` | `docker_open5gs:master` | Authentication Server Function |
-| `udm-0` | `docker_open5gs:master` | Unified Data Management |
-| `udr-0` | `docker_open5gs:master` | Unified Data Repository |
-| `pcf-0` | `docker_open5gs:master` | Policy Control Function |
-| `udsf-0` | `mongo:6.0` | MongoDB (subscriber data store) |
-| `upf-0` | `docker_open5gs:master` | User Plane Function |
-| `webui-0` | `docker_open5gs:master` | Open5GS Web UI |
-| `gnb-0` | `gradiant/ueransim:3.2.8` | UERANSIM gNB, N2/N3 on host external network, radio link to `ue-0` |
-| `ue-0` | `gradiant/ueransim:3.2.8` | UERANSIM UE, connects to gNB, establishes PDU session |
-| `switch-0` | `ubuntu` | Control-plane switch (Linux bridge) |
-| `switch-1` | `ubuntu` | N4/SMF–UPF switch (Linux bridge) |
-| `switch-2` | `ubuntu` | UPF uplink switch (Linux bridge) |
-| `switch-3` | `ubuntu` | WebUI switch (Linux bridge) |
-| `router-0` | `frrouting/frr` | Edge router, external uplink, WebUI DNAT |
-| `router-1` | `frrouting/frr` | Internet gateway router (SNAT) |
+| Node | Driver | Image | Replicas | Role |
+| --- | --- | --- | --- | --- |
+| `amf` | `BasicHostDriver` | `ghcr.io/herlesupreeth/docker_open5gs:master` | 1 | Access and Mobility Management Function |
+| `smf` | `BasicHostDriver` | `ghcr.io/herlesupreeth/docker_open5gs:master` | 1 | Session Management Function |
+| `nrf` | `BasicHostDriver` | `ghcr.io/herlesupreeth/docker_open5gs:master` | 1 | Network Repository Function |
+| `scp` | `BasicHostDriver` | `ghcr.io/herlesupreeth/docker_open5gs:master` | 1 | Service Communication Proxy |
+| `ausf` | `BasicHostDriver` | `ghcr.io/herlesupreeth/docker_open5gs:master` | 1 | Authentication Server Function |
+| `udm` | `BasicHostDriver` | `ghcr.io/herlesupreeth/docker_open5gs:master` | 1 | Unified Data Management |
+| `udr` | `BasicHostDriver` | `ghcr.io/herlesupreeth/docker_open5gs:master` | 1 | Unified Data Repository |
+| `pcf` | `BasicHostDriver` | `ghcr.io/herlesupreeth/docker_open5gs:master` | 1 | Policy Control Function |
+| `udsf` | `BasicHostDriver` | `mongo:8.0` | 1 | MongoDB (subscriber data store) |
+| `upf` | `BasicHostDriver` | `ghcr.io/herlesupreeth/docker_open5gs:master` | 1 | User Plane Function |
+| `webui` | `BasicHostDriver` | `ghcr.io/herlesupreeth/docker_open5gs:master` | 1 | Open5GS Web UI |
+| `gnb` | `BasicHostDriver` | `gradiant/ueransim:3.3.0` | 1 | UERANSIM gNB, N2/N3 on the host external network, radio link to `ue-0` |
+| `ue` | `BasicHostDriver` | `gradiant/ueransim:3.3.0` | 1 | UERANSIM UE, connects to the gNB, establishes a PDU session |
+| `switch` | `LinuxSwitchDriver` | `ubuntu:26.04` | 4 | Linux bridges: `switch-0` control plane, `switch-1` N4 (SMF–UPF), `switch-2` UPF uplink, `switch-3` WebUI |
+| `router` | `FRRRouterDriver` | `quay.io/frrouting/frr:10.7.1` | 2 | `router-0`: edge router with the external uplink and the WebUI DNAT; `router-1`: internet gateway (SNAT) |
+
+Nodes without a `driver` in the topology JSON get the default of their type: `BasicHostDriver` for hosts and `LinuxSwitchDriver` for switches.
 
 Network segments:
 
@@ -61,8 +57,6 @@ Network segments:
 | External uplink | `10.208.x.x/16` | `router-0 eth1` and `gnb-0 eth1`, **host external network** (the physical underlay the K8s nodes are connected to; labeled "External Network" in the topology, subnet and gateway are environment-specific) |
 | Radio (N/A) | `10.6.0.0/24` | `gnb-0 eth2` (`.1`) ↔ `ue-0 eth1` (`.2`), simulated radio link |
 | UE internet pool | `192.168.10.0/24` | Allocated by UPF via `ogstun` TUN interface |
-
----
 
 ## IP Addressing Summary
 
@@ -90,8 +84,6 @@ Network segments:
 | `router-0` | `eth5` | `10.5.254.1/30` |
 | `router-1` | `eth1` | `10.5.2.1/24` |
 | `router-1` | `eth2` | `10.5.254.2/30` |
-
----
 
 ## Files In This Folder
 
@@ -149,8 +141,6 @@ ue/
 
 Each NF node mounts its own `<nf>.yaml` and `<nf>_init.sh` from the corresponding subfolder, plus `open5gs_init.sh` (and `ip_utils.py` where needed) from the root. All paths referenced in `topology-network-test-big.json` are relative to the namespace file root, so the structure above must be preserved exactly.
 
----
-
 ## Notable Characteristics
 
 - All 5GC network functions use the `ghcr.io/herlesupreeth/docker_open5gs:master` image. That repository publishes no version tags, so the exact digest a run used is worth recording when results matter (`kubectl get pods -o jsonpath='{.items[*].status.containerStatuses[*].imageID}'`). Each NF is configured via environment variables (IPs, MCC/MNC, etc.) and its own YAML config file, both provided at deploy time.
@@ -162,8 +152,7 @@ Each NF node mounts its own `<nf>.yaml` and `<nf>_init.sh` from the correspondin
 - `router-0` additionally exposes the WebUI externally via a DNAT rule: external TCP `9999` is forwarded to `webui-0` (`10.5.3.10:9999`).
 - The Open5GS WebUI runs on `webui-0` port `9999`. After deployment it is reachable at `http://<router-0-external-ip>:9999` from the physical network (via the DNAT), or directly at `http://10.5.3.10:9999` from any node on the `10.5.3.0/24` segment.
 - Default MCC/MNC is `999/30`, TAC `1`. These values are set as environment variables in the topology file and can be adjusted before importing.
-
----
+- FRR routers run `quay.io/frrouting/frr:10.7.1` through the image's own init (`watchfrr` under `tini`). The startup command installs `iptables`, which the NAT actions need and the image does not ship, and enables `ospfd`. A router is Ready only when zebra and the enabled daemons answer on their vty socket.
 
 ## Step-By-Step (UI)
 
@@ -205,7 +194,7 @@ Two entries contain lab-specific IPs that must be adjusted before applying:
 - `router-0`: `replace_ip` on `eth1` → set the correct IP for `router-0` on the host external network (default: `10.208.11.101/16`).
 - `gnb-0`: `replace_ip` on `eth1` → set the correct IP for `gnb-0` on the host external network (default: `10.208.11.103/16`). The `set_default_route` gateway (`10.208.11.101`) must point to `router-0`'s external IP, this is the path N2/N3 traffic uses to reach AMF and UPF.
 
-Also verify the `set_default_route` gateway for `router-0` if your upstream gateway differs from the default.
+`router-0`'s own default route points to `router-1` (`10.5.254.2`), which translates outbound traffic on its Kubernetes interface, so it does not depend on your physical gateway.
 
 ### 5. Apply network configuration
 
@@ -274,7 +263,7 @@ http://10.5.3.10:9999
 
 Default credentials: `admin` / `1423`. Log in and verify the dashboard shows the core as operational. You can also add subscriber entries here (IMSI, key, OPC) in preparation for attaching a UE.
 
-### 10. Validate internet path (requires external uplink)
+### 10. Validate internet path (requires internet access from the cluster network)
 
 From a shell on any NF node, test that the default route through `router-0` and back via `router-1` reaches the internet:
 
@@ -283,8 +272,6 @@ ping -c 3 8.8.8.8
 ```
 
 Expected: replies routed via `router-0 → router-1 (SNAT) → internet`.
-
----
 
 ## RAN and UE, UERANSIM
 
@@ -388,8 +375,6 @@ The returned IP should be the external IP of `router-1` (or your NAT gateway), n
 ping -c 1 -I uesimtun0 8.8.8.8   # explicit interface, must succeed
 ping -c 1 -I eth1 8.8.8.8        # direct path, will fail if default route is on uesimtun0
 ```
-
----
 
 ## Troubleshooting
 

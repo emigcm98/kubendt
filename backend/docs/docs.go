@@ -3072,7 +3072,7 @@ const docTemplate = `{
                         "type": "string"
                     },
                     "example": [
-                        "ip route add 10.10.0.0/16 via 10.0.0.1 dev net1"
+                        "ip route replace 10.10.0.0/16 via 10.0.0.1 dev net1"
                     ]
                 },
                 "driver_type": {
@@ -4248,7 +4248,7 @@ const docTemplate = `{
                 },
                 "image": {
                     "type": "string",
-                    "example": "frrouting/frr:latest"
+                    "example": "quay.io/frrouting/frr:10.7.1"
                 },
                 "mounts": {
                     "type": "array",
@@ -4412,7 +4412,7 @@ const docTemplate = `{
                 },
                 "image": {
                     "type": "string",
-                    "example": "frrouting/frr:latest"
+                    "example": "quay.io/frrouting/frr:10.7.1"
                 },
                 "l3capable": {
                     "description": "L3Capable reports whether the node can originate a traceroute. It gates the\n\"Traceroute from here\" menu item and is true only for L3-capable drivers.",

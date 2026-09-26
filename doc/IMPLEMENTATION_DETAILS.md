@@ -742,7 +742,7 @@ Live per-interface capture surfaced in the UI as a Wireshark-like panel (packet 
 
 There is no dedicated capture pod. An **ephemeral container** is injected into the _target pod_ and runs `tshark` there. Since all containers in a pod share the network namespace, it sees the pod's data-plane interfaces (`ethN` from Meshnet, `tapN` created by the QEMU entrypoint) — a single code path covers both `k8s-linux` and QEMU nodes, and capture is always pod-side (`ethN`/`tapN`), never inside a guest VM. See `helpers.InjectCaptureContainer` / `EnsureCaptureContainer`.
 
-Image: anything with `tshark`/`dumpcap` + a shell. Default `nicolaka/netshoot` (no build step); override with `KUBENDT_CAPTURE_IMAGE`; slim image in `deploy/custom_images/capture/`. The container is granted `NET_RAW`+`NET_ADMIN`. Requires cluster support for ephemeral containers (GA since k8s 1.25).
+Image: anything with `tshark`/`dumpcap` + a shell. Default `nicolaka/netshoot:v0.16` (no build step); override with `KUBENDT_CAPTURE_IMAGE`; slim image in `deploy/custom_images/capture/`. The container is granted `NET_RAW`+`NET_ADMIN`. Requires cluster support for ephemeral containers (GA since k8s 1.25).
 
 ### 11.2 One tshark, two outputs
 

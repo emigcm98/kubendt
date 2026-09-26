@@ -193,7 +193,7 @@ type LinksStatusResponse struct {
 // Structure for a Node (Statefulset pod) in the JSON request
 type NodeSpec struct {
 	Name      string `json:"name" example:"router1"`
-	Image     string `json:"image" example:"frrouting/frr:latest"`
+	Image     string `json:"image" example:"quay.io/frrouting/frr:10.7.1"`
 	Type      string `json:"type" example:"router"`
 	ShellMode string `json:"shellMode,omitempty" example:"sh"`
 	// Qemu is no longer accepted from request payloads; it is derived from

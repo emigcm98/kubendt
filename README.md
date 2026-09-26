@@ -8,7 +8,7 @@
    <a href="https://doi.org/10.5281/zenodo.21276320"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.21276320.svg" alt="DOI" /></a>
 </p>
 
-> Last reviewed: 21 Sep 2026
+> Last reviewed: 26 Sep 2026
 
 **KubeNDT** is a platform for deploying and operating virtual network topologies on Kubernetes.
 
@@ -187,7 +187,7 @@ KubeNDT includes **6 reference deployments** in `deploy/examples/`. Start with t
 - `topology-network-*.json`: Node and link definitions
 - `network_conf.json`: Configuration operations (IP assignment, NAT, routing, etc.)
 - `README.md`: Step-by-step instructions and validation tests
-- `*.conf` files: Configuration snippets for routing daemons (OSPF, BGP, etc.)
+- `files/` or a zip archive: content the nodes mount, in the examples that need it
 
 **Getting started with an example:**
 
