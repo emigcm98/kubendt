@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-09-26
+
 ### Added
 
 - Nodes accept an optional `terminationGracePeriodSeconds` in the topology JSON. The platform default is now 2 s instead of the Kubernetes 30 s, since emulated nodes are stateless and the usual `sleep infinity` entrypoint ignores SIGTERM, so every operation that recreates a pod finishes sooner. Set it higher per node for workloads that need an orderly shutdown.
@@ -143,7 +145,8 @@ Initial public release. KubeNDT deploys and operates virtual network topologies 
 - Health, readiness and version endpoints, and Swagger docs at `/swagger`.
 - Container images published to GHCR and a Docker Compose deployment.
 
-[Unreleased]: https://github.com/emigcm98/kubendt/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/emigcm98/kubendt/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/emigcm98/kubendt/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/emigcm98/kubendt/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/emigcm98/kubendt/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/emigcm98/kubendt/compare/v1.0.0...v1.1.0
