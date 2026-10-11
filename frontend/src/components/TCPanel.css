@@ -1,7 +1,7 @@
 .tc-panel {
   position: fixed;
-  width: 380px;
-  height: 600px;
+  width: 420px;
+  height: 620px;
   min-width: 300px;
   min-height: 320px;
   display: flex;
@@ -246,6 +246,91 @@
 .tc-both-ends input {
   width: auto !important;
   margin: 0 !important;
+}
+
+/* htb class editor */
+.tc-class {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--tool-border);
+  border-radius: var(--radius-sm);
+  background: var(--tool-bg-sunken);
+}
+
+.tc-class.default {
+  border-color: var(--tool-accent);
+}
+
+.tc-class-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tc-config .tc-class-head .tc-class-name {
+  flex: 1;
+  width: auto;
+  margin: 0;
+  font-weight: 600;
+}
+
+.tc-class-default {
+  display: flex !important;
+  justify-content: flex-start !important;
+  gap: 0.3rem;
+  font-size: 0.78rem !important;
+  color: var(--tool-text-muted) !important;
+}
+
+.tc-class-default input {
+  width: auto !important;
+  margin: 0 !important;
+}
+
+.tc-class-shaping {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding-left: 0.6rem;
+  border-left: 2px solid var(--tool-border);
+}
+
+.tc-class-matches {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.tc-match {
+  display: grid;
+  grid-template-columns: 1.2fr 1.4fr 1.4fr auto;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.tc-config .tc-match input,
+.tc-config .tc-match select {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 3px 5px;
+  font-size: 0.78rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--tool-border);
+  background: var(--tool-bg-well);
+  color: var(--tool-text);
+}
+
+.tc-match .tc-btn {
+  justify-self: end;
+}
+
+.tc-form-btn.tc-small {
+  align-self: flex-start;
+  padding: 3px 9px;
+  font-size: 0.78rem;
 }
 
 /* Section headings of the composite form */

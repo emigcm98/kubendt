@@ -235,8 +235,20 @@ func qdiscStateFromJSON(e tcJSONQdisc) *types.QdiscState {
 		readTBFOptions(s, e.Options)
 	case "htb":
 		readHTBOptions(s, e.Options)
+	case "pfifo", "bfifo":
+		readLimitOption(s, e.Options)
 	}
 	return s
+}
+
+// readLimitOption keeps the queue length of a plain fifo leaf.
+func readLimitOption(s *types.QdiscState, opts json.RawMessage) {
+	var o struct {
+		Limit *int `json:"limit"`
+	}
+	if err := json.Unmarshal(opts, &o); err == nil {
+		s.Limit = o.Limit
+	}
 }
 
 // readHTBOptions keeps the default class, printed as a hex minor ("0x12").
