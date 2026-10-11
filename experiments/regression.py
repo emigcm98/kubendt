@@ -17,6 +17,7 @@ never restarts amf-0 (the core keeps no UE state, a restarted AMF strands the UE
 import glob
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -224,6 +225,19 @@ def ex4():
         ok, det, w = retry(contains(ex.ns, "user-0", "nslookup web-internal 2>&1", "Address"), 90); ex.check("user-0 nslookup web-internal", ok, det, w)
         ok, det, w = retry(contains(ex.ns, "user-0", "wget -qO- http://web-internal.kubendt.local 2>&1", "<"), 60); ex.check("user-0 wget web-internal (mounted page)", ok, det, w)
         ok, det, w = retry(contains(ex.ns, "user-0", "wget -qO- http://web-public.kubendt.local 2>&1", "<"), 60); ex.check("user-0 wget web-public", ok, det, w)
+        # README step 13: shaping on user-0 eth1 applied and read back through the API,
+        # felt by a ping, then removed. One netem carries the delay and the rate.
+        shaping = {"qdisc": "netem", "delay": "30ms", "rate": "1mbit"}
+        st, r = api("POST", f"/network/configure/{ex.ns}", body={"targets": [{"pod": "user-0", "actions": [{"type": "add_qdisc", "iface": "eth1", "tcparams": shaping}]}]})
+        ex.check("user-0 add_qdisc netem 30ms 1mbit", st == 200 and r.get("failures") == 0, r.get("errors") if isinstance(r, dict) else r)
+        q = (client.qdisc(ex.ns, "user-0", "eth1") or {}).get("tcparams") or {}
+        ex.check("user-0 eth1 reads back shaped, 30ms, 1mbit", bool(q.get("shaped")) and q.get("delay") == "30ms" and q.get("rate") == "1mbit", q)
+        rc, out = kexec(ex.ns, "user-0", "ping -c 5 -i 0.2 -W 2 192.168.10.10")
+        m = re.search(r"= [\d.]+/([\d.]+)/", out)
+        ex.check("user-0 ping RTT carries the 30 ms delay", bool(m) and float(m.group(1)) >= 30, out[-120:])
+        st, r = api("POST", f"/network/configure/{ex.ns}", body={"targets": [{"pod": "user-0", "actions": [{"type": "del_qdisc", "iface": "eth1"}]}]})
+        q = (client.qdisc(ex.ns, "user-0", "eth1") or {}).get("tcparams") or {}
+        ex.check("user-0 eth1 unshaped after del_qdisc", st == 200 and r.get("failures") == 0 and not q.get("shaped"), q)
         if restart(ex, "room-router-0"):
             ok, det, w = retry(ping(ex.ns, "user-0", "192.168.10.10"), 150); ex.check("user-0 ping 192.168.10.10 after room-router restart (replay)", ok, det, w)
     teardown(ex); return ex

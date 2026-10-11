@@ -71,15 +71,41 @@ type ActionOptions struct {
 // action instead of being dropped. Times accept ms, us or s (a bare number is
 // ms), percentages accept an optional "%", rates accept bit, kbit, mbit or
 // gbit, sizes accept b, kb, mb, kbit or mbit. Zero impairments are omitted.
+//
+// With netem (the default) every field but burst and latency combines in one
+// qdisc: delay, jitter, loss, duplicate, corrupt, reorder and a rate. tbf is
+// kept for a plain token bucket and takes rate, burst and latency only.
 type TCParamEntry struct {
-	Qdisc     string `json:"qdisc" example:"netem"`              // netem (default) or tbf
-	Delay     string `json:"delay,omitempty" example:"100ms"`    // netem, 0 to 60000 ms
-	Jitter    string `json:"jitter,omitempty" example:"10ms"`    // netem, 0 to 10000 ms, needs a delay
-	Loss      string `json:"loss,omitempty" example:"1%"`        // netem, 0 to 100 %
-	Duplicate string `json:"duplicate,omitempty" example:"0.5%"` // netem, 0 to 100 %
-	Corrupt   string `json:"corrupt,omitempty" example:"0.1%"`   // netem, 0 to 100 %
-	Limit     *int   `json:"limit,omitempty" example:"1000"`     // netem queue length in packets, 1 to 1000000
-	Rate      string `json:"rate,omitempty" example:"10mbit"`    // tbf, required
-	Burst     string `json:"burst,omitempty" example:"32kbit"`   // tbf, defaults to 32kbit
-	Latency   string `json:"latency,omitempty" example:"50ms"`   // tbf, 1 to 5000 ms, defaults to 50ms
+	Qdisc string `json:"qdisc,omitempty" example:"netem"` // netem (default) or tbf
+	// netem
+	Delay            string `json:"delay,omitempty" example:"100ms"`           // 0 to 60000 ms
+	Jitter           string `json:"jitter,omitempty" example:"10ms"`           // 0 to 10000 ms, needs a delay
+	DelayCorrelation string `json:"delay_correlation,omitempty" example:"25%"` // needs a jitter
+	// Distribution of the jitter: uniform (default), normal, pareto or
+	// paretonormal. tc does not report it back, the history keeps it.
+	Distribution       string       `json:"distribution,omitempty" example:"normal"`
+	Loss               string       `json:"loss,omitempty" example:"1%"`
+	LossCorrelation    string       `json:"loss_correlation,omitempty" example:"10%"`
+	Gemodel            *GemodelSpec `json:"gemodel,omitempty"` // Gilbert-Elliott loss, instead of loss
+	Duplicate          string       `json:"duplicate,omitempty" example:"0.5%"`
+	Corrupt            string       `json:"corrupt,omitempty" example:"0.1%"`
+	Reorder            string       `json:"reorder,omitempty" example:"25%"` // needs a delay
+	ReorderCorrelation string       `json:"reorder_correlation,omitempty" example:"50%"`
+	Limit              *int         `json:"limit,omitempty" example:"1000"` // queue length in packets, 1 to 1000000
+	// Rate caps the bandwidth: netem's link rate emulation, or tbf's rate (required there).
+	Rate string `json:"rate,omitempty" example:"10mbit"`
+	// tbf only
+	Burst   string `json:"burst,omitempty" example:"32kbit"` // defaults to 32kbit
+	Latency string `json:"latency,omitempty" example:"50ms"` // 1 to 5000 ms, defaults to 50ms
+}
+
+// GemodelSpec is netem's Gilbert-Elliott loss model: p is the probability of
+// entering the bad state, r of leaving it, 1-h the loss probability in the
+// bad state (100% by default) and 1-k in the good state (0% by default).
+// Average loss is p / (p + r) with the defaults.
+type GemodelSpec struct {
+	P string `json:"p" example:"1%"`
+	R string `json:"r,omitempty" example:"10%"`
+	H string `json:"1-h,omitempty" example:"100%"`
+	K string `json:"1-k,omitempty" example:"0%"`
 }

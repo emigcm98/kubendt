@@ -267,8 +267,12 @@ func buildTCParams(p *types.TCParamEntry) (qdisc string, args []string, err erro
 	return qdisc, args, err
 }
 
+// netemDistributions are the jitter distributions tc ships tables for.
+// uniform is tc's default and has no table, so it is never sent.
+var netemDistributions = map[string]bool{"uniform": true, "normal": true, "pareto": true, "paretonormal": true}
+
 func netemArgs(p *types.TCParamEntry) ([]string, error) {
-	for _, f := range []struct{ name, val string }{{"rate", p.Rate}, {"burst", p.Burst}, {"latency", p.Latency}} {
+	for _, f := range []struct{ name, val string }{{"burst", p.Burst}, {"latency", p.Latency}} {
 		if f.val != "" {
 			return nil, fmt.Errorf("tcparams.%s is a tbf parameter and does not apply to netem", f.name)
 		}
@@ -284,15 +288,63 @@ func netemArgs(p *types.TCParamEntry) ([]string, error) {
 	if jitter.n > 0 && delay.n <= 0 {
 		return nil, fmt.Errorf("tcparams.jitter requires a delay greater than zero")
 	}
+	delayCorr, err := tcPercent("delay_correlation", p.DelayCorrelation)
+	if err != nil {
+		return nil, err
+	}
+	if delayCorr.n > 0 && jitter.n <= 0 {
+		return nil, fmt.Errorf("tcparams.delay_correlation requires a jitter greater than zero")
+	}
+	distribution := strings.ToLower(strings.TrimSpace(p.Distribution))
+	if distribution != "" {
+		if !netemDistributions[distribution] {
+			return nil, fmt.Errorf("tcparams.distribution %q is not supported (uniform, normal, pareto, paretonormal)", p.Distribution)
+		}
+		if jitter.n <= 0 {
+			return nil, fmt.Errorf("tcparams.distribution requires a jitter greater than zero")
+		}
+	}
 	loss, err := tcPercent("loss", p.Loss)
 	if err != nil {
 		return nil, err
+	}
+	lossCorr, err := tcPercent("loss_correlation", p.LossCorrelation)
+	if err != nil {
+		return nil, err
+	}
+	if lossCorr.n > 0 && loss.n <= 0 {
+		return nil, fmt.Errorf("tcparams.loss_correlation requires a loss greater than zero")
+	}
+	gemodel, err := gemodelArgs(p.Gemodel)
+	if err != nil {
+		return nil, err
+	}
+	if gemodel != nil && loss.n > 0 {
+		return nil, fmt.Errorf("tcparams.loss and tcparams.gemodel are exclusive, pick one loss model")
 	}
 	duplicate, err := tcPercent("duplicate", p.Duplicate)
 	if err != nil {
 		return nil, err
 	}
 	corrupt, err := tcPercent("corrupt", p.Corrupt)
+	if err != nil {
+		return nil, err
+	}
+	reorder, err := tcPercent("reorder", p.Reorder)
+	if err != nil {
+		return nil, err
+	}
+	if reorder.n > 0 && delay.n <= 0 {
+		return nil, fmt.Errorf("tcparams.reorder requires a delay greater than zero")
+	}
+	reorderCorr, err := tcPercent("reorder_correlation", p.ReorderCorrelation)
+	if err != nil {
+		return nil, err
+	}
+	if reorderCorr.n > 0 && reorder.n <= 0 {
+		return nil, fmt.Errorf("tcparams.reorder_correlation requires a reorder greater than zero")
+	}
+	rate, err := tcRate("rate", p.Rate)
 	if err != nil {
 		return nil, err
 	}
@@ -307,15 +359,37 @@ func netemArgs(p *types.TCParamEntry) ([]string, error) {
 		args = append(args, "delay", delay.canon)
 		if jitter.n > 0 {
 			args = append(args, jitter.canon)
+			if delayCorr.n > 0 {
+				args = append(args, delayCorr.canon)
+			}
+			if distribution != "" && distribution != "uniform" {
+				args = append(args, "distribution", distribution)
+			}
 		}
 	}
+	if loss.n > 0 {
+		args = append(args, "loss", loss.canon)
+		if lossCorr.n > 0 {
+			args = append(args, lossCorr.canon)
+		}
+	}
+	args = append(args, gemodel...)
 	for _, v := range []struct {
 		name string
 		val  tcValue
-	}{{"loss", loss}, {"duplicate", duplicate}, {"corrupt", corrupt}} {
+	}{{"duplicate", duplicate}, {"corrupt", corrupt}} {
 		if v.val.n > 0 {
 			args = append(args, v.name, v.val.canon)
 		}
+	}
+	if reorder.n > 0 {
+		args = append(args, "reorder", reorder.canon)
+		if reorderCorr.n > 0 {
+			args = append(args, reorderCorr.canon)
+		}
+	}
+	if rate.set {
+		args = append(args, "rate", rate.canon)
 	}
 	if p.Limit != nil {
 		args = append(args, "limit", strconv.Itoa(*p.Limit))
@@ -323,11 +397,46 @@ func netemArgs(p *types.TCParamEntry) ([]string, error) {
 	return args, nil
 }
 
+// gemodelArgs emits `loss gemodel p [r [1-h [1-k]]]`. tc reads the values by
+// position, so a later one cannot be given without the ones before it.
+func gemodelArgs(g *types.GemodelSpec) ([]string, error) {
+	if g == nil {
+		return nil, nil
+	}
+	args := []string{"loss", "gemodel"}
+	prev := ""
+	for _, f := range []struct{ name, val string }{{"p", g.P}, {"r", g.R}, {"1-h", g.H}, {"1-k", g.K}} {
+		if f.val == "" {
+			if f.name == "p" {
+				return nil, fmt.Errorf("tcparams.gemodel.p is required")
+			}
+			prev = f.name
+			continue
+		}
+		if prev != "" {
+			return nil, fmt.Errorf("tcparams.gemodel.%s needs tcparams.gemodel.%s as well", f.name, prev)
+		}
+		v, err := tcPercent("gemodel."+f.name, f.val)
+		if err != nil {
+			return nil, err
+		}
+		args = append(args, v.canon)
+	}
+	return args, nil
+}
+
 func tbfArgs(p *types.TCParamEntry) ([]string, error) {
-	for _, f := range []struct{ name, val string }{{"delay", p.Delay}, {"jitter", p.Jitter}, {"loss", p.Loss}, {"duplicate", p.Duplicate}, {"corrupt", p.Corrupt}} {
+	for _, f := range []struct{ name, val string }{
+		{"delay", p.Delay}, {"jitter", p.Jitter}, {"delay_correlation", p.DelayCorrelation}, {"distribution", p.Distribution},
+		{"loss", p.Loss}, {"loss_correlation", p.LossCorrelation}, {"duplicate", p.Duplicate}, {"corrupt", p.Corrupt},
+		{"reorder", p.Reorder}, {"reorder_correlation", p.ReorderCorrelation},
+	} {
 		if f.val != "" {
 			return nil, fmt.Errorf("tcparams.%s is a netem parameter and does not apply to tbf", f.name)
 		}
+	}
+	if p.Gemodel != nil {
+		return nil, fmt.Errorf("tcparams.gemodel is a netem parameter and does not apply to tbf")
 	}
 	if p.Limit != nil {
 		return nil, fmt.Errorf("tcparams.limit is a netem parameter and does not apply to tbf")

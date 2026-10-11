@@ -3207,6 +3207,27 @@
                 }
             }
         },
+        "types.GemodelSpec": {
+            "type": "object",
+            "properties": {
+                "1-h": {
+                    "type": "string",
+                    "example": "100%"
+                },
+                "1-k": {
+                    "type": "string",
+                    "example": "0%"
+                },
+                "p": {
+                    "type": "string",
+                    "example": "1%"
+                },
+                "r": {
+                    "type": "string",
+                    "example": "10%"
+                }
+            }
+        },
         "types.HealthResponse": {
             "type": "object",
             "properties": {
@@ -4923,44 +4944,63 @@
             "type": "object",
             "properties": {
                 "burst": {
-                    "description": "tbf, defaults to 32kbit",
+                    "description": "tbf only",
                     "type": "string",
                     "example": "32kbit"
                 },
                 "corrupt": {
-                    "description": "netem, 0 to 100 %",
                     "type": "string",
                     "example": "0.1%"
                 },
                 "delay": {
-                    "description": "netem, 0 to 60000 ms",
+                    "description": "netem",
                     "type": "string",
                     "example": "100ms"
                 },
+                "delay_correlation": {
+                    "description": "needs a jitter",
+                    "type": "string",
+                    "example": "25%"
+                },
+                "distribution": {
+                    "description": "Distribution of the jitter: uniform (default), normal, pareto or\nparetonormal. tc does not report it back, the history keeps it.",
+                    "type": "string",
+                    "example": "normal"
+                },
                 "duplicate": {
-                    "description": "netem, 0 to 100 %",
                     "type": "string",
                     "example": "0.5%"
                 },
+                "gemodel": {
+                    "description": "Gilbert-Elliott loss, instead of loss",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.GemodelSpec"
+                        }
+                    ]
+                },
                 "jitter": {
-                    "description": "netem, 0 to 10000 ms, needs a delay",
+                    "description": "0 to 10000 ms, needs a delay",
                     "type": "string",
                     "example": "10ms"
                 },
                 "latency": {
-                    "description": "tbf, 1 to 5000 ms, defaults to 50ms",
+                    "description": "1 to 5000 ms, defaults to 50ms",
                     "type": "string",
                     "example": "50ms"
                 },
                 "limit": {
-                    "description": "netem queue length in packets, 1 to 1000000",
+                    "description": "queue length in packets, 1 to 1000000",
                     "type": "integer",
                     "example": 1000
                 },
                 "loss": {
-                    "description": "netem, 0 to 100 %",
                     "type": "string",
                     "example": "1%"
+                },
+                "loss_correlation": {
+                    "type": "string",
+                    "example": "10%"
                 },
                 "qdisc": {
                     "description": "netem (default) or tbf",
@@ -4968,9 +5008,18 @@
                     "example": "netem"
                 },
                 "rate": {
-                    "description": "tbf, required",
+                    "description": "Rate caps the bandwidth: netem's link rate emulation, or tbf's rate (required there).",
                     "type": "string",
                     "example": "10mbit"
+                },
+                "reorder": {
+                    "description": "needs a delay",
+                    "type": "string",
+                    "example": "25%"
+                },
+                "reorder_correlation": {
+                    "type": "string",
+                    "example": "50%"
                 }
             }
         },

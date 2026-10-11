@@ -19,14 +19,27 @@ import {
 // The panel keeps numbers and units apart. The API speaks tc strings ("50ms",
 // "500Kbit", "4Kb"), so a read-back is parsed on the way in and formatted on
 // the way out.
+//
+// netem is the composite impairment: delay with jitter and its distribution,
+// loss (random or bursty), duplicate, corrupt, reorder and a rate, all in one
+// qdisc. tbf stays as a plain token bucket.
+const DISTRIBUTIONS = ['uniform', 'normal', 'pareto', 'paretonormal'];
+
 const defaultNetem = {
   qdisc: 'netem',
   delay: 0,
   jitter: 0,
+  distribution: 'uniform',
+  lossModel: 'random',
   loss: 0,
+  gemodel: { p: 1, r: 10, h: 100, k: 0 },
   duplicate: 0,
   corrupt: 0,
+  reorder: 0,
+  reorderCorrelation: 0,
+  rate: { value: 0, unit: 'mbit' },
   limit: 1000,
+  extras: [],
 };
 
 const defaultTBF = {
@@ -34,33 +47,72 @@ const defaultTBF = {
   rate: { value: 1, unit: 'mbit' },
   burst: { value: 32, unit: 'kbit' },
   latency: 400,
+  extras: [],
 };
 
-// Settings the panel has no field for (netem rate, reorder, a loss model, a
+// Starting points for a netem draft. Delay is one-way, per direction.
+const PRESETS = [
+  { id: 'custom', label: 'Custom', values: {} },
+  {
+    id: 'wan',
+    label: 'WAN, 50 ms',
+    values: { delay: 50, jitter: 5, rate: { value: 100, unit: 'mbit' } },
+  },
+  {
+    id: 'satellite',
+    label: 'Satellite, 300 ms',
+    values: { delay: 300, jitter: 10, loss: 0.5, rate: { value: 10, unit: 'mbit' } },
+  },
+  {
+    id: '3g',
+    label: '3G, 2 Mbit/s',
+    values: { delay: 100, jitter: 20, loss: 1, rate: { value: 2, unit: 'mbit' } },
+  },
+  {
+    id: 'wifi',
+    label: 'Lossy wifi',
+    values: { delay: 10, jitter: 15, distribution: 'normal', loss: 5 },
+  },
+];
+
+// Settings the panel has no field for (correlations on delay and loss, a
 // child qdisc). They are shown so an Update, which rebuilds the whole qdisc,
 // does not drop them unnoticed.
 const extrasOf = (tcparams) => {
   const extras = [];
-  if (tcparams.qdisc === 'netem' && tcparams.rate) extras.push(`rate ${tcparams.rate}`);
-  if (tcparams.reorder) extras.push(`reorder ${tcparams.reorder}`);
-  if (tcparams.loss_model === 'gemodel') extras.push('Gilbert-Elliott loss');
+  if (tcparams.delay_correlation) extras.push(`delay correlation ${tcparams.delay_correlation}`);
+  if (tcparams.loss_correlation) extras.push(`loss correlation ${tcparams.loss_correlation}`);
   (tcparams.children || []).forEach((c) => extras.push(`child ${c.qdisc}`));
   return extras;
 };
 
-const fromApi = (tcparams) => {
+// tc does not report the jitter distribution, so it comes from the persisted
+// action for the interface (the intent), when there is one.
+const fromApi = (tcparams, intent) => {
   const kind = tcparams?.qdisc;
   const shaped = typeof tcparams?.shaped === 'boolean' ? tcparams.shaped : isShapedQdisc(kind);
   if (!shaped) return null;
   const extras = extrasOf(tcparams);
   if (kind === 'netem') {
+    const gm = tcparams.gemodel || {};
     return {
       qdisc: 'netem',
       delay: timeToMs(tcparams.delay),
       jitter: timeToMs(tcparams.jitter),
+      distribution: DISTRIBUTIONS.includes(intent?.distribution) ? intent.distribution : 'uniform',
+      lossModel: tcparams.loss_model === 'gemodel' ? 'gemodel' : 'random',
       loss: percentToNumber(tcparams.loss),
+      gemodel: {
+        p: percentToNumber(gm.p ?? '1%'),
+        r: percentToNumber(gm.r ?? '10%'),
+        h: percentToNumber(gm['1-h'] ?? '100%'),
+        k: percentToNumber(gm['1-k'] ?? '0%'),
+      },
       duplicate: percentToNumber(tcparams.duplicate),
       corrupt: percentToNumber(tcparams.corrupt),
+      reorder: percentToNumber(tcparams.reorder),
+      reorderCorrelation: percentToNumber(tcparams.reorder_correlation),
+      rate: tcparams.rate ? parseRate(tcparams.rate) : { value: 0, unit: 'mbit' },
       limit: Number(tcparams.limit) || 1000,
       extras,
     };
@@ -77,37 +129,66 @@ const fromApi = (tcparams) => {
   return { qdisc: kind, extras };
 };
 
-const toApi = (qd) =>
-  qd.qdisc === 'netem'
-    ? {
-        qdisc: 'netem',
-        delay: `${qd.delay}ms`,
-        jitter: `${qd.jitter}ms`,
-        loss: `${qd.loss}%`,
-        duplicate: `${qd.duplicate}%`,
-        corrupt: `${qd.corrupt}%`,
-        limit: qd.limit,
-      }
-    : {
-        qdisc: 'tbf',
-        rate: formatRate(qd.rate),
-        burst: formatSize(qd.burst),
-        latency: `${qd.latency}ms`,
-      };
+const toApi = (qd) => {
+  if (qd.qdisc === 'tbf') {
+    return {
+      qdisc: 'tbf',
+      rate: formatRate(qd.rate),
+      burst: formatSize(qd.burst),
+      latency: `${qd.latency}ms`,
+    };
+  }
+  const out = {
+    qdisc: 'netem',
+    delay: `${qd.delay}ms`,
+    jitter: `${qd.jitter}ms`,
+    duplicate: `${qd.duplicate}%`,
+    corrupt: `${qd.corrupt}%`,
+    reorder: `${qd.reorder}%`,
+    limit: qd.limit,
+  };
+  if (qd.jitter > 0 && qd.distribution !== 'uniform') out.distribution = qd.distribution;
+  if (qd.lossModel === 'gemodel') {
+    out.gemodel = {
+      p: `${qd.gemodel.p}%`,
+      r: `${qd.gemodel.r}%`,
+      '1-h': `${qd.gemodel.h}%`,
+      '1-k': `${qd.gemodel.k}%`,
+    };
+  } else {
+    out.loss = `${qd.loss}%`;
+  }
+  if (qd.reorder > 0) out.reorder_correlation = `${qd.reorderCorrelation}%`;
+  if (qd.rate.value > 0) out.rate = formatRate(qd.rate);
+  return out;
+};
+
+const pct = (v, label, errors) => {
+  if (v < 0 || v > 100) errors.push(`${label} must be between 0% and 100%`);
+};
 
 const validateNetem = (qd) => {
   const errors = [];
   if (qd.delay < 0 || qd.delay > 60000) errors.push('Delay must be between 0 and 60000 ms');
   if (qd.jitter < 0 || qd.jitter > 10000) errors.push('Jitter must be between 0 and 10000 ms');
-  for (const [key, label] of [
-    ['loss', 'Loss'],
-    ['duplicate', 'Duplicate'],
-    ['corrupt', 'Corrupt'],
-  ]) {
-    if (qd[key] < 0 || qd[key] > 100) errors.push(`${label} must be between 0% and 100%`);
-  }
-  if (qd.limit < 1 || qd.limit > 1000000) errors.push('Limit must be between 1 and 1000000');
   if (qd.jitter > 0 && qd.delay <= 0) errors.push('Jitter requires a non-zero Delay');
+  if (qd.distribution !== 'uniform' && qd.jitter <= 0)
+    errors.push('A jitter distribution needs a non-zero Jitter');
+  if (qd.lossModel === 'gemodel') {
+    pct(qd.gemodel.p, 'p', errors);
+    pct(qd.gemodel.r, 'r', errors);
+    pct(qd.gemodel.h, 'Bad-state loss', errors);
+    pct(qd.gemodel.k, 'Good-state loss', errors);
+  } else {
+    pct(qd.loss, 'Loss', errors);
+  }
+  pct(qd.duplicate, 'Duplicate', errors);
+  pct(qd.corrupt, 'Corrupt', errors);
+  pct(qd.reorder, 'Reorder', errors);
+  pct(qd.reorderCorrelation, 'Reorder correlation', errors);
+  if (qd.reorder > 0 && qd.delay <= 0) errors.push('Reorder requires a non-zero Delay');
+  if (qd.rate.value < 0) errors.push('Rate cannot be negative');
+  if (qd.limit < 1 || qd.limit > 1000000) errors.push('Limit must be between 1 and 1000000');
   return errors;
 };
 
@@ -184,6 +265,7 @@ const TCPanel = ({
   const positionRef = useRef({ x: 150 + Math.random() * 160, y: 90 + Math.random() * 110 });
 
   const [states, setStates] = useState(null); // iface -> state from the pod-wide read
+  const [intents, setIntents] = useState({}); // iface -> persisted add_qdisc tcparams
   const [selected, setSelected] = useState(iface);
   const [qdiscData, setQdiscData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -191,6 +273,7 @@ const TCPanel = ({
   const [feedback, setFeedback] = useState(null); // {type:'ok'|'error', text}
   const [isDraft, setIsDraft] = useState(false); // created in the UI, not yet applied
   const [newQdiscType, setNewQdiscType] = useState('netem');
+  const [preset, setPreset] = useState('custom');
 
   // The topology's interfaces of the pod, in link order. Without that list,
   // whatever the pod has except its cluster interface, which cannot be shaped.
@@ -245,14 +328,29 @@ const TCPanel = ({
     e.preventDefault();
   };
 
+  // The live state of every interface, and the persisted actions for what tc
+  // cannot report (the jitter distribution).
   const fetchStates = async () => {
     setLoading(true);
     setLoadError(null);
     try {
-      const res = await fetch(`${API_BASE_URL}/pods/tc/${namespace}/${pod}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const [stRes, histRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/pods/tc/${namespace}/${pod}`),
+        fetch(`${API_BASE_URL}/drivers/history/${namespace}/${pod}`),
+      ]);
+      if (!stRes.ok) throw new Error(`HTTP ${stRes.status}`);
+      const data = await stRes.json();
       setStates(data.interfaces || {});
+      if (histRes.ok) {
+        const hist = await histRes.json();
+        const byIface = {};
+        (hist.operations || []).forEach((op) => {
+          if (op.action_type === 'add_qdisc' && op.action?.iface) {
+            byIface[op.action.iface] = op.action.tcparams || {};
+          }
+        });
+        setIntents(byIface);
+      }
     } catch (err) {
       console.error('❌ Error fetching qdiscs:', err);
       setLoadError('Error reading the traffic control state');
@@ -284,8 +382,8 @@ const TCPanel = ({
   // user is in the middle of a draft.
   useEffect(() => {
     if (isDraft) return;
-    setQdiscData(states && selected ? fromApi(states[selected]) : null);
-  }, [states, selected, isDraft]);
+    setQdiscData(states && selected ? fromApi(states[selected], intents[selected]) : null);
+  }, [states, intents, selected, isDraft]);
 
   // Auto-dismiss the feedback banner.
   useEffect(() => {
@@ -301,7 +399,12 @@ const TCPanel = ({
   };
 
   const handleCreateQdisc = () => {
-    setQdiscData(newQdiscType === 'netem' ? { ...defaultNetem } : { ...defaultTBF });
+    if (newQdiscType === 'tbf') {
+      setQdiscData({ ...defaultTBF });
+    } else {
+      const values = PRESETS.find((p) => p.id === preset)?.values || {};
+      setQdiscData({ ...defaultNetem, ...values });
+    }
     setIsDraft(true);
     setFeedback(null);
   };
@@ -363,6 +466,8 @@ const TCPanel = ({
     }
   };
 
+  const set = (patch) => setQdiscData((prev) => ({ ...prev, ...patch }));
+
   const renderIfaces = () => (
     <div className="tc-ifaces">
       {ifaceList.length === 0 && !loading && (
@@ -408,13 +513,27 @@ const TCPanel = ({
           <option value="netem">netem</option>
           <option value="tbf">tbf</option>
         </select>
+        {newQdiscType === 'netem' && (
+          <select
+            className="tc-select"
+            value={preset}
+            onChange={(e) => setPreset(e.target.value)}
+            title="Starting values"
+          >
+            {PRESETS.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.label}
+              </option>
+            ))}
+          </select>
+        )}
         <button className="tc-form-btn primary" onClick={handleCreateQdisc}>
-          Add qdisc
+          Add
         </button>
       </div>
       <p className="tc-hint">
-        <strong>netem</strong> emulates delay, jitter and packet loss. <strong>tbf</strong> limits
-        bandwidth.
+        <strong>netem</strong> combines delay, jitter, loss, reordering and a rate in one place.{' '}
+        <strong>tbf</strong> is a plain token bucket.
       </p>
     </div>
   );
@@ -467,63 +586,106 @@ const TCPanel = ({
     </div>
   );
 
-  const numberField = (label, key, min, max, step = 1) => (
-    <label>
-      {label}:
-      <input
-        type="number"
-        min={min}
-        max={max}
-        step={step}
-        value={qdiscData[key]}
-        onChange={(e) => setQdiscData({ ...qdiscData, [key]: Number(e.target.value) })}
+  const numberField = (label, key, min, max, step = 1, obj = null) => {
+    const value = obj ? qdiscData[obj][key] : qdiscData[key];
+    const onChange = (e) => {
+      const n = Number(e.target.value);
+      if (obj) set({ [obj]: { ...qdiscData[obj], [key]: n } });
+      else set({ [key]: n });
+    };
+    return (
+      <label>
+        {label}:
+        <input type="number" min={min} max={max} step={step} value={value} onChange={onChange} />
+      </label>
+    );
+  };
+
+  const renderNetemForm = () => (
+    <div className="tc-config">
+      <div className="tc-section">Delay</div>
+      {numberField('Delay (ms)', 'delay', 0, 60000)}
+      {numberField('Jitter (ms)', 'jitter', 0, 10000)}
+      <label>
+        Jitter distribution:
+        <select
+          value={qdiscData.distribution}
+          onChange={(e) => set({ distribution: e.target.value })}
+          disabled={!(qdiscData.jitter > 0)}
+        >
+          {DISTRIBUTIONS.map((d) => (
+            <option key={d} value={d}>
+              {d}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <div className="tc-section">Loss</div>
+      <label>
+        Model:
+        <select value={qdiscData.lossModel} onChange={(e) => set({ lossModel: e.target.value })}>
+          <option value="random">random</option>
+          <option value="gemodel">bursty (Gilbert-Elliott)</option>
+        </select>
+      </label>
+      {qdiscData.lossModel === 'gemodel' ? (
+        <>
+          {numberField('p, enter bad state (%)', 'p', 0, 100, 0.1, 'gemodel')}
+          {numberField('r, leave bad state (%)', 'r', 0, 100, 0.1, 'gemodel')}
+          {numberField('Loss in bad state (%)', 'h', 0, 100, 0.1, 'gemodel')}
+          {numberField('Loss in good state (%)', 'k', 0, 100, 0.1, 'gemodel')}
+        </>
+      ) : (
+        numberField('Loss (%)', 'loss', 0, 100, 0.1)
+      )}
+
+      <div className="tc-section">Packets</div>
+      {numberField('Duplicate (%)', 'duplicate', 0, 100, 0.1)}
+      {numberField('Corrupt (%)', 'corrupt', 0, 100, 0.1)}
+      {numberField('Reorder (%)', 'reorder', 0, 100, 0.1)}
+      {qdiscData.reorder > 0 &&
+        numberField('Reorder correlation (%)', 'reorderCorrelation', 0, 100, 1)}
+
+      <div className="tc-section">Bandwidth</div>
+      <UnitField
+        label="Rate (0 = unlimited)"
+        value={qdiscData.rate}
+        units={RATE_UNITS}
+        onChange={(rate) => set({ rate })}
       />
-    </label>
+      {numberField('Queue limit (packets)', 'limit', 1, 1000000)}
+      {renderExtras()}
+      {renderActions()}
+    </div>
+  );
+
+  const renderTBFForm = () => (
+    <div className="tc-config">
+      <p className="tc-desc">Token Bucket Filter: caps the egress bandwidth of this interface.</p>
+      <UnitField
+        label="Rate"
+        value={qdiscData.rate}
+        units={RATE_UNITS}
+        onChange={(rate) => set({ rate })}
+      />
+      <UnitField
+        label="Burst"
+        value={qdiscData.burst}
+        units={SIZE_UNITS}
+        onChange={(burst) => set({ burst })}
+      />
+      {numberField('Latency (ms)', 'latency', 1, 5000)}
+      {renderExtras()}
+      {renderActions()}
+    </div>
   );
 
   const renderForm = () => {
     if (!selected) return null;
     if (!qdiscData) return renderNoQdisc();
     if (!isManagedQdisc(qdiscData.qdisc)) return renderForeignQdisc();
-
-    if (qdiscData.qdisc === 'netem') {
-      return (
-        <div className="tc-config">
-          <p className="tc-desc">
-            Emulates link impairments: latency, jitter and packet loss, duplication or corruption.
-          </p>
-          {numberField('Delay (ms)', 'delay', 0, 60000)}
-          {numberField('Jitter (ms)', 'jitter', 0, 10000)}
-          {numberField('Loss (%)', 'loss', 0, 100, 0.1)}
-          {numberField('Duplicate (%)', 'duplicate', 0, 100, 0.1)}
-          {numberField('Corrupt (%)', 'corrupt', 0, 100, 0.1)}
-          {numberField('Limit (packets)', 'limit', 1, 1000000)}
-          {renderExtras()}
-          {renderActions()}
-        </div>
-      );
-    }
-
-    return (
-      <div className="tc-config">
-        <p className="tc-desc">Token Bucket Filter: caps the egress bandwidth of this interface.</p>
-        <UnitField
-          label="Rate"
-          value={qdiscData.rate}
-          units={RATE_UNITS}
-          onChange={(rate) => setQdiscData({ ...qdiscData, rate })}
-        />
-        <UnitField
-          label="Burst"
-          value={qdiscData.burst}
-          units={SIZE_UNITS}
-          onChange={(burst) => setQdiscData({ ...qdiscData, burst })}
-        />
-        {numberField('Latency (ms)', 'latency', 1, 5000)}
-        {renderExtras()}
-        {renderActions()}
-      </div>
-    );
+    return qdiscData.qdisc === 'netem' ? renderNetemForm() : renderTBFForm();
   };
 
   const shapedCount = Object.values(states || {}).filter((s) => s?.shaped).length;
