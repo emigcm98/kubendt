@@ -63,6 +63,86 @@
   color: #fff;
 }
 
+/* Selection box while dragging on the pane. The frame React Flow draws
+   around the result is hidden: the selected nodes carry the highlight and
+   dragging any of them moves the group. */
+.react-flow__selection {
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  border: 1px dashed var(--primary);
+}
+
+.graph-container .react-flow__nodesselection {
+  display: none;
+}
+
+/* Left-drag on the pane selects, so React Flow would show a pointer cursor
+   everywhere; keep the default one and switch to a crosshair while a box is
+   being dragged. Labels go inert meanwhile so the box does not stop on them. */
+.graph-container .react-flow__pane.selection {
+  cursor: default;
+}
+
+.graph-container.selecting .react-flow__pane {
+  cursor: crosshair;
+}
+
+.graph-container.selecting .edge-label {
+  pointer-events: none;
+}
+
+/* A node in the multi-selection, told apart from the one open in the panel. */
+.react-flow__node.selected .custom-node:not(.node-selected) .node-icon {
+  filter: drop-shadow(0 0 4px var(--primary)) drop-shadow(0 0 9px rgba(25, 118, 210, 0.4));
+}
+
+.react-flow__node.selected .custom-node:not(.node-selected) .label {
+  border-color: var(--primary);
+}
+
+/* How many nodes are selected, with a way to drop the selection. */
+.graph-selection-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-pill);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.graph-selection-hint {
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.graph-selection-chip button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.graph-selection-chip button:hover {
+  background: var(--info-bg);
+  color: var(--primary);
+}
+
+.graph-selection-chip button .app-icon {
+  width: 13px;
+  height: 13px;
+}
+
 /* Hint shown while node repulsion is on. */
 .graph-repel-hint {
   display: flex;
