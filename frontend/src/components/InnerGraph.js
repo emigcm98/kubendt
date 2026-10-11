@@ -1,7 +1,16 @@
-import React, { useRef, useLayoutEffect, useEffect, useState, useMemo, useCallback } from 'react';
-import { ReactFlow, Panel, Background, EdgeLabelRenderer, useReactFlow } from 'reactflow';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  ReactFlow,
+  Panel,
+  Background,
+  EdgeLabelRenderer,
+  SelectionMode,
+  useReactFlow,
+  useStoreApi,
+} from 'reactflow';
 import 'reactflow/dist/style.css';
 import MiniMapOverlay from './MiniMapOverlay.js';
+import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
 import ContextMenu from './ContextMenu.js';
 import EdgeContextMenu from './EdgeContextMenu.js';
 import InterfaceContextMenu from './InterfaceContextMenu.js';
@@ -18,6 +27,13 @@ import { ReactComponent as UnlockIcon } from '../assets/images/icons/unlock.svg'
 import { ReactComponent as MagnetIcon } from '../assets/images/icons/magnet.svg';
 
 import CustomNode, { NODE_SIZE } from './CustomNode';
+// Keys that add to the selection with a click. Module level on purpose: React
+// Flow re-registers its key listeners whenever this prop changes identity and
+// a Shift release that lands mid re-render gets lost, leaving multi-select on.
+const MULTI_SELECT_KEYS = ['Shift', 'Control', 'Meta'];
+const GRAPH_MIN_ZOOM = 0.4;
+const GRAPH_MAX_ZOOM = 3.5;
+
 const nodeTypes = { custom: CustomNode };
 
 const EdgeLabel = ({ x, y, intfName, status, loading, dimmed, onClick, onHover, onRightClick }) => {
@@ -204,6 +220,63 @@ const InnerGraph = ({
   const [contextMenu, setContextMenu] = useState(null);
   const [edgeContextMenu, setEdgeContextMenu] = useState(null);
   const [interfaceContextMenu, setInterfaceContextMenu] = useState(null);
+  // Nodes picked with a selection box or Ctrl-click. React Flow owns the
+  // selection, this mirrors it for the chip and for Esc. The handler must be
+  // stable and must not set a new array for the same selection: React Flow
+  // re-registers it on every change of identity and the render loop never ends.
+  const [selectedIds, setSelectedIds] = useState([]);
+  const storeApi = useStoreApi();
+  // True while a selection box is being dragged: interface labels go inert so
+  // the box does not stop on them and no tooltip gets stuck.
+  const [selecting, setSelecting] = useState(false);
+  const onSelectionChange = useCallback(({ nodes: picked }) => {
+    const ids = picked.map((n) => n.id);
+    setSelectedIds((prev) =>
+      prev.length === ids.length && prev.every((id, i) => id === ids[i]) ? prev : ids
+    );
+  }, []);
+
+  // Last pointer that went down on the graph, for the capture in onSelectionStart.
+  const pointerIdRef = useRef(1);
+
+  // React Flow blocks its own zoom while a box is open. Zooming is useful
+  // right then (zoom out to reach more nodes), so do it here, around the
+  // cursor. The box keeps its screen corners and picks nodes on the next move.
+  // While the box is open React Flow also detaches its d3 zoom listener, so
+  // setViewport alone moves d3's transform and not the one that renders:
+  // the store gets the same transform by hand to keep both in step.
+  const zoomWhileSelecting = (event) => {
+    if (!selecting) return;
+    const bounds = containerRef.current?.getBoundingClientRect();
+    if (!bounds) return;
+    const { x, y, zoom } = getViewport();
+    const factor = Math.pow(2, -event.deltaY * (event.deltaMode === 1 ? 0.05 : 0.002));
+    const next = Math.min(GRAPH_MAX_ZOOM, Math.max(GRAPH_MIN_ZOOM, zoom * factor));
+    if (next === zoom) return;
+    const px = event.clientX - bounds.left;
+    const py = event.clientY - bounds.top;
+    const nx = px - ((px - x) / zoom) * next;
+    const ny = py - ((py - y) / zoom) * next;
+    setViewport({ x: nx, y: ny, zoom: next });
+    storeApi.setState({ transform: [nx, ny, next] });
+  };
+
+  const clearSelection = () => {
+    if (selectedIds.length === 0) return;
+    handleNodesChange(selectedIds.map((id) => ({ id, type: 'select', selected: false })));
+  };
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key !== 'Escape' || selectedIds.length === 0) return;
+      const tag = e.target?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      handleNodesChange(selectedIds.map((id) => ({ id, type: 'select', selected: false })));
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedIds]);
 
   // Remember the lock / repulsion toggles across sessions.
   useEffect(() => {
@@ -478,21 +551,53 @@ const InnerGraph = ({
   };
 
   return (
-    <div ref={containerRef} className="graph-container">
+    <div
+      ref={containerRef}
+      className={`graph-container${selecting ? ' selecting' : ''}`}
+      onPointerDownCapture={(event) => {
+        pointerIdRef.current = event.pointerId;
+      }}
+      onWheel={zoomWhileSelecting}
+    >
       <ReactFlow
         nodes={displayedNodes}
         edges={displayedEdges}
         onNodesChange={handleNodesChange}
         onEdgesChange={onEdgesChange}
         panOnDrag={[2]}
+        selectionOnDrag
+        selectionMode={SelectionMode.Partial}
+        deleteKeyCode={null}
+        onSelectionChange={onSelectionChange}
+        multiSelectionKeyCode={MULTI_SELECT_KEYS}
+        onSelectionStart={(event) => {
+          setSelecting(true);
+          // Keep every mouse event on the pane until the button is released,
+          // so the box survives the minimap, the controls or the top bar.
+          try {
+            event.currentTarget.setPointerCapture(pointerIdRef.current);
+          } catch {
+            /* no active pointer, the box just ends at the pane edge */
+          }
+          clearTimeout(hoverTimeoutRef.current);
+          hoverAbortRef.current?.abort();
+          setHoveredInfo(null);
+          setContextMenu(null);
+          setEdgeContextMenu(null);
+          setInterfaceContextMenu(null);
+        }}
+        onSelectionEnd={() => setSelecting(false)}
         nodesDraggable={!isBusy && !locked}
         nodeDragThreshold={8}
-        minZoom={0.4}
-        maxZoom={3.5}
+        minZoom={GRAPH_MIN_ZOOM}
+        maxZoom={GRAPH_MAX_ZOOM}
         proOptions={{ hideAttribution: true }}
         onPaneContextMenu={(e) => e.preventDefault()}
-        onNodeClick={(_, node) => {
+        onNodeClick={(event, node) => {
           if (isBusy) return;
+          // Shift or Ctrl and a click adds the node to the selection, React
+          // Flow handles that; the info panel stays as it is.
+          if (event?.shiftKey || event?.ctrlKey || event?.metaKey) return;
           // External nodes don't have a shell, open the info panel immediately.
           if (node.data?.type === 'external') {
             setSelectedNodeInfo(node.data.fullInfo || null);
@@ -592,9 +697,12 @@ const InnerGraph = ({
             time: Date.now(),
           };
         }}
-        onNodeDragStop={(dragEvent, node) => {
+        onNodeDragStop={(dragEvent, node, draggedNodes) => {
           const info = dragInfoRef.current;
           dragInfoRef.current = null;
+          // A group drag moves the selection as a block: no click fallback and
+          // no bounce, the arrangement the user made inside the block stays.
+          if (draggedNodes && draggedNodes.length > 1) return;
           if (!info || info.nodeId !== node.id) return;
 
           const dx = node.position.x - info.position.x;
@@ -605,6 +713,7 @@ const InnerGraph = ({
           // Momentum-click protection: short + small drag → revert and treat as click.
           if (elapsed < 250 && dist < 25) {
             onNodesChange([{ id: node.id, type: 'position', position: info.position }]);
+            if (dragEvent?.shiftKey || dragEvent?.ctrlKey || dragEvent?.metaKey) return;
             setSelectedNodeInfo(node.data?.fullInfo || null);
             if (setSelectedLink) setSelectedLink(null);
           } else if (onNodeDropRelax && repel && !dragEvent?.ctrlKey && !dragEvent?.metaKey) {
@@ -670,6 +779,20 @@ const InnerGraph = ({
             <MagnetIcon className="app-icon" aria-hidden="true" />
           </button>
         </Panel>
+        {selectedIds.length > 1 && (
+          <Panel position="top-center" className="graph-selection-chip">
+            <span>
+              {selectedIds.length} nodes selected
+              <span className="graph-selection-hint">
+                {' '}
+                · drag one to move them, Shift+click adds, Esc clears
+              </span>
+            </span>
+            <button type="button" title="Clear selection" onClick={clearSelection}>
+              <CloseIcon className="app-icon" aria-hidden="true" />
+            </button>
+          </Panel>
+        )}
         {repel && (
           <Panel position="bottom-center" className="graph-repel-hint">
             Hold <kbd>Ctrl</kbd> while dragging to place nodes close

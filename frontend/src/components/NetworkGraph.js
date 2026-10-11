@@ -1896,7 +1896,14 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
         isDeployingRef.current = false;
       }
 
-      setNodes(newNodes);
+      // A refresh rebuilds the node objects; the multi-selection lives on them
+      // (React Flow's `selected`), so carry it over or it vanishes mid-use.
+      setNodes((prev) => {
+        const picked = new Set(prev.filter((n) => n.selected).map((n) => n.id));
+        return picked.size === 0
+          ? newNodes
+          : newNodes.map((n) => (picked.has(n.id) ? { ...n, selected: true } : n));
+      });
       setEdges(newEdges);
       setHasGraph(newNodes.length > 0);
       setInitialLoading(false); // Disable initial loading after first fetch
