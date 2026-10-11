@@ -126,6 +126,20 @@ func createTables() {
 		CREATE INDEX IF NOT EXISTS idx_link_uid_registry_namespace
 		ON link_uid_registry (cluster_id, namespace);`,
 		`
+		CREATE TABLE IF NOT EXISTS link_attributes (
+			cluster_id TEXT NOT NULL DEFAULT '',
+			namespace TEXT NOT NULL,
+			node TEXT NOT NULL,
+			intf TEXT NOT NULL,
+			peer_node TEXT NOT NULL,
+			peer_intf TEXT NOT NULL,
+			delay TEXT NOT NULL DEFAULT '',
+			jitter TEXT NOT NULL DEFAULT '',
+			loss TEXT NOT NULL DEFAULT '',
+			bandwidth TEXT NOT NULL DEFAULT '',
+			PRIMARY KEY (cluster_id, namespace, node, intf)
+		);`,
+		`
 		CREATE TABLE IF NOT EXISTS driver_operation_history (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			cluster_id TEXT NOT NULL DEFAULT '',

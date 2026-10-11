@@ -116,6 +116,7 @@ These files are mounted into the corresponding nodes at deploy time:
 - `user-*` nodes start with `iproute2-tc` installed (for optional traffic shaping tests).
 - `iperf-server-*` nodes auto-start `iperf3 -s -p 5201` on boot. No manual server startup needed.
 - DNS is fully functional after applying `network_conf.json`: `user-*` nodes can resolve `web-internal` and `web-public` by short name.
+- The `dist-sw` to `room-router` backbone link declares `"delay": "10ms"` and `"bandwidth": "50mbit"` in the topology JSON. The platform applies them on both ends right after wiring the link and replays them after a restart, so every path from the rooms to the services network pays 20 ms of RTT and is capped at 50 Mbit/s. The link panel shows them as **Declared**. The same shaping can be applied later by hand, see [step 13](#13-apply-traffic-shaping-tc-and-observe-bandwidth-drop).
 - FRR routers run `quay.io/frrouting/frr:10.7.1` through the image's own init (`watchfrr` under `tini`). The startup command installs `iptables`, which the NAT actions need and the image does not ship, and enables `ospfd`. A router is Ready only when zebra and the enabled daemons answer on their vty socket.
 
 ## Step-By-Step (UI)
@@ -266,6 +267,8 @@ Expected: successful replies, translated by `edge-router-0` on `eth0` toward the
 ### 13. Apply traffic shaping (TC) and observe bandwidth drop
 
 The `user-*` nodes have `iproute2-tc` installed, so traffic shaping can be applied straight from the UI without touching the shell. Shaping works on any node now, not just these.
+
+The `dist-sw` to `room-router` link is already shaped from the topology JSON (10 ms, 50 Mbit/s). What follows adds shaping by hand on a user's own interface; both end up as persisted operations and survive a restart alike.
 
 #### How to apply TC
 

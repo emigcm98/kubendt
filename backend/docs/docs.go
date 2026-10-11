@@ -3336,6 +3336,19 @@ const docTemplate = `{
         "types.LinkSpec": {
             "type": "object",
             "properties": {
+                "bandwidth": {
+                    "type": "string",
+                    "example": "50mbit"
+                },
+                "delay": {
+                    "description": "Shaping the platform applies on both ends once the link is wired: a\nnetem with the delay, jitter, loss and bandwidth (tc units, delay is\none-way per direction). Persisted as operations of each end, so a\nrestart replays them. A link to the external network gets it on the\nnode's end only.",
+                    "type": "string",
+                    "example": "10ms"
+                },
+                "jitter": {
+                    "type": "string",
+                    "example": "2ms"
+                },
                 "localIntf": {
                     "type": "string",
                     "example": "eth1"
@@ -3343,6 +3356,10 @@ const docTemplate = `{
                 "localIp": {
                     "type": "string",
                     "example": "10.0.0.1/24"
+                },
+                "loss": {
+                    "type": "string",
+                    "example": "0.5%"
                 },
                 "name": {
                     "type": "string",

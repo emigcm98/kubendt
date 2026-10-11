@@ -231,6 +231,15 @@ type LinkSpec struct {
 	PeerIP    string `json:"peerIp" example:"10.0.0.2/24"`
 	PeerLabel string `json:"peerLabel,omitempty" example:"router2-eth1"`
 	Name      string `json:"name,omitempty" example:"N3"`
+	// Shaping the platform applies on both ends once the link is wired: a
+	// netem with the delay, jitter, loss and bandwidth (tc units, delay is
+	// one-way per direction). Persisted as operations of each end, so a
+	// restart replays them. A link to the external network gets it on the
+	// node's end only.
+	Delay     string `json:"delay,omitempty" example:"10ms"`
+	Jitter    string `json:"jitter,omitempty" example:"2ms"`
+	Loss      string `json:"loss,omitempty" example:"0.5%"`
+	Bandwidth string `json:"bandwidth,omitempty" example:"50mbit"`
 }
 
 // Structure for mounting a backend file into a pod. Mounts are always

@@ -222,6 +222,14 @@ def ex4():
             return out.count("Full") >= 2, out[-300:]
         ok, det, w = retry(two_full, 180); ex.check("edge-router two OSPF neighbors Full", ok, det, w)
         ok, det, w = retry(ping(ex.ns, "user-0", "192.168.10.10"), 90); ex.check("user-0 ping iperf-server-1 192.168.10.10 (via OSPF)", ok, det, w)
+        def rtt_over(pod, ip, ms):
+            def f():
+                rc, out = kexec(ex.ns, pod, f"ping -c 5 -i 0.2 -W 2 {ip}")
+                m = re.search(r"= [\d.]+/([\d.]+)/", out)
+                return bool(m) and float(m.group(1)) >= ms, out[-120:]
+            return f
+        # The dist-sw to room-router link declares 10 ms each way in the topology.
+        ok, det, w = retry(rtt_over("user-0", "192.168.10.10", 20), 30); ex.check("user-0 RTT to services carries the declared 20 ms (link attributes)", ok, det, w)
         ok, det, w = retry(contains(ex.ns, "user-0", "nslookup web-internal 2>&1", "Address"), 90); ex.check("user-0 nslookup web-internal", ok, det, w)
         ok, det, w = retry(contains(ex.ns, "user-0", "wget -qO- http://web-internal.kubendt.local 2>&1", "<"), 60); ex.check("user-0 wget web-internal (mounted page)", ok, det, w)
         ok, det, w = retry(contains(ex.ns, "user-0", "wget -qO- http://web-public.kubendt.local 2>&1", "<"), 60); ex.check("user-0 wget web-public", ok, det, w)
@@ -240,6 +248,7 @@ def ex4():
         ex.check("user-0 eth1 unshaped after del_qdisc", st == 200 and r.get("failures") == 0 and not q.get("shaped"), q)
         if restart(ex, "room-router-0"):
             ok, det, w = retry(ping(ex.ns, "user-0", "192.168.10.10"), 150); ex.check("user-0 ping 192.168.10.10 after room-router restart (replay)", ok, det, w)
+            ok, det, w = retry(rtt_over("user-0", "192.168.10.10", 20), 30); ex.check("declared link delay back after the restart (replay on both ends)", ok, det, w)
     teardown(ex); return ex
 
 def ex5():

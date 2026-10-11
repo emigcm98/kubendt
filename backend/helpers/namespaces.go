@@ -159,6 +159,9 @@ func CreateNamespace(namespace string) error {
 	if err := DeleteNamespaceDriverOperationHistory(namespace); err != nil {
 		log.Printf("⚠️ Could not clear leftover operation history for new namespace %s: %v", namespace, err)
 	}
+	if err := DeleteNamespaceLinkAttributes(namespace); err != nil {
+		log.Printf("⚠️ Could not clear leftover link attributes for new namespace %s: %v", namespace, err)
+	}
 
 	// Create files directory associated with namespace
 	if err := CreateNamespaceFileDir(namespace); err != nil {
@@ -215,6 +218,9 @@ func DeleteNamespace(namespace string, deletePositions, deleteFiles bool) error 
 
 	if err := DeleteNamespaceDriverOperationHistory(namespace); err != nil {
 		log.Printf("⚠️ Could not cleanup driver operation history for %s: %v", namespace, err)
+	}
+	if err := DeleteNamespaceLinkAttributes(namespace); err != nil {
+		log.Printf("⚠️ Could not cleanup link attributes for %s: %v", namespace, err)
 	}
 
 	return nil

@@ -74,6 +74,10 @@ const LINK_SPEC_FIELDS = new Set([
   'peerIp',
   'peerLabel',
   'name',
+  'delay',
+  'jitter',
+  'loss',
+  'bandwidth',
 ]);
 const MOUNT_SPEC_FIELDS = new Set(['file', 'mountTo', 'sensitive']);
 const DEVICE_SPEC_FIELDS = new Set(['path']);
@@ -196,7 +200,16 @@ const validateLinkSpecFields = (link, label) => {
   if (link.uid !== undefined && link.uid !== null && !Number.isInteger(link.uid)) {
     throw new Error(`${label}: 'uid' must be an integer.`);
   }
-  for (const f of ['localIp', 'peerIp', 'peerLabel', 'name']) {
+  for (const f of [
+    'localIp',
+    'peerIp',
+    'peerLabel',
+    'name',
+    'delay',
+    'jitter',
+    'loss',
+    'bandwidth',
+  ]) {
     if (link[f] !== undefined && link[f] !== null && typeof link[f] !== 'string') {
       throw new Error(`${label}: '${f}' must be a string.`);
     }
@@ -686,6 +699,16 @@ const generateEdges = (links, expandedPods, originalNodes) => {
           peerIntf: link.peerIntf,
           uid: link.uid,
           linkName: link.name || null,
+          // Declared link properties, shown in the link panel.
+          attributes:
+            link.delay || link.jitter || link.loss || link.bandwidth
+              ? {
+                  delay: link.delay,
+                  jitter: link.jitter,
+                  loss: link.loss,
+                  bandwidth: link.bandwidth,
+                }
+              : null,
         },
         style: {
           strokeWidth: 1.4,

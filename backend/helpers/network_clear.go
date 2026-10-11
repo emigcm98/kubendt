@@ -30,6 +30,9 @@ func RollbackNamespaceTopology(namespace string) {
 	if err := DeleteNamespaceDriverOperationHistory(namespace); err != nil {
 		log.Printf("⚠️ Could not clean driver history during rollback for '%s': %v", namespace, err)
 	}
+	if err := DeleteNamespaceLinkAttributes(namespace); err != nil {
+		log.Printf("⚠️ Could not clean link attributes during rollback for '%s': %v", namespace, err)
+	}
 	if err := DeleteIfaceCountsConfigMap(namespace); err != nil {
 		log.Printf("⚠️ Could not delete iface counts ConfigMap during rollback for '%s': %v", namespace, err)
 	}

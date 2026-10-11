@@ -240,6 +240,9 @@ func ApplyDeleteOnExistingTopology(namespace string, deleteNodes []string, delet
 		if err != nil {
 			return nil, nil, err
 		}
+		if err := DeleteLinkAttributesForLinks(namespace, deleteLinks, existingNodes); err != nil {
+			log.Printf("⚠️ Could not drop the attributes of deleted links in %s: %v", namespace, err)
+		}
 		for _, pod := range touched {
 			restartedSet[pod] = struct{}{}
 		}
@@ -277,6 +280,11 @@ func ApplyDeleteOnExistingTopology(namespace string, deleteNodes []string, delet
 	for podName := range deletedPods {
 		if err := DeleteDriverOperationHistoryForPod(namespace, podName); err != nil {
 			return nil, nil, fmt.Errorf("could not cleanup driver operation history for deleted pod %s: %w", podName, err)
+		}
+	}
+	if len(deletedPods) > 0 {
+		if err := DeleteLinkAttributesForPods(namespace, deletedPods); err != nil {
+			log.Printf("⚠️ Could not drop the link attributes of deleted pods in %s: %v", namespace, err)
 		}
 	}
 
