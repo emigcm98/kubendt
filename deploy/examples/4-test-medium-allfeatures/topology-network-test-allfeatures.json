@@ -225,7 +225,9 @@
       "localIp": "",
       "peerNode": "room-router",
       "peerIntf": "eth1",
-      "peerIp": "10.0.255.252/24"
+      "peerIp": "10.0.255.252/24",
+      "delay": "10ms",
+      "bandwidth": "50mbit"
     },
     {
       "node": "svc-router",

@@ -141,6 +141,20 @@ const LinkInfoPanel = ({
       link?.data?.realization
     ] || null;
 
+  // Properties declared on the link in the topology, applied by the platform
+  // on both ends after wiring.
+  const attrs = link?.data?.attributes;
+  const declaredText = attrs
+    ? [
+        attrs.delay && `delay ${attrs.delay}`,
+        attrs.jitter && `jitter ${attrs.jitter}`,
+        attrs.loss && `loss ${attrs.loss}`,
+        attrs.bandwidth && `bandwidth ${attrs.bandwidth}`,
+      ]
+        .filter(Boolean)
+        .join(', ')
+    : null;
+
   const renderEndpoint = (side, podName, nodeData, ifaceName, info, isExternal) => {
     const iconKey = nodeData?.type || 'host';
     const icon = ICONS[iconKey] || pcIcon;
@@ -269,6 +283,14 @@ const LinkInfoPanel = ({
             <div className="pod-line">
               <span className="pod-label">Realization:</span>
               <span className="pod-value">{realizationText}</span>
+            </div>
+          )}
+          {declaredText && (
+            <div className="pod-line">
+              <span className="pod-label">Declared:</span>
+              <span className="pod-value" title="Applied on both ends after wiring">
+                {declaredText}
+              </span>
             </div>
           )}
           {link.data?.uid !== undefined && link.data?.uid !== null && (

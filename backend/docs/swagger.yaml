@@ -543,11 +543,29 @@ definitions:
     type: object
   types.LinkSpec:
     properties:
+      bandwidth:
+        example: 50mbit
+        type: string
+      delay:
+        description: |-
+          Shaping the platform applies on both ends once the link is wired: a
+          netem with the delay, jitter, loss and bandwidth (tc units, delay is
+          one-way per direction). Persisted as operations of each end, so a
+          restart replays them. A link to the external network gets it on the
+          node's end only.
+        example: 10ms
+        type: string
+      jitter:
+        example: 2ms
+        type: string
       localIntf:
         example: eth1
         type: string
       localIp:
         example: 10.0.0.1/24
+        type: string
+      loss:
+        example: 0.5%
         type: string
       name:
         example: N3

@@ -119,6 +119,10 @@ func ModifyNetwork(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
+		if err := helpers.ValidateLinkAttributes(request.Add.Links); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 		validationNodes := make([]types.NodeSpec, 0, len(preExistingNodes)+len(request.Add.Nodes))
 		validationNodes = append(validationNodes, preExistingNodes...)
 		validationNodes = append(validationNodes, request.Add.Nodes...)
@@ -548,6 +552,10 @@ func ModifyNetwork(c *gin.Context) {
 			if healErr := helpers.HealMissingInterfaces(namespace, currentNodes, request.Add.Links, 2); healErr != nil {
 				log.Printf("⚠️ Modify heal: %v", healErr)
 			}
+			if err := helpers.SaveLinkAttributes(namespace, request.Add.Links, currentNodes); err != nil {
+				log.Printf("⚠️ Could not save link attributes in namespace '%s': %v", namespace, err)
+			}
+			warnings = append(warnings, helpers.ApplyLinkAttributes(namespace, request.Add.Links, currentNodes)...)
 		}
 	}
 
@@ -760,6 +768,10 @@ func DeployNetwork(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	if err := helpers.ValidateLinkAttributes(request.Links); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 	// A link IP requires an L3-capable endpoint; reject e.g. an IP on a switch.
 	if err := helpers.ValidateLinkIPCapabilities(request.Links, request.Nodes); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -924,6 +936,13 @@ func DeployNetwork(c *gin.Context) {
 
 	healDur := time.Since(healAt)
 
+	// 11. Link attributes declared in the topology: shaping and MTU on both
+	// ends, persisted like any operation so a restart replays them.
+	if err := helpers.SaveLinkAttributes(namespace, request.Links, request.Nodes); err != nil {
+		log.Printf("⚠️ Could not save link attributes in namespace '%s': %v", namespace, err)
+	}
+	warnings = append(warnings, helpers.ApplyLinkAttributes(namespace, request.Links, request.Nodes)...)
+
 	if err := helpers.SetNamespaceHasTopology(namespace, true); err != nil {
 		log.Printf("⚠️ Could not persist topology state for namespace '%s': %v", namespace, err)
 	}
@@ -1000,6 +1019,9 @@ func ClearTopology(c *gin.Context) {
 	}
 	if err := helpers.DeleteNamespaceDriverOperationHistory(namespace); err != nil {
 		log.Printf("⚠️ Could not cleanup driver operation history after clear in namespace '%s': %v", namespace, err)
+	}
+	if err := helpers.DeleteNamespaceLinkAttributes(namespace); err != nil {
+		log.Printf("⚠️ Could not cleanup link attributes after clear in namespace '%s': %v", namespace, err)
 	}
 	if err := helpers.DeleteIfaceCountsConfigMap(namespace); err != nil {
 		log.Printf("⚠️ Could not delete iface counts ConfigMap after clear in namespace '%s': %v", namespace, err)
@@ -1240,6 +1262,10 @@ func GetNetwork(c *gin.Context) {
 	// Process links
 	seenLinks := make(map[string]bool)
 	var links []types.LinkSpec
+	linkAttrs, err := helpers.LoadLinkAttributes(namespace)
+	if err != nil {
+		log.Printf("⚠️ get-network: could not load link attributes: %v", err)
+	}
 
 	for _, topology := range topologyList.Items {
 		spec, found, _ := unstructured.NestedSlice(topology.Object, "spec", "links")
@@ -1264,6 +1290,7 @@ func GetNetwork(c *gin.Context) {
 			pod := topology.GetName()
 			// Translate CRD peer_pod ("localhost") → API layer ("external") at read time
 			peerPod := helpers.FromCRDPeerPod(linkMap["peer_pod"].(string))
+			podName, peerPodName := pod, peerPod
 
 			pod = helpers.ConvertToNodeNameIfSingleReplica(pod, replicaCount)
 			if peerPod != "external" {
@@ -1300,6 +1327,7 @@ func GetNetwork(c *gin.Context) {
 			if name, ok := linkNamesMap[fmt.Sprintf("%d", uidValue)]; ok && name != "" {
 				link.Name = name
 			}
+			helpers.FillLinkAttributes(&link, podName, peerPodName, linkAttrs)
 
 			links = append(links, link)
 		}
