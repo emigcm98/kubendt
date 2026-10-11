@@ -234,6 +234,20 @@
   font-size: 0.85rem;
 }
 
+/* Shape the peer's interface too */
+.tc-both-ends {
+  display: flex !important;
+  justify-content: flex-start !important;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  color: var(--tool-text-body);
+}
+
+.tc-both-ends input {
+  width: auto !important;
+  margin: 0 !important;
+}
+
 /* Section headings of the composite form */
 .tc-section {
   margin-top: 0.35rem;

@@ -18,6 +18,7 @@ const EdgeContextMenu = ({
   onCaptureTarget,
   onTCSource,
   onTCTarget,
+  onTCLink,
 }) => {
   const menuRef = useRef(null);
   const leaveTimerRef = useRef(null);
@@ -148,6 +149,13 @@ const EdgeContextMenu = ({
           <span className="graph-context-menu-label">
             Traffic control on {targetLabel || edge.target}:{edge.data?.peerIntf || '?'}
           </span>
+        </div>
+      )}
+
+      {onTCLink && (
+        <div className="graph-context-menu-item" onClick={() => handleOptionClick(onTCLink)}>
+          <SlidersIcon className="graph-context-menu-icon" />
+          <span className="graph-context-menu-label">Traffic control on both ends</span>
         </div>
       )}
 

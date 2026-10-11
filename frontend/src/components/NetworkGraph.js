@@ -78,6 +78,16 @@ const LINK_SPEC_FIELDS = new Set([
 const MOUNT_SPEC_FIELDS = new Set(['file', 'mountTo', 'sensitive']);
 const DEVICE_SPEC_FIELDS = new Set(['path']);
 const CONFIGURE_TARGET_FIELDS = new Set(['pod', 'actions']);
+const CONFIGURE_LINK_FIELDS = new Set([
+  'node',
+  'localIntf',
+  'peerNode',
+  'peerIntf',
+  'shaping',
+  'symmetric',
+  'reverse',
+  'remove',
+]);
 const SCALE_SPEC_FIELDS = new Set(['name', 'replicas']);
 
 const ensureAllowedFields = (obj, allowed, label) => {
@@ -1291,7 +1301,7 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
   // Traffic-control panels are per pod. Opening a pod again focuses its
   // window and selects the interface asked for, if any, instead of stacking a
   // second editor. focusToken tells the panel it was asked again.
-  const openTC = (pod, iface = null) => {
+  const openTC = (pod, iface = null, { symmetric = false } = {}) => {
     if (!pod) return;
     setMaxZIndex((prev) => prev + 1);
     setOpenTCs((prev) => {
@@ -1302,6 +1312,7 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
             ? {
                 ...t,
                 iface: iface || t.iface,
+                symmetric,
                 focusToken: (t.focusToken || 0) + 1,
                 minimized: false,
                 zIndex: maxZIndex + 1,
@@ -1310,8 +1321,26 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
         );
       }
       const id = `tc-${Date.now()}-${Math.random()}`;
-      return [...prev, { id, pod, iface, focusToken: 1, zIndex: maxZIndex + 1, minimized: false }];
+      return [
+        ...prev,
+        { id, pod, iface, symmetric, focusToken: 1, zIndex: maxZIndex + 1, minimized: false },
+      ];
     });
+  };
+
+  // The pod at the other end of each interface's link, for shaping both
+  // ends at once. Links to the external network have no pod to shape.
+  const podPeers = (pod) => {
+    const isExternal = (id) => nodes.find((n) => n.id === id)?.type === 'external';
+    const peers = {};
+    edges.forEach((e) => {
+      if (e.source === pod && e.data?.localIntf && !isExternal(e.target)) {
+        peers[e.data.localIntf] = { node: e.target, iface: e.data.peerIntf };
+      } else if (e.target === pod && e.data?.peerIntf && !isExternal(e.source)) {
+        peers[e.data.peerIntf] = { node: e.source, iface: e.data.localIntf };
+      }
+    });
+    return peers;
   };
 
   // The interfaces a pod has in the topology, in link order, for its
@@ -2286,17 +2315,30 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
     if (!json || typeof json !== 'object' || Array.isArray(json)) {
       throw new Error('Network configuration must be a JSON object.');
     }
-    // Root accepts only 'targets'
+    // Root accepts 'targets' and 'links'
     for (const key of Object.keys(json)) {
-      if (key !== 'targets') {
-        throw new Error(`Unknown root-level field '${key}'. Only 'targets' is allowed.`);
+      if (key !== 'targets' && key !== 'links') {
+        throw new Error(
+          `Unknown root-level field '${key}'. Only 'targets' and 'links' are allowed.`
+        );
       }
     }
-    if (!Array.isArray(json.targets) || json.targets.length === 0) {
-      throw new Error("'targets' must exist as a non-empty array.");
+    const links = json.links ?? [];
+    if (!Array.isArray(links)) throw new Error("'links' must be an array.");
+    for (let i = 0; i < links.length; i++) {
+      const l = links[i];
+      if (!isPlainObject(l)) throw new Error(`links[${i}]: must be an object.`);
+      ensureAllowedFields(l, CONFIGURE_LINK_FIELDS, `links[${i}]`);
+      if (!isNonEmptyString(l.node) || !isNonEmptyString(l.localIntf)) {
+        throw new Error(`links[${i}]: must include 'node' and 'localIntf' (strings).`);
+      }
     }
-    for (let i = 0; i < json.targets.length; i++) {
-      const t = json.targets[i];
+    const targets = json.targets ?? [];
+    if (!Array.isArray(targets) || (targets.length === 0 && links.length === 0)) {
+      throw new Error("'targets' must be a non-empty array, unless 'links' is given.");
+    }
+    for (let i = 0; i < targets.length; i++) {
+      const t = targets[i];
       if (!t || typeof t !== 'object' || Array.isArray(t)) {
         throw new Error(`targets[${i}]: must be an object.`);
       }
@@ -3740,6 +3782,8 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
           iface={tc.iface}
           focusToken={tc.focusToken}
           interfaces={podInterfaces(tc.pod)}
+          peers={podPeers(tc.pod)}
+          symmetric={!!tc.symmetric}
           zIndex={tc.zIndex}
           minimized={!!tc.minimized}
           onClose={() => closeTC(tc.id)}

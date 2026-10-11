@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- A configure request takes a `links` section that shapes a link by one of its ends: the peer comes from the topology, `symmetric` repeats the shaping on it, `reverse` puts a different one there and `remove` clears both. The panel offers to shape the other end too, and the link menu opens it for both ends.
 - A shaping request combines delay, jitter, loss, duplicate, corrupt, reorder and a rate in one netem, with a jitter distribution and a Gilbert-Elliott loss model as options. The panel edits all of them and offers presets, and `tc_fidelity.py` measures the composite and the models.
 - `GET /pods/tc/{namespace}/{pod}` returns the traffic control state of every interface of a pod. The Links tab uses it and marks the shaped interfaces.
 

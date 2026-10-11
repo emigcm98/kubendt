@@ -348,6 +348,22 @@ Delay, loss and bandwidth can also go together in one `netem`, which is what the
 
 `gemodel` replaces `loss` with a bursty Gilbert-Elliott model (`p`, `r`, `1-h`, `1-k`), and `reorder` and `corrupt` are available too. See the Swagger description of `tcparams` for the units and ranges.
 
+To shape a whole link, name one end in a `links` section and the backend finds the other in the topology. `symmetric` puts the same shaping on both interfaces (delay is one-way, so the RTT doubles it), `reverse` puts a different one on the peer, and `remove` clears both. The panel has the same option, and the link's context menu opens it for both ends.
+
+```json
+{
+  "targets": [],
+  "links": [
+    {
+      "node": "user-0",
+      "localIntf": "eth1",
+      "shaping": { "qdisc": "netem", "delay": "25ms", "rate": "10mbit" },
+      "symmetric": true
+    }
+  ]
+}
+```
+
 ## Troubleshooting
 
 - **Node stuck in `Init` / crash loop**: the most common cause is a missing mounted file. Verify all six files from the [Files In This Folder](#files-in-this-folder) table exist in the Namespace File Manager.
