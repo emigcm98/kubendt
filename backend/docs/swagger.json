@@ -4715,6 +4715,44 @@
                 }
             }
         },
+        "types.QdiscClass": {
+            "type": "object",
+            "properties": {
+                "ceil": {
+                    "type": "string",
+                    "example": "10mbit"
+                },
+                "classid": {
+                    "type": "string",
+                    "example": "1:11"
+                },
+                "default": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "leaf": {
+                    "$ref": "#/definitions/types.QdiscState"
+                },
+                "match": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.TCMatch"
+                    }
+                },
+                "parent": {
+                    "type": "string",
+                    "example": "1:1"
+                },
+                "prio": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "rate": {
+                    "type": "string",
+                    "example": "2mbit"
+                }
+            }
+        },
         "types.QdiscResponse": {
             "type": "object",
             "properties": {
@@ -4741,9 +4779,20 @@
                         "$ref": "#/definitions/types.QdiscState"
                     }
                 },
+                "classes": {
+                    "description": "Classes are the htb classes under this root, each with its leaf and the\nmatches that feed it. DefaultClass is the one unmatched traffic goes to.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.QdiscClass"
+                    }
+                },
                 "corrupt": {
                     "type": "string",
                     "example": "0.1%"
+                },
+                "default_class": {
+                    "type": "string",
+                    "example": "1:12"
                 },
                 "delay": {
                     "description": "netem",
@@ -4940,6 +4989,93 @@
                 }
             }
         },
+        "types.TCClassEntry": {
+            "type": "object",
+            "properties": {
+                "ceil": {
+                    "description": "what it may borrow up to, defaults to the link rate",
+                    "type": "string",
+                    "example": "10mbit"
+                },
+                "default": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "limit": {
+                    "description": "pfifo length in packets, defaults to 1000",
+                    "type": "integer",
+                    "example": 100
+                },
+                "match": {
+                    "description": "Match lists the flower rules that send traffic here. A class without\nmatches must be the default.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.TCMatch"
+                    }
+                },
+                "name": {
+                    "type": "string",
+                    "example": "voice"
+                },
+                "prio": {
+                    "description": "0 to 7, lower is served first",
+                    "type": "integer",
+                    "example": 0
+                },
+                "queue": {
+                    "description": "Queue is the leaf: pfifo (default), fq_codel, sfq, or netem with Shaping.",
+                    "type": "string",
+                    "example": "fq_codel"
+                },
+                "rate": {
+                    "description": "guaranteed, at most the link rate",
+                    "type": "string",
+                    "example": "2mbit"
+                },
+                "shaping": {
+                    "description": "Shaping makes the leaf a netem with the composite impairments. Its rate\nfield is not used, the class rate and ceil cap the class.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.TCParamEntry"
+                        }
+                    ]
+                }
+            }
+        },
+        "types.TCMatch": {
+            "type": "object",
+            "properties": {
+                "dscp": {
+                    "type": "integer",
+                    "example": 46
+                },
+                "dst": {
+                    "type": "string",
+                    "example": "10.0.0.5"
+                },
+                "dstPort": {
+                    "type": "integer",
+                    "example": 80
+                },
+                "proto": {
+                    "description": "tcp, udp or icmp",
+                    "type": "string",
+                    "example": "tcp"
+                },
+                "src": {
+                    "type": "string",
+                    "example": "192.168.1.0/24"
+                },
+                "srcPort": {
+                    "type": "integer",
+                    "example": 5201
+                },
+                "vlan": {
+                    "type": "integer",
+                    "example": 10
+                }
+            }
+        },
         "types.TCParamEntry": {
             "type": "object",
             "properties": {
@@ -4947,6 +5083,13 @@
                     "description": "tbf only",
                     "type": "string",
                     "example": "32kbit"
+                },
+                "classes": {
+                    "description": "htb only. Rate is the link rate the classes share, each class gets a\nguaranteed rate, a ceil, a priority, the matches that send traffic to\nit and a leaf queue. Exactly one class is the default for the rest.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.TCClassEntry"
+                    }
                 },
                 "corrupt": {
                     "type": "string",

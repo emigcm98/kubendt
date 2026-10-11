@@ -1,7 +1,10 @@
 package helpers
 
 import (
+	"bytes"
+	"context"
 	"fmt"
+	"net"
 	"regexp"
 	"strconv"
 	"strings"
@@ -9,7 +12,12 @@ import (
 	"time"
 
 	"kubendt/executor"
+	"kubendt/kubeclient"
 	"kubendt/types"
+
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/tools/remotecommand"
 )
 
 // tcToolboxStartTimeout bounds the wait for the netshoot toolbox to come up.
@@ -32,6 +40,7 @@ func init() {
 	// Wire the tc_universal executor to the pod-exec + toolbox machinery here,
 	// since the executor package must not import helpers.
 	executor.RunTCHook = RunTC
+	executor.RunTCBatchHook = RunTCBatch
 }
 
 // RunTC runs a tc command in a pod's network namespace. Shaping is universal:
@@ -39,6 +48,16 @@ func init() {
 // ephemeral netshoot toolbox (ships tc, has NET_ADMIN) for images without it.
 // The qdisc lives in the shared pod netns, so it persists after the exec ends.
 func RunTC(namespace, podName string, args []string) (stdout, stderr string, err error) {
+	return runTCWith(namespace, podName, args, "")
+}
+
+// RunTCBatch feeds lines (without the "tc" prefix) to `tc -b -` in one exec.
+// tc stops at the first line that fails and reports it.
+func RunTCBatch(namespace, podName string, lines []string) (stdout, stderr string, err error) {
+	return runTCWith(namespace, podName, []string{"tc", "-b", "-"}, strings.Join(lines, "\n")+"\n")
+}
+
+func runTCWith(namespace, podName string, args []string, stdin string) (stdout, stderr string, err error) {
 	key := namespace + "/" + podName
 	choice, known := tcUseToolbox.Load(key)
 	if !known && FindRunningDebugContainer(namespace, podName) != "" {
@@ -46,15 +65,15 @@ func RunTC(namespace, podName string, args []string) (stdout, stderr string, err
 		tcUseToolbox.Store(key, true)
 	}
 	if known && choice.(bool) {
-		return runTCInToolbox(namespace, podName, args)
+		return runTCInToolbox(namespace, podName, args, stdin)
 	}
-	stdout, stderr, err = ExecInPod(namespace, podName, args)
+	stdout, stderr, err = execTC(namespace, podName, "", args, stdin)
 	switch {
 	case err == nil:
 		tcUseToolbox.Store(key, false)
 	case isBinaryNotFound(err, stderr):
 		tcUseToolbox.Store(key, true)
-		return runTCInToolbox(namespace, podName, args)
+		return runTCInToolbox(namespace, podName, args, stdin)
 	}
 	return stdout, stderr, err
 }
@@ -62,12 +81,42 @@ func RunTC(namespace, podName string, args []string) (stdout, stderr string, err
 // runTCInToolbox runs the tc command inside a shared netshoot debug container,
 // injecting one and waiting for it to start if the pod has none yet. Creation
 // is serialized per pod so parallel shaping calls converge on one container.
-func runTCInToolbox(namespace, podName string, args []string) (string, string, error) {
+func runTCInToolbox(namespace, podName string, args []string, stdin string) (string, string, error) {
 	container, err := ensureTCToolbox(namespace, podName)
 	if err != nil {
 		return "", "", err
 	}
-	return ExecInContainer(namespace, podName, container, args)
+	return execTC(namespace, podName, container, args, stdin)
+}
+
+// execTC is the exec behind every tc call, in the pod's main container when
+// container is empty. stdin, when given, is what a batch reads.
+func execTC(namespace, podName, container string, args []string, stdin string) (string, string, error) {
+	var outBuf, errBuf bytes.Buffer
+	req := kubeclient.Clientset.CoreV1().RESTClient().
+		Post().
+		Resource("pods").
+		Name(podName).
+		Namespace(namespace).
+		SubResource("exec").
+		VersionedParams(&v1.PodExecOptions{
+			Container: container,
+			Command:   args,
+			Stdin:     stdin != "",
+			Stdout:    true,
+			Stderr:    true,
+			TTY:       false,
+		}, scheme.ParameterCodec)
+	exec, err := remotecommand.NewSPDYExecutor(kubeclient.Config, "POST", req.URL())
+	if err != nil {
+		return "", "", fmt.Errorf("exec init error: %w", err)
+	}
+	opts := remotecommand.StreamOptions{Stdout: &outBuf, Stderr: &errBuf}
+	if stdin != "" {
+		opts.Stdin = strings.NewReader(stdin)
+	}
+	err = exec.StreamWithContext(context.TODO(), opts)
+	return strings.TrimSpace(outBuf.String()), strings.TrimSpace(errBuf.String()), err
 }
 
 func ensureTCToolbox(namespace, podName string) (string, error) {
@@ -244,13 +293,32 @@ func tcSize(field, s string) (tcValue, error) {
 	return tcValue{set: true, n: n, canon: m[1] + strings.ToLower(m[2])}, nil
 }
 
-// buildTCParams validates a shaping request and returns the qdisc kind and
-// the tc arguments that follow it. Every problem is an error naming the field
-// and the accepted values, nothing is dropped on the way: a netem missing one
-// parameter is a different impairment, not a correction of the request.
+// buildShapingCommands validates a shaping request and returns the tc rows
+// that install it: a reset, then one qdisc for netem and tbf, or the htb tree
+// with its classes, leaves and filters. Every problem is an error naming the
+// field and the accepted values, nothing is dropped on the way.
+func buildShapingCommands(iface string, p *types.TCParamEntry) ([][]string, error) {
+	if p == nil {
+		return nil, fmt.Errorf("tcparams is required")
+	}
+	if strings.TrimSpace(p.Qdisc) == "htb" || (p.Qdisc == "" && len(p.Classes) > 0) {
+		return htbCommands(iface, p)
+	}
+	qdisc, params, err := buildTCParams(p)
+	if err != nil {
+		return nil, err
+	}
+	return buildAddQdiscCommand(iface, qdisc, params), nil
+}
+
+// buildTCParams validates a classless shaping request and returns the qdisc
+// kind and the tc arguments that follow it.
 func buildTCParams(p *types.TCParamEntry) (qdisc string, args []string, err error) {
 	if p == nil {
 		return "", nil, fmt.Errorf("tcparams is required")
+	}
+	if len(p.Classes) > 0 {
+		return "", nil, fmt.Errorf("tcparams.classes needs qdisc htb")
 	}
 	qdisc = strings.TrimSpace(p.Qdisc)
 	if qdisc == "" {
@@ -262,7 +330,7 @@ func buildTCParams(p *types.TCParamEntry) (qdisc string, args []string, err erro
 	case "tbf":
 		args, err = tbfArgs(p)
 	default:
-		err = fmt.Errorf("tcparams.qdisc %q is not supported (netem, tbf)", p.Qdisc)
+		err = fmt.Errorf("tcparams.qdisc %q is not supported (netem, tbf, htb)", p.Qdisc)
 	}
 	return qdisc, args, err
 }
@@ -465,4 +533,256 @@ func tbfArgs(p *types.TCParamEntry) ([]string, error) {
 		return nil, err
 	}
 	return []string{"rate", rate.canon, "burst", burst.canon, "latency", latency.canon}, nil
+}
+
+// htb trees. The root class 1:1 carries the link rate every class shares, so
+// a class can borrow what its siblings leave. Classes get 1:11, 1:12, ...,
+// their leaf qdisc the same minor as handle, and flower filters on the root
+// send matching traffic to them. One class takes everything else.
+
+const (
+	tcMaxClasses  = 50
+	tcMinorBase   = 10
+	tcLeafQueues  = "pfifo, fq_codel, sfq, netem"
+	tcMatchProtos = "tcp, udp, icmp"
+)
+
+var (
+	tcLeafQueueSet  = map[string]bool{"pfifo": true, "fq_codel": true, "sfq": true, "netem": true}
+	tcMatchProtoSet = map[string]bool{"tcp": true, "udp": true, "icmp": true}
+)
+
+func htbCommands(iface string, p *types.TCParamEntry) ([][]string, error) {
+	for _, f := range []struct{ name, val string }{
+		{"delay", p.Delay}, {"jitter", p.Jitter}, {"distribution", p.Distribution}, {"loss", p.Loss},
+		{"duplicate", p.Duplicate}, {"corrupt", p.Corrupt}, {"reorder", p.Reorder}, {"burst", p.Burst}, {"latency", p.Latency},
+	} {
+		if f.val != "" {
+			return nil, fmt.Errorf("tcparams.%s does not apply to htb, put impairments in a class shaping", f.name)
+		}
+	}
+	if p.Gemodel != nil || p.Limit != nil {
+		return nil, fmt.Errorf("tcparams.gemodel and tcparams.limit do not apply to htb, put them in a class shaping")
+	}
+	link, err := tcRate("rate", p.Rate)
+	if err != nil {
+		return nil, err
+	}
+	if !link.set {
+		return nil, fmt.Errorf("tcparams.rate is required for htb, it is the link rate the classes share")
+	}
+	linkBits := rateBits(link.canon)
+	if len(p.Classes) == 0 {
+		return nil, fmt.Errorf("tcparams.classes is required for htb")
+	}
+	if len(p.Classes) > tcMaxClasses {
+		return nil, fmt.Errorf("tcparams.classes has %d entries, at most %d", len(p.Classes), tcMaxClasses)
+	}
+
+	rows := [][]string{tcResetCommand(iface)}
+	defaultMinor := ""
+	var sumBits float64
+	var classRows, leafRows, filterRows [][]string
+	filterPrio := 0
+	for i, c := range p.Classes {
+		where := fmt.Sprintf("tcparams.classes[%d]", i)
+		minor := strconv.Itoa(tcMinorBase + i + 1)
+		classid := "1:" + minor
+		rate, err := tcRate(where+".rate", c.Rate)
+		if err != nil {
+			return nil, err
+		}
+		if !rate.set {
+			return nil, fmt.Errorf("%s.rate is required", where)
+		}
+		ceil := link
+		if c.Ceil != "" {
+			if ceil, err = tcRate(where+".ceil", c.Ceil); err != nil {
+				return nil, err
+			}
+		}
+		rb, cb := rateBits(rate.canon), rateBits(ceil.canon)
+		if rb > linkBits {
+			return nil, fmt.Errorf("%s.rate %s is above the link rate %s", where, rate.canon, link.canon)
+		}
+		if cb > linkBits {
+			return nil, fmt.Errorf("%s.ceil %s is above the link rate %s", where, ceil.canon, link.canon)
+		}
+		if cb < rb {
+			return nil, fmt.Errorf("%s.ceil %s is below its rate %s", where, ceil.canon, rate.canon)
+		}
+		sumBits += rb
+		if c.Prio != nil && (*c.Prio < 0 || *c.Prio > 7) {
+			return nil, fmt.Errorf("%s.prio %d is out of range (0 to 7)", where, *c.Prio)
+		}
+		if c.Default {
+			if defaultMinor != "" {
+				return nil, fmt.Errorf("%s: only one class can be the default", where)
+			}
+			defaultMinor = minor
+		} else if len(c.Match) == 0 {
+			return nil, fmt.Errorf("%s needs a match, or default: true to take the rest of the traffic", where)
+		}
+
+		classRow := []string{"tc", "class", "add", "dev", iface, "parent", "1:1", "classid", classid, "htb", "rate", rate.canon, "ceil", ceil.canon}
+		if c.Prio != nil {
+			classRow = append(classRow, "prio", strconv.Itoa(*c.Prio))
+		}
+		classRows = append(classRows, classRow)
+
+		leaf, err := leafQdiscArgs(where, c)
+		if err != nil {
+			return nil, err
+		}
+		leafRows = append(leafRows, append([]string{"tc", "qdisc", "add", "dev", iface, "parent", classid, "handle", minor + ":"}, leaf...))
+
+		for j, m := range c.Match {
+			protocol, keys, err := flowerArgs(fmt.Sprintf("%s.match[%d]", where, j), m)
+			if err != nil {
+				return nil, err
+			}
+			filterPrio++
+			row := []string{"tc", "filter", "add", "dev", iface, "parent", "1:", "protocol", protocol, "prio", strconv.Itoa(filterPrio), "flower"}
+			row = append(row, keys...)
+			filterRows = append(filterRows, append(row, "flowid", classid))
+		}
+	}
+	if defaultMinor == "" {
+		return nil, fmt.Errorf("tcparams.classes: one class must have default: true, or unmatched traffic bypasses the tree")
+	}
+	if sumBits > linkBits {
+		return nil, fmt.Errorf("tcparams.classes: the class rates add up to %s, above the link rate %s", fmtTCRate(sumBits), link.canon)
+	}
+
+	rows = append(rows,
+		[]string{"tc", "qdisc", "replace", "dev", iface, "root", "handle", "1:", "htb", "default", defaultMinor},
+		[]string{"tc", "class", "add", "dev", iface, "parent", "1:", "classid", "1:1", "htb", "rate", link.canon, "ceil", link.canon},
+	)
+	rows = append(rows, classRows...)
+	rows = append(rows, leafRows...)
+	rows = append(rows, filterRows...)
+	return rows, nil
+}
+
+// leafQdiscArgs is the qdisc under a class: a netem with the composite
+// impairments (its rate is the class rate), or a plain queue.
+func leafQdiscArgs(where string, c types.TCClassEntry) ([]string, error) {
+	queue := strings.TrimSpace(c.Queue)
+	if queue == "" {
+		queue = "pfifo"
+		if c.Shaping != nil {
+			queue = "netem"
+		}
+	}
+	if !tcLeafQueueSet[queue] {
+		return nil, fmt.Errorf("%s.queue %q is not supported (%s)", where, c.Queue, tcLeafQueues)
+	}
+	if c.Shaping != nil && queue != "netem" {
+		return nil, fmt.Errorf("%s.shaping needs queue netem", where)
+	}
+	if c.Limit != nil && queue != "pfifo" {
+		return nil, fmt.Errorf("%s.limit applies to the pfifo queue only", where)
+	}
+	switch queue {
+	case "netem":
+		if c.Shaping == nil {
+			return nil, fmt.Errorf("%s.queue netem needs a shaping", where)
+		}
+		if c.Shaping.Rate != "" {
+			return nil, fmt.Errorf("%s.shaping.rate does not apply, the class rate and ceil cap the class", where)
+		}
+		if c.Shaping.Qdisc != "" && c.Shaping.Qdisc != "netem" {
+			return nil, fmt.Errorf("%s.shaping.qdisc must be netem", where)
+		}
+		args, err := netemArgs(c.Shaping)
+		if err != nil {
+			return nil, fmt.Errorf("%s.shaping: %w", where, err)
+		}
+		return append([]string{"netem"}, args...), nil
+	case "pfifo":
+		limit := 1000
+		if c.Limit != nil {
+			if *c.Limit < tcMinLimit || *c.Limit > tcMaxLimit {
+				return nil, fmt.Errorf("%s.limit %d is out of range (%d to %d packets)", where, *c.Limit, tcMinLimit, tcMaxLimit)
+			}
+			limit = *c.Limit
+		}
+		return []string{"pfifo", "limit", strconv.Itoa(limit)}, nil
+	case "sfq":
+		return []string{"sfq", "perturb", "10"}, nil
+	default:
+		return []string{queue}, nil
+	}
+}
+
+// flowerArgs turns a match into flower keys and the protocol the filter is
+// registered under: ip, or 802.1Q with the IP keys behind vlan_ethtype.
+func flowerArgs(where string, m types.TCMatch) (protocol string, keys []string, err error) {
+	proto := strings.ToLower(strings.TrimSpace(m.Proto))
+	if proto != "" && !tcMatchProtoSet[proto] {
+		return "", nil, fmt.Errorf("%s.proto %q is not supported (%s)", where, m.Proto, tcMatchProtos)
+	}
+	ip := []string{}
+	if proto != "" {
+		ip = append(ip, "ip_proto", proto)
+	}
+	for _, f := range []struct{ name, key, val string }{{"src", "src_ip", m.Src}, {"dst", "dst_ip", m.Dst}} {
+		if f.val == "" {
+			continue
+		}
+		if _, _, cerr := net.ParseCIDR(f.val); cerr != nil && net.ParseIP(f.val) == nil {
+			return "", nil, fmt.Errorf("%s.%s %q is not an IP address or CIDR", where, f.name, f.val)
+		}
+		ip = append(ip, f.key, f.val)
+	}
+	for _, f := range []struct {
+		name, key string
+		val       *int
+	}{{"srcPort", "src_port", m.SrcPort}, {"dstPort", "dst_port", m.DstPort}} {
+		if f.val == nil {
+			continue
+		}
+		if proto != "tcp" && proto != "udp" {
+			return "", nil, fmt.Errorf("%s.%s needs proto tcp or udp", where, f.name)
+		}
+		if *f.val < 1 || *f.val > 65535 {
+			return "", nil, fmt.Errorf("%s.%s %d is out of range (1 to 65535)", where, f.name, *f.val)
+		}
+		ip = append(ip, f.key, strconv.Itoa(*f.val))
+	}
+	if m.DSCP != nil {
+		if *m.DSCP < 0 || *m.DSCP > 63 {
+			return "", nil, fmt.Errorf("%s.dscp %d is out of range (0 to 63)", where, *m.DSCP)
+		}
+		ip = append(ip, "ip_tos", fmt.Sprintf("0x%x/0xfc", *m.DSCP<<2))
+	}
+	if m.VLAN != nil {
+		if *m.VLAN < 1 || *m.VLAN > 4094 {
+			return "", nil, fmt.Errorf("%s.vlan %d is out of range (1 to 4094)", where, *m.VLAN)
+		}
+		keys = append(keys, "vlan_id", strconv.Itoa(*m.VLAN))
+		if len(ip) > 0 {
+			keys = append(keys, "vlan_ethtype", "ip")
+		}
+		return "802.1Q", append(keys, ip...), nil
+	}
+	if len(ip) == 0 {
+		return "", nil, fmt.Errorf("%s needs at least one of proto, src, dst, srcPort, dstPort, dscp or vlan", where)
+	}
+	return "ip", ip, nil
+}
+
+// rateBits converts a canonical rate ("500kbit", "2mbit", "1gbit") to bits
+// per second, for comparing class rates against the link rate.
+func rateBits(canon string) float64 {
+	m := tcRateRe.FindStringSubmatch(canon)
+	if m == nil {
+		return 0
+	}
+	n, _ := strconv.ParseFloat(m[1], 64)
+	scale := map[string]float64{
+		"": 1, "bit": 1, "kbit": 1e3, "mbit": 1e6, "gbit": 1e9, "tbit": 1e12,
+		"bps": 8, "kbps": 8e3, "mbps": 8e6, "gbps": 8e9, "tbps": 8e12,
+	}[strings.ToLower(m[2])]
+	return n * scale
 }

@@ -118,6 +118,40 @@ type TCParamEntry struct {
 	// tbf only
 	Burst   string `json:"burst,omitempty" example:"32kbit"` // defaults to 32kbit
 	Latency string `json:"latency,omitempty" example:"50ms"` // 1 to 5000 ms, defaults to 50ms
+	// htb only. Rate is the link rate the classes share, each class gets a
+	// guaranteed rate, a ceil, a priority, the matches that send traffic to
+	// it and a leaf queue. Exactly one class is the default for the rest.
+	Classes []TCClassEntry `json:"classes,omitempty"`
+}
+
+// TCClassEntry is one htb class of a shaping request.
+type TCClassEntry struct {
+	Name string `json:"name,omitempty" example:"voice"`
+	Rate string `json:"rate" example:"2mbit"`            // guaranteed, at most the link rate
+	Ceil string `json:"ceil,omitempty" example:"10mbit"` // what it may borrow up to, defaults to the link rate
+	Prio *int   `json:"prio,omitempty" example:"0"`      // 0 to 7, lower is served first
+	// Match lists the flower rules that send traffic here. A class without
+	// matches must be the default.
+	Match   []TCMatch `json:"match,omitempty"`
+	Default bool      `json:"default,omitempty" example:"false"`
+	// Queue is the leaf: pfifo (default), fq_codel, sfq, or netem with Shaping.
+	Queue string `json:"queue,omitempty" example:"fq_codel"`
+	Limit *int   `json:"limit,omitempty" example:"100"` // pfifo length in packets, defaults to 1000
+	// Shaping makes the leaf a netem with the composite impairments. Its rate
+	// field is not used, the class rate and ceil cap the class.
+	Shaping *TCParamEntry `json:"shaping,omitempty"`
+}
+
+// TCMatch is one flower rule. Ports need proto tcp or udp, dscp is the
+// 6-bit codepoint, vlan matches tagged frames by id.
+type TCMatch struct {
+	Proto   string `json:"proto,omitempty" example:"tcp"` // tcp, udp or icmp
+	Src     string `json:"src,omitempty" example:"192.168.1.0/24"`
+	Dst     string `json:"dst,omitempty" example:"10.0.0.5"`
+	SrcPort *int   `json:"srcPort,omitempty" example:"5201"`
+	DstPort *int   `json:"dstPort,omitempty" example:"80"`
+	DSCP    *int   `json:"dscp,omitempty" example:"46"`
+	VLAN    *int   `json:"vlan,omitempty" example:"10"`
 }
 
 // GemodelSpec is netem's Gilbert-Elliott loss model: p is the probability of

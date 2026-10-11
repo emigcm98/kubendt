@@ -1552,6 +1552,33 @@ definitions:
           $ref: '#/definitions/types.PodInfo'
         type: array
     type: object
+  types.QdiscClass:
+    properties:
+      ceil:
+        example: 10mbit
+        type: string
+      classid:
+        example: "1:11"
+        type: string
+      default:
+        example: false
+        type: boolean
+      leaf:
+        $ref: '#/definitions/types.QdiscState'
+      match:
+        items:
+          $ref: '#/definitions/types.TCMatch'
+        type: array
+      parent:
+        example: "1:1"
+        type: string
+      prio:
+        example: 0
+        type: integer
+      rate:
+        example: 2mbit
+        type: string
+    type: object
   types.QdiscResponse:
     properties:
       interface:
@@ -1571,8 +1598,18 @@ definitions:
         items:
           $ref: '#/definitions/types.QdiscState'
         type: array
+      classes:
+        description: |-
+          Classes are the htb classes under this root, each with its leaf and the
+          matches that feed it. DefaultClass is the one unmatched traffic goes to.
+        items:
+          $ref: '#/definitions/types.QdiscClass'
+        type: array
       corrupt:
         example: 0.1%
+        type: string
+      default_class:
+        example: "1:12"
         type: string
       delay:
         description: netem
@@ -1717,12 +1754,88 @@ definitions:
         example: my-cluster
         type: string
     type: object
+  types.TCClassEntry:
+    properties:
+      ceil:
+        description: what it may borrow up to, defaults to the link rate
+        example: 10mbit
+        type: string
+      default:
+        example: false
+        type: boolean
+      limit:
+        description: pfifo length in packets, defaults to 1000
+        example: 100
+        type: integer
+      match:
+        description: |-
+          Match lists the flower rules that send traffic here. A class without
+          matches must be the default.
+        items:
+          $ref: '#/definitions/types.TCMatch'
+        type: array
+      name:
+        example: voice
+        type: string
+      prio:
+        description: 0 to 7, lower is served first
+        example: 0
+        type: integer
+      queue:
+        description: 'Queue is the leaf: pfifo (default), fq_codel, sfq, or netem
+          with Shaping.'
+        example: fq_codel
+        type: string
+      rate:
+        description: guaranteed, at most the link rate
+        example: 2mbit
+        type: string
+      shaping:
+        allOf:
+        - $ref: '#/definitions/types.TCParamEntry'
+        description: |-
+          Shaping makes the leaf a netem with the composite impairments. Its rate
+          field is not used, the class rate and ceil cap the class.
+    type: object
+  types.TCMatch:
+    properties:
+      dscp:
+        example: 46
+        type: integer
+      dst:
+        example: 10.0.0.5
+        type: string
+      dstPort:
+        example: 80
+        type: integer
+      proto:
+        description: tcp, udp or icmp
+        example: tcp
+        type: string
+      src:
+        example: 192.168.1.0/24
+        type: string
+      srcPort:
+        example: 5201
+        type: integer
+      vlan:
+        example: 10
+        type: integer
+    type: object
   types.TCParamEntry:
     properties:
       burst:
         description: tbf only
         example: 32kbit
         type: string
+      classes:
+        description: |-
+          htb only. Rate is the link rate the classes share, each class gets a
+          guaranteed rate, a ceil, a priority, the matches that send traffic to
+          it and a leaf queue. Exactly one class is the default for the rest.
+        items:
+          $ref: '#/definitions/types.TCClassEntry'
+        type: array
       corrupt:
         example: 0.1%
         type: string

@@ -108,3 +108,84 @@ func TestQdiscCommandsStartFromACleanRoot(t *testing.T) {
 		t.Errorf("del commands = %v, want %v", got, want)
 	}
 }
+
+func intPtr(n int) *int { return &n }
+
+// An htb request becomes a reset, the root with its default class, the link
+// class, one class per entry, their leaves and the flower filters, in that order.
+func TestHTBCommands(t *testing.T) {
+	p := &types.TCParamEntry{Qdisc: "htb", Rate: "10mbit", Classes: []types.TCClassEntry{
+		{Name: "voice", Rate: "2mbit", Prio: intPtr(0), Match: []types.TCMatch{{Proto: "udp", DstPort: intPtr(5060)}, {DSCP: intPtr(46)}},
+			Shaping: &types.TCParamEntry{Delay: "5ms"}},
+		{Name: "bulk", Rate: "8mbit", Ceil: "10mbit", Prio: intPtr(1), Default: true, Queue: "pfifo", Limit: intPtr(100)},
+	}}
+	got, err := buildShapingCommands("eth1", p)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := [][]string{
+		{"tc", "qdisc", "replace", "dev", "eth1", "root", "noqueue"},
+		{"tc", "qdisc", "replace", "dev", "eth1", "root", "handle", "1:", "htb", "default", "12"},
+		{"tc", "class", "add", "dev", "eth1", "parent", "1:", "classid", "1:1", "htb", "rate", "10mbit", "ceil", "10mbit"},
+		{"tc", "class", "add", "dev", "eth1", "parent", "1:1", "classid", "1:11", "htb", "rate", "2mbit", "ceil", "10mbit", "prio", "0"},
+		{"tc", "class", "add", "dev", "eth1", "parent", "1:1", "classid", "1:12", "htb", "rate", "8mbit", "ceil", "10mbit", "prio", "1"},
+		{"tc", "qdisc", "add", "dev", "eth1", "parent", "1:11", "handle", "11:", "netem", "delay", "5ms"},
+		{"tc", "qdisc", "add", "dev", "eth1", "parent", "1:12", "handle", "12:", "pfifo", "limit", "100"},
+		{"tc", "filter", "add", "dev", "eth1", "parent", "1:", "protocol", "ip", "prio", "1", "flower", "ip_proto", "udp", "dst_port", "5060", "flowid", "1:11"},
+		{"tc", "filter", "add", "dev", "eth1", "parent", "1:", "protocol", "ip", "prio", "2", "flower", "ip_tos", "0xb8/0xfc", "flowid", "1:11"},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("commands =\n%v\nwant\n%v", got, want)
+	}
+}
+
+func TestHTBValidation(t *testing.T) {
+	ok := types.TCClassEntry{Rate: "1mbit", Default: true}
+	cases := []struct {
+		name    string
+		p       *types.TCParamEntry
+		wantErr string
+	}{
+		{"no rate", &types.TCParamEntry{Qdisc: "htb", Classes: []types.TCClassEntry{ok}}, "tcparams.rate is required for htb"},
+		{"no classes", &types.TCParamEntry{Qdisc: "htb", Rate: "10mbit"}, "tcparams.classes is required"},
+		{"classes without htb", &types.TCParamEntry{Qdisc: "netem", Classes: []types.TCClassEntry{ok}}, "needs qdisc htb"},
+		{"impairment on the root", &types.TCParamEntry{Qdisc: "htb", Rate: "10mbit", Delay: "5ms", Classes: []types.TCClassEntry{ok}}, "tcparams.delay does not apply to htb"},
+		{"no default", &types.TCParamEntry{Qdisc: "htb", Rate: "10mbit", Classes: []types.TCClassEntry{{Rate: "1mbit", Match: []types.TCMatch{{Proto: "udp"}}}}}, "one class must have default"},
+		{"two defaults", &types.TCParamEntry{Qdisc: "htb", Rate: "10mbit", Classes: []types.TCClassEntry{ok, ok}}, "only one class can be the default"},
+		{"no match and not default", &types.TCParamEntry{Qdisc: "htb", Rate: "10mbit", Classes: []types.TCClassEntry{ok, {Rate: "1mbit"}}}, "classes[1] needs a match"},
+		{"rate above link", &types.TCParamEntry{Qdisc: "htb", Rate: "10mbit", Classes: []types.TCClassEntry{{Rate: "20mbit", Default: true}}}, "above the link rate"},
+		{"ceil below rate", &types.TCParamEntry{Qdisc: "htb", Rate: "10mbit", Classes: []types.TCClassEntry{{Rate: "5mbit", Ceil: "2mbit", Default: true}}}, "below its rate"},
+		{"rates add up above link", &types.TCParamEntry{Qdisc: "htb", Rate: "10mbit", Classes: []types.TCClassEntry{{Rate: "6mbit", Default: true}, {Rate: "6mbit", Match: []types.TCMatch{{Proto: "udp"}}}}}, "add up to 12mbit"},
+		{"prio out of range", &types.TCParamEntry{Qdisc: "htb", Rate: "10mbit", Classes: []types.TCClassEntry{{Rate: "1mbit", Default: true, Prio: intPtr(9)}}}, "prio 9 is out of range"},
+		{"unknown queue", &types.TCParamEntry{Qdisc: "htb", Rate: "10mbit", Classes: []types.TCClassEntry{{Rate: "1mbit", Default: true, Queue: "codel"}}}, `queue "codel" is not supported`},
+		{"shaping with a rate", &types.TCParamEntry{Qdisc: "htb", Rate: "10mbit", Classes: []types.TCClassEntry{{Rate: "1mbit", Default: true, Shaping: &types.TCParamEntry{Rate: "5mbit"}}}}, "shaping.rate does not apply"},
+		{"shaping on a plain queue", &types.TCParamEntry{Qdisc: "htb", Rate: "10mbit", Classes: []types.TCClassEntry{{Rate: "1mbit", Default: true, Queue: "sfq", Shaping: &types.TCParamEntry{Delay: "5ms"}}}}, "shaping needs queue netem"},
+		{"bad shaping value", &types.TCParamEntry{Qdisc: "htb", Rate: "10mbit", Classes: []types.TCClassEntry{{Rate: "1mbit", Default: true, Shaping: &types.TCParamEntry{Delay: "fast"}}}}, `shaping: tcparams.delay "fast"`},
+		{"port without proto", &types.TCParamEntry{Qdisc: "htb", Rate: "10mbit", Classes: []types.TCClassEntry{ok, {Rate: "1mbit", Match: []types.TCMatch{{DstPort: intPtr(80)}}}}}, "dstPort needs proto tcp or udp"},
+		{"bad cidr", &types.TCParamEntry{Qdisc: "htb", Rate: "10mbit", Classes: []types.TCClassEntry{ok, {Rate: "1mbit", Match: []types.TCMatch{{Dst: "10.0.0.0/33"}}}}}, "is not an IP address or CIDR"},
+		{"empty match", &types.TCParamEntry{Qdisc: "htb", Rate: "10mbit", Classes: []types.TCClassEntry{ok, {Rate: "1mbit", Match: []types.TCMatch{{}}}}}, "needs at least one of"},
+		{"unknown proto", &types.TCParamEntry{Qdisc: "htb", Rate: "10mbit", Classes: []types.TCClassEntry{ok, {Rate: "1mbit", Match: []types.TCMatch{{Proto: "sctp"}}}}}, `proto "sctp" is not supported`},
+		{"dscp out of range", &types.TCParamEntry{Qdisc: "htb", Rate: "10mbit", Classes: []types.TCClassEntry{ok, {Rate: "1mbit", Match: []types.TCMatch{{DSCP: intPtr(64)}}}}}, "dscp 64 is out of range"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := buildShapingCommands("eth1", tc.p)
+			if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
+				t.Fatalf("error = %v, want one containing %q", err, tc.wantErr)
+			}
+		})
+	}
+}
+
+// A vlan match registers the filter under 802.1Q with the IP keys behind
+// vlan_ethtype, a bare IP match under protocol ip.
+func TestFlowerArgs(t *testing.T) {
+	protocol, keys, err := flowerArgs("m", types.TCMatch{VLAN: intPtr(10), Proto: "tcp", DstPort: intPtr(443)})
+	if err != nil || protocol != "802.1Q" || !slices.Equal(keys, []string{"vlan_id", "10", "vlan_ethtype", "ip", "ip_proto", "tcp", "dst_port", "443"}) {
+		t.Errorf("vlan match = %q %v %v", protocol, keys, err)
+	}
+	protocol, keys, err = flowerArgs("m", types.TCMatch{Src: "192.168.1.0/24", DSCP: intPtr(0)})
+	if err != nil || protocol != "ip" || !slices.Equal(keys, []string{"src_ip", "192.168.1.0/24", "ip_tos", "0x0/0xfc"}) {
+		t.Errorf("ip match = %q %v %v", protocol, keys, err)
+	}
+}
