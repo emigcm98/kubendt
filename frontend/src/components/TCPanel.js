@@ -13,6 +13,7 @@ import {
   parseRate,
   parseSize,
   percentToNumber,
+  rateToBits,
   timeToMs,
 } from './tcUnits';
 
@@ -22,8 +23,11 @@ import {
 //
 // netem is the composite impairment: delay with jitter and its distribution,
 // loss (random or bursty), duplicate, corrupt, reorder and a rate, all in one
-// qdisc. tbf stays as a plain token bucket.
+// qdisc. tbf stays as a plain token bucket. htb splits a link rate into
+// classes, each with its matches and a leaf queue.
 const DISTRIBUTIONS = ['uniform', 'normal', 'pareto', 'paretonormal'];
+const LEAF_QUEUES = ['pfifo', 'fq_codel', 'sfq', 'netem'];
+const MATCH_PROTOS = ['', 'tcp', 'udp', 'icmp'];
 
 const defaultNetem = {
   qdisc: 'netem',
@@ -49,6 +53,55 @@ const defaultTBF = {
   latency: 400,
   extras: [],
 };
+
+// A class leaf's netem, the composite fields the class rate does not cover.
+const emptyLeafShaping = () => ({
+  delay: 0,
+  jitter: 0,
+  loss: 0,
+  duplicate: 0,
+  corrupt: 0,
+  reorder: 0,
+});
+
+const emptyMatch = () => ({
+  proto: '',
+  src: '',
+  dst: '',
+  srcPort: '',
+  dstPort: '',
+  dscp: '',
+  vlan: '',
+});
+
+// Ceil 0 means "the link rate", which is what tc gets when ceil is omitted.
+const newClass = (over = {}) => ({
+  name: '',
+  rate: { value: 1, unit: 'mbit' },
+  ceil: { value: 0, unit: 'mbit' },
+  prio: 1,
+  isDefault: false,
+  match: [],
+  queue: 'pfifo',
+  limit: 1000,
+  shaping: emptyLeafShaping(),
+  ...over,
+});
+
+const defaultHTB = () => ({
+  qdisc: 'htb',
+  rate: { value: 10, unit: 'mbit' },
+  classes: [
+    newClass({
+      name: 'priority',
+      rate: { value: 2, unit: 'mbit' },
+      prio: 0,
+      match: [{ ...emptyMatch(), proto: 'icmp' }],
+    }),
+    newClass({ name: 'rest', rate: { value: 8, unit: 'mbit' }, prio: 1, isDefault: true }),
+  ],
+  extras: [],
+});
 
 // Starting points for a netem draft. Delay is one-way, per direction.
 const PRESETS = [
@@ -83,12 +136,20 @@ const extrasOf = (tcparams) => {
   if (tcparams.delay_correlation) extras.push(`delay correlation ${tcparams.delay_correlation}`);
   if (tcparams.loss_correlation) extras.push(`loss correlation ${tcparams.loss_correlation}`);
   (tcparams.children || []).forEach((c) => extras.push(`child ${c.qdisc}`));
-  if (tcparams.classes?.length) extras.push(`${tcparams.classes.length} htb classes`);
   return extras;
 };
 
-// tc does not report the jitter distribution, so it comes from the persisted
-// action for the interface (the intent), when there is one.
+const leafShapingFromApi = (leaf) => ({
+  delay: timeToMs(leaf?.delay),
+  jitter: timeToMs(leaf?.jitter),
+  loss: percentToNumber(leaf?.loss),
+  duplicate: percentToNumber(leaf?.duplicate),
+  corrupt: percentToNumber(leaf?.corrupt),
+  reorder: percentToNumber(leaf?.reorder),
+});
+
+// tc does not report the jitter distribution nor class names, so they come
+// from the persisted action for the interface (the intent), when there is one.
 const fromApi = (tcparams, intent) => {
   const kind = tcparams?.qdisc;
   const shaped = typeof tcparams?.shaped === 'boolean' ? tcparams.shaped : isShapedQdisc(kind);
@@ -127,8 +188,43 @@ const fromApi = (tcparams, intent) => {
       extras,
     };
   }
+  if (kind === 'htb') {
+    const intentClasses = intent?.classes || [];
+    const linkBits = rateToBits(parseRate(tcparams.rate));
+    return {
+      qdisc: 'htb',
+      rate: parseRate(tcparams.rate),
+      classes: (tcparams.classes || []).map((c, i) => {
+        const ceil = c.ceil ? parseRate(c.ceil) : { value: 0, unit: 'mbit' };
+        return newClass({
+          name: intentClasses[i]?.name || '',
+          rate: parseRate(c.rate),
+          // A ceil equal to the link rate is what tc gives when none was asked for.
+          ceil: rateToBits(ceil) === linkBits ? { value: 0, unit: ceil.unit } : ceil,
+          prio: c.prio ?? 0,
+          isDefault: !!c.default,
+          match: (c.match || []).map((m) => ({
+            proto: m.proto || '',
+            src: m.src || '',
+            dst: m.dst || '',
+            srcPort: m.srcPort ?? '',
+            dstPort: m.dstPort ?? '',
+            dscp: m.dscp ?? '',
+            vlan: m.vlan ?? '',
+          })),
+          queue: LEAF_QUEUES.includes(c.leaf?.qdisc) ? c.leaf.qdisc : 'pfifo',
+          limit: Number(c.leaf?.limit) || 1000,
+          shaping: c.leaf?.qdisc === 'netem' ? leafShapingFromApi(c.leaf) : emptyLeafShaping(),
+        });
+      }),
+      extras,
+    };
+  }
   return { qdisc: kind, extras };
 };
+
+const numberOrUndefined = (v) =>
+  v === '' || v === null || v === undefined ? undefined : Number(v);
 
 const toApi = (qd) => {
   if (qd.qdisc === 'tbf') {
@@ -137,6 +233,47 @@ const toApi = (qd) => {
       rate: formatRate(qd.rate),
       burst: formatSize(qd.burst),
       latency: `${qd.latency}ms`,
+    };
+  }
+  if (qd.qdisc === 'htb') {
+    return {
+      qdisc: 'htb',
+      rate: formatRate(qd.rate),
+      classes: qd.classes.map((c) => {
+        const out = {
+          name: c.name || undefined,
+          rate: formatRate(c.rate),
+          prio: c.prio,
+          default: c.isDefault || undefined,
+          queue: c.queue,
+        };
+        if (c.ceil.value > 0) out.ceil = formatRate(c.ceil);
+        const match = c.match.map((m) => {
+          const o = {};
+          if (m.proto) o.proto = m.proto;
+          if (m.src) o.src = m.src.trim();
+          if (m.dst) o.dst = m.dst.trim();
+          for (const k of ['srcPort', 'dstPort', 'dscp', 'vlan']) {
+            const n = numberOrUndefined(m[k]);
+            if (n !== undefined) o[k] = n;
+          }
+          return o;
+        });
+        if (match.length) out.match = match;
+        if (c.queue === 'pfifo') out.limit = c.limit;
+        if (c.queue === 'netem') {
+          const s = c.shaping;
+          out.shaping = {
+            delay: `${s.delay}ms`,
+            jitter: `${s.jitter}ms`,
+            loss: `${s.loss}%`,
+            duplicate: `${s.duplicate}%`,
+            corrupt: `${s.corrupt}%`,
+            reorder: `${s.reorder}%`,
+          };
+        }
+        return out;
+      }),
     };
   }
   const out = {
@@ -201,6 +338,61 @@ const validateTBF = (qd) => {
   return errors;
 };
 
+const inRange = (v, min, max) =>
+  v === '' || (Number.isInteger(Number(v)) && Number(v) >= min && Number(v) <= max);
+
+const validateHTB = (qd) => {
+  const errors = [];
+  const linkBits = rateToBits(qd.rate);
+  if (!(linkBits > 0)) errors.push('Link rate must be greater than zero');
+  if (qd.classes.length === 0) errors.push('Add at least one class');
+  if (qd.classes.filter((c) => c.isDefault).length !== 1)
+    errors.push('Exactly one class must be the default');
+  let sum = 0;
+  qd.classes.forEach((c, i) => {
+    const label = c.name || `class ${i + 1}`;
+    const rb = rateToBits(c.rate);
+    if (!(rb > 0)) errors.push(`${label}: rate must be greater than zero`);
+    if (rb > linkBits) errors.push(`${label}: rate is above the link rate`);
+    sum += rb;
+    if (c.ceil.value > 0) {
+      const cb = rateToBits(c.ceil);
+      if (cb < rb) errors.push(`${label}: ceil is below its rate`);
+      if (cb > linkBits) errors.push(`${label}: ceil is above the link rate`);
+    }
+    if (c.prio < 0 || c.prio > 7) errors.push(`${label}: prio must be between 0 and 7`);
+    if (!c.isDefault && c.match.length === 0)
+      errors.push(`${label}: needs a match or to be the default`);
+    c.match.forEach((m, j) => {
+      const where = `${label}, match ${j + 1}`;
+      const hasPort = m.srcPort !== '' || m.dstPort !== '';
+      if (hasPort && m.proto !== 'tcp' && m.proto !== 'udp')
+        errors.push(`${where}: ports need protocol tcp or udp`);
+      if (!inRange(m.srcPort, 1, 65535) || !inRange(m.dstPort, 1, 65535))
+        errors.push(`${where}: ports must be between 1 and 65535`);
+      if (!inRange(m.dscp, 0, 63)) errors.push(`${where}: DSCP must be between 0 and 63`);
+      if (!inRange(m.vlan, 1, 4094)) errors.push(`${where}: VLAN must be between 1 and 4094`);
+      if (!m.proto && !m.src && !m.dst && !hasPort && m.dscp === '' && m.vlan === '')
+        errors.push(`${where}: fill in at least one field`);
+    });
+    if (c.queue === 'pfifo' && (c.limit < 1 || c.limit > 1000000))
+      errors.push(`${label}: limit must be between 1 and 1000000`);
+    if (c.queue === 'netem') {
+      const s = c.shaping;
+      if (s.delay < 0 || s.delay > 60000)
+        errors.push(`${label}: delay must be between 0 and 60000 ms`);
+      if (s.jitter > 0 && s.delay <= 0) errors.push(`${label}: jitter requires a delay`);
+      if (s.reorder > 0 && s.delay <= 0) errors.push(`${label}: reorder requires a delay`);
+      pct(s.loss, `${label}: loss`, errors);
+      pct(s.duplicate, `${label}: duplicate`, errors);
+      pct(s.corrupt, `${label}: corrupt`, errors);
+      pct(s.reorder, `${label}: reorder`, errors);
+    }
+  });
+  if (sum > linkBits) errors.push('The class rates add up to more than the link rate');
+  return errors;
+};
+
 // Outcome of a configure call. The endpoint answers 200 even when an action
 // failed, so the statuses inside are what count; a 400 carries its own error.
 const actionOutcome = async (res) => {
@@ -245,8 +437,8 @@ const postRemoval = (namespace, pod, iface, bothEnds) =>
       : { targets: [{ pod, actions: [{ type: 'del_qdisc', iface }] }] }
   );
 
-const UnitField = ({ label, value, units, onChange }) => (
-  <label>
+const UnitField = ({ label, value, units, onChange, title }) => (
+  <label title={title}>
     {label}:
     <span className="tc-unit">
       <input
@@ -264,6 +456,20 @@ const UnitField = ({ label, value, units, onChange }) => (
         ))}
       </select>
     </span>
+  </label>
+);
+
+const NumberField = ({ label, value, min, max, step = 1, onChange }) => (
+  <label>
+    {label}:
+    <input
+      type="number"
+      min={min}
+      max={max}
+      step={step}
+      value={value}
+      onChange={(e) => onChange(Number(e.target.value))}
+    />
   </label>
 );
 
@@ -357,7 +563,7 @@ const TCPanel = ({
   };
 
   // The live state of every interface, and the persisted actions for what tc
-  // cannot report (the jitter distribution).
+  // cannot report (the jitter distribution, class names).
   const fetchStates = async () => {
     setLoading(true);
     setLoadError(null);
@@ -431,6 +637,8 @@ const TCPanel = ({
   const handleCreateQdisc = () => {
     if (newQdiscType === 'tbf') {
       setQdiscData({ ...defaultTBF });
+    } else if (newQdiscType === 'htb') {
+      setQdiscData(defaultHTB());
     } else {
       const values = PRESETS.find((p) => p.id === preset)?.values || {};
       setQdiscData({ ...defaultNetem, ...values });
@@ -450,6 +658,7 @@ const TCPanel = ({
     let errors = [];
     if (qdiscData.qdisc === 'netem') errors = validateNetem(qdiscData);
     else if (qdiscData.qdisc === 'tbf') errors = validateTBF(qdiscData);
+    else if (qdiscData.qdisc === 'htb') errors = validateHTB(qdiscData);
     else errors = ['Unsupported qdisc type'];
 
     if (errors.length > 0) {
@@ -500,6 +709,22 @@ const TCPanel = ({
 
   const set = (patch) => setQdiscData((prev) => ({ ...prev, ...patch }));
 
+  // Class and match edits, all immutable on the classes array.
+  const setClasses = (fn) => setQdiscData((prev) => ({ ...prev, classes: fn(prev.classes) }));
+  const updateClass = (i, patch) =>
+    setClasses((cs) => cs.map((c, k) => (k === i ? { ...c, ...patch } : c)));
+  const setDefaultClass = (i) =>
+    setClasses((cs) => cs.map((c, k) => ({ ...c, isDefault: k === i })));
+  const removeClass = (i) => setClasses((cs) => cs.filter((_, k) => k !== i));
+  const addClass = () => setClasses((cs) => [...cs, newClass({ prio: Math.min(7, cs.length) })]);
+  const updateMatch = (i, j, patch) =>
+    updateClass(i, {
+      match: qdiscData.classes[i].match.map((m, k) => (k === j ? { ...m, ...patch } : m)),
+    });
+  const addMatch = (i) => updateClass(i, { match: [...qdiscData.classes[i].match, emptyMatch()] });
+  const removeMatch = (i, j) =>
+    updateClass(i, { match: qdiscData.classes[i].match.filter((_, k) => k !== j) });
+
   const renderIfaces = () => (
     <div className="tc-ifaces">
       {ifaceList.length === 0 && !loading && (
@@ -544,6 +769,7 @@ const TCPanel = ({
         >
           <option value="netem">netem</option>
           <option value="tbf">tbf</option>
+          <option value="htb">htb classes</option>
         </select>
         {newQdiscType === 'netem' && (
           <select
@@ -565,7 +791,8 @@ const TCPanel = ({
       </div>
       <p className="tc-hint">
         <strong>netem</strong> combines delay, jitter, loss, reordering and a rate in one place.{' '}
-        <strong>tbf</strong> is a plain token bucket.
+        <strong>tbf</strong> is a plain token bucket. <strong>htb</strong> splits a link rate into
+        classes with their own matches and queues.
       </p>
     </div>
   );
@@ -575,17 +802,8 @@ const TCPanel = ({
   const renderForeignQdisc = () => (
     <div className="tc-empty">
       <p className="tc-empty-text">
-        {qdiscData.qdisc === 'htb' ? (
-          <>
-            <code>{selected}</code> carries an <code>htb</code> tree ({qdiscData.extras.join(', ')}
-            ), set through the API. The panel does not edit classes yet. Remove clears the tree.
-          </>
-        ) : (
-          <>
-            <code>{selected}</code> has a <code>{qdiscData.qdisc}</code> qdisc that was not set from
-            here. Remove it to shape the interface from this panel.
-          </>
-        )}
+        <code>{selected}</code> has a <code>{qdiscData.qdisc}</code> qdisc that was not set from
+        here. Remove it to shape the interface from this panel.
       </p>
       {renderBothEnds()}
       <div className="tc-actions">
@@ -642,16 +860,19 @@ const TCPanel = ({
 
   const numberField = (label, key, min, max, step = 1, obj = null) => {
     const value = obj ? qdiscData[obj][key] : qdiscData[key];
-    const onChange = (e) => {
-      const n = Number(e.target.value);
+    const onChange = (n) => {
       if (obj) set({ [obj]: { ...qdiscData[obj], [key]: n } });
       else set({ [key]: n });
     };
     return (
-      <label>
-        {label}:
-        <input type="number" min={min} max={max} step={step} value={value} onChange={onChange} />
-      </label>
+      <NumberField
+        label={label}
+        value={value}
+        min={min}
+        max={max}
+        step={step}
+        onChange={onChange}
+      />
     );
   };
 
@@ -737,11 +958,193 @@ const TCPanel = ({
     </div>
   );
 
+  const renderMatch = (i, j, m) => (
+    <div className="tc-match" key={j}>
+      <select value={m.proto} onChange={(e) => updateMatch(i, j, { proto: e.target.value })}>
+        {MATCH_PROTOS.map((p) => (
+          <option key={p} value={p}>
+            {p || 'any proto'}
+          </option>
+        ))}
+      </select>
+      <input
+        placeholder="src IP/CIDR"
+        value={m.src}
+        onChange={(e) => updateMatch(i, j, { src: e.target.value })}
+      />
+      <input
+        placeholder="dst IP/CIDR"
+        value={m.dst}
+        onChange={(e) => updateMatch(i, j, { dst: e.target.value })}
+      />
+      <button
+        type="button"
+        className="tc-btn"
+        title="Remove match"
+        onClick={() => removeMatch(i, j)}
+      >
+        ✕
+      </button>
+      <input
+        type="number"
+        placeholder="src port"
+        value={m.srcPort}
+        onChange={(e) => updateMatch(i, j, { srcPort: e.target.value })}
+      />
+      <input
+        type="number"
+        placeholder="dst port"
+        value={m.dstPort}
+        onChange={(e) => updateMatch(i, j, { dstPort: e.target.value })}
+      />
+      <input
+        type="number"
+        placeholder="DSCP"
+        value={m.dscp}
+        onChange={(e) => updateMatch(i, j, { dscp: e.target.value })}
+      />
+      <input
+        type="number"
+        placeholder="VLAN"
+        value={m.vlan}
+        onChange={(e) => updateMatch(i, j, { vlan: e.target.value })}
+      />
+    </div>
+  );
+
+  const renderClass = (c, i) => (
+    <div className={`tc-class${c.isDefault ? ' default' : ''}`} key={i}>
+      <div className="tc-class-head">
+        <input
+          className="tc-class-name"
+          placeholder={`class ${i + 1}`}
+          value={c.name}
+          onChange={(e) => updateClass(i, { name: e.target.value })}
+        />
+        <label className="tc-class-default" title="Unmatched traffic goes to the default class">
+          <input
+            type="radio"
+            name={`tc-default-${pod}-${selected}`}
+            checked={c.isDefault}
+            onChange={() => setDefaultClass(i)}
+          />
+          default
+        </label>
+        <button
+          type="button"
+          className="tc-btn"
+          title="Remove class"
+          onClick={() => removeClass(i)}
+        >
+          ✕
+        </button>
+      </div>
+      <UnitField
+        label="Rate"
+        value={c.rate}
+        units={RATE_UNITS}
+        onChange={(rate) => updateClass(i, { rate })}
+        title="Guaranteed share of the link"
+      />
+      <UnitField
+        label="Ceil (0 = link rate)"
+        value={c.ceil}
+        units={RATE_UNITS}
+        onChange={(ceil) => updateClass(i, { ceil })}
+        title="What the class may borrow up to"
+      />
+      <NumberField
+        label="Priority (0 first)"
+        value={c.prio}
+        min={0}
+        max={7}
+        onChange={(prio) => updateClass(i, { prio })}
+      />
+      <label>
+        Queue:
+        <select value={c.queue} onChange={(e) => updateClass(i, { queue: e.target.value })}>
+          {LEAF_QUEUES.map((q) => (
+            <option key={q} value={q}>
+              {q}
+            </option>
+          ))}
+        </select>
+      </label>
+      {c.queue === 'pfifo' && (
+        <NumberField
+          label="Queue limit (packets)"
+          value={c.limit}
+          min={1}
+          max={1000000}
+          onChange={(limit) => updateClass(i, { limit })}
+        />
+      )}
+      {c.queue === 'netem' && (
+        <div className="tc-class-shaping">
+          {[
+            ['delay', 'Delay (ms)', 60000, 1],
+            ['jitter', 'Jitter (ms)', 10000, 1],
+            ['loss', 'Loss (%)', 100, 0.1],
+            ['duplicate', 'Duplicate (%)', 100, 0.1],
+            ['corrupt', 'Corrupt (%)', 100, 0.1],
+            ['reorder', 'Reorder (%)', 100, 0.1],
+          ].map(([key, label, max, step]) => (
+            <NumberField
+              key={key}
+              label={label}
+              value={c.shaping[key]}
+              min={0}
+              max={max}
+              step={step}
+              onChange={(v) => updateClass(i, { shaping: { ...c.shaping, [key]: v } })}
+            />
+          ))}
+        </div>
+      )}
+      <div className="tc-class-matches">
+        {c.match.length === 0 && (
+          <span className="tc-hint">
+            {c.isDefault ? 'Takes the traffic no other class matches.' : 'No match yet.'}
+          </span>
+        )}
+        {c.match.map((m, j) => renderMatch(i, j, m))}
+        <button type="button" className="tc-form-btn ghost tc-small" onClick={() => addMatch(i)}>
+          Add match
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderHTBForm = () => (
+    <div className="tc-config">
+      <p className="tc-desc">
+        The link rate is split into classes. Each gets a guaranteed rate, may borrow up to its ceil,
+        and is served by priority. Filters send matching traffic to a class.
+      </p>
+      <UnitField
+        label="Link rate"
+        value={qdiscData.rate}
+        units={RATE_UNITS}
+        onChange={(rate) => set({ rate })}
+      />
+      <div className="tc-section">Classes</div>
+      {qdiscData.classes.map(renderClass)}
+      <button type="button" className="tc-form-btn ghost tc-small" onClick={addClass}>
+        Add class
+      </button>
+      {renderExtras()}
+      {renderBothEnds()}
+      {renderActions()}
+    </div>
+  );
+
   const renderForm = () => {
     if (!selected) return null;
     if (!qdiscData) return renderNoQdisc();
     if (!isManagedQdisc(qdiscData.qdisc)) return renderForeignQdisc();
-    return qdiscData.qdisc === 'netem' ? renderNetemForm() : renderTBFForm();
+    if (qdiscData.qdisc === 'netem') return renderNetemForm();
+    if (qdiscData.qdisc === 'htb') return renderHTBForm();
+    return renderTBFForm();
   };
 
   const shapedCount = Object.values(states || {}).filter((s) => s?.shaped).length;

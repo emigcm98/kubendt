@@ -163,7 +163,8 @@ func TestAttachClasses(t *testing.T) {
 		voice.Match[1].DstPort == nil || *voice.Match[1].DstPort != 5201 || voice.Match[1].DSCP == nil || *voice.Match[1].DSCP != 46 {
 		t.Errorf("voice matches = %+v", voice.Match)
 	}
-	if bulk.ClassID != "1:12" || bulk.Rate != "9mbit" || !bulk.Default || bulk.Leaf == nil || bulk.Leaf.Qdisc != "pfifo" || len(bulk.Match) != 0 {
+	if bulk.ClassID != "1:12" || bulk.Rate != "9mbit" || !bulk.Default || bulk.Leaf == nil || bulk.Leaf.Qdisc != "pfifo" ||
+		bulk.Leaf.Limit == nil || *bulk.Leaf.Limit != 100 || len(bulk.Match) != 0 {
 		t.Errorf("bulk class = %+v leaf %+v", bulk, bulk.Leaf)
 	}
 }

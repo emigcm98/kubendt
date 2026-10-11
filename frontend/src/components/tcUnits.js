@@ -8,7 +8,7 @@ const DEFAULT_QDISCS = new Set(['noqueue', 'pfifo_fast', 'mq', 'noop']);
 export const isShapedQdisc = (kind) => !!kind && !DEFAULT_QDISCS.has(kind);
 
 // The kinds the panel can edit. Anything else was set outside KubeNDT.
-export const isManagedQdisc = (kind) => kind === 'netem' || kind === 'tbf';
+export const isManagedQdisc = (kind) => kind === 'netem' || kind === 'tbf' || kind === 'htb';
 
 // "50ms", "1.5s", "200us" or a bare number (ms) to milliseconds.
 export const timeToMs = (s) => {
@@ -42,6 +42,10 @@ export const parseRate = (s) => {
 };
 
 export const formatRate = ({ value, unit }) => `${value}${unit}`;
+
+// A {value, unit} rate in bits per second, for comparing rates.
+export const rateToBits = ({ value, unit }) =>
+  (Number(value) || 0) * { bit: 1, kbit: 1e3, mbit: 1e6, gbit: 1e9 }[unit];
 
 export const SIZE_UNITS = ['b', 'kb', 'mb', 'kbit', 'mbit'];
 

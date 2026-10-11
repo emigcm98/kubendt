@@ -384,7 +384,7 @@ With `htb`, the link rate is split into classes. Each class has a guaranteed `ra
 }
 ```
 
-Matches also take `src`, `dst` (IP or CIDR), `srcPort`, `dscp` and `vlan`. The panel shows such a tree and removes it, editing classes still goes through JSON.
+Matches also take `src`, `dst` (IP or CIDR), `srcPort`, `dscp` and `vlan`. The panel builds the same tree: pick **htb classes** when adding shaping, set the link rate and add classes with their matches and queues.
 
 To shape a whole link, name one end in a `links` section and the backend finds the other in the topology. `symmetric` puts the same shaping on both interfaces (delay is one-way, so the RTT doubles it), `reverse` puts a different one on the peer, and `remove` clears both. The panel has the same option, and the link's context menu opens it for both ends.
 
