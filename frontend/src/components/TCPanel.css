@@ -215,6 +215,25 @@
   box-shadow: 0 0 0 2px rgba(79, 195, 247, 0.2);
 }
 
+.tc-config .tc-unit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.tc-config .tc-unit input {
+  width: 72px;
+}
+
+.tc-config select {
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--tool-border);
+  background: var(--tool-bg-well);
+  color: var(--tool-text);
+  font-size: 0.85rem;
+}
+
 /* No-qdisc empty state */
 .tc-empty {
   text-align: center;

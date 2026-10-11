@@ -66,15 +66,20 @@ type ActionOptions struct {
 	CaptureOutput *bool `json:"capture_output,omitempty" example:"true"`
 }
 
+// TCParamEntry is the shaping request of add_qdisc. Values use tc units and
+// are validated before anything runs: a value outside its range fails the
+// action instead of being dropped. Times accept ms, us or s (a bare number is
+// ms), percentages accept an optional "%", rates accept bit, kbit, mbit or
+// gbit, sizes accept b, kb, mb, kbit or mbit. Zero impairments are omitted.
 type TCParamEntry struct {
-	Qdisc     string `json:"qdisc" example:"netem"`              // netem or tbf
-	Delay     string `json:"delay,omitempty" example:"100ms"`    // optional (netem)
-	Jitter    string `json:"jitter,omitempty" example:"10ms"`    // optional (netem)
-	Loss      string `json:"loss,omitempty" example:"1%"`        // optional (netem)
-	Duplicate string `json:"duplicate,omitempty" example:"0.5%"` // optional (netem)
-	Corrupt   string `json:"corrupt,omitempty" example:"0.1%"`   // optional (netem)
-	Limit     *int   `json:"limit,omitempty" example:"1000"`     // optional (netem)
-	Rate      string `json:"rate,omitempty" example:"10mbit"`    // optional (tbf)
-	Burst     string `json:"burst,omitempty" example:"32kbit"`   // optional (tbf)
-	Latency   string `json:"latency,omitempty" example:"50ms"`   // optional (tbf)
+	Qdisc     string `json:"qdisc" example:"netem"`              // netem (default) or tbf
+	Delay     string `json:"delay,omitempty" example:"100ms"`    // netem, 0 to 60000 ms
+	Jitter    string `json:"jitter,omitempty" example:"10ms"`    // netem, 0 to 10000 ms, needs a delay
+	Loss      string `json:"loss,omitempty" example:"1%"`        // netem, 0 to 100 %
+	Duplicate string `json:"duplicate,omitempty" example:"0.5%"` // netem, 0 to 100 %
+	Corrupt   string `json:"corrupt,omitempty" example:"0.1%"`   // netem, 0 to 100 %
+	Limit     *int   `json:"limit,omitempty" example:"1000"`     // netem queue length in packets, 1 to 1000000
+	Rate      string `json:"rate,omitempty" example:"10mbit"`    // tbf, required
+	Burst     string `json:"burst,omitempty" example:"32kbit"`   // tbf, defaults to 32kbit
+	Latency   string `json:"latency,omitempty" example:"50ms"`   // tbf, 1 to 5000 ms, defaults to 50ms
 }

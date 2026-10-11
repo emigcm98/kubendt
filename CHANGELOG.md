@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- Traffic control rejects a malformed or out-of-range value instead of dropping it and reporting success. The error names the field and the accepted range.
+- Re-applying shaping starts from a clean root qdisc. `tc qdisc replace` kept the parameters a new request did not mention, so a `corrupt` set once survived later updates.
+- `del_qdisc` on an interface without shaping succeeds instead of failing with "Cannot delete qdisc with handle of zero".
+- A `tbf` request only needs `rate`, `burst` and `latency` default to `32kbit` and `50ms`. A request without `tcparams` or with an unsupported qdisc says so instead of "unrecognized or unsupported action".
+- The traffic control panel reports the backend's error when an action is rejected instead of saying it was applied, keeps tc units for rate and burst instead of whole Mbit and mislabeled kilobytes, and shows an interface on the kernel default qdisc as unshaped.
+- Opening traffic control on a node whose image has no `tc` is faster the first time: a toolbox left by capture or trace is used directly, and a new one is awaited every 200 ms instead of every second.
+
 ## [1.4.0] - 2026-09-26
 
 ### Added

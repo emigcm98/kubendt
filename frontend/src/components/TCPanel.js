@@ -3,54 +3,147 @@ import './TCPanel.css';
 import { API_BASE_URL } from '../config';
 import { ReactComponent as SlidersIcon } from '../assets/images/icons/sliders.svg';
 import { ReactComponent as WarningIcon } from '../assets/images/icons/warning.svg';
+import {
+  RATE_UNITS,
+  SIZE_UNITS,
+  formatRate,
+  formatSize,
+  isManagedQdisc,
+  isShapedQdisc,
+  parseRate,
+  parseSize,
+  percentToNumber,
+  timeToMs,
+} from './tcUnits';
 
+// The panel keeps numbers and units apart. The API speaks tc strings ("50ms",
+// "500Kbit", "4Kb"), so a read-back is parsed on the way in and formatted on
+// the way out.
 const defaultNetem = {
   qdisc: 'netem',
-  delay: '0ms',
-  jitter: '0ms',
-  loss: '0%',
-  duplicate: '0%',
-  corrupt: '0%',
+  delay: 0,
+  jitter: 0,
+  loss: 0,
+  duplicate: 0,
+  corrupt: 0,
   limit: 1000,
 };
 
 const defaultTBF = {
   qdisc: 'tbf',
-  rate: '1mbit',
-  burst: '32Kb',
-  latency: '400ms',
+  rate: { value: 1, unit: 'mbit' },
+  burst: { value: 32, unit: 'kbit' },
+  latency: 400,
 };
+
+const fromApi = (tcparams) => {
+  const kind = tcparams?.qdisc;
+  if (!isShapedQdisc(kind)) return null;
+  if (kind === 'netem') {
+    return {
+      qdisc: 'netem',
+      delay: timeToMs(tcparams.delay),
+      jitter: timeToMs(tcparams.jitter),
+      loss: percentToNumber(tcparams.loss),
+      duplicate: percentToNumber(tcparams.duplicate),
+      corrupt: percentToNumber(tcparams.corrupt),
+      limit: Number(tcparams.limit) || 1000,
+    };
+  }
+  if (kind === 'tbf') {
+    return {
+      qdisc: 'tbf',
+      rate: parseRate(tcparams.rate),
+      burst: parseSize(tcparams.burst),
+      latency: timeToMs(tcparams.latency),
+    };
+  }
+  return { qdisc: kind };
+};
+
+const toApi = (qd) =>
+  qd.qdisc === 'netem'
+    ? {
+        qdisc: 'netem',
+        delay: `${qd.delay}ms`,
+        jitter: `${qd.jitter}ms`,
+        loss: `${qd.loss}%`,
+        duplicate: `${qd.duplicate}%`,
+        corrupt: `${qd.corrupt}%`,
+        limit: qd.limit,
+      }
+    : {
+        qdisc: 'tbf',
+        rate: formatRate(qd.rate),
+        burst: formatSize(qd.burst),
+        latency: `${qd.latency}ms`,
+      };
 
 const validateNetem = (qd) => {
   const errors = [];
-  const delayVal = parseInt(qd.delay) || 0;
-  const jitterVal = parseInt(qd.jitter) || 0;
-  const lossVal = parseFloat(qd.loss) || 0;
-  const dupVal = parseFloat(qd.duplicate) || 0;
-  const corruptVal = parseFloat(qd.corrupt) || 0;
-  const limitVal = parseInt(qd.limit) || 0;
-
-  if (delayVal < 0 || delayVal > 60000) errors.push('Delay must be between 0 and 60000 ms');
-  if (jitterVal < 0 || jitterVal > 10000) errors.push('Jitter must be between 0 and 10000 ms');
-  if (lossVal < 0 || lossVal > 100) errors.push('Loss must be between 0% and 100%');
-  if (dupVal < 0 || dupVal > 100) errors.push('Duplicate must be between 0% and 100%');
-  if (corruptVal < 0 || corruptVal > 100) errors.push('Corrupt must be between 0% and 100%');
-  if (limitVal < 100 || limitVal > 10000) errors.push('Limit must be between 100 and 10000');
-
-  if (qd.jitter && parseInt(qd.jitter) > 0 && (!qd.delay || parseInt(qd.delay) === 0)) {
-    errors.push('Jitter requires a non-zero Delay');
+  if (qd.delay < 0 || qd.delay > 60000) errors.push('Delay must be between 0 and 60000 ms');
+  if (qd.jitter < 0 || qd.jitter > 10000) errors.push('Jitter must be between 0 and 10000 ms');
+  for (const [key, label] of [
+    ['loss', 'Loss'],
+    ['duplicate', 'Duplicate'],
+    ['corrupt', 'Corrupt'],
+  ]) {
+    if (qd[key] < 0 || qd[key] > 100) errors.push(`${label} must be between 0% and 100%`);
   }
+  if (qd.limit < 1 || qd.limit > 1000000) errors.push('Limit must be between 1 and 1000000');
+  if (qd.jitter > 0 && qd.delay <= 0) errors.push('Jitter requires a non-zero Delay');
   return errors;
 };
 
 const validateTBF = (qd) => {
   const errors = [];
-  if (!qd.rate || qd.rate.trim() === '') errors.push('Rate is required (e.g., 10mbit)');
-  const lat = parseInt(qd.latency) || 0;
-  if (lat < 1 || lat > 5000) errors.push('Latency must be between 1 and 5000 ms');
-  if (!qd.burst || qd.burst.trim() === '') errors.push('Burst is required (e.g., 32Kb)');
+  if (!(qd.rate.value > 0)) errors.push('Rate must be greater than zero');
+  if (!(qd.burst.value > 0)) errors.push('Burst must be greater than zero');
+  if (qd.latency < 1 || qd.latency > 5000) errors.push('Latency must be between 1 and 5000 ms');
   return errors;
 };
+
+// Outcome of a configure call carrying one action. The endpoint answers 200
+// even when the action failed, so the status inside is what counts.
+const actionOutcome = async (res) => {
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  const result = data?.action_results?.[0];
+  if (!result) throw new Error('the backend returned no result');
+  if (result.status === 'failed') {
+    throw new Error(result.error || data?.errors?.[0]?.error || 'the backend rejected the action');
+  }
+  return result;
+};
+
+const postAction = (namespace, pod, action) =>
+  fetch(`${API_BASE_URL}/network/configure/${namespace}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ targets: [{ pod, actions: [action] }] }),
+  });
+
+const UnitField = ({ label, value, units, onChange }) => (
+  <label>
+    {label}:
+    <span className="tc-unit">
+      <input
+        type="number"
+        min="0"
+        step="any"
+        value={value.value}
+        onChange={(e) => onChange({ ...value, value: Number(e.target.value) })}
+      />
+      <select value={value.unit} onChange={(e) => onChange({ ...value, unit: e.target.value })}>
+        {units.map((u) => (
+          <option key={u} value={u}>
+            {u}
+          </option>
+        ))}
+      </select>
+    </span>
+  </label>
+);
 
 // TCPanel is a floating, draggable traffic-control window for one pod interface,
 // a peer of the capture and trace panels. Shaping is universal, so it opens for
@@ -128,7 +221,7 @@ const TCPanel = ({
       const res = await fetch(`${API_BASE_URL}/pods/tc/${namespace}/${pod}/${iface}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      setQdiscData(data.tcparams || null);
+      setQdiscData(fromApi(data.tcparams));
       setIsDraft(false);
     } catch (err) {
       console.error('❌ Error fetching qdisc:', err);
@@ -146,7 +239,7 @@ const TCPanel = ({
   // Auto-dismiss the feedback banner.
   useEffect(() => {
     if (!feedback) return;
-    const t = setTimeout(() => setFeedback(null), 4000);
+    const t = setTimeout(() => setFeedback(null), feedback.type === 'error' ? 8000 : 4000);
     return () => clearTimeout(t);
   }, [feedback]);
 
@@ -175,39 +268,21 @@ const TCPanel = ({
       return;
     }
 
-    // Send only the editable fields; the read carries read-only ones (handle,
-    // parent) that the backend rejects with strict JSON decoding.
-    const cleanParams =
-      qdiscData.qdisc === 'netem'
-        ? {
-            qdisc: 'netem',
-            delay: qdiscData.delay,
-            jitter: qdiscData.jitter,
-            loss: qdiscData.loss,
-            duplicate: qdiscData.duplicate,
-            corrupt: qdiscData.corrupt,
-            limit: qdiscData.limit,
-          }
-        : {
-            qdisc: 'tbf',
-            rate: qdiscData.rate,
-            burst: qdiscData.burst,
-            latency: qdiscData.latency,
-          };
-
-    const payload = {
-      targets: [{ pod, actions: [{ type: 'add_qdisc', iface, tcparams: cleanParams }] }],
-    };
-
     try {
-      const res = await fetch(`${API_BASE_URL}/network/configure/${namespace}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+      const res = await postAction(namespace, pod, {
+        type: 'add_qdisc',
+        iface,
+        tcparams: toApi(qdiscData),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const outcome = await actionOutcome(res);
       setIsDraft(false);
-      setFeedback({ type: 'ok', text: `${qdiscData.qdisc} applied to ${iface}` });
+      setFeedback({
+        type: 'ok',
+        text:
+          outcome.status === 'skipped'
+            ? `${qdiscData.qdisc} already applied to ${iface} with these settings`
+            : `${qdiscData.qdisc} applied to ${iface}`,
+      });
       fetchQdisc();
     } catch (err) {
       console.error('❌ Error applying qdisc:', err);
@@ -216,14 +291,9 @@ const TCPanel = ({
   };
 
   const handleDeleteQdisc = async () => {
-    const payload = { targets: [{ pod, actions: [{ type: 'del_qdisc', iface }] }] };
     try {
-      const res = await fetch(`${API_BASE_URL}/network/configure/${namespace}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const res = await postAction(namespace, pod, { type: 'del_qdisc', iface });
+      await actionOutcome(res);
       setQdiscData(null);
       setIsDraft(false);
       setNewQdiscType('netem');
@@ -259,6 +329,25 @@ const TCPanel = ({
     </div>
   );
 
+  // A qdisc KubeNDT does not edit (set by hand, or by something else in the
+  // pod). Removing it is the way back to a panel-managed interface.
+  const renderForeignQdisc = () => (
+    <div className="tc-empty">
+      <p className="tc-empty-text">
+        This interface has a <code>{qdiscData.qdisc}</code> qdisc that was not set from here. Remove
+        it to shape the interface from this panel.
+      </p>
+      <div className="tc-actions">
+        <button className="tc-form-btn danger" onClick={handleDeleteQdisc}>
+          Remove
+        </button>
+        <button className="tc-form-btn ghost" title="Reload current settings" onClick={fetchQdisc}>
+          Refresh
+        </button>
+      </div>
+    </div>
+  );
+
   const renderActions = () => (
     <div className="tc-actions">
       {isDraft && (
@@ -280,8 +369,23 @@ const TCPanel = ({
     </div>
   );
 
+  const numberField = (label, key, min, max, step = 1) => (
+    <label>
+      {label}:
+      <input
+        type="number"
+        min={min}
+        max={max}
+        step={step}
+        value={qdiscData[key]}
+        onChange={(e) => setQdiscData({ ...qdiscData, [key]: Number(e.target.value) })}
+      />
+    </label>
+  );
+
   const renderForm = () => {
     if (!qdiscData) return renderNoQdisc();
+    if (!isManagedQdisc(qdiscData.qdisc)) return renderForeignQdisc();
 
     if (qdiscData.qdisc === 'netem') {
       return (
@@ -289,116 +393,36 @@ const TCPanel = ({
           <p className="tc-desc">
             Emulates link impairments: latency, jitter and packet loss, duplication or corruption.
           </p>
-          <label>
-            Delay (ms):
-            <input
-              type="number"
-              min="0"
-              max="60000"
-              value={parseInt(qdiscData.delay) || 0}
-              onChange={(e) => setQdiscData({ ...qdiscData, delay: e.target.value + 'ms' })}
-            />
-          </label>
-          <label>
-            Jitter (ms):
-            <input
-              type="number"
-              min="0"
-              max="10000"
-              value={parseInt(qdiscData.jitter) || 0}
-              onChange={(e) => setQdiscData({ ...qdiscData, jitter: e.target.value + 'ms' })}
-            />
-          </label>
-          <label>
-            Loss (%):
-            <input
-              type="number"
-              min="0"
-              max="100"
-              step="0.1"
-              value={parseFloat(qdiscData.loss) || 0}
-              onChange={(e) => setQdiscData({ ...qdiscData, loss: e.target.value + '%' })}
-            />
-          </label>
-          <label>
-            Duplicate (%):
-            <input
-              type="number"
-              min="0"
-              max="100"
-              step="0.1"
-              value={parseFloat(qdiscData.duplicate) || 0}
-              onChange={(e) => setQdiscData({ ...qdiscData, duplicate: e.target.value + '%' })}
-            />
-          </label>
-          <label>
-            Corrupt (%):
-            <input
-              type="number"
-              min="0"
-              max="100"
-              step="0.1"
-              value={parseFloat(qdiscData.corrupt) || 0}
-              onChange={(e) => setQdiscData({ ...qdiscData, corrupt: e.target.value + '%' })}
-            />
-          </label>
-          <label>
-            Limit:
-            <input
-              type="number"
-              min="100"
-              max="10000"
-              value={qdiscData.limit || 0}
-              onChange={(e) => setQdiscData({ ...qdiscData, limit: parseInt(e.target.value) })}
-            />
-          </label>
+          {numberField('Delay (ms)', 'delay', 0, 60000)}
+          {numberField('Jitter (ms)', 'jitter', 0, 10000)}
+          {numberField('Loss (%)', 'loss', 0, 100, 0.1)}
+          {numberField('Duplicate (%)', 'duplicate', 0, 100, 0.1)}
+          {numberField('Corrupt (%)', 'corrupt', 0, 100, 0.1)}
+          {numberField('Limit (packets)', 'limit', 1, 1000000)}
           {renderActions()}
         </div>
       );
     }
 
-    if (qdiscData.qdisc === 'tbf') {
-      return (
-        <div className="tc-config">
-          <p className="tc-desc">
-            Token Bucket Filter: caps the egress bandwidth of this interface.
-          </p>
-          <label>
-            Rate (Mbit):
-            <input
-              type="number"
-              min="1"
-              max="100000"
-              value={parseInt(qdiscData.rate) || 0}
-              onChange={(e) => setQdiscData({ ...qdiscData, rate: e.target.value + 'Mbit' })}
-            />
-          </label>
-          <label>
-            Burst (kbit):
-            <input
-              type="number"
-              min="1"
-              max="100000"
-              value={parseInt(qdiscData.burst) || 0}
-              onChange={(e) => setQdiscData({ ...qdiscData, burst: e.target.value + 'kb' })}
-            />
-          </label>
-          <label>
-            Latency (ms):
-            <input
-              type="number"
-              min="1"
-              max="5000"
-              value={parseInt(qdiscData.latency) || 0}
-              onChange={(e) => setQdiscData({ ...qdiscData, latency: e.target.value + 'ms' })}
-            />
-          </label>
-          {renderActions()}
-        </div>
-      );
-    }
-
-    return renderNoQdisc();
+    return (
+      <div className="tc-config">
+        <p className="tc-desc">Token Bucket Filter: caps the egress bandwidth of this interface.</p>
+        <UnitField
+          label="Rate"
+          value={qdiscData.rate}
+          units={RATE_UNITS}
+          onChange={(rate) => setQdiscData({ ...qdiscData, rate })}
+        />
+        <UnitField
+          label="Burst"
+          value={qdiscData.burst}
+          units={SIZE_UNITS}
+          onChange={(burst) => setQdiscData({ ...qdiscData, burst })}
+        />
+        {numberField('Latency (ms)', 'latency', 1, 5000)}
+        {renderActions()}
+      </div>
+    );
   };
 
   const statusLabel = qdiscData

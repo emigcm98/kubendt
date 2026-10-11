@@ -170,7 +170,9 @@ func WaitEphemeralRunning(namespace, podName, container string, timeout time.Dur
 		if time.Now().After(deadline) {
 			return fmt.Errorf("timed out waiting for capture container %s to start", container)
 		}
-		time.Sleep(time.Second)
+		// A cached image starts in well under a second, so a one second poll
+		// was most of what the first shaping or capture on a pod waited for.
+		time.Sleep(200 * time.Millisecond)
 	}
 }
 
