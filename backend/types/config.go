@@ -19,6 +19,27 @@ func DefaultActionFlags() ActionFlags {
 
 type ConfigureNetworkRequest struct {
 	Targets []PodConfig `json:"targets"`
+	// Links shapes links by one of their ends. Each entry becomes add_qdisc
+	// or del_qdisc actions on the interfaces of both ends, run with Targets.
+	Links []LinkShaping `json:"links,omitempty"`
+}
+
+// LinkShaping shapes a link named by one of its ends. The peer end comes
+// from the topology, so node and localIntf are enough; peerNode and peerIntf,
+// when given, are checked against it.
+type LinkShaping struct {
+	Node      string `json:"node" example:"host-0"`
+	LocalIntf string `json:"localIntf" example:"eth1"`
+	PeerNode  string `json:"peerNode,omitempty" example:"switch-0"`
+	PeerIntf  string `json:"peerIntf,omitempty" example:"eth1"`
+	// Shaping goes on node's interface, the node to peer direction. Delay is one-way.
+	Shaping *TCParamEntry `json:"shaping,omitempty"`
+	// Symmetric puts the same shaping on the peer's interface. Reverse puts a
+	// different one there instead. A link to the external network has no peer to shape.
+	Symmetric bool          `json:"symmetric,omitempty" example:"true"`
+	Reverse   *TCParamEntry `json:"reverse,omitempty"`
+	// Remove clears the shaping on both ends.
+	Remove bool `json:"remove,omitempty" example:"false"`
 }
 
 type PodConfig struct {

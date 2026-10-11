@@ -200,25 +200,49 @@ const validateTBF = (qd) => {
   return errors;
 };
 
-// Outcome of a configure call carrying one action. The endpoint answers 200
-// even when the action failed, so the status inside is what counts.
+// Outcome of a configure call. The endpoint answers 200 even when an action
+// failed, so the statuses inside are what count; a 400 carries its own error.
 const actionOutcome = async (res) => {
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const data = await res.json();
-  const result = data?.action_results?.[0];
-  if (!result) throw new Error('the backend returned no result');
-  if (result.status === 'failed') {
-    throw new Error(result.error || data?.errors?.[0]?.error || 'the backend rejected the action');
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+  const results = data?.action_results || [];
+  if (results.length === 0) throw new Error('the backend returned no result');
+  const failed = results.filter((r) => r.status === 'failed');
+  if (failed.length > 0) {
+    throw new Error(
+      failed.map((r) => `${r.resolved_pod || r.pod}: ${r.error || 'rejected'}`).join('; ')
+    );
   }
-  return result;
+  return results[0];
 };
 
-const postAction = (namespace, pod, action) =>
+const postConfigure = (namespace, body) =>
   fetch(`${API_BASE_URL}/network/configure/${namespace}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ targets: [{ pod, actions: [action] }] }),
+    body: JSON.stringify(body),
   });
+
+// One action on one interface, or the same on both ends of its link through
+// the links section of the configure request.
+const postShaping = (namespace, pod, iface, tcparams, bothEnds) =>
+  postConfigure(
+    namespace,
+    bothEnds
+      ? {
+          targets: [],
+          links: [{ node: pod, localIntf: iface, shaping: tcparams, symmetric: true }],
+        }
+      : { targets: [{ pod, actions: [{ type: 'add_qdisc', iface, tcparams }] }] }
+  );
+
+const postRemoval = (namespace, pod, iface, bothEnds) =>
+  postConfigure(
+    namespace,
+    bothEnds
+      ? { targets: [], links: [{ node: pod, localIntf: iface, remove: true }] }
+      : { targets: [{ pod, actions: [{ type: 'del_qdisc', iface }] }] }
+  );
 
 const UnitField = ({ label, value, units, onChange }) => (
   <label>
@@ -253,6 +277,8 @@ const TCPanel = ({
   iface = null,
   focusToken = 0,
   interfaces = null,
+  peers = {},
+  symmetric = false,
   zIndex = 1000,
   minimized = false,
   onClose,
@@ -274,6 +300,7 @@ const TCPanel = ({
   const [isDraft, setIsDraft] = useState(false); // created in the UI, not yet applied
   const [newQdiscType, setNewQdiscType] = useState('netem');
   const [preset, setPreset] = useState('custom');
+  const [bothEnds, setBothEnds] = useState(symmetric); // shape the peer's interface too
 
   // The topology's interfaces of the pod, in link order. Without that list,
   // whatever the pod has except its cluster interface, which cannot be shaped.
@@ -364,14 +391,16 @@ const TCPanel = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [namespace, pod]);
 
-  // Follow the interface the caller asked for, every time it asks.
+  // Follow the interface the caller asked for, every time it asks. Opened
+  // from a link for both ends, the checkbox comes on.
   useEffect(() => {
     if (iface) {
       setSelected(iface);
       setIsDraft(false);
       setFeedback(null);
     }
-  }, [iface, focusToken]);
+    if (symmetric) setBothEnds(true);
+  }, [iface, focusToken, symmetric]);
 
   // Nothing selected yet: take the first interface once the list is known.
   useEffect(() => {
@@ -427,23 +456,22 @@ const TCPanel = ({
       return;
     }
 
+    const peer = peers[selected];
+    const withPeer = bothEnds && !!peer;
     try {
-      const res = await postAction(namespace, pod, {
-        type: 'add_qdisc',
-        iface: selected,
-        tcparams: toApi(qdiscData),
-      });
+      const res = await postShaping(namespace, pod, selected, toApi(qdiscData), withPeer);
       const outcome = await actionOutcome(res);
       // Read the new state before leaving draft mode, so the form switches
       // straight to what was applied instead of flashing the old state.
       await fetchStates();
       setIsDraft(false);
+      const where = withPeer ? `${selected} and ${peer.node}:${peer.iface}` : selected;
       setFeedback({
         type: 'ok',
         text:
           outcome.status === 'skipped'
-            ? `${qdiscData.qdisc} already applied to ${selected} with these settings`
-            : `${qdiscData.qdisc} applied to ${selected}`,
+            ? `${qdiscData.qdisc} already applied to ${where} with these settings`
+            : `${qdiscData.qdisc} applied to ${where}`,
       });
     } catch (err) {
       console.error('❌ Error applying qdisc:', err);
@@ -453,12 +481,15 @@ const TCPanel = ({
 
   const handleDeleteQdisc = async () => {
     if (!selected) return;
+    const peer = peers[selected];
+    const withPeer = bothEnds && !!peer;
     try {
-      const res = await postAction(namespace, pod, { type: 'del_qdisc', iface: selected });
+      const res = await postRemoval(namespace, pod, selected, withPeer);
       await actionOutcome(res);
       setIsDraft(false);
       setNewQdiscType('netem');
-      setFeedback({ type: 'ok', text: `Traffic shaping removed from ${selected}` });
+      const where = withPeer ? `${selected} and ${peer.node}:${peer.iface}` : selected;
+      setFeedback({ type: 'ok', text: `Traffic shaping removed from ${where}` });
       fetchStates();
     } catch (err) {
       console.error('❌ Error deleting qdisc:', err);
@@ -546,6 +577,7 @@ const TCPanel = ({
         <code>{selected}</code> has a <code>{qdiscData.qdisc}</code> qdisc that was not set from
         here. Remove it to shape the interface from this panel.
       </p>
+      {renderBothEnds()}
       <div className="tc-actions">
         <button className="tc-form-btn danger" onClick={handleDeleteQdisc}>
           Remove
@@ -564,6 +596,18 @@ const TCPanel = ({
         without them.
       </p>
     );
+
+  // The other end of the selected interface's link, when it is a pod.
+  const renderBothEnds = () => {
+    const peer = peers[selected];
+    if (!peer) return null;
+    return (
+      <label className="tc-both-ends">
+        <input type="checkbox" checked={bothEnds} onChange={(e) => setBothEnds(e.target.checked)} />
+        Also apply to the other end, {peer.node}:{peer.iface}
+      </label>
+    );
+  };
 
   const renderActions = () => (
     <div className="tc-actions">
@@ -656,6 +700,7 @@ const TCPanel = ({
       />
       {numberField('Queue limit (packets)', 'limit', 1, 1000000)}
       {renderExtras()}
+      {renderBothEnds()}
       {renderActions()}
     </div>
   );
@@ -677,6 +722,7 @@ const TCPanel = ({
       />
       {numberField('Latency (ms)', 'latency', 1, 5000)}
       {renderExtras()}
+      {renderBothEnds()}
       {renderActions()}
     </div>
   );

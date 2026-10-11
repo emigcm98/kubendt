@@ -31,6 +31,16 @@ func ConfigureNetwork(c *gin.Context) {
 		return
 	}
 
+	// A link entry is shorthand for actions on the interfaces of its two ends.
+	// It is resolved against the topology up front, so a wrong link is a 400
+	// instead of a half-applied request.
+	linkTargets, err := helpers.ExpandLinkShaping(namespace, req.Links)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	req.Targets = append(req.Targets, linkTargets...)
+
 	type ErrorEntry struct {
 		Pod    string `json:"pod"`
 		Driver string `json:"driver"`

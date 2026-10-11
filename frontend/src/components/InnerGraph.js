@@ -1115,6 +1115,11 @@ const InnerGraph = ({
               onTCTarget={
                 onStartTC && !tgtExternal && tgtIntf ? () => onStartTC(edge.target, tgtIntf) : null
               }
+              onTCLink={
+                onStartTC && !srcExternal && !tgtExternal && srcIntf
+                  ? () => onStartTC(edge.source, srcIntf, { symmetric: true })
+                  : null
+              }
             />
           );
         })()}

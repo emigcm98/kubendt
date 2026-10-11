@@ -1739,7 +1739,7 @@ const docTemplate = `{
         },
         "/network/configure/{namespace}": {
             "post": {
-                "description": "Applies driver-based configuration actions (routes, bridges, NAT, TC, etc.) to pods concurrently. Each action can include options: {\"persist_history\": false, \"capture_output\": true}. The response includes a sequential_equivalent time (sum of per-pod durations) and a speedup factor vs the concurrent wall time.",
+                "description": "Applies driver-based configuration actions (routes, bridges, NAT, TC, etc.) to pods concurrently. A ` + "`" + `links` + "`" + ` section shapes links by one end: the peer comes from the topology, ` + "`" + `symmetric` + "`" + ` repeats the shaping on the peer's interface, ` + "`" + `reverse` + "`" + ` puts a different one there, ` + "`" + `remove` + "`" + ` clears both ends. Each entry expands to add_qdisc or del_qdisc actions on the two interfaces. Each action can include options: {\"persist_history\": false, \"capture_output\": true}. The response includes a sequential_equivalent time (sum of per-pod durations) and a speedup factor vs the concurrent wall time.",
                 "consumes": [
                     "application/json"
                 ],
