@@ -276,7 +276,7 @@ The `user-*` nodes have `iproute2-tc` installed, so traffic shaping can be appli
    | Rate    | `1mbit`  | Maximum bandwidth: 1 Mbit/s                |
    | Burst   | `32kbit` | Token bucket burst size                    |
    | Latency | `50ms`   | Maximum latency before packets are dropped |
-3. Click **Apply**. The backend runs `tc qdisc replace dev eth1 root tbf rate 1mbit burst 32kbit latency 50ms`.
+3. Click **Apply**. The backend resets the interface with `tc qdisc replace dev eth1 root noqueue` and then runs `tc qdisc replace dev eth1 root tbf rate 1mbit burst 32kbit latency 50ms`. A value outside the accepted range is rejected with the range in the error instead of being dropped.
 4. To remove it later, open the panel again and click **Remove**.
 
 > The same flow works on any node. Pick the interface for the segment you want to rate-limit.

@@ -1619,43 +1619,43 @@ definitions:
   types.TCParamEntry:
     properties:
       burst:
-        description: optional (tbf)
+        description: tbf, defaults to 32kbit
         example: 32kbit
         type: string
       corrupt:
-        description: optional (netem)
+        description: netem, 0 to 100 %
         example: 0.1%
         type: string
       delay:
-        description: optional (netem)
+        description: netem, 0 to 60000 ms
         example: 100ms
         type: string
       duplicate:
-        description: optional (netem)
+        description: netem, 0 to 100 %
         example: 0.5%
         type: string
       jitter:
-        description: optional (netem)
+        description: netem, 0 to 10000 ms, needs a delay
         example: 10ms
         type: string
       latency:
-        description: optional (tbf)
+        description: tbf, 1 to 5000 ms, defaults to 50ms
         example: 50ms
         type: string
       limit:
-        description: optional (netem)
+        description: netem queue length in packets, 1 to 1000000
         example: 1000
         type: integer
       loss:
-        description: optional (netem)
+        description: netem, 0 to 100 %
         example: 1%
         type: string
       qdisc:
-        description: netem or tbf
+        description: netem (default) or tbf
         example: netem
         type: string
       rate:
-        description: optional (tbf)
+        description: tbf, required
         example: 10mbit
         type: string
     type: object

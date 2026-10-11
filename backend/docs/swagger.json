@@ -4763,52 +4763,52 @@
             "type": "object",
             "properties": {
                 "burst": {
-                    "description": "optional (tbf)",
+                    "description": "tbf, defaults to 32kbit",
                     "type": "string",
                     "example": "32kbit"
                 },
                 "corrupt": {
-                    "description": "optional (netem)",
+                    "description": "netem, 0 to 100 %",
                     "type": "string",
                     "example": "0.1%"
                 },
                 "delay": {
-                    "description": "optional (netem)",
+                    "description": "netem, 0 to 60000 ms",
                     "type": "string",
                     "example": "100ms"
                 },
                 "duplicate": {
-                    "description": "optional (netem)",
+                    "description": "netem, 0 to 100 %",
                     "type": "string",
                     "example": "0.5%"
                 },
                 "jitter": {
-                    "description": "optional (netem)",
+                    "description": "netem, 0 to 10000 ms, needs a delay",
                     "type": "string",
                     "example": "10ms"
                 },
                 "latency": {
-                    "description": "optional (tbf)",
+                    "description": "tbf, 1 to 5000 ms, defaults to 50ms",
                     "type": "string",
                     "example": "50ms"
                 },
                 "limit": {
-                    "description": "optional (netem)",
+                    "description": "netem queue length in packets, 1 to 1000000",
                     "type": "integer",
                     "example": 1000
                 },
                 "loss": {
-                    "description": "optional (netem)",
+                    "description": "netem, 0 to 100 %",
                     "type": "string",
                     "example": "1%"
                 },
                 "qdisc": {
-                    "description": "netem or tbf",
+                    "description": "netem (default) or tbf",
                     "type": "string",
                     "example": "netem"
                 },
                 "rate": {
-                    "description": "optional (tbf)",
+                    "description": "tbf, required",
                     "type": "string",
                     "example": "10mbit"
                 }

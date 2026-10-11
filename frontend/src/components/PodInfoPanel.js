@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { isShapedQdisc } from './tcUnits';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import './PodInfoPanel.css';
@@ -1060,10 +1061,12 @@ const PodInfoPanel = ({
                       <div className="tc-links-panel">
                         <div className="tc-links-head">
                           <span className="tc-links-title">Traffic control</span>
-                          <span className={`tc-links-status ${qdiscData ? 'on' : 'off'}`}>
+                          <span
+                            className={`tc-links-status ${isShapedQdisc(qdiscData?.qdisc) ? 'on' : 'off'}`}
+                          >
                             {loadingQdisc
                               ? 'checking…'
-                              : qdiscData
+                              : isShapedQdisc(qdiscData?.qdisc)
                                 ? `${qdiscData.qdisc} · active`
                                 : 'No shaping'}
                           </span>

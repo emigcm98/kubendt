@@ -11,7 +11,6 @@ import (
 	"kubendt/types"
 	"log"
 	"slices"
-	"strconv"
 	"strings"
 
 	v1 "k8s.io/api/core/v1"
@@ -231,24 +230,22 @@ func ResolveDriverCommandsForPod(namespace, podName string, driver interface{}, 
 	// TC actions (traffic shaping) are universal: tc runs in the pod netns, so
 	// any pod can be shaped without a driver capability. The command builder
 	// stays shared; execution is routed to the tc_universal executor by
-	// ResolveDriverExecutionPlanForPod.
+	// ResolveDriverExecutionPlanForPod. A bad request is an error here, so it
+	// shows up on the action instead of as a silently different qdisc.
 	switch action.Type {
 	case "add_qdisc":
-		if action.TCParams == nil {
-			log.Println("❌ TCParams not defined in add_qdisc action")
-			return nil, nil
-		} else if action.TCParams.Qdisc == "" {
-			log.Println("❌ Qdisc not specified")
-			return nil, nil
+		if action.Iface == "" {
+			return nil, fmt.Errorf("add_qdisc requires iface")
 		}
-		validQdiscs := map[string]bool{"netem": true, "tbf": true}
-		if !validQdiscs[action.TCParams.Qdisc] {
-			log.Printf("❌ Qdisc '%s' not allowed. Supported: [netem, tbf]", action.TCParams.Qdisc)
-			return nil, nil
+		qdisc, params, err := buildTCParams(action.TCParams)
+		if err != nil {
+			return nil, fmt.Errorf("add_qdisc on %s: %w", action.Iface, err)
 		}
-		params := buildTCParamsFromStruct(action.TCParams)
-		return buildAddQdiscCommand(action.Iface, action.TCParams.Qdisc, params), nil
+		return buildAddQdiscCommand(action.Iface, qdisc, params), nil
 	case "del_qdisc":
+		if action.Iface == "" {
+			return nil, fmt.Errorf("del_qdisc requires iface")
+		}
 		return buildDelQdiscCommand(action.Iface), nil
 	}
 
@@ -319,160 +316,4 @@ func driverNameType(driver interface{}) (name, typ string) {
 		return d.Name(), d.Type()
 	}
 	return "unknown", "unknown"
-}
-
-func buildTCParamsFromStruct(p *types.TCParamEntry) []string {
-	args := []string{}
-
-	add := func(k, v string) {
-		if v != "" {
-			args = append(args, k, v)
-		}
-	}
-
-	addNumeric := func(k string, val *int) {
-		if val != nil && *val > 0 {
-			args = append(args, k, fmt.Sprintf("%d", *val))
-		}
-	}
-
-	// Validations
-	if p.Qdisc == "" {
-		log.Println("⚠️ Empty qdisc, defaulting to 'netem'")
-		p.Qdisc = "netem"
-	}
-
-	// --- NETEM ---
-	if p.Qdisc == "netem" {
-
-		// Jitter without delay → invalid
-		if p.Jitter != "" && p.Delay == "" {
-			log.Printf("⚠️ Ignoring jitter='%s' because there is no delay defined", p.Jitter)
-			p.Jitter = ""
-		}
-
-		// Validate numeric values (milliseconds or %)
-		parseInt := func(s string) int {
-			val, _ := strconv.Atoi(strings.TrimSuffix(s, "ms"))
-			return val
-		}
-		parseFloat := func(s string) float64 {
-			f, _ := strconv.ParseFloat(strings.TrimSuffix(s, "%"), 64)
-			return f
-		}
-
-		// Delay: 0–60000 ms
-		if p.Delay != "" {
-			delay := parseInt(p.Delay)
-			if delay < 0 || delay > 60000 {
-				log.Printf("⚠️ Ignoring invalid delay: %s (out of range 0–60000ms)", p.Delay)
-				p.Delay = ""
-			}
-		}
-
-		// Jitter: 0–10000 ms
-		if p.Jitter != "" {
-			jitter := parseInt(p.Jitter)
-			if jitter < 0 || jitter > 10000 {
-				log.Printf("⚠️ Ignoring invalid jitter: %s (out of range 0–10000ms)", p.Jitter)
-				p.Jitter = ""
-			}
-		}
-
-		// Loss: 0–100 %
-		if p.Loss != "" {
-			loss := parseFloat(p.Loss)
-			if loss < 0 || loss > 100 {
-				log.Printf("⚠️ Ignoring invalid loss: %s (out of range 0–100%%)", p.Loss)
-				p.Loss = ""
-			}
-		}
-
-		// Duplicate: 0–100 %
-		if p.Duplicate != "" {
-			dup := parseFloat(p.Duplicate)
-			if dup < 0 || dup > 100 {
-				log.Printf("⚠️ Ignoring invalid duplicate: %s (out of range 0–100%%)", p.Duplicate)
-				p.Duplicate = ""
-			}
-		}
-
-		// Corrupt: 0–100 %
-		if p.Corrupt != "" {
-			cor := parseFloat(p.Corrupt)
-			if cor < 0 || cor > 100 {
-				log.Printf("⚠️ Ignoring invalid corrupt: %s (out of range 0–100%%)", p.Corrupt)
-				p.Corrupt = ""
-			}
-		}
-
-		// Limit: 100–10000
-		if p.Limit != nil {
-			if *p.Limit < 100 || *p.Limit > 10000 {
-				log.Printf("⚠️ Ignoring invalid limit: %d (out of range 100–10000)", *p.Limit)
-				p.Limit = nil
-			}
-		}
-
-		// --- netem construction ---
-		if p.Delay != "" {
-			args = append(args, "delay", p.Delay)
-			if p.Jitter != "" {
-				args = append(args, p.Jitter)
-			}
-		}
-		add("loss", p.Loss)
-		add("duplicate", p.Duplicate)
-		add("corrupt", p.Corrupt)
-		addNumeric("limit", p.Limit)
-	}
-
-	// --- TBF ---
-	if p.Qdisc == "tbf" {
-
-		// Basic validations (rate required)
-		if p.Rate == "" {
-			log.Println("⚠️ Qdisc tbf requires 'rate'")
-			return args
-		}
-
-		// Burst: read the leading number regardless of the unit suffix (kb, Kb,
-		// kbit or a bare byte count) so a valid burst is not dropped. tc accepts
-		// the value verbatim, so only the range check needs the number.
-		if p.Burst != "" {
-			n := leadingInt(p.Burst)
-			if n < 1 || n > 100000 {
-				log.Printf("⚠️ Ignoring invalid burst: %s (out of range 1–100000)", p.Burst)
-				p.Burst = ""
-			}
-		}
-
-		// Latency: 1–5000ms
-		if p.Latency != "" {
-			val, _ := strconv.Atoi(strings.TrimSuffix(p.Latency, "ms"))
-			if val < 1 || val > 5000 {
-				log.Printf("⚠️ Ignoring invalid latency: %s (out of range 1–5000ms)", p.Latency)
-				p.Latency = ""
-			}
-		}
-
-		// --- tbf construction ---
-		add("rate", p.Rate)
-		add("burst", p.Burst)
-		add("latency", p.Latency)
-	}
-
-	return args
-}
-
-// leadingInt returns the leading integer of s, ignoring any unit suffix, so
-// "32kb", "32Kb", "32kbit" and "32" all give 32. Returns 0 when s has no
-// leading digit.
-func leadingInt(s string) int {
-	i := 0
-	for i < len(s) && s[i] >= '0' && s[i] <= '9' {
-		i++
-	}
-	n, _ := strconv.Atoi(s[:i])
-	return n
 }
