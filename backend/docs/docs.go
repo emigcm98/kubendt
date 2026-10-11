@@ -2284,9 +2284,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/pods/tc/{namespace}/{podName}": {
+            "get": {
+                "description": "Returns the traffic control state of every interface of a pod (loopback and kernel pseudo-interfaces excluded), read with one exec. Each entry has the same shape as the single-interface endpoint.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pods"
+                ],
+                "summary": "Show Qdisc (TC) info for every interface",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pod name",
+                        "name": "podName",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.PodQdiscsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/pods/tc/{namespace}/{podName}/{interface}": {
             "get": {
-                "description": "Returns Traffic Control qdisc information for a pod interface.",
+                "description": "Returns the traffic control state of a pod interface, read with ` + "`" + `tc -j qdisc show` + "`" + ` and normalized (times in ms, percentages, rates in kbit/mbit, sizes in bytes). ` + "`" + `shaped` + "`" + ` is false on the kernel default qdisc.",
                 "produces": [
                     "application/json"
                 ],
@@ -4602,6 +4650,21 @@ const docTemplate = `{
                 }
             }
         },
+        "types.PodQdiscsResponse": {
+            "type": "object",
+            "properties": {
+                "interfaces": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/types.QdiscState"
+                    }
+                },
+                "pod": {
+                    "type": "string",
+                    "example": "host-0"
+                }
+            }
+        },
         "types.PodTimeline": {
             "type": "object",
             "properties": {
@@ -4646,8 +4709,105 @@ const docTemplate = `{
                     "example": "eth1"
                 },
                 "tcparams": {
+                    "$ref": "#/definitions/types.QdiscState"
+                }
+            }
+        },
+        "types.QdiscState": {
+            "type": "object",
+            "properties": {
+                "burst": {
+                    "type": "string",
+                    "example": "4096b"
+                },
+                "children": {
+                    "description": "Children are the qdiscs attached below this one, when a tree was set by hand.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.QdiscState"
+                    }
+                },
+                "corrupt": {
+                    "type": "string",
+                    "example": "0.1%"
+                },
+                "delay": {
+                    "description": "netem",
+                    "type": "string",
+                    "example": "50ms"
+                },
+                "delay_correlation": {
+                    "type": "string",
+                    "example": "25%"
+                },
+                "duplicate": {
+                    "type": "string",
+                    "example": "0.5%"
+                },
+                "gemodel": {
                     "type": "object",
-                    "additionalProperties": true
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "handle": {
+                    "type": "string",
+                    "example": "8001"
+                },
+                "jitter": {
+                    "type": "string",
+                    "example": "10ms"
+                },
+                "latency": {
+                    "type": "string",
+                    "example": "50ms"
+                },
+                "limit": {
+                    "type": "integer",
+                    "example": 1000
+                },
+                "loss": {
+                    "type": "string",
+                    "example": "1%"
+                },
+                "loss_correlation": {
+                    "type": "string",
+                    "example": "10%"
+                },
+                "loss_model": {
+                    "description": "LossModel is \"gemodel\" when a Gilbert-Elliott loss model is active, with\nits parameters (p, r, 1-h, 1-k) in Gemodel.",
+                    "type": "string",
+                    "example": "gemodel"
+                },
+                "parent": {
+                    "type": "string",
+                    "example": "root"
+                },
+                "qdisc": {
+                    "type": "string",
+                    "example": "netem"
+                },
+                "rate": {
+                    "description": "Rate is netem's rate or tbf's. Burst and Latency are tbf's.",
+                    "type": "string",
+                    "example": "500kbit"
+                },
+                "raw": {
+                    "description": "Raw is what tc printed for this qdisc.",
+                    "type": "string"
+                },
+                "reorder": {
+                    "type": "string",
+                    "example": "25%"
+                },
+                "reorder_correlation": {
+                    "type": "string",
+                    "example": "50%"
+                },
+                "shaped": {
+                    "description": "False on the kernel default (noqueue, pfifo_fast, mq), true for anything installed on purpose.",
+                    "type": "boolean",
+                    "example": true
                 }
             }
         },

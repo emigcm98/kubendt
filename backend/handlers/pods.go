@@ -322,28 +322,38 @@ func ShowQdisc(c *gin.Context) {
 		return
 	}
 
-	// Runs `tc qdisc show dev <iface>` in the pod netns, via the pod's own tc or
-	// an ephemeral toolbox when the image ships none (same path as apply).
-	stdout, stderr, err := helpers.RunTC(namespace, podName, []string{"tc", "qdisc", "show", "dev", iface})
-
+	state, err := helpers.ReadQdisc(namespace, podName, iface)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":  err.Error(),
-			"stderr": stderr,
-			"stdout": stdout,
-		})
-		return
-	}
-
-	parsed, perr := helpers.ParseQdiscShowToMap(stdout)
-	if perr != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": perr.Error(), "raw": stdout})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"interface": iface,
-		"tcparams":  parsed, // map[string]interface{} con qdisc, parent, delay, jitter, loss, duplicate, corrupt, limit, ...
+		"tcparams":  state,
+	})
+}
+
+// ShowPodQdiscs returns the shaping state of every interface of a pod with a
+// single tc exec, for the views that show all of them at once.
+func ShowPodQdiscs(c *gin.Context) {
+	namespace := c.Param("namespace")
+	podRef := c.Param("podName")
+	podName, err := helpers.ResolvePodReference(namespace, podRef)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	states, err := helpers.ReadPodQdiscs(namespace, podName)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"pod":        podName,
+		"interfaces": states,
 	})
 }
 

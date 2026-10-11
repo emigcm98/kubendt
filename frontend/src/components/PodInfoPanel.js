@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { isShapedQdisc } from './tcUnits';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import './PodInfoPanel.css';
@@ -95,7 +94,7 @@ const PodInfoPanel = ({
 
   // --- QDISC STATES ---
   // Read-only qdisc status for the Links tab badge; editing lives in TCPanel.
-  const [qdiscData, setQdiscData] = useState(null);
+  const [qdiscByIface, setQdiscByIface] = useState({});
   const [loadingQdisc, setLoadingQdisc] = useState(false);
 
   const [copyFloater, setCopyFloater] = useState(null);
@@ -552,16 +551,18 @@ const PodInfoPanel = ({
     }
   };
 
-  const fetchQdisc = async (iface) => {
+  // One exec reads the shaping state of every interface, so the list can badge
+  // the shaped ones and the selected interface needs no read of its own.
+  const fetchQdiscs = async () => {
     setLoadingQdisc(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/pods/tc/${namespace}/${pod.name}/${iface}`);
+      const res = await fetch(`${API_BASE_URL}/pods/tc/${namespace}/${pod.name}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      setQdiscData(data.tcparams || null);
+      setQdiscByIface(data.interfaces || {});
     } catch (err) {
-      console.error('❌ Error fetching qdisc:', err);
-      setQdiscData(null);
+      console.error('❌ Error fetching qdiscs:', err);
+      setQdiscByIface({});
     } finally {
       setLoadingQdisc(false);
     }
@@ -575,9 +576,10 @@ const PodInfoPanel = ({
     return () => window.removeEventListener('keydown', onKey);
   }, [requestClose]);
 
-  // --- Refrescar qdisc al cambiar interfaz / pod / ns
+  // Refresh the shaping state when the pod changes or an interface is picked,
+  // so the status is current after an apply in the traffic control panel.
   useEffect(() => {
-    if (selectedInterface) fetchQdisc(selectedInterface);
+    fetchQdiscs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedInterface, namespace, pod.name]);
 
@@ -1035,6 +1037,14 @@ const PodInfoPanel = ({
                             {intf.guestInterface && (
                               <span className="interface-guest-name"> → {intf.guestInterface}</span>
                             )}
+                            {qdiscByIface[intf.interface]?.shaped && (
+                              <span
+                                className="interface-shaped"
+                                title={`traffic control: ${qdiscByIface[intf.interface].qdisc}`}
+                              >
+                                tc
+                              </span>
+                            )}
                             {loadingInterfaces?.has(`${pod.name}:${intf.interface}`) ? (
                               <span className="interface-state-spinner" title="applying…" />
                             ) : (
@@ -1062,12 +1072,12 @@ const PodInfoPanel = ({
                         <div className="tc-links-head">
                           <span className="tc-links-title">Traffic control</span>
                           <span
-                            className={`tc-links-status ${isShapedQdisc(qdiscData?.qdisc) ? 'on' : 'off'}`}
+                            className={`tc-links-status ${qdiscByIface[selectedInterface]?.shaped ? 'on' : 'off'}`}
                           >
                             {loadingQdisc
                               ? 'checking…'
-                              : isShapedQdisc(qdiscData?.qdisc)
-                                ? `${qdiscData.qdisc} · active`
+                              : qdiscByIface[selectedInterface]?.shaped
+                                ? `${qdiscByIface[selectedInterface].qdisc} · active`
                                 : 'No shaping'}
                           </span>
                         </div>
