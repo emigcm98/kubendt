@@ -125,3 +125,55 @@ func TestFmtTCRate(t *testing.T) {
 		t.Errorf("fmtTCMs float noise: %q", got)
 	}
 }
+
+// Captured from a tree built with `tc -b`: an htb root with two classes, a
+// netem leaf and a pfifo leaf, and two flower filters.
+const (
+	tcJSONHTBQdiscs  = `[{"kind":"htb","handle":"1:","root":true,"refcnt":2,"options":{"r2q":10,"default":"0x12","direct_packets_stat":0,"direct_qlen":1000}},{"kind":"pfifo","handle":"12:","parent":"1:12","options":{"limit":100}},{"kind":"netem","handle":"11:","parent":"1:11","options":{"limit":1000,"delay":{"delay":0.005,"jitter":0,"correlation":0},"seed":15151744933504699061,"ecn":false,"gap":0}}]`
+	tcJSONHTBClasses = `[{"class":"htb","handle":"1:11","parent":"1:1","leaf":"0x11","prio":0,"rate":125000,"ceil":1250000,"burst":1600,"cburst":1600},{"class":"htb","handle":"1:1","root":true,"rate":1250000,"ceil":1250000,"burst":1600,"cburst":1600},{"class":"htb","handle":"1:12","parent":"1:1","leaf":"0x12","prio":1,"rate":1125000,"ceil":1250000,"burst":1600,"cburst":1600}]`
+	tcJSONHTBFilters = `[{"parent":"1:","protocol":"ip","pref":1,"kind":"flower","chain":0},{"parent":"1:","protocol":"ip","pref":1,"kind":"flower","chain":0,"options":{"handle":1,"classid":"1:11","keys":{"eth_type":"ipv4","ip_proto":"icmp"},"not_in_hw":true}},{"parent":"1:","protocol":"ip","pref":2,"kind":"flower","chain":0},{"parent":"1:","protocol":"ip","pref":2,"kind":"flower","chain":0,"options":{"handle":1,"classid":"1:11","keys":{"eth_type":"ipv4","ip_proto":"tcp","ip_tos":184,"ip_tos_mask":"fc","dst_ip":"192.168.3.0/24","dst_port":5201},"not_in_hw":true}}]`
+)
+
+func TestAttachClasses(t *testing.T) {
+	states, err := ParseTCQdiscJSON(tcJSONHTBQdiscs)
+	if err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+	root := states[""]
+	if err := attachClasses(root, tcJSONHTBClasses, tcJSONHTBFilters); err != nil {
+		t.Fatalf("attach error: %v", err)
+	}
+	if root.Qdisc != "htb" || !root.Shaped || root.Rate != "10mbit" || root.DefaultClass != "1:12" {
+		t.Fatalf("root = %+v", root)
+	}
+	if len(root.Children) != 0 {
+		t.Errorf("leaves should hang from their classes, %d left on the root", len(root.Children))
+	}
+	if len(root.Classes) != 2 {
+		t.Fatalf("expected 2 classes, got %+v", root.Classes)
+	}
+	voice, bulk := root.Classes[0], root.Classes[1]
+	if voice.ClassID != "1:11" || voice.Rate != "1mbit" || voice.Ceil != "10mbit" || voice.Prio == nil || *voice.Prio != 0 || voice.Default {
+		t.Errorf("voice class = %+v", voice)
+	}
+	if voice.Leaf == nil || voice.Leaf.Qdisc != "netem" || voice.Leaf.Delay != "5ms" {
+		t.Errorf("voice leaf = %+v", voice.Leaf)
+	}
+	if len(voice.Match) != 2 || voice.Match[0].Proto != "icmp" || voice.Match[1].Dst != "192.168.3.0/24" ||
+		voice.Match[1].DstPort == nil || *voice.Match[1].DstPort != 5201 || voice.Match[1].DSCP == nil || *voice.Match[1].DSCP != 46 {
+		t.Errorf("voice matches = %+v", voice.Match)
+	}
+	if bulk.ClassID != "1:12" || bulk.Rate != "9mbit" || !bulk.Default || bulk.Leaf == nil || bulk.Leaf.Qdisc != "pfifo" || len(bulk.Match) != 0 {
+		t.Errorf("bulk class = %+v leaf %+v", bulk, bulk.Leaf)
+	}
+}
+
+func TestSplitJSONDocuments(t *testing.T) {
+	docs, err := splitJSONDocuments("[1,2]\n[]\n[{\"a\":1}]\n")
+	if err != nil || len(docs) != 3 || docs[1] != "[]" {
+		t.Errorf("docs = %v err %v", docs, err)
+	}
+	if _, err := splitJSONDocuments("qdisc noqueue 0: root"); err == nil {
+		t.Errorf("text must not split as JSON")
+	}
+}

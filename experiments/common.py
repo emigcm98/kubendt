@@ -107,15 +107,24 @@ class Client:
         return self.api("DELETE", f"/network/clear-topology/{ns}")
 
     def fresh_namespace(self, ns):
-        """Leave ns empty and enabled: clear it if it exists, create it otherwise."""
+        """Leave ns empty and enabled: clear it if it exists, create it otherwise.
+        A namespace the previous run just dropped can still be terminating, in
+        which case it is waited out and created again."""
         if ns in self.namespaces():
             st, r = self.clear_topology(ns)
-            if st != 200:
+            if st == 200:
+                return
+            if not (st == 404 and "terminating" in str(r)):
                 raise SystemExit(f"clear-topology {ns}: {st} {r}")
-        else:
-            st, r = self.create_namespace(ns)
-            if st != 200:
-                raise SystemExit(f"create namespace {ns}: {st} {r}")
+            for _ in range(60):
+                time.sleep(2)
+                if ns not in self.namespaces():
+                    break
+            else:
+                raise SystemExit(f"namespace {ns} is still terminating")
+        st, r = self.create_namespace(ns)
+        if st != 200:
+            raise SystemExit(f"create namespace {ns}: {st} {r}")
 
     def drop_namespace(self, ns):
         self.clear_topology(ns)

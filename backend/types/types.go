@@ -298,8 +298,25 @@ type QdiscState struct {
 	Rate    string `json:"rate,omitempty" example:"500kbit"`
 	Burst   string `json:"burst,omitempty" example:"4096b"`
 	Latency string `json:"latency,omitempty" example:"50ms"`
+	// Classes are the htb classes under this root, each with its leaf and the
+	// matches that feed it. DefaultClass is the one unmatched traffic goes to.
+	Classes      []*QdiscClass `json:"classes,omitempty"`
+	DefaultClass string        `json:"default_class,omitempty" example:"1:12"`
 	// Children are the qdiscs attached below this one, when a tree was set by hand.
 	Children []*QdiscState `json:"children,omitempty"`
 	// Raw is what tc printed for this qdisc.
 	Raw string `json:"raw,omitempty"`
+}
+
+// QdiscClass is one htb class as read back: its rates, priority, the flower
+// matches sending traffic to it and the leaf qdisc under it.
+type QdiscClass struct {
+	ClassID string      `json:"classid" example:"1:11"`
+	Parent  string      `json:"parent,omitempty" example:"1:1"`
+	Rate    string      `json:"rate,omitempty" example:"2mbit"`
+	Ceil    string      `json:"ceil,omitempty" example:"10mbit"`
+	Prio    *int        `json:"prio,omitempty" example:"0"`
+	Default bool        `json:"default,omitempty" example:"false"`
+	Match   []TCMatch   `json:"match,omitempty"`
+	Leaf    *QdiscState `json:"leaf,omitempty"`
 }

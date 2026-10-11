@@ -34,7 +34,10 @@ def apply(client, ns, pod, action):
 def readback(client, ns, pod, iface):
     q = client.qdisc(ns, pod, iface) or {}
     tp = q.get("tcparams") or {}
-    return {k: tp.get(k) for k in ("qdisc", "delay", "loss", "rate") if tp.get(k)}
+    rb = {k: tp.get(k) for k in ("qdisc", "delay", "loss", "rate") if tp.get(k)}
+    if tp.get("classes"):
+        rb["classes"] = len(tp["classes"])
+    return rb
 
 
 def udp_through(ns, a, b, ip_b, seconds, offered_mbit):
@@ -93,6 +96,8 @@ def main():
     ap.add_argument("--composite", action="store_true", help="also apply delay, loss and rate together in one netem")
     ap.add_argument("--models", action="store_true", help="also check the jitter distributions and a Gilbert-Elliott loss")
     ap.add_argument("--jitter", default="20ms", help="jitter for the distribution cases")
+    ap.add_argument("--offload", action="store_true", help="also compare TCP under netem with GSO/TSO/GRO on and off at both ends")
+    ap.add_argument("--qos", action="store_true", help="also measure ping RTT under bulk TCP on a 10 mbit link, plain and with an htb priority class")
     ap.add_argument("--image", default=C.TOOLS_IMAGE)
     ap.add_argument("--namespace", default="exp-tc")
     args = ap.parse_args()
@@ -197,19 +202,66 @@ def main():
             want = gp / (gp + gr) * 100
             n = p.get("sent") or args.loss_count
             got = p.get("loss_pct")
-            tol = max(3 * math.sqrt(want / 100 * (1 - want / 100) / n) * 100, want * 0.15)
+            # Bursty loss: the sample holds about n * p bursts, so the relative spread
+            # of the measured loss is about 1 / sqrt(n * p), far above the binomial one.
+            tol = max(3 * math.sqrt(want / 100 * (1 - want / 100) / n) * 100, want * 3 / math.sqrt(n * gp / 100))
             row = rec.add(run=run, kind="gemodel", configured=f"p {gp}% r {gr}%", apply_ok=ok, apply_s=round(wall, 3), readback=json.dumps(rb), packets=n,
                           measured_loss_pct=got, expected_pct=round(want, 3), error_pct=round((got - want) / want * 100, 2) if got is not None else None,
                           within=(got is not None and abs(got - want) <= tol), tolerance_pct=round(tol, 3))
             C.log(f"run {run} gemodel p {gp}% r {gr}%: measured {got}% over {n} packets, expected {row['expected_pct']}%, within {row['within']}")
             apply(client, ns, a, {"type": "del_qdisc", "iface": "eth1"})
+        if args.qos:
+            # Bulk TCP and pings share a 10 mbit link. With one queue the pings wait
+            # behind the bulk; with htb and ICMP in a higher-priority class they do not.
+            def rtt_under_load():
+                C.kexec(ns, a, f"sh -c 'iperf3 -c {ip_b} -t {args.iperf_seconds} -p 5201 >/dev/null 2>&1 &'")
+                time.sleep(2)
+                p = P.ping(ns, a, ip_b, 20, 0.2)
+                time.sleep(max(0, args.iperf_seconds - 6))
+                return p.get("rtt_avg_ms")
+            plain = {"qdisc": "netem", "rate": "10mbit"}
+            qos = {"qdisc": "htb", "rate": "10mbit", "classes": [
+                {"name": "ping", "rate": "1mbit", "ceil": "10mbit", "prio": 0, "match": [{"proto": "icmp"}]},
+                {"name": "bulk", "rate": "9mbit", "ceil": "10mbit", "prio": 1, "default": True, "queue": "pfifo", "limit": 100}]}
+            got = {}
+            for label, spec in (("plain rate 10mbit", plain), ("htb icmp priority", qos)):
+                ok, wall, r = apply(client, ns, a, {"type": "add_qdisc", "iface": "eth1", "tcparams": spec})
+                rb = readback(client, ns, a, "eth1")
+                got[label] = rtt_under_load()
+                rec.add(run=run, kind="qos", configured=label, apply_ok=ok, apply_s=round(wall, 3), readback=json.dumps(rb), measured_rtt_ms=got[label],
+                        within=True)
+                C.log(f"run {run} qos {label}: ping RTT under bulk load {got[label]} ms, readback {rb}")
+                apply(client, ns, a, {"type": "del_qdisc", "iface": "eth1"})
+            rec.note(f"run {run}: RTT under load, plain {got['plain rate 10mbit']} ms against htb {got['htb icmp priority']} ms")
+        if args.offload:
+            # With the offloads on, netem handles 64 KB super-packets: a lost one is a
+            # burst of segments and a rate-limited one is serialized as a block. The
+            # same netem is measured with TCP with the offloads on, then off at both ends.
+            def offloads(state):
+                for pod in (a, b):
+                    rc, out = C.kexec(ns, pod, f"ethtool -K eth1 tso {state} gso {state} gro {state}")
+                    if rc != 0:
+                        rec.note(f"ethtool on {pod} failed: {out[-120:]}")
+            for mode in ("on", "off"):
+                offloads(mode)
+                for label, spec in (("loss 1% at 20ms", {"qdisc": "netem", "delay": "20ms", "loss": "1%"}),
+                                    ("rate 10mbit at 20ms", {"qdisc": "netem", "delay": "20ms", "rate": "10mbit"})):
+                    ok, wall, r = apply(client, ns, a, {"type": "add_qdisc", "iface": "eth1", "tcparams": spec})
+                    t = P.iperf_tcp(ns, a, ip_b, args.iperf_seconds)
+                    # A comparison, not a pass or fail: the row is informational.
+                    row = rec.add(run=run, kind="offload", configured=f"{mode} {label}", apply_ok=ok, apply_s=round(wall, 3),
+                                  measured_mbps=t.get("tcp_recv_mbps"), retransmits=t.get("tcp_retransmits"), offloads=mode, within=True)
+                    C.log(f"run {run} offloads {mode}, {label}: {row['measured_mbps']} Mbit/s, {row['retransmits']} retransmits")
+                    apply(client, ns, a, {"type": "del_qdisc", "iface": "eth1"})
+            offloads("on")
         rb = readback(client, ns, a, "eth1")
         rec.note(f"run {run}: qdisc after del_qdisc: {rb or 'none'}")
 
     if not args.keep:
         client.drop_namespace(ns)
     measure_key = {"delay": "measured_added_ms", "loss": "measured_loss_pct", "rate": "measured_mbps",
-                   "composite": "measured_mbps", "jitter": "measured_mdev_ms", "gemodel": "measured_loss_pct"}
+                   "composite": "measured_mbps", "jitter": "measured_mdev_ms", "gemodel": "measured_loss_pct", "offload": "measured_mbps",
+                   "qos": "measured_rtt_ms"}
     rows = [r for r in rec.rows if r.get("kind") in measure_key]
     summary = {}
     for kind in measure_key:

@@ -83,6 +83,7 @@ const extrasOf = (tcparams) => {
   if (tcparams.delay_correlation) extras.push(`delay correlation ${tcparams.delay_correlation}`);
   if (tcparams.loss_correlation) extras.push(`loss correlation ${tcparams.loss_correlation}`);
   (tcparams.children || []).forEach((c) => extras.push(`child ${c.qdisc}`));
+  if (tcparams.classes?.length) extras.push(`${tcparams.classes.length} htb classes`);
   return extras;
 };
 
@@ -574,8 +575,17 @@ const TCPanel = ({
   const renderForeignQdisc = () => (
     <div className="tc-empty">
       <p className="tc-empty-text">
-        <code>{selected}</code> has a <code>{qdiscData.qdisc}</code> qdisc that was not set from
-        here. Remove it to shape the interface from this panel.
+        {qdiscData.qdisc === 'htb' ? (
+          <>
+            <code>{selected}</code> carries an <code>htb</code> tree ({qdiscData.extras.join(', ')}
+            ), set through the API. The panel does not edit classes yet. Remove clears the tree.
+          </>
+        ) : (
+          <>
+            <code>{selected}</code> has a <code>{qdiscData.qdisc}</code> qdisc that was not set from
+            here. Remove it to shape the interface from this panel.
+          </>
+        )}
       </p>
       {renderBothEnds()}
       <div className="tc-actions">

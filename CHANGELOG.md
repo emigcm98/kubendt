@@ -8,12 +8,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Shaping requests take `qdisc: htb` with `classes`: a link rate split into classes with guaranteed rate, ceil, priority, flower matches (protocol, addresses, ports, DSCP, VLAN) and a leaf queue, pfifo, fq_codel, sfq or a netem with impairments. The read-back returns the tree with its classes, matches and leaves, and `tc_fidelity.py` has a QoS case.
 - A configure request takes a `links` section that shapes a link by one of its ends: the peer comes from the topology, `symmetric` repeats the shaping on it, `reverse` puts a different one there and `remove` clears both. The panel offers to shape the other end too, and the link menu opens it for both ends.
 - A shaping request combines delay, jitter, loss, duplicate, corrupt, reorder and a rate in one netem, with a jitter distribution and a Gilbert-Elliott loss model as options. The panel edits all of them and offers presets, and `tc_fidelity.py` measures the composite and the models.
 - `GET /pods/tc/{namespace}/{pod}` returns the traffic control state of every interface of a pod. The Links tab uses it and marks the shaped interfaces.
 
 ### Changed
 
+- Every traffic control action runs as one `tc -b` batch instead of one exec per command, so an apply costs one round trip whatever its size and the action's commands are reported as a single batch.
 - The traffic control panel is per node: it lists the node's interfaces with their shaping state and edits the one picked. It opens from the node's context menu too, and the link menu and the Links tab open it on that interface.
 - Traffic control state is read from tc's JSON output in canonical units, with a `shaped` flag and the settings the old parser ignored: netem rate, reorder, Gilbert-Elliott loss and child qdiscs. A `tc` without `-j` is read through the toolbox container.
 

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -15,36 +16,45 @@ import (
 type tcJSONQdisc struct {
 	Kind    string          `json:"kind"`
 	Handle  string          `json:"handle"`
-	Dev     string          `json:"dev"`
-	Root    bool            `json:"root"`
-	Parent  string          `json:"parent"`
+	Dev     string          `json:"dev,omitempty"`
+	Root    bool            `json:"root,omitempty"`
+	Parent  string          `json:"parent,omitempty"`
 	Options json.RawMessage `json:"options"`
 }
 
 // defaultQdiscs are what an interface carries when nobody shaped it.
 var defaultQdiscs = map[string]bool{"noqueue": true, "pfifo_fast": true, "mq": true, "noop": true}
 
-// ReadQdisc returns the shaping state of one interface.
+// ReadQdisc returns the shaping state of one interface: its root qdisc, and
+// for an htb root the classes with their leaves and filters, read in one exec.
 func ReadQdisc(namespace, podName, iface string) (*types.QdiscState, error) {
-	stdout, err := runTCJSON(namespace, podName, []string{"tc", "-j", "qdisc", "show", "dev", iface})
+	docs, err := runTCJSONBatch(namespace, podName, []string{"qdisc show dev " + iface, "class show dev " + iface, "filter show dev " + iface})
 	if err != nil {
 		return nil, err
 	}
-	states, err := ParseTCQdiscJSON(stdout)
+	if len(docs) != 3 {
+		return nil, fmt.Errorf("tc printed %d documents for 3 commands", len(docs))
+	}
+	states, err := ParseTCQdiscJSON(docs[0])
 	if err != nil {
 		return nil, err
 	}
-	if s, ok := states[iface]; ok {
-		return s, nil
+	state, ok := states[iface]
+	if !ok {
+		if state, ok = states[""]; !ok {
+			state = unshapedQdisc("")
+		}
 	}
-	if s, ok := states[""]; ok {
-		return s, nil
+	if err := attachClasses(state, docs[1], docs[2]); err != nil {
+		return nil, err
 	}
-	return unshapedQdisc(""), nil
+	return state, nil
 }
 
-// ReadPodQdiscs returns the shaping state of every interface of a pod with
-// one exec. The loopback and the kernel's pseudo-interfaces are left out.
+// ReadPodQdiscs returns the shaping state of every interface of a pod. One
+// exec lists the roots; a second one, only when some root is classful, reads
+// the classes and filters of those interfaces. The loopback and the kernel's
+// pseudo-interfaces are left out.
 func ReadPodQdiscs(namespace, podName string) (map[string]*types.QdiscState, error) {
 	stdout, err := runTCJSON(namespace, podName, []string{"tc", "-j", "qdisc", "show"})
 	if err != nil {
@@ -54,9 +64,34 @@ func ReadPodQdiscs(namespace, podName string) (map[string]*types.QdiscState, err
 	if err != nil {
 		return nil, err
 	}
-	for dev := range states {
+	var classful []string
+	for dev, st := range states {
 		if dev == "" || dev == "lo" || types.IsPseudoInterface(dev) {
 			delete(states, dev)
+			continue
+		}
+		if st.Qdisc == "htb" {
+			classful = append(classful, dev)
+		}
+	}
+	if len(classful) == 0 {
+		return states, nil
+	}
+	sort.Strings(classful)
+	lines := make([]string, 0, 2*len(classful))
+	for _, dev := range classful {
+		lines = append(lines, "class show dev "+dev, "filter show dev "+dev)
+	}
+	docs, err := runTCJSONBatch(namespace, podName, lines)
+	if err != nil {
+		return nil, err
+	}
+	if len(docs) != len(lines) {
+		return nil, fmt.Errorf("tc printed %d documents for %d commands", len(docs), len(lines))
+	}
+	for i, dev := range classful {
+		if err := attachClasses(states[dev], docs[2*i], docs[2*i+1]); err != nil {
+			return nil, err
 		}
 	}
 	return states, nil
@@ -69,12 +104,42 @@ func runTCJSON(namespace, podName string, args []string) (string, error) {
 	stdout, stderr, err := RunTC(namespace, podName, args)
 	if err != nil && tcLacksJSON(stderr) {
 		tcUseToolbox.Store(namespace+"/"+podName, true)
-		stdout, stderr, err = runTCInToolbox(namespace, podName, args)
+		stdout, stderr, err = runTCInToolbox(namespace, podName, args, "")
 	}
 	if err != nil {
 		return "", tcExecError(err, stderr)
 	}
 	return stdout, nil
+}
+
+// runTCJSONBatch runs several show commands as one `tc -j -b` batch and
+// returns the JSON document each printed, in order.
+func runTCJSONBatch(namespace, podName string, lines []string) ([]string, error) {
+	stdin := strings.Join(lines, "\n") + "\n"
+	args := []string{"tc", "-j", "-b", "-"}
+	stdout, stderr, err := runTCWith(namespace, podName, args, stdin)
+	if err != nil && tcLacksJSON(stderr) {
+		tcUseToolbox.Store(namespace+"/"+podName, true)
+		stdout, stderr, err = runTCInToolbox(namespace, podName, args, stdin)
+	}
+	if err != nil {
+		return nil, tcExecError(err, stderr)
+	}
+	return splitJSONDocuments(stdout)
+}
+
+// splitJSONDocuments separates the concatenated JSON values a tc batch prints.
+func splitJSONDocuments(raw string) ([]string, error) {
+	dec := json.NewDecoder(strings.NewReader(raw))
+	var docs []string
+	for dec.More() {
+		var v json.RawMessage
+		if err := dec.Decode(&v); err != nil {
+			return nil, fmt.Errorf("unparseable tc JSON output: %w", err)
+		}
+		docs = append(docs, string(v))
+	}
+	return docs, nil
 }
 
 // tcLacksJSON reports whether tc rejected the -j flag.
@@ -168,8 +233,23 @@ func qdiscStateFromJSON(e tcJSONQdisc) *types.QdiscState {
 		readNetemOptions(s, e.Options)
 	case "tbf":
 		readTBFOptions(s, e.Options)
+	case "htb":
+		readHTBOptions(s, e.Options)
 	}
 	return s
+}
+
+// readHTBOptions keeps the default class, printed as a hex minor ("0x12").
+func readHTBOptions(s *types.QdiscState, opts json.RawMessage) {
+	var o struct {
+		Default string `json:"default"`
+	}
+	if err := json.Unmarshal(opts, &o); err != nil || o.Default == "" {
+		return
+	}
+	if n, err := strconv.ParseInt(strings.TrimPrefix(o.Default, "0x"), 16, 32); err == nil && n > 0 {
+		s.DefaultClass = "1:" + strconv.FormatInt(n, 16)
+	}
 }
 
 // readNetemOptions maps netem's JSON options: times come in seconds,
@@ -272,4 +352,106 @@ func fmtTCRate(bits float64) string {
 		}
 	}
 	return strconv.FormatFloat(bits, 'f', -1, 64) + "bit"
+}
+
+// Classes and filters of an htb root.
+
+type tcJSONClass struct {
+	Class  string  `json:"class"`
+	Handle string  `json:"handle"`
+	Parent string  `json:"parent"`
+	Root   bool    `json:"root"`
+	Prio   *int    `json:"prio"`
+	Rate   float64 `json:"rate"`
+	Ceil   float64 `json:"ceil"`
+}
+
+type tcJSONFilter struct {
+	Parent  string `json:"parent"`
+	Kind    string `json:"kind"`
+	Pref    int    `json:"pref"`
+	Options *struct {
+		ClassID string `json:"classid"`
+		Keys    struct {
+			IPProto   string          `json:"ip_proto"`
+			SrcIP     string          `json:"src_ip"`
+			DstIP     string          `json:"dst_ip"`
+			SrcPort   *int            `json:"src_port"`
+			DstPort   *int            `json:"dst_port"`
+			IPTos     *int            `json:"ip_tos"`
+			IPTosMask json.RawMessage `json:"ip_tos_mask"`
+			VlanID    *int            `json:"vlan_id"`
+		} `json:"keys"`
+	} `json:"options"`
+}
+
+// attachClasses turns the class and filter listings of an htb root into
+// QdiscClass entries. The root class (1:1, the link rate) becomes the
+// root's Rate; leaf qdiscs hang from the class whose id matches their parent;
+// flower filters become matches on the class they send to.
+func attachClasses(root *types.QdiscState, classesJSON, filtersJSON string) error {
+	if root == nil || root.Qdisc != "htb" {
+		return nil
+	}
+	var classes []tcJSONClass
+	if err := json.Unmarshal([]byte(strings.TrimSpace(classesJSON)), &classes); err != nil {
+		return fmt.Errorf("unparseable tc class output: %w", err)
+	}
+	var filters []tcJSONFilter
+	if err := json.Unmarshal([]byte(strings.TrimSpace(filtersJSON)), &filters); err != nil {
+		return fmt.Errorf("unparseable tc filter output: %w", err)
+	}
+
+	byID := map[string]*types.QdiscClass{}
+	for _, c := range classes {
+		if c.Class != "htb" {
+			continue
+		}
+		if c.Root {
+			if c.Rate > 0 {
+				root.Rate = fmtTCRate(c.Rate * 8)
+			}
+			continue
+		}
+		qc := &types.QdiscClass{ClassID: c.Handle, Parent: c.Parent, Prio: c.Prio, Default: c.Handle == root.DefaultClass}
+		if c.Rate > 0 {
+			qc.Rate = fmtTCRate(c.Rate * 8)
+		}
+		if c.Ceil > 0 {
+			qc.Ceil = fmtTCRate(c.Ceil * 8)
+		}
+		root.Classes = append(root.Classes, qc)
+		byID[c.Handle] = qc
+	}
+	sort.Slice(root.Classes, func(i, j int) bool { return root.Classes[i].ClassID < root.Classes[j].ClassID })
+
+	// Leaves were attached to the root by handle major; move them under their class.
+	var rest []*types.QdiscState
+	for _, child := range root.Children {
+		if qc, ok := byID[child.Parent]; ok {
+			qc.Leaf = child
+			continue
+		}
+		rest = append(rest, child)
+	}
+	root.Children = rest
+
+	sort.SliceStable(filters, func(i, j int) bool { return filters[i].Pref < filters[j].Pref })
+	for _, f := range filters {
+		if f.Kind != "flower" || f.Options == nil {
+			continue
+		}
+		qc, ok := byID[f.Options.ClassID]
+		if !ok {
+			continue
+		}
+		k := f.Options.Keys
+		m := types.TCMatch{Proto: k.IPProto, Src: k.SrcIP, Dst: k.DstIP, SrcPort: k.SrcPort, DstPort: k.DstPort, VLAN: k.VlanID}
+		if k.IPTos != nil {
+			dscp := *k.IPTos >> 2
+			m.DSCP = &dscp
+		}
+		qc.Match = append(qc.Match, m)
+	}
+	return nil
 }

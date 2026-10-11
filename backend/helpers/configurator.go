@@ -237,11 +237,11 @@ func ResolveDriverCommandsForPod(namespace, podName string, driver interface{}, 
 		if action.Iface == "" {
 			return nil, fmt.Errorf("add_qdisc requires iface")
 		}
-		qdisc, params, err := buildTCParams(action.TCParams)
+		commands, err := buildShapingCommands(action.Iface, action.TCParams)
 		if err != nil {
 			return nil, fmt.Errorf("add_qdisc on %s: %w", action.Iface, err)
 		}
-		return buildAddQdiscCommand(action.Iface, qdisc, params), nil
+		return commands, nil
 	case "del_qdisc":
 		if action.Iface == "" {
 			return nil, fmt.Errorf("del_qdisc requires iface")

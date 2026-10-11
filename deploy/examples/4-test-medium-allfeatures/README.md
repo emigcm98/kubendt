@@ -348,6 +348,44 @@ Delay, loss and bandwidth can also go together in one `netem`, which is what the
 
 `gemodel` replaces `loss` with a bursty Gilbert-Elliott model (`p`, `r`, `1-h`, `1-k`), and `reorder` and `corrupt` are available too. See the Swagger description of `tcparams` for the units and ranges.
 
+With `htb`, the link rate is split into classes. Each class has a guaranteed `rate`, a `ceil` it may borrow up to, a `prio` (lower is served first), the `match` rules that send traffic to it and a leaf queue: `pfifo` with a `limit`, `fq_codel`, `sfq`, or `netem` with a `shaping`. Exactly one class is the `default` for the rest. This keeps pings responsive while a bulk transfer fills the link, the usual QoS exercise:
+
+```json
+{
+  "type": "add_qdisc",
+  "iface": "eth1",
+  "tcparams": {
+    "qdisc": "htb",
+    "rate": "10mbit",
+    "classes": [
+      {
+        "name": "icmp",
+        "rate": "1mbit",
+        "prio": 0,
+        "match": [{ "proto": "icmp" }]
+      },
+      {
+        "name": "web",
+        "rate": "4mbit",
+        "prio": 1,
+        "match": [{ "proto": "tcp", "dstPort": 80 }],
+        "queue": "fq_codel"
+      },
+      {
+        "name": "rest",
+        "rate": "5mbit",
+        "prio": 2,
+        "default": true,
+        "queue": "pfifo",
+        "limit": 100
+      }
+    ]
+  }
+}
+```
+
+Matches also take `src`, `dst` (IP or CIDR), `srcPort`, `dscp` and `vlan`. The panel shows such a tree and removes it, editing classes still goes through JSON.
+
 To shape a whole link, name one end in a `links` section and the backend finds the other in the topology. `symmetric` puts the same shaping on both interfaces (delay is one-way, so the RTT doubles it), `reverse` puts a different one on the peer, and `remove` clears both. The panel has the same option, and the link's context menu opens it for both ends.
 
 ```json

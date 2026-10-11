@@ -17,6 +17,10 @@ const TCUniversalExecutorName = "tc_universal"
 // tokens, e.g. ["tc","qdisc","replace","dev","eth1","root","netem","delay","50ms"].
 var RunTCHook func(namespace, podName string, args []string) (stdout, stderr string, err error)
 
+// RunTCBatchHook runs several tc commands as one `tc -b` batch, lines without
+// the "tc" prefix. tc stops at the first failing line.
+var RunTCBatchHook func(namespace, podName string, lines []string) (stdout, stderr string, err error)
+
 // tcUniversalExecutor adapts RunTCHook to the CommandExecutor interface so the
 // configure and replay paths dispatch tc like any other executor.
 type tcUniversalExecutor struct{}
@@ -29,13 +33,22 @@ func (e tcUniversalExecutor) ExecCommand(podName, namespace string, command Comm
 }
 
 func (tcUniversalExecutor) ExecCommandAndGet(podName, namespace string, command Command) (string, error) {
-	if command.Kind != CommandKindArgs {
-		return "", fmt.Errorf("executor %q expects args commands, but got %q", TCUniversalExecutorName, command.Kind)
+	var stdout, stderr string
+	var err error
+	switch command.Kind {
+	case CommandKindArgs:
+		if RunTCHook == nil {
+			return "", fmt.Errorf("executor %q is not wired (RunTCHook is nil)", TCUniversalExecutorName)
+		}
+		stdout, stderr, err = RunTCHook(namespace, podName, command.Args)
+	case CommandKindBatch:
+		if RunTCBatchHook == nil {
+			return "", fmt.Errorf("executor %q is not wired (RunTCBatchHook is nil)", TCUniversalExecutorName)
+		}
+		stdout, stderr, err = RunTCBatchHook(namespace, podName, command.Lines)
+	default:
+		return "", fmt.Errorf("executor %q expects args or batch commands, but got %q", TCUniversalExecutorName, command.Kind)
 	}
-	if RunTCHook == nil {
-		return "", fmt.Errorf("executor %q is not wired (RunTCHook is nil)", TCUniversalExecutorName)
-	}
-	stdout, stderr, err := RunTCHook(namespace, podName, command.Args)
 	if err != nil {
 		if s := strings.TrimSpace(stderr); s != "" {
 			return "", fmt.Errorf("%w: %s", err, s)
