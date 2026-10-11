@@ -1288,22 +1288,43 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
     );
   };
 
-  // Traffic-control panels are per pod interface. Opening the same interface
-  // again focuses the existing window instead of stacking a second editor.
-  const openTC = (pod, iface) => {
-    if (!pod || !iface) return;
+  // Traffic-control panels are per pod. Opening a pod again focuses its
+  // window and selects the interface asked for, if any, instead of stacking a
+  // second editor. focusToken tells the panel it was asked again.
+  const openTC = (pod, iface = null) => {
+    if (!pod) return;
     setMaxZIndex((prev) => prev + 1);
     setOpenTCs((prev) => {
-      const existing = prev.find((t) => t.pod === pod && t.iface === iface);
+      const existing = prev.find((t) => t.pod === pod);
       if (existing) {
         return prev.map((t) =>
-          t.id === existing.id ? { ...t, minimized: false, zIndex: maxZIndex + 1 } : t
+          t.id === existing.id
+            ? {
+                ...t,
+                iface: iface || t.iface,
+                focusToken: (t.focusToken || 0) + 1,
+                minimized: false,
+                zIndex: maxZIndex + 1,
+              }
+            : t
         );
       }
       const id = `tc-${Date.now()}-${Math.random()}`;
-      return [...prev, { id, pod, iface, zIndex: maxZIndex + 1, minimized: false }];
+      return [...prev, { id, pod, iface, focusToken: 1, zIndex: maxZIndex + 1, minimized: false }];
     });
   };
+
+  // The interfaces a pod has in the topology, in link order, for its
+  // traffic-control panel.
+  const podInterfaces = (pod) => [
+    ...new Set(
+      edges
+        .map((e) =>
+          e.source === pod ? e.data?.localIntf : e.target === pod ? e.data?.peerIntf : null
+        )
+        .filter(Boolean)
+    ),
+  ];
 
   const closeTC = (id) => setOpenTCs((prev) => prev.filter((t) => t.id !== id));
 
@@ -3717,6 +3738,8 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
           namespace={namespace}
           pod={tc.pod}
           iface={tc.iface}
+          focusToken={tc.focusToken}
+          interfaces={podInterfaces(tc.pod)}
           zIndex={tc.zIndex}
           minimized={!!tc.minimized}
           onClose={() => closeTC(tc.id)}
@@ -3803,13 +3826,13 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
                   type="button"
                   className="shell-taskbar-chip-restore"
                   onClick={() => restoreTC(tc.id)}
-                  title={`Restore traffic control: ${tc.pod} · ${tc.iface}`}
+                  title={`Restore traffic control: ${tc.pod}`}
                 >
                   <span className="shell-taskbar-chip-icon">
                     <SlidersIcon />
                   </span>
                   <span className="shell-taskbar-chip-name">{tc.pod}</span>
-                  <span className="shell-taskbar-chip-mode">{tc.iface}</span>
+                  <span className="shell-taskbar-chip-mode">tc</span>
                 </button>
                 <button
                   type="button"

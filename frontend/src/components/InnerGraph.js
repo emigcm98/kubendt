@@ -1047,6 +1047,7 @@ const InnerGraph = ({
                 }
               : null
           }
+          onStartTC={onStartTC ? () => onStartTC(contextMenu.nodeId, null) : null}
           onRestartPod={
             isBusy
               ? null

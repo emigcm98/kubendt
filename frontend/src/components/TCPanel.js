@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import './TCPanel.css';
 import { API_BASE_URL } from '../config';
 import { ReactComponent as SlidersIcon } from '../assets/images/icons/sliders.svg';
@@ -161,13 +161,17 @@ const UnitField = ({ label, value, units, onChange }) => (
   </label>
 );
 
-// TCPanel is a floating, draggable traffic-control window for one pod interface,
-// a peer of the capture and trace panels. Shaping is universal, so it opens for
-// any real node. It reads and writes the qdisc through the same backend as before.
+// TCPanel is a floating, draggable traffic-control window for one pod, a peer
+// of the capture and trace panels. It lists the pod's interfaces with their
+// shaping state, read in one call, and edits the one picked. `iface` is the
+// interface to select, `focusToken` changes when the panel is opened again
+// so the selection follows even if the same interface is asked for.
 const TCPanel = ({
   namespace,
   pod,
-  iface,
+  iface = null,
+  focusToken = 0,
+  interfaces = null,
   zIndex = 1000,
   minimized = false,
   onClose,
@@ -179,12 +183,23 @@ const TCPanel = ({
   const dragOffsetRef = useRef({ x: 0, y: 0 });
   const positionRef = useRef({ x: 150 + Math.random() * 160, y: 90 + Math.random() * 110 });
 
+  const [states, setStates] = useState(null); // iface -> state from the pod-wide read
+  const [selected, setSelected] = useState(iface);
   const [qdiscData, setQdiscData] = useState(null);
-  const [loadingQdisc, setLoadingQdisc] = useState(false);
-  const [qdiscError, setQdiscError] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(null);
   const [feedback, setFeedback] = useState(null); // {type:'ok'|'error', text}
   const [isDraft, setIsDraft] = useState(false); // created in the UI, not yet applied
   const [newQdiscType, setNewQdiscType] = useState('netem');
+
+  // The topology's interfaces of the pod, in link order. Without that list,
+  // whatever the pod has except its cluster interface, which cannot be shaped.
+  const ifaceList = useMemo(() => {
+    if (interfaces && interfaces.length > 0) return [...new Set(interfaces.filter(Boolean))];
+    return Object.keys(states || {})
+      .filter((name) => name !== 'eth0')
+      .sort();
+  }, [interfaces, states]);
 
   // Keep the window at its dragged position and stacking order.
   useEffect(() => {
@@ -230,27 +245,47 @@ const TCPanel = ({
     e.preventDefault();
   };
 
-  const fetchQdisc = async () => {
-    setLoadingQdisc(true);
-    setQdiscError(null);
+  const fetchStates = async () => {
+    setLoading(true);
+    setLoadError(null);
     try {
-      const res = await fetch(`${API_BASE_URL}/pods/tc/${namespace}/${pod}/${iface}`);
+      const res = await fetch(`${API_BASE_URL}/pods/tc/${namespace}/${pod}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      setQdiscData(fromApi(data.tcparams));
-      setIsDraft(false);
+      setStates(data.interfaces || {});
     } catch (err) {
-      console.error('❌ Error fetching qdisc:', err);
-      setQdiscError('Error fetching qdisc');
+      console.error('❌ Error fetching qdiscs:', err);
+      setLoadError('Error reading the traffic control state');
     } finally {
-      setLoadingQdisc(false);
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchQdisc();
+    fetchStates();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [namespace, pod, iface]);
+  }, [namespace, pod]);
+
+  // Follow the interface the caller asked for, every time it asks.
+  useEffect(() => {
+    if (iface) {
+      setSelected(iface);
+      setIsDraft(false);
+      setFeedback(null);
+    }
+  }, [iface, focusToken]);
+
+  // Nothing selected yet: take the first interface once the list is known.
+  useEffect(() => {
+    if (!selected && ifaceList.length > 0) setSelected(ifaceList[0]);
+  }, [ifaceList, selected]);
+
+  // The form mirrors the read state of the selected interface, unless the
+  // user is in the middle of a draft.
+  useEffect(() => {
+    if (isDraft) return;
+    setQdiscData(states && selected ? fromApi(states[selected]) : null);
+  }, [states, selected, isDraft]);
 
   // Auto-dismiss the feedback banner.
   useEffect(() => {
@@ -259,6 +294,12 @@ const TCPanel = ({
     return () => clearTimeout(t);
   }, [feedback]);
 
+  const selectIface = (name) => {
+    setSelected(name);
+    setIsDraft(false);
+    setFeedback(null);
+  };
+
   const handleCreateQdisc = () => {
     setQdiscData(newQdiscType === 'netem' ? { ...defaultNetem } : { ...defaultTBF });
     setIsDraft(true);
@@ -266,13 +307,12 @@ const TCPanel = ({
   };
 
   const handleCancelDraft = () => {
-    setQdiscData(null);
     setIsDraft(false);
     setFeedback(null);
   };
 
   const handleApplyQdisc = async () => {
-    if (!qdiscData) return;
+    if (!qdiscData || !selected) return;
 
     let errors = [];
     if (qdiscData.qdisc === 'netem') errors = validateNetem(qdiscData);
@@ -287,19 +327,21 @@ const TCPanel = ({
     try {
       const res = await postAction(namespace, pod, {
         type: 'add_qdisc',
-        iface,
+        iface: selected,
         tcparams: toApi(qdiscData),
       });
       const outcome = await actionOutcome(res);
+      // Read the new state before leaving draft mode, so the form switches
+      // straight to what was applied instead of flashing the old state.
+      await fetchStates();
       setIsDraft(false);
       setFeedback({
         type: 'ok',
         text:
           outcome.status === 'skipped'
-            ? `${qdiscData.qdisc} already applied to ${iface} with these settings`
-            : `${qdiscData.qdisc} applied to ${iface}`,
+            ? `${qdiscData.qdisc} already applied to ${selected} with these settings`
+            : `${qdiscData.qdisc} applied to ${selected}`,
       });
-      fetchQdisc();
     } catch (err) {
       console.error('❌ Error applying qdisc:', err);
       setFeedback({ type: 'error', text: `Could not apply qdisc: ${err.message}` });
@@ -307,23 +349,55 @@ const TCPanel = ({
   };
 
   const handleDeleteQdisc = async () => {
+    if (!selected) return;
     try {
-      const res = await postAction(namespace, pod, { type: 'del_qdisc', iface });
+      const res = await postAction(namespace, pod, { type: 'del_qdisc', iface: selected });
       await actionOutcome(res);
-      setQdiscData(null);
       setIsDraft(false);
       setNewQdiscType('netem');
-      setFeedback({ type: 'ok', text: `Traffic shaping removed from ${iface}` });
+      setFeedback({ type: 'ok', text: `Traffic shaping removed from ${selected}` });
+      fetchStates();
     } catch (err) {
       console.error('❌ Error deleting qdisc:', err);
       setFeedback({ type: 'error', text: `Could not remove qdisc: ${err.message}` });
     }
   };
 
+  const renderIfaces = () => (
+    <div className="tc-ifaces">
+      {ifaceList.length === 0 && !loading && (
+        <span className="tc-ifaces-empty">This node has no interface to shape.</span>
+      )}
+      {ifaceList.map((name) => {
+        const st = states?.[name];
+        const missing = !!states && !st;
+        const shaped = !!st?.shaped;
+        const title = missing
+          ? 'not present in the pod'
+          : shaped
+            ? `${st.qdisc} active`
+            : 'no shaping';
+        return (
+          <button
+            key={name}
+            type="button"
+            className={`tc-iface-chip${selected === name ? ' selected' : ''}${shaped ? ' shaped' : ''}`}
+            disabled={missing}
+            title={title}
+            onClick={() => selectIface(name)}
+          >
+            {name}
+            {shaped && <span className="tc-iface-dot" />}
+          </button>
+        );
+      })}
+    </div>
+  );
+
   const renderNoQdisc = () => (
     <div className="tc-empty">
       <p className="tc-empty-text">
-        This interface forwards traffic without shaping (<code>noqueue</code>).
+        <code>{selected}</code> forwards traffic without shaping (<code>noqueue</code>).
       </p>
       <div className="tc-add">
         <select
@@ -350,14 +424,14 @@ const TCPanel = ({
   const renderForeignQdisc = () => (
     <div className="tc-empty">
       <p className="tc-empty-text">
-        This interface has a <code>{qdiscData.qdisc}</code> qdisc that was not set from here. Remove
-        it to shape the interface from this panel.
+        <code>{selected}</code> has a <code>{qdiscData.qdisc}</code> qdisc that was not set from
+        here. Remove it to shape the interface from this panel.
       </p>
       <div className="tc-actions">
         <button className="tc-form-btn danger" onClick={handleDeleteQdisc}>
           Remove
         </button>
-        <button className="tc-form-btn ghost" title="Reload current settings" onClick={fetchQdisc}>
+        <button className="tc-form-btn ghost" title="Reload current settings" onClick={fetchStates}>
           Refresh
         </button>
       </div>
@@ -387,7 +461,7 @@ const TCPanel = ({
           Remove
         </button>
       )}
-      <button className="tc-form-btn ghost" title="Reload current settings" onClick={fetchQdisc}>
+      <button className="tc-form-btn ghost" title="Reload current settings" onClick={fetchStates}>
         Refresh
       </button>
     </div>
@@ -408,6 +482,7 @@ const TCPanel = ({
   );
 
   const renderForm = () => {
+    if (!selected) return null;
     if (!qdiscData) return renderNoQdisc();
     if (!isManagedQdisc(qdiscData.qdisc)) return renderForeignQdisc();
 
@@ -451,12 +526,15 @@ const TCPanel = ({
     );
   };
 
+  const shapedCount = Object.values(states || {}).filter((s) => s?.shaped).length;
   const statusLabel = qdiscData
     ? isDraft
       ? `${qdiscData.qdisc} · draft`
       : `${qdiscData.qdisc} · active`
-    : 'No shaping';
-  const statusClass = qdiscData ? (isDraft ? 'draft' : 'on') : 'off';
+    : shapedCount > 0
+      ? `${shapedCount} shaped`
+      : 'No shaping';
+  const statusClass = qdiscData ? (isDraft ? 'draft' : 'on') : shapedCount > 0 ? 'on' : 'off';
 
   return (
     <div
@@ -470,7 +548,7 @@ const TCPanel = ({
         <SlidersIcon className="tc-header-icon" />
         <span className="tc-title">
           <span className="tc-title-pod">{pod}</span>
-          <span className="tc-title-iface">· {iface}</span>
+          {selected && <span className="tc-title-iface">· {selected}</span>}
         </span>
         <span className={`tc-status ${statusClass}`}>{statusLabel}</span>
         <div className="tc-header-btns">
@@ -484,14 +562,15 @@ const TCPanel = ({
       </div>
 
       <div className="tc-body">
+        {renderIfaces()}
         {feedback && (
           <div className={`tc-feedback ${feedback.type}`}>
             {feedback.type === 'ok' ? '✓ ' : <WarningIcon className="app-icon" />} {feedback.text}
           </div>
         )}
-        {loadingQdisc && <p className="tc-loading">Loading qdisc…</p>}
-        {qdiscError && <p className="tc-error">{qdiscError}</p>}
-        {!loadingQdisc && renderForm()}
+        {loading && !states && <p className="tc-loading">Reading traffic control state…</p>}
+        {loadError && <p className="tc-error">{loadError}</p>}
+        {states && renderForm()}
       </div>
     </div>
   );
