@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import './ContextMenu.css';
 import { ReactComponent as TraceIcon } from '../assets/images/icons/trace-icon.svg';
+import { ReactComponent as SlidersIcon } from '../assets/images/icons/sliders.svg';
 import { ReactComponent as TerminalIcon } from '../assets/images/icons/terminal.svg';
 import { ReactComponent as RefreshIcon } from '../assets/images/icons/refresh.svg';
 import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
@@ -15,6 +16,7 @@ const ContextMenu = ({
   onRestartPod,
   onOpenInfoPanel,
   onStartTrace,
+  onStartTC,
   onDelete,
 }) => {
   const menuRef = useRef(null);
@@ -158,6 +160,13 @@ const ContextMenu = ({
         <div className="graph-context-menu-item" onClick={() => handleOptionClick(onStartTrace)}>
           <TraceIcon className="graph-context-menu-icon" />
           <span className="graph-context-menu-label">Traceroute from here</span>
+        </div>
+      )}
+
+      {!isExternal && onStartTC && (
+        <div className="graph-context-menu-item" onClick={() => handleOptionClick(onStartTC)}>
+          <SlidersIcon className="graph-context-menu-icon" />
+          <span className="graph-context-menu-label">Traffic control</span>
         </div>
       )}
 

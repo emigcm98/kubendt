@@ -234,6 +234,56 @@
   font-size: 0.85rem;
 }
 
+/* Interface picker: one chip per interface, a dot on the shaped ones */
+.tc-ifaces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.2rem;
+}
+
+.tc-iface-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--tool-border);
+  background: var(--tool-bg-sunken);
+  color: var(--tool-text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tc-iface-chip:hover {
+  color: var(--tool-text);
+  border-color: var(--tool-border-strong);
+}
+
+.tc-iface-chip.selected {
+  color: var(--tool-text);
+  background: var(--tool-bg-raised);
+  border-color: var(--tool-accent);
+}
+
+.tc-iface-chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.tc-iface-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--tool-success);
+}
+
+.tc-ifaces-empty {
+  font-size: 0.82rem;
+  color: var(--tool-text-muted);
+}
+
 /* No-qdisc empty state */
 .tc-empty {
   text-align: center;

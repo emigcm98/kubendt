@@ -269,7 +269,7 @@ The `user-*` nodes have `iproute2-tc` installed, so traffic shaping can be appli
 
 #### How to apply TC
 
-1. Right-click the link between a `user-*` node and its room switch and choose **Traffic control on user-…:eth1**. A shaping panel opens. You can also open it from the node's **Pod Info Panel → Links** tab with **Open traffic control**.
+1. Right-click the link between a `user-*` node and its room switch and choose **Traffic control on user-…:eth1**. The node's shaping panel opens with `eth1` selected. You can also right-click the node and choose **Traffic control**, then pick the interface in the panel, or open it from the node's **Pod Info Panel → Links** tab with **Open traffic control**.
 2. Pick **tbf** and fill in the parameters:
    | Field   | Value    | Meaning                                    |
    | ------- | -------- | ------------------------------------------ |

@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
+- The traffic control panel is per node: it lists the node's interfaces with their shaping state and edits the one picked. It opens from the node's context menu too, and the link menu and the Links tab open it on that interface.
 - Traffic control state is read from tc's JSON output in canonical units, with a `shaped` flag and the settings the old parser ignored: netem rate, reorder, Gilbert-Elliott loss and child qdiscs. A `tc` without `-j` is read through the toolbox container.
 
 ### Fixed
