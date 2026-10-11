@@ -454,6 +454,21 @@ definitions:
           $ref: '#/definitions/types.FileEntry'
         type: array
     type: object
+  types.GemodelSpec:
+    properties:
+      1-h:
+        example: 100%
+        type: string
+      1-k:
+        example: 0%
+        type: string
+      p:
+        example: 1%
+        type: string
+      r:
+        example: 10%
+        type: string
+    type: object
   types.HealthResponse:
     properties:
       build_date:
@@ -1705,44 +1720,66 @@ definitions:
   types.TCParamEntry:
     properties:
       burst:
-        description: tbf, defaults to 32kbit
+        description: tbf only
         example: 32kbit
         type: string
       corrupt:
-        description: netem, 0 to 100 %
         example: 0.1%
         type: string
       delay:
-        description: netem, 0 to 60000 ms
+        description: netem
         example: 100ms
         type: string
+      delay_correlation:
+        description: needs a jitter
+        example: 25%
+        type: string
+      distribution:
+        description: |-
+          Distribution of the jitter: uniform (default), normal, pareto or
+          paretonormal. tc does not report it back, the history keeps it.
+        example: normal
+        type: string
       duplicate:
-        description: netem, 0 to 100 %
         example: 0.5%
         type: string
+      gemodel:
+        allOf:
+        - $ref: '#/definitions/types.GemodelSpec'
+        description: Gilbert-Elliott loss, instead of loss
       jitter:
-        description: netem, 0 to 10000 ms, needs a delay
+        description: 0 to 10000 ms, needs a delay
         example: 10ms
         type: string
       latency:
-        description: tbf, 1 to 5000 ms, defaults to 50ms
+        description: 1 to 5000 ms, defaults to 50ms
         example: 50ms
         type: string
       limit:
-        description: netem queue length in packets, 1 to 1000000
+        description: queue length in packets, 1 to 1000000
         example: 1000
         type: integer
       loss:
-        description: netem, 0 to 100 %
         example: 1%
+        type: string
+      loss_correlation:
+        example: 10%
         type: string
       qdisc:
         description: netem (default) or tbf
         example: netem
         type: string
       rate:
-        description: tbf, required
+        description: 'Rate caps the bandwidth: netem''s link rate emulation, or tbf''s
+          rate (required there).'
         example: 10mbit
+        type: string
+      reorder:
+        description: needs a delay
+        example: 25%
+        type: string
+      reorder_correlation:
+        example: 50%
         type: string
     type: object
   types.TraceHopDoc:

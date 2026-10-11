@@ -329,6 +329,25 @@ If you prefer scripted configuration rather than the UI, the same rule can be ex
 
 To remove it via script, replace `"type": "add_qdisc"` with `"type": "del_qdisc"` (the `tcparams` field is not needed for deletion).
 
+Delay, loss and bandwidth can also go together in one `netem`, which is what the panel does. The rate is netem's link rate emulation:
+
+```json
+{
+  "type": "add_qdisc",
+  "iface": "eth1",
+  "tcparams": {
+    "qdisc": "netem",
+    "delay": "50ms",
+    "jitter": "10ms",
+    "distribution": "normal",
+    "loss": "1%",
+    "rate": "10mbit"
+  }
+}
+```
+
+`gemodel` replaces `loss` with a bursty Gilbert-Elliott model (`p`, `r`, `1-h`, `1-k`), and `reorder` and `corrupt` are available too. See the Swagger description of `tcparams` for the units and ranges.
+
 ## Troubleshooting
 
 - **Node stuck in `Init` / crash loop**: the most common cause is a missing mounted file. Verify all six files from the [Files In This Folder](#files-in-this-folder) table exist in the Namespace File Manager.

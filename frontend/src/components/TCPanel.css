@@ -1,7 +1,7 @@
 .tc-panel {
   position: fixed;
-  width: 360px;
-  height: 470px;
+  width: 380px;
+  height: 600px;
   min-width: 300px;
   min-height: 320px;
   display: flex;
@@ -232,6 +232,16 @@
   background: var(--tool-bg-well);
   color: var(--tool-text);
   font-size: 0.85rem;
+}
+
+/* Section headings of the composite form */
+.tc-section {
+  margin-top: 0.35rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tool-text-subtle);
 }
 
 /* Interface picker: one chip per interface, a dot on the shaped ones */

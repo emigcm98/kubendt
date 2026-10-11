@@ -7,7 +7,14 @@ a tbf rate for each value given, measures the effect from the other end (ping RT
 over the baseline, ping loss over --loss-count packets, iperf3 TCP throughput) and
 reads the qdisc back through GET /pods/tc. Each row says whether the measurement
 lies within the declared tolerance: delay ±(tolerance% + 1 ms), loss within three
-binomial standard deviations, rate ±tolerance%."""
+binomial standard deviations, rate ±tolerance%.
+
+--composite applies the first delay, loss and rate together in one netem and checks
+the three at once; the rate is measured with UDP offered above the cap, since TCP
+under random loss is bound by the loss, not by the rate. --models checks the jitter
+distributions (ping mdev, the RTT standard deviation, against what a uniform or a
+normal spread of --jitter gives) and a Gilbert-Elliott loss (average loss
+p / (p + r), a bursty loss so the tolerance is wider)."""
 import json
 import math
 import re
@@ -28,6 +35,34 @@ def readback(client, ns, pod, iface):
     q = client.qdisc(ns, pod, iface) or {}
     tp = q.get("tcparams") or {}
     return {k: tp.get(k) for k in ("qdisc", "delay", "loss", "rate") if tp.get(k)}
+
+
+def udp_through(ns, a, b, ip_b, seconds, offered_mbit):
+    """UDP rate as the server receives it, with the loss it saw. The client's own
+    figure divides what arrived by its sending time, which overstates a rate-limited
+    link: netem's queue keeps draining after the client stopped and the server
+    counts that too. A one-off JSON server on its own port gives the real number."""
+    C.kexec(ns, b, "sh -c 'rm -f /tmp/udp.json; (iperf3 -s -1 -p 5202 -J > /tmp/udp.json 2>&1 &)'")
+    time.sleep(0.5)
+    C.kexec(ns, a, f"iperf3 -c {ip_b} -u -b {offered_mbit}M -t {seconds} -p 5202 -J", timeout=seconds + 60)
+    out = ""
+    for _ in range(30):
+        time.sleep(0.5)
+        rc, out = C.kexec(ns, b, "cat /tmp/udp.json")
+        if '"end"' in out:
+            break
+    try:
+        j = json.loads(out[out.index("{"):])
+    except (ValueError, json.JSONDecodeError):
+        return None, None
+    end = j.get("end", {})
+    # The server fills sum_received for UDP (sum carries only the loss); the
+    # rate is bytes over the server's own duration, which includes the drain.
+    recv, sm = end.get("sum_received", {}), end.get("sum", {})
+    mbps = recv.get("bits_per_second") or 0
+    if not mbps and recv.get("seconds"):
+        mbps = recv.get("bytes", 0) * 8 / recv["seconds"]
+    return round(mbps / 1e6, 2), round(sm.get("lost_percent", 0), 3)
 
 
 def to_ms(s):
@@ -55,6 +90,9 @@ def main():
     ap.add_argument("--loss-count", type=int, default=2000)
     ap.add_argument("--iperf-seconds", type=int, default=10)
     ap.add_argument("--cross", action="store_true", help="pods on different workers (VXLAN) instead of the same one")
+    ap.add_argument("--composite", action="store_true", help="also apply delay, loss and rate together in one netem")
+    ap.add_argument("--models", action="store_true", help="also check the jitter distributions and a Gilbert-Elliott loss")
+    ap.add_argument("--jitter", default="20ms", help="jitter for the distribution cases")
     ap.add_argument("--image", default=C.TOOLS_IMAGE)
     ap.add_argument("--namespace", default="exp-tc")
     args = ap.parse_args()
@@ -115,25 +153,76 @@ def main():
                           within=(got is not None and abs(got - mbit) <= mbit * args.tolerance / 100), retransmits=t.get("tcp_retransmits"))
             C.log(f"run {run} rate {rate} (burst {burst}): measured {got} Mbit/s (error {row['error_pct']}%), readback {rb}, within {row['within']}")
             apply(client, ns, a, {"type": "del_qdisc", "iface": "eth1"})
+        if args.composite:
+            # The first of each list, or the middle defaults when a list was emptied.
+            d, l, rate = (args.delays or ["50ms"])[0], (args.losses or ["2%"])[0], (args.rates or ["10mbit"])[0]
+            mbit, want_d, want_l = to_mbit(rate), to_ms(d), float(l.rstrip("%"))
+            ok, wall, r = apply(client, ns, a, {"type": "add_qdisc", "iface": "eth1", "tcparams": {"qdisc": "netem", "delay": d, "loss": l, "rate": rate}})
+            rb = readback(client, ns, a, "eth1")
+            p = P.ping(ns, a, ip_b, args.loss_count, 0.005)
+            # UDP offered at 1.5x the cap: what gets through is the cap minus the loss.
+            got_m, udp_loss = udp_through(ns, a, b, ip_b, args.iperf_seconds, mbit * 1.5)
+            added = (p.get("rtt_avg_ms") or 0) - (base.get("rtt_avg_ms") or 0)
+            n = p.get("sent") or args.loss_count
+            sigma = math.sqrt(want_l / 100 * (1 - want_l / 100) / n) * 100
+            got_l = p.get("loss_pct")
+            want_m = mbit * (1 - want_l / 100)
+            within = (abs(added - want_d) <= want_d * args.tolerance / 100 + 1.0 and got_l is not None and abs(got_l - want_l) <= 3 * sigma
+                      and got_m is not None and abs(got_m - want_m) <= want_m * args.tolerance / 100)
+            row = rec.add(run=run, kind="composite", configured=f"{d} {l} {rate}", apply_ok=ok, apply_s=round(wall, 3), readback=json.dumps(rb),
+                          measured_added_ms=round(added, 3), expected_ms=want_d, measured_loss_pct=got_l, expected_pct=want_l, packets=n,
+                          measured_mbps=got_m, expected_mbps=round(want_m, 2), udp_offered_mbps=round(mbit * 1.5, 2), udp_loss_pct=udp_loss,
+                          error_pct=round((got_m - want_m) / want_m * 100, 2) if got_m is not None else None, within=within)
+            C.log(f"run {run} composite {d} {l} {rate}: added {row['measured_added_ms']} ms, loss {got_l}%, {got_m} Mbit/s, readback {rb}, within {within}")
+            apply(client, ns, a, {"type": "del_qdisc", "iface": "eth1"})
+        if args.models:
+            # ping's mdev is the standard deviation of the RTT. netem's normal table
+            # has sd = jitter, its uniform spread is +-jitter, sd = jitter / sqrt(3).
+            j = to_ms(args.jitter)
+            for dist, factor in (("uniform", 1 / math.sqrt(3)), ("normal", 1.0)):
+                ok, wall, r = apply(client, ns, a, {"type": "add_qdisc", "iface": "eth1", "tcparams": {"qdisc": "netem", "delay": "50ms", "jitter": args.jitter, "distribution": dist}})
+                rb = readback(client, ns, a, "eth1")
+                p = P.ping(ns, a, ip_b, args.ping_count, 0.02)
+                got, want = p.get("rtt_mdev_ms"), factor * j
+                tol = want * args.tolerance / 100 + 1.0
+                row = rec.add(run=run, kind="jitter", configured=f"{dist} {args.jitter}", apply_ok=ok, apply_s=round(wall, 3), readback=json.dumps(rb),
+                              measured_mdev_ms=got, expected_mdev_ms=round(want, 3), error_pct=round((got - want) / want * 100, 2) if got is not None else None,
+                              within=(got is not None and abs(got - want) <= tol), tolerance_ms=round(tol, 2))
+                C.log(f"run {run} jitter {dist} {args.jitter}: mdev {got} ms, expected {row['expected_mdev_ms']} ms, within {row['within']}")
+                apply(client, ns, a, {"type": "del_qdisc", "iface": "eth1"})
+            gp, gr = 1.0, 10.0   # p/(p+r): 9.09% average loss in bursts
+            ok, wall, r = apply(client, ns, a, {"type": "add_qdisc", "iface": "eth1", "tcparams": {"qdisc": "netem", "gemodel": {"p": f"{gp}%", "r": f"{gr}%"}}})
+            rb = readback(client, ns, a, "eth1")
+            p = P.ping(ns, a, ip_b, args.loss_count, 0.005)
+            want = gp / (gp + gr) * 100
+            n = p.get("sent") or args.loss_count
+            got = p.get("loss_pct")
+            tol = max(3 * math.sqrt(want / 100 * (1 - want / 100) / n) * 100, want * 0.15)
+            row = rec.add(run=run, kind="gemodel", configured=f"p {gp}% r {gr}%", apply_ok=ok, apply_s=round(wall, 3), readback=json.dumps(rb), packets=n,
+                          measured_loss_pct=got, expected_pct=round(want, 3), error_pct=round((got - want) / want * 100, 2) if got is not None else None,
+                          within=(got is not None and abs(got - want) <= tol), tolerance_pct=round(tol, 3))
+            C.log(f"run {run} gemodel p {gp}% r {gr}%: measured {got}% over {n} packets, expected {row['expected_pct']}%, within {row['within']}")
+            apply(client, ns, a, {"type": "del_qdisc", "iface": "eth1"})
         rb = readback(client, ns, a, "eth1")
         rec.note(f"run {run}: qdisc after del_qdisc: {rb or 'none'}")
 
     if not args.keep:
         client.drop_namespace(ns)
-    rows = [r for r in rec.rows if r.get("kind") in ("delay", "loss", "rate")]
+    measure_key = {"delay": "measured_added_ms", "loss": "measured_loss_pct", "rate": "measured_mbps",
+                   "composite": "measured_mbps", "jitter": "measured_mdev_ms", "gemodel": "measured_loss_pct"}
+    rows = [r for r in rec.rows if r.get("kind") in measure_key]
     summary = {}
-    for kind in ("delay", "loss", "rate"):
+    for kind in measure_key:
         for cfg in sorted({r["configured"] for r in rows if r["kind"] == kind}):
             sel = [r for r in rows if r["kind"] == kind and r["configured"] == cfg]
-            key = {"delay": "measured_added_ms", "loss": "measured_loss_pct", "rate": "measured_mbps"}[kind]
-            summary[f"{kind} {cfg}"] = {"measured": C.summarize([r.get(key) for r in sel]), "error_pct": C.summarize([r.get("error_pct") for r in sel]),
+            summary[f"{kind} {cfg}"] = {"measured": C.summarize([r.get(measure_key[kind]) for r in sel]), "error_pct": C.summarize([r.get("error_pct") for r in sel]),
                                         "within_tolerance": sum(1 for r in sel if r.get("within")), "n": len(sel)}
     rec.finish(summary)
-    C.table([{"case": k, "measured": C.mean_std([r.get({"delay": "measured_added_ms", "loss": "measured_loss_pct", "rate": "measured_mbps"}[k.split()[0]])
-                                                  for r in rows if f"{r['kind']} {r['configured']}" == k], 2),
+    C.table([{"case": k, "measured": C.mean_std([r.get(measure_key[k.split()[0]]) for r in rows if f"{r['kind']} {r['configured']}" == k], 2),
               "error (%)": C.mean_std([r.get("error_pct") for r in rows if f"{r['kind']} {r['configured']}" == k], 1),
               "within tolerance": f"{v['within_tolerance']}/{v['n']}"} for k, v in summary.items()],
-            ["case", "measured", "error (%)", "within tolerance"], f"traffic control fidelity (delay in added ms, loss in %, rate in Mbit/s), {args.runs} runs")
+            ["case", "measured", "error (%)", "within tolerance"],
+            f"traffic control fidelity (delay in added ms, loss in %, rate and composite in Mbit/s, jitter in mdev ms), {args.runs} runs")
 
 
 if __name__ == "__main__":
