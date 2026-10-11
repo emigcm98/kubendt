@@ -179,7 +179,7 @@ func swaggerGetInterfacesFromPod() {}
 // swaggerShowQdisc godoc
 //
 //	@Summary      Show Qdisc (TC) info
-//	@Description  Returns Traffic Control qdisc information for a pod interface.
+//	@Description  Returns the traffic control state of a pod interface, read with `tc -j qdisc show` and normalized (times in ms, percentages, rates in kbit/mbit, sizes in bytes). `shaped` is false on the kernel default qdisc.
 //	@Tags         pods
 //	@Produce      json
 //	@Param        namespace  path      string  true  "Namespace name"
@@ -190,6 +190,20 @@ func swaggerGetInterfacesFromPod() {}
 //	@Failure      500        {object}  types.ErrorResponse
 //	@Router       /pods/tc/{namespace}/{podName}/{interface} [get]
 func swaggerShowQdisc() {}
+
+// swaggerShowPodQdiscs godoc
+//
+//	@Summary      Show Qdisc (TC) info for every interface
+//	@Description  Returns the traffic control state of every interface of a pod (loopback and kernel pseudo-interfaces excluded), read with one exec. Each entry has the same shape as the single-interface endpoint.
+//	@Tags         pods
+//	@Produce      json
+//	@Param        namespace  path      string  true  "Namespace name"
+//	@Param        podName    path      string  true  "Pod name"
+//	@Success      200        {object}  types.PodQdiscsResponse
+//	@Failure      400        {object}  types.ErrorResponse
+//	@Failure      500        {object}  types.ErrorResponse
+//	@Router       /pods/tc/{namespace}/{podName} [get]
+func swaggerShowPodQdiscs() {}
 
 // swaggerGetPodMetrics godoc
 //
@@ -841,7 +855,8 @@ var _ = types.PodsListResponse{}
 var _ = types.PodInterfaceEntry{}
 var _ = types.PodInterfacesResponse{}
 var _ = types.PodInterfaceInfo{}
-var _ = types.QdiscInfo{}
+var _ = types.QdiscState{}
+var _ = types.PodQdiscsResponse{}
 var _ = types.QdiscResponse{}
 var _ = types.NetworkTopologyResponse{}
 var _ = types.DeployNetworkResponse{}

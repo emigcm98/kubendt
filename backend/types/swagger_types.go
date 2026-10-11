@@ -188,17 +188,16 @@ type PodInterfaceInfo struct {
 	NAT        []NATRule                  `json:"nat,omitempty"`
 }
 
-// QdiscInfo is returned by GET /pods/tc/:ns/:pod/:iface.
-type QdiscInfo struct {
-	Interface string `json:"interface" example:"eth1"`
-	Qdisc     string `json:"qdisc" example:"netem"`
-	Details   string `json:"details" example:"limit 1000 delay 100ms loss 1%"`
-}
-
 // QdiscResponse is returned by GET /pods/tc/:ns/:pod/:iface.
 type QdiscResponse struct {
-	Interface string                 `json:"interface" example:"eth1"`
-	TCParams  map[string]interface{} `json:"tcparams"`
+	Interface string      `json:"interface" example:"eth1"`
+	TCParams  *QdiscState `json:"tcparams"`
+}
+
+// PodQdiscsResponse is returned by GET /pods/tc/:ns/:pod.
+type PodQdiscsResponse struct {
+	Pod        string                 `json:"pod" example:"host-0"`
+	Interfaces map[string]*QdiscState `json:"interfaces"`
 }
 
 // PodMetricsResponse is returned by GET /pods/metrics/:ns/:pod when metrics-server is available.

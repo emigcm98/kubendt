@@ -268,3 +268,38 @@ type ScaleSpec struct {
 type DeviceSpec struct {
 	Path string `json:"path" example:"/dev/net/tun"` // absolute path on host
 }
+
+// QdiscState is the shaping state of one interface as GET /pods/tc returns
+// it, read from `tc -j qdisc show`. Values are canonical whatever tc printed:
+// times in ms, percentages with "%", rates in bit, kbit, mbit or gbit, sizes
+// in bytes. Only the fields the qdisc carries are present.
+type QdiscState struct {
+	Qdisc string `json:"qdisc" example:"netem"`
+	// False on the kernel default (noqueue, pfifo_fast, mq), true for anything installed on purpose.
+	Shaped bool   `json:"shaped" example:"true"`
+	Handle string `json:"handle,omitempty" example:"8001"`
+	Parent string `json:"parent,omitempty" example:"root"`
+	// netem
+	Delay              string `json:"delay,omitempty" example:"50ms"`
+	Jitter             string `json:"jitter,omitempty" example:"10ms"`
+	DelayCorrelation   string `json:"delay_correlation,omitempty" example:"25%"`
+	Loss               string `json:"loss,omitempty" example:"1%"`
+	LossCorrelation    string `json:"loss_correlation,omitempty" example:"10%"`
+	Duplicate          string `json:"duplicate,omitempty" example:"0.5%"`
+	Corrupt            string `json:"corrupt,omitempty" example:"0.1%"`
+	Reorder            string `json:"reorder,omitempty" example:"25%"`
+	ReorderCorrelation string `json:"reorder_correlation,omitempty" example:"50%"`
+	Limit              *int   `json:"limit,omitempty" example:"1000"`
+	// LossModel is "gemodel" when a Gilbert-Elliott loss model is active, with
+	// its parameters (p, r, 1-h, 1-k) in Gemodel.
+	LossModel string            `json:"loss_model,omitempty" example:"gemodel"`
+	Gemodel   map[string]string `json:"gemodel,omitempty"`
+	// Rate is netem's rate or tbf's. Burst and Latency are tbf's.
+	Rate    string `json:"rate,omitempty" example:"500kbit"`
+	Burst   string `json:"burst,omitempty" example:"4096b"`
+	Latency string `json:"latency,omitempty" example:"50ms"`
+	// Children are the qdiscs attached below this one, when a tree was set by hand.
+	Children []*QdiscState `json:"children,omitempty"`
+	// Raw is what tc printed for this qdisc.
+	Raw string `json:"raw,omitempty"`
+}

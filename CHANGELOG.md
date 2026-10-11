@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- `GET /pods/tc/{namespace}/{pod}` returns the traffic control state of every interface of a pod. The Links tab uses it and marks the shaped interfaces.
+
+### Changed
+
+- Traffic control state is read from tc's JSON output in canonical units, with a `shaped` flag and the settings the old parser ignored: netem rate, reorder, Gilbert-Elliott loss and child qdiscs. A `tc` without `-j` is read through the toolbox container.
+
 ### Fixed
 
 - Traffic control rejects a malformed or out-of-range value instead of dropping it and reporting success. The error names the field and the accepted range.

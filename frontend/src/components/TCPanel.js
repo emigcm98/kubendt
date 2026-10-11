@@ -36,9 +36,23 @@ const defaultTBF = {
   latency: 400,
 };
 
+// Settings the panel has no field for (netem rate, reorder, a loss model, a
+// child qdisc). They are shown so an Update, which rebuilds the whole qdisc,
+// does not drop them unnoticed.
+const extrasOf = (tcparams) => {
+  const extras = [];
+  if (tcparams.qdisc === 'netem' && tcparams.rate) extras.push(`rate ${tcparams.rate}`);
+  if (tcparams.reorder) extras.push(`reorder ${tcparams.reorder}`);
+  if (tcparams.loss_model === 'gemodel') extras.push('Gilbert-Elliott loss');
+  (tcparams.children || []).forEach((c) => extras.push(`child ${c.qdisc}`));
+  return extras;
+};
+
 const fromApi = (tcparams) => {
   const kind = tcparams?.qdisc;
-  if (!isShapedQdisc(kind)) return null;
+  const shaped = typeof tcparams?.shaped === 'boolean' ? tcparams.shaped : isShapedQdisc(kind);
+  if (!shaped) return null;
+  const extras = extrasOf(tcparams);
   if (kind === 'netem') {
     return {
       qdisc: 'netem',
@@ -48,6 +62,7 @@ const fromApi = (tcparams) => {
       duplicate: percentToNumber(tcparams.duplicate),
       corrupt: percentToNumber(tcparams.corrupt),
       limit: Number(tcparams.limit) || 1000,
+      extras,
     };
   }
   if (kind === 'tbf') {
@@ -56,9 +71,10 @@ const fromApi = (tcparams) => {
       rate: parseRate(tcparams.rate),
       burst: parseSize(tcparams.burst),
       latency: timeToMs(tcparams.latency),
+      extras,
     };
   }
-  return { qdisc: kind };
+  return { qdisc: kind, extras };
 };
 
 const toApi = (qd) =>
@@ -348,6 +364,14 @@ const TCPanel = ({
     </div>
   );
 
+  const renderExtras = () =>
+    qdiscData?.extras?.length > 0 && (
+      <p className="tc-hint">
+        Also set outside this panel: {qdiscData.extras.join(', ')}. Update rebuilds the qdisc
+        without them.
+      </p>
+    );
+
   const renderActions = () => (
     <div className="tc-actions">
       {isDraft && (
@@ -399,6 +423,7 @@ const TCPanel = ({
           {numberField('Duplicate (%)', 'duplicate', 0, 100, 0.1)}
           {numberField('Corrupt (%)', 'corrupt', 0, 100, 0.1)}
           {numberField('Limit (packets)', 'limit', 1, 1000000)}
+          {renderExtras()}
           {renderActions()}
         </div>
       );
@@ -420,6 +445,7 @@ const TCPanel = ({
           onChange={(burst) => setQdiscData({ ...qdiscData, burst })}
         />
         {numberField('Latency (ms)', 'latency', 1, 5000)}
+        {renderExtras()}
         {renderActions()}
       </div>
     );

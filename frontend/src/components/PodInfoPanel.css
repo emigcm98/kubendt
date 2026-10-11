@@ -542,6 +542,19 @@
   background-color: var(--danger);
 }
 
+/* Marks an interface with traffic control applied, next to its name. */
+.interface-shaped {
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 2px 5px;
+  margin-left: 0.4rem;
+  border-radius: var(--radius-pill);
+  background: var(--success-bg);
+  color: #1e7e34;
+  border: 1px solid #b7e1c2;
+}
+
 /* Spinner shown in place of the state dot while an interface is toggling. */
 .interface-state-spinner {
   width: 11px;

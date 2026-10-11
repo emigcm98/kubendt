@@ -1501,6 +1501,16 @@ definitions:
         example: 4300
         type: integer
     type: object
+  types.PodQdiscsResponse:
+    properties:
+      interfaces:
+        additionalProperties:
+          $ref: '#/definitions/types.QdiscState'
+        type: object
+      pod:
+        example: host-0
+        type: string
+    type: object
   types.PodTimeline:
     properties:
       kubernetes:
@@ -1533,8 +1543,84 @@ definitions:
         example: eth1
         type: string
       tcparams:
-        additionalProperties: true
+        $ref: '#/definitions/types.QdiscState'
+    type: object
+  types.QdiscState:
+    properties:
+      burst:
+        example: 4096b
+        type: string
+      children:
+        description: Children are the qdiscs attached below this one, when a tree
+          was set by hand.
+        items:
+          $ref: '#/definitions/types.QdiscState'
+        type: array
+      corrupt:
+        example: 0.1%
+        type: string
+      delay:
+        description: netem
+        example: 50ms
+        type: string
+      delay_correlation:
+        example: 25%
+        type: string
+      duplicate:
+        example: 0.5%
+        type: string
+      gemodel:
+        additionalProperties:
+          type: string
         type: object
+      handle:
+        example: "8001"
+        type: string
+      jitter:
+        example: 10ms
+        type: string
+      latency:
+        example: 50ms
+        type: string
+      limit:
+        example: 1000
+        type: integer
+      loss:
+        example: 1%
+        type: string
+      loss_correlation:
+        example: 10%
+        type: string
+      loss_model:
+        description: |-
+          LossModel is "gemodel" when a Gilbert-Elliott loss model is active, with
+          its parameters (p, r, 1-h, 1-k) in Gemodel.
+        example: gemodel
+        type: string
+      parent:
+        example: root
+        type: string
+      qdisc:
+        example: netem
+        type: string
+      rate:
+        description: Rate is netem's rate or tbf's. Burst and Latency are tbf's.
+        example: 500kbit
+        type: string
+      raw:
+        description: Raw is what tc printed for this qdisc.
+        type: string
+      reorder:
+        example: 25%
+        type: string
+      reorder_correlation:
+        example: 50%
+        type: string
+      shaped:
+        description: False on the kernel default (noqueue, pfifo_fast, mq), true for
+          anything installed on purpose.
+        example: true
+        type: boolean
     type: object
   types.ReadinessResponse:
     properties:
@@ -3397,9 +3483,45 @@ paths:
       summary: Restart pod
       tags:
       - pods
+  /pods/tc/{namespace}/{podName}:
+    get:
+      description: Returns the traffic control state of every interface of a pod (loopback
+        and kernel pseudo-interfaces excluded), read with one exec. Each entry has
+        the same shape as the single-interface endpoint.
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: Pod name
+        in: path
+        name: podName
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.PodQdiscsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Show Qdisc (TC) info for every interface
+      tags:
+      - pods
   /pods/tc/{namespace}/{podName}/{interface}:
     get:
-      description: Returns Traffic Control qdisc information for a pod interface.
+      description: Returns the traffic control state of a pod interface, read with
+        `tc -j qdisc show` and normalized (times in ms, percentages, rates in kbit/mbit,
+        sizes in bytes). `shaped` is false on the kernel default qdisc.
       parameters:
       - description: Namespace name
         in: path

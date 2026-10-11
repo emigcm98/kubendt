@@ -71,8 +71,9 @@ func SetupRoutes(router *gin.Engine) {
 		podGroup.PATCH("/restart/:namespace/:podName", handlers.RestartPod)
 		// 3. Get pod IP, MAC, NAT
 		podGroup.GET("/ips/:namespace/:podName", handlers.GetInterfacesFromPod)
-		// 4. Get Qdisc info
+		// 4. Get Qdisc info, one interface or every interface of the pod
 		podGroup.GET("/tc/:namespace/:podName/:interface", handlers.ShowQdisc)
+		podGroup.GET("/tc/:namespace/:podName", handlers.ShowPodQdiscs)
 		// 5. Get pod CPU/RAM metrics (requires metrics-server)
 		podGroup.GET("/metrics/:namespace/:podName", handlers.GetPodMetrics)
 	}
