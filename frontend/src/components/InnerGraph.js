@@ -159,6 +159,7 @@ const InnerGraph = ({
   loadingInterfaces,
   setLoadingInterfaces,
   onOpenInteractiveShell,
+  onOpenLogs,
   onRestartPod,
   onDeleteNode,
   onDeleteLink,
@@ -1162,6 +1163,14 @@ const InnerGraph = ({
               onOpenInteractiveShell(pod, mode);
             }
           }}
+          onOpenLogs={
+            onOpenLogs
+              ? () => {
+                  const pod = nodes.find((n) => n.id === contextMenu.nodeId)?.data?.fullInfo;
+                  if (pod) onOpenLogs(pod);
+                }
+              : null
+          }
           onStartTrace={
             onStartTrace
               ? () => {

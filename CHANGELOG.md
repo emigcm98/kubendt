@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `GET /network/export-conf/{namespace}` returns the configuration applied in a namespace as a configure request, and the dashboard downloads it with Export network conf, ready for Load network conf.
 - The namespace bar shows the pods and links of the topology on one side of the name and the vCPU and MiB the namespace uses on the other.
 - `GET /pods/counters/{namespace}/{pod}` returns the kernel counters of every interface of a pod. The interface detail of the node panel and both ends of the link panel show rates, packets, errors and drops, read every 5 s while open.
+- View logs in the node menu and a button in the node panel open a floating viewer that follows the log, with filter, timestamps, the previous instance after a restart and download. `GET /pods/logs/{namespace}/{pod}` returns it as text and the WebSocket variant streams it.
 
 ### Changed
 

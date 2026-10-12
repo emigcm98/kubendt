@@ -2258,6 +2258,85 @@
                 }
             }
         },
+        "/pods/logs/{namespace}/{podName}": {
+            "get": {
+                "description": "Returns the log of one container of a pod as text, like kubectl logs, read from the kubelet through the API server (no exec). The main container by default. `tail` is 500 lines unless given, 0 reads everything. The same log can be followed over WebSocket at /pods/logs/ws/{namespace}/{podName} with the same query: a first text frame with the metadata (containers, restarts), one binary frame per line, and a final text frame when the stream ends.",
+                "produces": [
+                    "text/plain"
+                ],
+                "tags": [
+                    "pods"
+                ],
+                "summary": "Container log of a pod",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pod name",
+                        "name": "podName",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Container to read, the main one by default",
+                        "name": "container",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 500,
+                        "description": "Lines from the end, 0 for the whole log",
+                        "name": "tail",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Only lines newer than this many seconds",
+                        "name": "since",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Prefix every line with its timestamp",
+                        "name": "timestamps",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Read the log of the previous instance of the container, after a restart",
+                        "name": "previous",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The log",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/pods/metrics/{namespace}/{podName}": {
             "get": {
                 "description": "Returns real-time CPU (millicores) and memory (bytes/MiB) usage for a single pod via the Kubernetes metrics-server API. Returns HTTP 503 with {\"available\": false} when metrics-server is not installed or not yet ready.",

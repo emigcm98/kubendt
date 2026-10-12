@@ -3,6 +3,7 @@ import './ContextMenu.css';
 import { ReactComponent as TraceIcon } from '../assets/images/icons/trace-icon.svg';
 import { ReactComponent as SlidersIcon } from '../assets/images/icons/sliders.svg';
 import { ReactComponent as TerminalIcon } from '../assets/images/icons/terminal.svg';
+import { ReactComponent as LogsIcon } from '../assets/images/icons/logs.svg';
 import { ReactComponent as RefreshIcon } from '../assets/images/icons/refresh.svg';
 import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
 import { ReactComponent as InfoIcon } from '../assets/images/icons/info.svg';
@@ -13,6 +14,7 @@ const ContextMenu = ({
   node,
   onClose,
   onOpenShell,
+  onOpenLogs,
   onRestartPod,
   onOpenInfoPanel,
   onStartTrace,
@@ -153,6 +155,13 @@ const ContextMenu = ({
         >
           <TerminalIcon className="graph-context-menu-icon" />
           <span className="graph-context-menu-label">Open vtysh console</span>
+        </div>
+      )}
+
+      {!isExternal && onOpenLogs && (
+        <div className="graph-context-menu-item" onClick={() => handleOptionClick(onOpenLogs)}>
+          <LogsIcon className="graph-context-menu-icon" />
+          <span className="graph-context-menu-label">View logs</span>
         </div>
       )}
 

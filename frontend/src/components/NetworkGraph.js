@@ -18,11 +18,13 @@ import ExternalNodeInfoPanel from './ExternalNodeInfoPanel';
 import LinkInfoPanel from './LinkInfoPanel';
 import TopologyInputModal from './TopologyInputModal';
 import PodInteractiveShellModal from './PodInteractiveShellModal';
+import PodLogsModal from './PodLogsModal';
 import CapturePanel from './CapturePanel';
 import TCPanel from './TCPanel';
 import TracePanel from './TracePanel';
 import { ReactComponent as PcapIcon } from '../assets/images/icons/pcap.svg';
 import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
+import { ReactComponent as LogsIcon } from '../assets/images/icons/logs.svg';
 import { ReactComponent as UploadIcon } from '../assets/images/icons/upload.svg';
 import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
 import { ReactComponent as EditIcon } from '../assets/images/icons/edit.svg';
@@ -752,6 +754,7 @@ const NetworkGraph = ({
     }));
   };
   const [openShells, setOpenShells] = useState([]); // Array of {id, podName, pod, shellMode, zIndex, minimized}
+  const [openLogs, setOpenLogs] = useState([]); // Array of {id, podName, zIndex, minimized}
   const openShellsRef = useRef(openShells);
   const [openCaptures, setOpenCaptures] = useState([]); // Array of {id, pod, iface, zIndex, minimized}
   const [openTCs, setOpenTCs] = useState([]); // Array of {id, pod, iface, zIndex, minimized}
@@ -1269,6 +1272,35 @@ const NetworkGraph = ({
         minimized: false,
       },
     ]);
+  };
+
+  // Log windows: same lifecycle as the shells, one per open window.
+  const openPodLogs = (pod) => {
+    const podName = pod?.metadata?.name || pod?.name;
+    if (!podName) return;
+    setMaxZIndex((prev) => prev + 1);
+    setOpenLogs((prev) => [
+      ...prev,
+      {
+        id: `logs-${Date.now()}-${Math.random()}`,
+        podName,
+        zIndex: maxZIndex + 1,
+        minimized: false,
+      },
+    ]);
+  };
+  const closePodLogs = (id) => setOpenLogs((prev) => prev.filter((l) => l.id !== id));
+  const minimizePodLogs = (id) =>
+    setOpenLogs((prev) => prev.map((l) => (l.id === id ? { ...l, minimized: true } : l)));
+  const restorePodLogs = (id) => {
+    setMaxZIndex((prev) => prev + 1);
+    setOpenLogs((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, minimized: false, zIndex: maxZIndex + 1 } : l))
+    );
+  };
+  const bringPodLogsToFront = (id) => {
+    setMaxZIndex((prev) => prev + 1);
+    setOpenLogs((prev) => prev.map((l) => (l.id === id ? { ...l, zIndex: maxZIndex + 1 } : l)));
   };
 
   const closeInteractiveShell = (shellId) => {
@@ -3491,6 +3523,7 @@ const NetworkGraph = ({
             pod={selectedNodeInfo}
             namespace={namespace}
             onOpenInteractiveShell={openInteractiveShell}
+            onOpenLogs={openPodLogs}
             onRestartPod={handleRestartPod}
             onDeletePod={handleDeleteNode}
             isBusy={isBusy}
@@ -3826,6 +3859,7 @@ const NetworkGraph = ({
             setLoadingInterfaces={setLoadingInterfaces}
             onUpdateInterface={updateInterfaceStatus}
             onOpenInteractiveShell={openInteractiveShell}
+            onOpenLogs={openPodLogs}
             onRestartPod={handleRestartPod}
             onDeleteNode={handleDeleteNode}
             onDeleteLink={handleDeleteLink}
@@ -3854,6 +3888,20 @@ const NetworkGraph = ({
           onClose={() => closeInteractiveShell(shell.id)}
           onMinimize={() => minimizeShell(shell.id)}
           onBringToFront={() => bringShellToFront(shell.id)}
+        />
+      ))}
+
+      {openLogs.map((win) => (
+        <PodLogsModal
+          key={win.id}
+          logId={win.id}
+          podName={win.podName}
+          namespace={namespace}
+          zIndex={win.zIndex}
+          minimized={!!win.minimized}
+          onClose={() => closePodLogs(win.id)}
+          onMinimize={() => minimizePodLogs(win.id)}
+          onBringToFront={() => bringPodLogsToFront(win.id)}
         />
       ))}
 
@@ -3909,6 +3957,7 @@ const NetworkGraph = ({
 
       {/* Bottom-centered taskbar with chips for minimized shells and captures */}
       {(openShells.some((s) => s.minimized) ||
+        openLogs.some((l) => l.minimized) ||
         openCaptures.some((c) => c.minimized) ||
         openTCs.some((t) => t.minimized)) && (
         <div className="shell-taskbar" role="toolbar" aria-label="Minimized windows">
@@ -3931,6 +3980,32 @@ const NetworkGraph = ({
                   className="shell-taskbar-chip-close"
                   onClick={() => closeInteractiveShell(shell.id)}
                   title="Close shell"
+                >
+                  <CloseIcon className="app-icon" />
+                </button>
+              </div>
+            ))}
+          {openLogs
+            .filter((l) => l.minimized)
+            .map((win) => (
+              <div key={win.id} className="shell-taskbar-chip">
+                <button
+                  type="button"
+                  className="shell-taskbar-chip-restore"
+                  onClick={() => restorePodLogs(win.id)}
+                  title={`Restore logs: ${win.podName}`}
+                >
+                  <span className="shell-taskbar-chip-icon">
+                    <LogsIcon className="app-icon" />
+                  </span>
+                  <span className="shell-taskbar-chip-name">{win.podName}</span>
+                  <span className="shell-taskbar-chip-mode">logs</span>
+                </button>
+                <button
+                  type="button"
+                  className="shell-taskbar-chip-close"
+                  onClick={() => closePodLogs(win.id)}
+                  title="Close logs"
                 >
                   <CloseIcon className="app-icon" />
                 </button>

@@ -3811,6 +3811,65 @@ paths:
       summary: Get interfaces from a pod
       tags:
       - pods
+  /pods/logs/{namespace}/{podName}:
+    get:
+      description: 'Returns the log of one container of a pod as text, like kubectl
+        logs, read from the kubelet through the API server (no exec). The main container
+        by default. `tail` is 500 lines unless given, 0 reads everything. The same
+        log can be followed over WebSocket at /pods/logs/ws/{namespace}/{podName}
+        with the same query: a first text frame with the metadata (containers, restarts),
+        one binary frame per line, and a final text frame when the stream ends.'
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: Pod name
+        in: path
+        name: podName
+        required: true
+        type: string
+      - description: Container to read, the main one by default
+        in: query
+        name: container
+        type: string
+      - default: 500
+        description: Lines from the end, 0 for the whole log
+        in: query
+        name: tail
+        type: integer
+      - description: Only lines newer than this many seconds
+        in: query
+        name: since
+        type: integer
+      - description: Prefix every line with its timestamp
+        in: query
+        name: timestamps
+        type: boolean
+      - description: Read the log of the previous instance of the container, after
+          a restart
+        in: query
+        name: previous
+        type: boolean
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: The log
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Container log of a pod
+      tags:
+      - pods
   /pods/metrics/{namespace}/{podName}:
     get:
       description: 'Returns real-time CPU (millicores) and memory (bytes/MiB) usage

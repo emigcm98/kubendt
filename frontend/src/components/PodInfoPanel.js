@@ -12,6 +12,7 @@ import routerIcon from '../assets/images/nodes/router.svg';
 import switchIcon from '../assets/images/nodes/switch.svg';
 import { ReactComponent as RefreshIcon } from '../assets/images/icons/refresh.svg';
 import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
+import { ReactComponent as LogsIcon } from '../assets/images/icons/logs.svg';
 import { ReactComponent as FileIcon } from '../assets/images/icons/file.svg';
 import { ReactComponent as EyeIcon } from '../assets/images/icons/eye.svg';
 import { ReactComponent as LockIcon } from '../assets/images/icons/lock.svg';
@@ -58,6 +59,7 @@ const PodInfoPanel = ({
   pod,
   namespace,
   onOpenInteractiveShell,
+  onOpenLogs,
   showInteractiveShell,
   onClosePanel,
   onRestartPod,
@@ -610,6 +612,11 @@ const PodInfoPanel = ({
             <RefreshIcon className="app-icon" />
           )}
         </button>
+        {onOpenLogs && (
+          <button className="logs-btn" onClick={() => onOpenLogs(pod)} title="View the pod's log">
+            <LogsIcon className="app-icon" />
+          </button>
+        )}
         {onDeletePod && (
           <button
             className="delete-btn"
