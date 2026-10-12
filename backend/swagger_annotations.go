@@ -909,3 +909,17 @@ var _ = types.TraceMetricsDoc{}
 //	@Failure      500        {object}  types.ErrorResponse
 //	@Router       /network/export-conf/{namespace} [get]
 func swaggerExportNetworkConf() {}
+
+// swaggerGetPodInterfaceCounters godoc
+//
+//	@Summary      Interface counters of a pod
+//	@Description  Returns the kernel counters (bytes, packets, errors, drops, per direction) of every data interface of a pod, read from /proc/net/dev with one exec. `at` is the read time in Unix milliseconds, so two reads give rates.
+//	@Tags         pods
+//	@Produce      json
+//	@Param        namespace  path      string  true  "Namespace name"
+//	@Param        podName    path      string  true  "Pod name"
+//	@Success      200        {object}  types.PodCountersResponse
+//	@Failure      400        {object}  types.ErrorResponse
+//	@Failure      500        {object}  types.ErrorResponse
+//	@Router       /pods/counters/{namespace}/{podName} [get]
+func swaggerGetPodInterfaceCounters() {}

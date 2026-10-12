@@ -217,3 +217,10 @@
   background: var(--info-bg);
   border-color: var(--primary);
 }
+
+/* Counters of this end, under its addresses. */
+.link-endpoint-counters {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border-light);
+}

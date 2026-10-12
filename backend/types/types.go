@@ -292,6 +292,27 @@ type DeviceSpec struct {
 // it, read from `tc -j qdisc show`. Values are canonical whatever tc printed:
 // times in ms, percentages with "%", rates in bit, kbit, mbit or gbit, sizes
 // in bytes. Only the fields the qdisc carries are present.
+// InterfaceCounters is one row of /proc/net/dev: what the kernel has seen on
+// an interface since it came up.
+type InterfaceCounters struct {
+	RxBytes   int64 `json:"rx_bytes" example:"32308"`
+	RxPackets int64 `json:"rx_packets" example:"507"`
+	RxErrors  int64 `json:"rx_errors" example:"0"`
+	RxDropped int64 `json:"rx_dropped" example:"0"`
+	TxBytes   int64 `json:"tx_bytes" example:"696"`
+	TxPackets int64 `json:"tx_packets" example:"10"`
+	TxErrors  int64 `json:"tx_errors" example:"0"`
+	TxDropped int64 `json:"tx_dropped" example:"0"`
+}
+
+// PodCountersResponse is returned by GET /pods/counters/{namespace}/{podName}.
+// At is the read time in Unix milliseconds, so two reads give rates.
+type PodCountersResponse struct {
+	Pod        string                       `json:"pod" example:"router1-0"`
+	At         int64                        `json:"at" example:"1760260000000"`
+	Interfaces map[string]InterfaceCounters `json:"interfaces"`
+}
+
 type QdiscState struct {
 	Qdisc string `json:"qdisc" example:"netem"`
 	// False on the kernel default (noqueue, pfifo_fast, mq), true for anything installed on purpose.

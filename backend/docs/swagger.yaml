@@ -577,6 +577,33 @@ definitions:
         example: 0.1.0-pre
         type: string
     type: object
+  types.InterfaceCounters:
+    properties:
+      rx_bytes:
+        example: 32308
+        type: integer
+      rx_dropped:
+        example: 0
+        type: integer
+      rx_errors:
+        example: 0
+        type: integer
+      rx_packets:
+        example: 507
+        type: integer
+      tx_bytes:
+        example: 696
+        type: integer
+      tx_dropped:
+        example: 0
+        type: integer
+      tx_errors:
+        example: 0
+        type: integer
+      tx_packets:
+        example: 10
+        type: integer
+    type: object
   types.InterfaceDetail:
     properties:
       ip:
@@ -1492,6 +1519,19 @@ definitions:
         type: array
       pod:
         example: router1
+        type: string
+    type: object
+  types.PodCountersResponse:
+    properties:
+      at:
+        example: 1760260000000
+        type: integer
+      interfaces:
+        additionalProperties:
+          $ref: '#/definitions/types.InterfaceCounters'
+        type: object
+      pod:
+        example: router1-0
         type: string
     type: object
   types.PodDriverHistoryResponseDoc:
@@ -3687,6 +3727,40 @@ paths:
           schema:
             $ref: '#/definitions/types.ErrorResponse'
       summary: List pods
+      tags:
+      - pods
+  /pods/counters/{namespace}/{podName}:
+    get:
+      description: Returns the kernel counters (bytes, packets, errors, drops, per
+        direction) of every data interface of a pod, read from /proc/net/dev with
+        one exec. `at` is the read time in Unix milliseconds, so two reads give rates.
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: Pod name
+        in: path
+        name: podName
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.PodCountersResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Interface counters of a pod
       tags:
       - pods
   /pods/ips/{namespace}/{podName}:

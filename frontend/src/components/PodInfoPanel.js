@@ -6,6 +6,7 @@ import AlertModal from './AlertModal';
 import InterfaceContextMenu from './InterfaceContextMenu';
 import usePanelClose from './usePanelClose';
 import { API_BASE_URL } from '../config';
+import { useCounters, CountersRows } from './counters';
 import pcIcon from '../assets/images/nodes/host.svg';
 import routerIcon from '../assets/images/nodes/router.svg';
 import switchIcon from '../assets/images/nodes/switch.svg';
@@ -18,6 +19,7 @@ import { ReactComponent as CopyIcon } from '../assets/images/icons/copy.svg';
 import { ReactComponent as WarningIcon } from '../assets/images/icons/warning.svg';
 import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
 import { ReactComponent as SlidersIcon } from '../assets/images/icons/sliders.svg';
+import { ReactComponent as PcapIcon } from '../assets/images/icons/pcap.svg';
 
 const POD_INFO_TAB_KEY_PREFIX = 'kubendt.podInfoPanel.activeTab.';
 const VALID_TABS = new Set(['summary', 'driver', 'links', 'vars']);
@@ -65,6 +67,7 @@ const PodInfoPanel = ({
   setLoadingInterfaces,
   onUpdateInterface,
   onOpenTrafficControl,
+  onStartCapture,
   isBusy = false,
 }) => {
   const navigate = useNavigate();
@@ -583,6 +586,9 @@ const PodInfoPanel = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedInterface, namespace, pod.name]);
 
+  // Counters of the picked interface, read while its detail is open.
+  const counters = useCounters(namespace, pod?.name, activeTab === 'links' && !!selectedInterface);
+
   if (!pod) return null;
 
   return (
@@ -1070,6 +1076,13 @@ const PodInfoPanel = ({
                     ) : (
                       <div className="tc-links-panel">
                         <div className="tc-links-head">
+                          <span className="tc-links-title">Traffic</span>
+                          <span className="counters-note">
+                            {counters.last === null ? 'reading…' : 'every 5 s while open'}
+                          </span>
+                        </div>
+                        <CountersRows samples={counters} iface={selectedInterface} />
+                        <div className="tc-links-head">
                           <span className="tc-links-title">Traffic control</span>
                           <span
                             className={`tc-links-status ${qdiscByIface[selectedInterface]?.shaped ? 'on' : 'off'}`}
@@ -1081,16 +1094,27 @@ const PodInfoPanel = ({
                                 : 'No shaping'}
                           </span>
                         </div>
-                        <button
-                          className="tc-links-open"
-                          onClick={() =>
-                            onOpenTrafficControl &&
-                            onOpenTrafficControl(pod.name, selectedInterface)
-                          }
-                        >
-                          <SlidersIcon className="app-icon" />
-                          Open traffic control
-                        </button>
+                        {/* Same two actions as an end of the link panel, same look. */}
+                        <div className="link-endpoint-actions">
+                          {onStartCapture && (
+                            <button
+                              className="link-capture-btn"
+                              onClick={() => onStartCapture(pod.name, selectedInterface)}
+                              title={`Capture packets on ${pod.name}:${selectedInterface}`}
+                            >
+                              <PcapIcon /> Capture
+                            </button>
+                          )}
+                          {onOpenTrafficControl && (
+                            <button
+                              className="link-tc-btn"
+                              onClick={() => onOpenTrafficControl(pod.name, selectedInterface)}
+                              title={`Traffic control on ${pod.name}:${selectedInterface}`}
+                            >
+                              <SlidersIcon /> Traffic control
+                            </button>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>

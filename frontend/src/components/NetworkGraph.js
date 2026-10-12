@@ -3501,6 +3501,7 @@ const NetworkGraph = ({
             setLoadingInterfaces={setLoadingInterfaces}
             onUpdateInterface={updateInterfaceStatus}
             onOpenTrafficControl={openTC}
+            onStartCapture={openCapture}
           />
         ))}
 

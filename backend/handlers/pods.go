@@ -357,6 +357,23 @@ func ShowPodQdiscs(c *gin.Context) {
 	})
 }
 
+// GetPodInterfaceCounters returns the kernel counters of every data interface
+// of a pod, read on demand by the panels that show traffic.
+func GetPodInterfaceCounters(c *gin.Context) {
+	namespace := c.Param("namespace")
+	podName, err := helpers.ResolvePodReference(namespace, c.Param("podName"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	counters, err := helpers.ReadInterfaceCounters(namespace, podName)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, counters)
+}
+
 // GetPodMetrics returns CPU and memory usage for a single pod via the metrics-server API.
 // Returns {"available": false} with HTTP 503 if metrics-server is not installed.
 func GetPodMetrics(c *gin.Context) {
