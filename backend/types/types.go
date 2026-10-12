@@ -31,6 +31,12 @@ type GuestInterfaceMapper interface {
 	GuestInterface(namespace, podName, podInterface string) (string, error)
 }
 
+// SNATInterfaceInspector is an optional interface for drivers that can say
+// which interface a pod masquerades through. Read-only, nothing persisted.
+type SNATInterfaceInspector interface {
+	GetSNATInterface(namespace, podName string) (string, error)
+}
+
 // GuestProbeProvider is an optional interface for drivers whose dataplane
 // lives inside a guest VM. Network probes (traceroute, mtr) run there,
 // wrapped with the returned command prefix, instead of in the pod's debug

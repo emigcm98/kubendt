@@ -119,9 +119,9 @@ KubeNDT implements network topology management for Kubernetes through five inter
 2. `ListDriverOperationsForPod()`: Query all operations for a pod, ordered by ID (insertion order)
 3. `ReplayDriverOperationsForPod()`:
    - Get driver from pod label
-   - For each operation: resolve commands, execute, handle failures
-   - Unsupported actions: deleted from DB (pruned)
-   - Failed executions: deleted from DB (assume offline fix)
+   - Plan every operation and run them through the shared action pipeline, batching consecutive guest commits
+   - Operations that no longer resolve or fail permanently: deleted from DB (pruned)
+   - Transient transport errors abort the replay and keep the operations
    - Successful: count toward replay total
 
 **Pod Restart Recovery**:

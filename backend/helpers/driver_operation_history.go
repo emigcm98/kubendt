@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"kubendt/executor"
 	"kubendt/kubeclient"
 	"kubendt/types"
 	"log"
@@ -375,35 +374,28 @@ func ReplayDriverOperationsForPodWithStats(namespace, podName string) (DriverRep
 		return DriverReplayStats{}, fmt.Errorf("cannot resolve driver for replay in %s/%s: %w", namespace, podName, err)
 	}
 
-	driverExecutor, driverExecutorName, err := executor.ResolveForDriver(driver)
-	if err != nil {
-		return DriverReplayStats{}, fmt.Errorf("cannot resolve executor for replay in %s/%s: %w", namespace, podName, err)
-	}
-
 	// ── RESOLVE PHASE ────────────────────────────────────────────────────────
-	// Collect resolved items. Non-persist and error ops are pruned here.
-	type replayItem struct {
-		op       PersistedDriverOperation
-		execName string
-		execInst executor.CommandExecutor
-		commands [][]string
-	}
-	items := make([]replayItem, 0, len(ops))
+	// Non-persist ops and ops that no longer resolve are pruned here, the
+	// rest are planned in order.
+	plans := make([]PlannedAction, 0, len(ops))
+	planOps := make([]PersistedDriverOperation, 0, len(ops))
 	pruned := 0
 	errs := make([]string, 0)
+	prune := func(op PersistedDriverOperation, why string, cause error) {
+		if delErr := DeleteDriverOperationHistoryByID(op.ID); delErr != nil {
+			errs = append(errs, fmt.Sprintf("op id=%d %s and could not delete entry: %v", op.ID, why, delErr))
+			return
+		}
+		pruned++
+		log.Printf("🧹 Removed persisted operation id=%d for %s/%s after %s: %v", op.ID, namespace, podName, why, cause)
+	}
 
 	for _, op := range ops {
-		actionType := op.ActionType
-		if actionType == "" {
-			actionType = op.Action.Type
-		}
 		action := op.Action
 		if action.Type == "" {
-			action.Type = actionType
+			action.Type = op.ActionType
 		}
-
-		flags := ResolveActionFlags(action)
-		if !flags.Persist {
+		if !ResolveActionFlags(action).Persist {
 			if delErr := DeleteDriverOperationHistoryByID(op.ID); delErr != nil {
 				errs = append(errs, fmt.Sprintf("non-persist op id=%d should not be persisted and could not be deleted: %v", op.ID, delErr))
 			} else {
@@ -412,147 +404,42 @@ func ReplayDriverOperationsForPodWithStats(namespace, podName string) (DriverRep
 			}
 			continue
 		}
-
-		actionExecutorName, commands, resolveErr := ResolveDriverExecutionPlanForPod(namespace, podName, driver, action)
-		if resolveErr != nil {
-			if delErr := DeleteDriverOperationHistoryByID(op.ID); delErr != nil {
-				errs = append(errs, fmt.Sprintf("op id=%d resolve failure and could not delete entry: %v", op.ID, delErr))
-			} else {
-				pruned++
-				log.Printf("🧹 Removed persisted operation id=%d for %s/%s after resolve error: %v", op.ID, namespace, podName, resolveErr)
-			}
+		p := PlanActions(namespace, podName, driver, nil, []types.ActionEntry{action})[0]
+		if p.Err != nil {
+			prune(op, "resolve error", p.Err)
 			continue
 		}
-		if commands == nil {
-			if delErr := DeleteDriverOperationHistoryByID(op.ID); delErr != nil {
-				errs = append(errs, fmt.Sprintf("op id=%d unsupported by current driver and failed to delete stale entry: %v", op.ID, delErr))
-			} else {
-				pruned++
-				log.Printf("🧹 Removed stale persisted operation id=%d for %s/%s (unsupported by current driver)", op.ID, namespace, podName)
-			}
-			continue
-		}
-
-		execInst := driverExecutor
-		execModeName := driverExecutorName
-		if strings.TrimSpace(actionExecutorName) != "" && actionExecutorName != driverExecutorName {
-			execOverride, execErr := executor.Get(actionExecutorName)
-			if execErr != nil {
-				if delErr := DeleteDriverOperationHistoryByID(op.ID); delErr != nil {
-					errs = append(errs, fmt.Sprintf("op id=%d executor resolve failure and could not delete entry: %v", op.ID, delErr))
-				} else {
-					pruned++
-					log.Printf("🧹 Removed persisted operation id=%d for %s/%s after executor resolve error: %v", op.ID, namespace, podName, execErr)
-				}
-				continue
-			}
-			execInst = execOverride
-			execModeName = actionExecutorName
-		}
-
-		items = append(items, replayItem{
-			op:       op,
-			execName: execModeName,
-			execInst: execInst,
-			commands: commands,
-		})
+		plans = append(plans, p)
+		planOps = append(planOps, op)
 	}
 
-	// ── EXECUTE PHASE (with batching) ────────────────────────────────────────
-	// Consecutive items sharing the same batchable executor are merged into a
-	// single configure→commit→exit round trip, matching the initial apply logic.
+	// ── EXECUTE PHASE ────────────────────────────────────────────────────────
+	// Consecutive ops on one guest commit go as a single batch, like the first
+	// apply. A transient transport error aborts the replay and keeps the ops,
+	// a permanent error prunes the op (every op of a failed batch).
+	for i := range plans {
+		log.Printf("🔁 Replaying persisted operation id=%d type=%s for pod %s/%s", planOps[i].ID, plans[i].Action.Type, namespace, podName)
+	}
+	outcomes, abortErr := RunPlannedActions(namespace, podName, plans, RunOptions{Exec: execWithReplayRetry, Abort: isTransientExecError})
 	replayed := 0
-	i := 0
-	for i < len(items) {
-		item := items[i]
-
-		// Collect a batchable run.
-		if executor.BatchableExecutors[item.execName] {
-			j := i
-			group := make([]replayItem, 0)
-			for j < len(items) && items[j].execName == item.execName {
-				group = append(group, items[j])
-				j++
-			}
-
-			// Log each op in the batch.
-			for _, g := range group {
-				log.Printf("🔁 Replaying persisted operation id=%d type=%s for pod %s/%s", g.op.ID, g.op.ActionType, namespace, podName)
-			}
-
-			// Flatten all command arg groups into one batch command.
-			var allArgs []string
-			for _, g := range group {
-				for _, cmdGroup := range g.commands {
-					allArgs = append(allArgs, cmdGroup...)
-				}
-			}
-			batchCmd := executor.NewArgsCommand(allArgs)
-			execErr := execWithReplayRetry(func() error {
-				_, err := item.execInst.ExecCommandAndGet(podName, namespace, batchCmd)
-				return err
-			})
-
-			if execErr != nil {
-				if isTransientExecError(execErr) {
-					log.Printf("⏳ Transient executor error replaying batch for %s/%s, aborting replay (ops preserved): %v",
-						namespace, podName, execErr)
-					return DriverReplayStats{Total: len(ops), Replayed: replayed, Pruned: pruned},
-						&TransientReplayError{Namespace: namespace, PodName: podName, Err: execErr}
-				}
-				// Permanent error, prune all ops in the batch.
-				for _, g := range group {
-					if delErr := DeleteDriverOperationHistoryByID(g.op.ID); delErr != nil {
-						errs = append(errs, fmt.Sprintf("op id=%d batch failure and could not delete entry: %v", g.op.ID, delErr))
-					} else {
-						pruned++
-						log.Printf("🧹 Removed persisted operation id=%d for %s/%s after batch replay error: %v", g.op.ID, namespace, podName, execErr)
-					}
-				}
-			} else {
-				for _, g := range group {
-					replayed++
-					if err := TouchDriverOperation(g.op.ID); err != nil {
-						log.Printf("⚠️ Could not refresh executed_at of op id=%d: %v", g.op.ID, err)
-					}
-					log.Printf("✅ Replayed persisted operation id=%d for pod %s/%s", g.op.ID, namespace, podName)
-				}
-			}
-
-			i = j
+	for i, o := range outcomes {
+		if !o.Ran {
 			continue
 		}
-
-		// Non-batchable: execute individually.
-		log.Printf("🔁 Replaying persisted operation id=%d type=%s for pod %s/%s", item.op.ID, item.op.ActionType, namespace, podName)
-		pruneStale := false
-		for _, cmd := range executor.CommandsFromLegacyForExecutor(item.commands, item.execName) {
-			execErr := execWithReplayRetry(func() error { return item.execInst.ExecCommand(podName, namespace, cmd) })
-			if execErr != nil {
-				if isTransientExecError(execErr) {
-					log.Printf("⏳ Transient executor error replaying op id=%d for %s/%s, aborting replay (ops preserved): %v",
-						item.op.ID, namespace, podName, execErr)
-					return DriverReplayStats{Total: len(ops), Replayed: replayed, Pruned: pruned},
-						&TransientReplayError{Namespace: namespace, PodName: podName, Err: execErr}
-				}
-				if delErr := DeleteDriverOperationHistoryByID(item.op.ID); delErr != nil {
-					errs = append(errs, fmt.Sprintf("op id=%d replay failure and could not delete entry: %v", item.op.ID, delErr))
-				} else {
-					pruned++
-					log.Printf("🧹 Removed persisted operation id=%d for %s/%s after replay error: %v", item.op.ID, namespace, podName, execErr)
-				}
-				pruneStale = true
-				break
-			}
+		if o.Err != nil {
+			prune(planOps[i], "replay error", o.Err)
+			continue
 		}
-		if !pruneStale {
-			replayed++
-			if err := TouchDriverOperation(item.op.ID); err != nil {
-				log.Printf("⚠️ Could not refresh executed_at of op id=%d: %v", item.op.ID, err)
-			}
-			log.Printf("✅ Replayed persisted operation id=%d for pod %s/%s", item.op.ID, namespace, podName)
+		replayed++
+		if err := TouchDriverOperation(planOps[i].ID); err != nil {
+			log.Printf("⚠️ Could not refresh executed_at of op id=%d: %v", planOps[i].ID, err)
 		}
-		i++
+		log.Printf("✅ Replayed persisted operation id=%d for pod %s/%s", planOps[i].ID, namespace, podName)
+	}
+	if abortErr != nil {
+		log.Printf("⏳ Transient executor error replaying %s/%s, aborting replay (ops preserved): %v", namespace, podName, abortErr)
+		return DriverReplayStats{Total: len(ops), Replayed: replayed, Pruned: pruned},
+			&TransientReplayError{Namespace: namespace, PodName: podName, Err: abortErr}
 	}
 
 	if len(errs) > 0 {

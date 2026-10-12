@@ -145,12 +145,9 @@ func reapplyOpsOnIfaces(namespace, podName string, ifaces map[string]bool) (reap
 		log.Printf("⚠️ Peer replay: cannot resolve driver for %s/%s: %v", namespace, podName, err)
 		return 0, 0
 	}
-	driverExec, driverExecName, err := executor.ResolveForDriver(driver)
-	if err != nil {
-		log.Printf("⚠️ Peer replay: cannot resolve executor for %s/%s: %v", namespace, podName, err)
-		return 0, 0
-	}
 
+	var acts []types.ActionEntry
+	var opIDs []int64
 	for _, op := range ops {
 		action := op.Action
 		if action.Type == "" {
@@ -159,41 +156,26 @@ func reapplyOpsOnIfaces(namespace, podName string, ifaces map[string]bool) (reap
 		if !actionTouchesIface(action, ifaces) || !ResolveActionFlags(action).Persist {
 			continue
 		}
-		execName, commands, err := ResolveDriverExecutionPlanForPod(namespace, podName, driver, action)
-		if err != nil || commands == nil {
-			log.Printf("⚠️ Peer replay: op id=%d (%s) on %s/%s not re-applied: %v", op.ID, action.Type, namespace, podName, err)
+		acts = append(acts, action)
+		opIDs = append(opIDs, op.ID)
+	}
+	plans := PlanActions(namespace, podName, driver, nil, acts)
+	for i := range plans {
+		// Guest-VM transports keep their own config inside the guest.
+		if plans[i].Err == nil && executor.BatchableExecutors[plans[i].Executor] {
+			plans[i].Skip = "guest keeps its own config"
+		}
+	}
+	outcomes, _ := RunPlannedActions(namespace, podName, plans, RunOptions{})
+	for i, o := range outcomes {
+		switch {
+		case plans[i].Skip != "":
+		case o.Err != nil:
+			log.Printf("⚠️ Peer replay: op id=%d (%s) on %s/%s not re-applied (kept in history): %v", opIDs[i], plans[i].Action.Type, namespace, podName, o.Err)
 			failed++
-			continue
-		}
-		execInst := driverExec
-		if execName == "" {
-			execName = driverExecName
-		} else if execName != driverExecName {
-			override, getErr := executor.Get(execName)
-			if getErr != nil {
-				log.Printf("⚠️ Peer replay: op id=%d executor %q unavailable on %s/%s: %v", op.ID, execName, namespace, podName, getErr)
-				failed++
-				continue
-			}
-			execInst = override
-		}
-		if executor.BatchableExecutors[execName] {
-			// Guest-VM transports keep their own config inside the guest.
-			continue
-		}
-		ok := true
-		for _, cmd := range executor.CommandsFromLegacyForExecutor(commands, execName) {
-			if execErr := execInst.ExecCommand(podName, namespace, cmd); execErr != nil {
-				log.Printf("⚠️ Peer replay: op id=%d (%s) on %s/%s failed (kept in history): %v", op.ID, action.Type, namespace, podName, execErr)
-				ok = false
-				break
-			}
-		}
-		if ok {
+		default:
 			reapplied++
-			log.Printf("✅ Peer replay: re-applied op id=%d (%s) on %s/%s", op.ID, action.Type, namespace, podName)
-		} else {
-			failed++
+			log.Printf("✅ Peer replay: re-applied op id=%d (%s) on %s/%s", opIDs[i], plans[i].Action.Type, namespace, podName)
 		}
 	}
 	return reapplied, failed

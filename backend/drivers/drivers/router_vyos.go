@@ -95,6 +95,7 @@ type VyOSRouterDriver struct {
 }
 
 var _ capabilities.NATCapable = (*VyOSRouterDriver)(nil)
+var _ types.SNATInterfaceInspector = (*VyOSRouterDriver)(nil)
 
 // ─── NAT ─────────────────────────────────────────────────────────────────────
 

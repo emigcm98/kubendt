@@ -11,8 +11,8 @@ import (
 
 type NATBase struct{}
 
-// GetSNATInterface base implementation: uses iptables inside the pod (native Linux).
-// VyOS and XRD override this with their own commands.
+// GetSNATInterface reads the masqueraded interface from iptables inside the
+// pod (native Linux). VyOS reads its own config instead.
 func (NATBase) GetSNATInterface(namespace, podName string) (string, error) {
 	out, err := executor.ExecAndGet(namespace, podName, []string{"iptables", "-t", "nat", "-S", "POSTROUTING"})
 	if err != nil {

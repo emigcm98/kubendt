@@ -5,7 +5,6 @@ import (
 	"log"
 	"strings"
 
-	"kubendt/executor"
 	"kubendt/kubeclient"
 	"kubendt/types"
 )
@@ -110,46 +109,17 @@ func ApplyPodActions(namespace, podName string, actions []types.ActionEntry) []t
 		return out
 	}
 	driverType := fmt.Sprintf("%T", driver)
-	_, driverExecName, err := executor.ResolveForDriver(driver)
-	if err != nil {
-		var out []types.Warning
-		for _, a := range actions {
-			out = append(out, warn(a, err))
-		}
-		return out
-	}
 
 	var warnings []types.Warning
-	for _, action := range actions {
-		execName, commands, err := ResolveDriverExecutionPlanForPod(namespace, podName, driver, action)
-		if err == nil && commands == nil {
-			err = fmt.Errorf("unsupported action")
-		}
-		if err != nil {
-			warnings = append(warnings, warn(action, err))
+	plans := PlanActions(namespace, podName, driver, nil, actions)
+	outcomes, _ := RunPlannedActions(namespace, podName, plans, RunOptions{})
+	for i, o := range outcomes {
+		if o.Err != nil {
+			warnings = append(warnings, warn(plans[i].Action, o.Err))
 			continue
 		}
-		if strings.TrimSpace(execName) == "" {
-			execName = driverExecName
-		}
-		execInst, err := executor.Get(execName)
-		if err != nil {
-			warnings = append(warnings, warn(action, err))
-			continue
-		}
-		failed := false
-		for _, cmd := range executor.CommandsFromLegacyForExecutor(commands, execName) {
-			if execErr := execInst.ExecCommand(podName, namespace, cmd); execErr != nil {
-				warnings = append(warnings, warn(action, execErr))
-				failed = true
-				break
-			}
-		}
-		if failed {
-			continue
-		}
-		if err := SaveDriverOperation(namespace, podName, driverType, action); err != nil {
-			warnings = append(warnings, warn(action, fmt.Errorf("applied but not persisted: %w", err)))
+		if err := SaveDriverOperation(namespace, podName, driverType, plans[i].Action); err != nil {
+			warnings = append(warnings, warn(plans[i].Action, fmt.Errorf("applied but not persisted: %w", err)))
 		}
 	}
 	for _, w := range warnings {
