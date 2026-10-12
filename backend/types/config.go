@@ -77,7 +77,11 @@ type ActionEntry struct {
 
 	// Custom, accepts a string ("sh -c" wrapper) or an array of args.
 	// Only used when type == "custom". No driver label required on the pod.
-	Command json.RawMessage `json:"command,omitempty"`
+	Command json.RawMessage `json:"command,omitempty" swaggertype:"string" example:"ip route show"`
+	// Executor names where a custom command runs, kubectl (the pod's
+	// container) by default. ssh_qemu is a shell in a VyOS guest, vyos_ssh_cli
+	// an op-mode command there.
+	Executor string `json:"executor,omitempty" example:"ssh_qemu"`
 }
 
 type ActionOptions struct {

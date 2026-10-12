@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	caps "kubendt/capabilities/capabilities"
+	caps "kubendt/capabilities"
 	drivers_registry "kubendt/drivers/registry"
 	"kubendt/types"
 )

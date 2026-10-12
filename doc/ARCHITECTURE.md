@@ -40,7 +40,7 @@ Every action is declared once, next to its capability interface, in the `actions
 
 Traffic control is not a driver capability. It runs on any pod through the pod's own `tc`, with an ephemeral toolbox container as fallback, so every node can be shaped. It and `custom` are universal actions, registered against any driver with their own executor.
 
-The same action type can use different executors depending on driver/runtime constraints (for example guest CLI wrappers in QEMU-based platforms).
+A driver names the executor its actions run through: `kubectl` for Linux images, the guest's HTTP API for VyOS. A driver whose guest names interfaces differently from the pod maps them (`GuestInterfaceMapper`) before an action runs. A `custom` action may name its executor, to reach a guest shell for instance.
 
 ## Heal pass
 

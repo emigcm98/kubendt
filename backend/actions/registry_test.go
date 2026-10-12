@@ -1,6 +1,7 @@
 package actions
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -24,6 +25,13 @@ func init() {
 			Run: func(c pinger, a types.ActionEntry) ([][]string, error) { return c.Ping(a.Iface, a.CIDR), nil }},
 		Action[pinger]{Type: "test_ping_eth0", Label: "Ping from eth0", Params: P(Iface), AllowProtectedIface: true,
 			Run: func(c pinger, a types.ActionEntry) ([][]string, error) { return c.Ping(a.Iface, ""), nil }},
+	)
+	Register[any](
+		Capability{ID: "test_universal", Label: "Universal"},
+		Action[any]{Type: "test_echo", Label: "Echo", Params: P(Iface, Ifaces.Optional(), Executor), Executor: "kubectl", ExecutorFromRequest: true,
+			Run: func(_ any, a types.ActionEntry) ([][]string, error) {
+				return [][]string{append([]string{"echo", a.Iface}, a.Ifaces...)}, nil
+			}},
 	)
 }
 
@@ -84,15 +92,53 @@ func TestSupportsAndRun(t *testing.T) {
 }
 
 func TestForDriver(t *testing.T) {
-	var ids []string
-	for _, c := range ForDriver(fakeDriver{}) {
-		ids = append(ids, c.ID)
+	ids := func(driver any) string {
+		var out []string
+		for _, c := range ForDriver(driver) {
+			out = append(out, c.ID)
+		}
+		return strings.Join(out, ",")
 	}
-	if strings.Join(ids, ",") != "PingCapable" {
-		t.Errorf("ForDriver: got %v", ids)
+	if got := ids(fakeDriver{}); got != "PingCapable,test_universal" {
+		t.Errorf("ForDriver: got %v", got)
 	}
-	if got := ForDriver(otherDriver{}); len(got) != 0 {
+	if got := ids(otherDriver{}); got != "test_universal" {
 		t.Errorf("ForDriver on a driver without capabilities: got %v", got)
+	}
+}
+
+func TestUniversal(t *testing.T) {
+	d, _ := Lookup("test_echo")
+	if !d.Universal || !d.Supports(nil) || !d.Supports(otherDriver{}) {
+		t.Errorf("a capability declared against any must match every driver and none")
+	}
+	cmds, err := d.Run(nil, types.ActionEntry{Iface: "eth1"})
+	if err != nil || strings.Join(cmds[0], " ") != "echo eth1" {
+		t.Errorf("Run without a driver: got %v, %v", cmds, err)
+	}
+	if err := d.Validate(types.ActionEntry{Iface: "eth1", Executor: "nope"}); err == nil || !strings.Contains(err.Error(), `field "executor" must name a registered executor`) {
+		t.Errorf("unknown executor should fail validation, got %v", err)
+	}
+	if err := d.Validate(types.ActionEntry{Iface: "eth1", Executor: "kubectl"}); err != nil {
+		t.Errorf("a registered executor should pass, got %v", err)
+	}
+}
+
+func TestMapInterfaces(t *testing.T) {
+	d, _ := Lookup("test_echo")
+	original := types.ActionEntry{Iface: "eth1", Ifaces: []string{"eth2", "eth3"}}
+	mapped, err := d.MapInterfaces(original, func(name string) (string, error) { return "Gig-" + name, nil })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if mapped.Iface != "Gig-eth1" || strings.Join(mapped.Ifaces, ",") != "Gig-eth2,Gig-eth3" {
+		t.Errorf("mapped: %+v", mapped)
+	}
+	if original.Iface != "eth1" || strings.Join(original.Ifaces, ",") != "eth2,eth3" {
+		t.Errorf("the request must stay untouched: %+v", original)
+	}
+	if _, err := d.MapInterfaces(original, func(name string) (string, error) { return "", fmt.Errorf("no map for %s", name) }); err == nil {
+		t.Errorf("a mapping error must surface")
 	}
 }
 

@@ -27,6 +27,9 @@ type tcUniversalExecutor struct{}
 
 func (tcUniversalExecutor) Name() string { return TCUniversalExecutorName }
 
+// CommandKind: the rows of one action go as a single `tc -b` batch.
+func (tcUniversalExecutor) CommandKind() CommandKind { return CommandKindBatch }
+
 func (e tcUniversalExecutor) ExecCommand(podName, namespace string, command Command) error {
 	_, err := e.ExecCommandAndGet(podName, namespace, command)
 	return err

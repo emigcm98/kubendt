@@ -45,9 +45,10 @@ DRIVER RESOLUTION (on pod action):
    ├─ desc.Validate(action)            → missing or malformed field? error naming it
    ├─ desc.Supports(driver)            → driver lacks the capability? error
    ├─ universal action (tc, custom)    → its own executor
-   ├─ driver plans its own execution?  → EffectiveActionExecutionPlanResolver
+   ├─ driver names guest interfaces?   → GuestInterfaceMapper rewrites the iface params
    └─ desc.Run(driver, action)         → capability method, e.g. L3.SetIP(eth1, 10.0.0.1/24)
-      → [][]string{"ip", "addr", "add", "10.0.0.1/24", "dev", "eth1"} and the driver's executor
+      → [][]string{"ip", "addr", "add", "10.0.0.1/24", "dev", "eth1"}
+   └─ executor: the action's own (tc, custom), the one the request names (custom), or the driver's
 ```
 
 ### 1.2 Driver Type Hierarchy

@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"kubendt/capabilities/capabilities"
+	"kubendt/capabilities"
 	drivers_meta "kubendt/drivers/meta"
 	"kubendt/executor"
 	"kubendt/types"
@@ -22,8 +22,10 @@ type XRDRouterDriver struct {
 
 func NewXRDRouterDriver() *XRDRouterDriver {
 	return &XRDRouterDriver{
-		Meta:         drivers_meta.NewMeta("XRDRouterDriver", "router"),
-		ExecutorMeta: executor.NewExecutorMeta(executor.XRCLIExecutorName),
+		Meta: drivers_meta.NewMeta("XRDRouterDriver", "router"),
+		// Actions are configure blocks applied through xr_apply, xr_cli only
+		// speaks op-mode and the reads pick it on their own.
+		ExecutorMeta: executor.NewExecutorMeta(executor.XRApplyExecutorName),
 	}
 }
 
@@ -32,7 +34,7 @@ var _ capabilities.L3Capable = (*XRDRouterDriver)(nil)
 var _ types.EffectiveInterfaceInspector = (*XRDRouterDriver)(nil)
 var _ types.EffectiveSingleInterfaceInspector = (*XRDRouterDriver)(nil)
 var _ types.EffectiveInterfaceStateInspector = (*XRDRouterDriver)(nil)
-var _ types.EffectiveActionExecutionPlanResolver = (*XRDRouterDriver)(nil)
+var _ types.GuestInterfaceMapper = (*XRDRouterDriver)(nil)
 var _ types.ReadinessProbeProvider = (*XRDRouterDriver)(nil)
 
 // ReadinessProbeCommands gates pod readiness on Loopback0 being up, that
@@ -119,95 +121,18 @@ func (XRDRouterDriver) RemoveDNSSearch(domain string) [][]string {
 	return [][]string{{"no domain list " + domain}}
 }
 
-// ─── ResolveActionExecutionPlan ───────────────────────────────────────────────
-
-// ResolveActionExecutionPlan routes L2 and L3 actions through xr_apply,
-// which wraps configure blocks in an xrapply_string transaction.
-// xr_cli only supports op-mode; configure-mode requires xr_apply.
-func (d *XRDRouterDriver) ResolveActionExecutionPlan(namespace, podName string, action types.ActionEntry) (string, [][]string, bool, error) {
-	// resolveIface loads the iface map only when the action needs it.
-	resolveIface := func(podIntf string) (string, error) {
-		ifaceMap, err := d.readIfaceMap(namespace, podName)
-		if err != nil {
-			return "", err
-		}
-		g, ok := ifaceMap[podIntf]
-		if !ok {
-			return "", fmt.Errorf("interface %q not found in iface-map for pod %s/%s", podIntf, namespace, podName)
-		}
-		return g, nil
+// GuestInterface maps a pod interface to the XR name the entrypoint recorded
+// at boot (eth1 to GigabitEthernet0/0/0/0), so actions address the guest.
+func (d *XRDRouterDriver) GuestInterface(namespace, podName, podInterface string) (string, error) {
+	ifaceMap, err := d.readIfaceMap(namespace, podName)
+	if err != nil {
+		return "", err
 	}
-
-	driver := XRDRouterDriver{}
-
-	switch action.Type {
-	// L2
-	case "link_up":
-		g, err := resolveIface(action.Iface)
-		if err != nil {
-			return "", nil, true, err
-		}
-		return executor.XRApplyExecutorName, driver.LinkUp(g), true, nil
-	case "link_down":
-		g, err := resolveIface(action.Iface)
-		if err != nil {
-			return "", nil, true, err
-		}
-		return executor.XRApplyExecutorName, driver.LinkDown(g), true, nil
-
-	// L3, interfaces (require name resolution + CIDR→mask conversion)
-	case "set_ip":
-		g, err := resolveIface(action.Iface)
-		if err != nil {
-			return "", nil, true, err
-		}
-		ip, mask, err := xrCIDRToIPMask(action.CIDR)
-		if err != nil {
-			return "", nil, true, err
-		}
-		return executor.XRApplyExecutorName,
-			[][]string{{"interface " + g, " ipv4 address " + ip + " " + mask}},
-			true, nil
-	case "replace_ip":
-		g, err := resolveIface(action.Iface)
-		if err != nil {
-			return "", nil, true, err
-		}
-		ip, mask, err := xrCIDRToIPMask(action.CIDR)
-		if err != nil {
-			return "", nil, true, err
-		}
-		return executor.XRApplyExecutorName,
-			[][]string{{"interface " + g, " ipv4 address " + ip + " " + mask}},
-			true, nil
-	case "remove_ip":
-		g, err := resolveIface(action.Iface)
-		if err != nil {
-			return "", nil, true, err
-		}
-		return executor.XRApplyExecutorName, driver.RemoveIP(g, ""), true, nil
-
-	// L3, rutas y DNS (no dependen de interfaz de datos)
-	case "set_default_route":
-		return executor.XRApplyExecutorName, driver.SetDefaultRoute(action.Gateway), true, nil
-	case "remove_default_route":
-		return executor.XRApplyExecutorName, driver.RemoveDefaultRoute(), true, nil
-	case "add_static_route":
-		return executor.XRApplyExecutorName, driver.AddStaticRoute(action.DstCIDR, action.Gateway, action.Device), true, nil
-	case "remove_static_route":
-		return executor.XRApplyExecutorName, driver.RemoveStaticRoute(action.DstCIDR, action.Gateway, action.Device), true, nil
-	case "add_dns_nameserver":
-		return executor.XRApplyExecutorName, driver.AddDNSNameserver(action.DNSServer), true, nil
-	case "remove_dns_nameserver":
-		return executor.XRApplyExecutorName, driver.RemoveDNSNameserver(action.DNSServer), true, nil
-	case "add_dns_search":
-		return executor.XRApplyExecutorName, driver.AddDNSSearch(action.DNSDomain), true, nil
-	case "remove_dns_search":
-		return executor.XRApplyExecutorName, driver.RemoveDNSSearch(action.DNSDomain), true, nil
-
-	default:
-		return "", nil, false, nil
+	g, ok := ifaceMap[podInterface]
+	if !ok {
+		return "", fmt.Errorf("interface %q not found in iface-map for pod %s/%s", podInterface, namespace, podName)
 	}
+	return g, nil
 }
 
 // xrCIDRToIPMask convierte "10.0.0.1/24" a ("10.0.0.1", "255.255.255.0", nil).

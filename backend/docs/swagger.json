@@ -2617,7 +2617,99 @@
             }
         },
         "types.ActionEntry": {
-            "type": "object"
+            "type": "object",
+            "properties": {
+                "bridge": {
+                    "type": "string",
+                    "example": "br0"
+                },
+                "cidr": {
+                    "type": "string",
+                    "example": "192.168.1.1/24"
+                },
+                "command": {
+                    "description": "Custom, accepts a string (\"sh -c\" wrapper) or an array of args.\nOnly used when type == \"custom\". No driver label required on the pod.",
+                    "type": "string",
+                    "example": "ip route show"
+                },
+                "device": {
+                    "type": "string",
+                    "example": "/dev/net/tun"
+                },
+                "dns_domain": {
+                    "type": "string",
+                    "example": "example.local"
+                },
+                "dns_server": {
+                    "description": "DNS",
+                    "type": "string",
+                    "example": "8.8.8.8"
+                },
+                "dst_cidr": {
+                    "type": "string",
+                    "example": "10.0.0.0/8"
+                },
+                "executor": {
+                    "description": "Executor names where a custom command runs, kubectl (the pod's\ncontainer) by default. ssh_qemu is a shell in a VyOS guest, vyos_ssh_cli\nan op-mode command there.",
+                    "type": "string",
+                    "example": "ssh_qemu"
+                },
+                "externalPort": {
+                    "description": "NAT",
+                    "type": "integer",
+                    "example": 8080
+                },
+                "gateway": {
+                    "type": "string",
+                    "example": "192.168.1.254"
+                },
+                "iface": {
+                    "type": "string",
+                    "example": "eth1"
+                },
+                "ifaces": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "internalIP": {
+                    "type": "string",
+                    "example": "10.0.0.5"
+                },
+                "internalPort": {
+                    "type": "integer",
+                    "example": 80
+                },
+                "options": {
+                    "$ref": "#/definitions/types.ActionOptions"
+                },
+                "ospf_area": {
+                    "description": "OSPF",
+                    "type": "string",
+                    "example": "0"
+                },
+                "protocol": {
+                    "type": "string",
+                    "example": "tcp"
+                },
+                "router_id": {
+                    "type": "string",
+                    "example": "10.0.255.1"
+                },
+                "tcparams": {
+                    "description": "TC / Qdisc",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.TCParamEntry"
+                        }
+                    ]
+                },
+                "type": {
+                    "type": "string",
+                    "example": "ip"
+                }
+            }
         },
         "types.ActionOptions": {
             "type": "object",
@@ -2834,7 +2926,22 @@
             }
         },
         "types.ConfigureNetworkRequest": {
-            "type": "object"
+            "type": "object",
+            "properties": {
+                "links": {
+                    "description": "Links shapes links by one of their ends. Each entry becomes add_qdisc\nor del_qdisc actions on the interfaces of both ends, run with Targets.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.LinkShaping"
+                    }
+                },
+                "targets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.PodConfig"
+                    }
+                }
+            }
         },
         "types.ConfigureNetworkResponse": {
             "type": "object",
@@ -3327,6 +3434,48 @@
                 "path": {
                     "type": "string",
                     "example": "/home/user/.kube/config"
+                }
+            }
+        },
+        "types.LinkShaping": {
+            "type": "object",
+            "properties": {
+                "localIntf": {
+                    "type": "string",
+                    "example": "eth1"
+                },
+                "node": {
+                    "type": "string",
+                    "example": "host-0"
+                },
+                "peerIntf": {
+                    "type": "string",
+                    "example": "eth1"
+                },
+                "peerNode": {
+                    "type": "string",
+                    "example": "switch-0"
+                },
+                "remove": {
+                    "description": "Remove clears the shaping on both ends.",
+                    "type": "boolean",
+                    "example": false
+                },
+                "reverse": {
+                    "$ref": "#/definitions/types.TCParamEntry"
+                },
+                "shaping": {
+                    "description": "Shaping goes on node's interface, the node to peer direction. Delay is one-way.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.TCParamEntry"
+                        }
+                    ]
+                },
+                "symmetric": {
+                    "description": "Symmetric puts the same shaping on the peer's interface. Reverse puts a\ndifferent one there instead. A link to the external network has no peer to shape.",
+                    "type": "boolean",
+                    "example": true
                 }
             }
         },
@@ -4456,6 +4605,21 @@
                     "description": "Persisted operations re-run on neighbours because they touch an interface Meshnet recreated.",
                     "type": "integer",
                     "example": 1
+                }
+            }
+        },
+        "types.PodConfig": {
+            "type": "object",
+            "properties": {
+                "actions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.ActionEntry"
+                    }
+                },
+                "pod": {
+                    "type": "string",
+                    "example": "router1"
                 }
             }
         },

@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"kubendt/executor"
 	"kubendt/types"
 )
 
@@ -21,8 +22,9 @@ const (
 	KindIP        Kind = "ip"
 	KindPort      Kind = "port"
 	KindText      Kind = "text"
-	KindObject    Kind = "object"  // a nested spec the action validates itself
-	KindCommand   Kind = "command" // a string or an argv array
+	KindObject    Kind = "object"   // a nested spec the action validates itself
+	KindCommand   Kind = "command"  // a string or an argv array
+	KindExecutor  Kind = "executor" // the name of a registered executor
 )
 
 // Param is one field of ActionEntry an action reads, by its JSON name.
@@ -60,6 +62,7 @@ var (
 	OSPFArea     = Param{Name: "ospf_area", Kind: KindText, Required: true}
 	RouterID     = Param{Name: "router_id", Kind: KindIP, Required: true}
 	Command      = Param{Name: "command", Kind: KindCommand, Required: true}
+	Executor     = Param{Name: "executor", Kind: KindExecutor, Required: false}
 )
 
 // ProtectedInterface is the pod's cluster interface. An action on it would
@@ -155,8 +158,45 @@ func checkKind(k Kind, v reflect.Value) error {
 		if n := v.Int(); n < 1 || n > 65535 {
 			return fmt.Errorf("must be a port between 1 and 65535, got %d", n)
 		}
+	case KindExecutor:
+		if _, err := executor.Get(v.String()); err != nil {
+			return fmt.Errorf("must name a registered executor, got %q", v.String())
+		}
 	}
 	return nil
+}
+
+// MapInterfaces returns the action with every interface param passed through
+// f, for drivers whose dataplane names interfaces differently from the pod.
+// The request itself is left untouched.
+func (d *Descriptor) MapInterfaces(a types.ActionEntry, f func(string) (string, error)) (types.ActionEntry, error) {
+	v := reflect.ValueOf(&a).Elem()
+	for _, p := range d.Params {
+		field := v.FieldByIndex(fieldIndex[p.Name])
+		switch p.Kind {
+		case KindIface:
+			if field.String() == "" {
+				continue
+			}
+			mapped, err := f(field.String())
+			if err != nil {
+				return a, err
+			}
+			field.SetString(mapped)
+		case KindIfaceList:
+			copied := reflect.MakeSlice(field.Type(), field.Len(), field.Len())
+			reflect.Copy(copied, field)
+			for i := 0; i < copied.Len(); i++ {
+				mapped, err := f(copied.Index(i).String())
+				if err != nil {
+					return a, err
+				}
+				copied.Index(i).SetString(mapped)
+			}
+			field.Set(copied)
+		}
+	}
+	return a, nil
 }
 
 func ifaceNames(k Kind, v reflect.Value) []string {

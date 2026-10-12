@@ -3,7 +3,7 @@ package drivers_registry
 import (
 	"fmt"
 
-	caps "kubendt/capabilities/capabilities"
+	caps "kubendt/capabilities"
 )
 
 type Driver interface {

@@ -29,8 +29,14 @@ func TestTCRowsBecomeOneBatch(t *testing.T) {
 	if err := NewBatchCommand("tc", nil).Validate(); err == nil {
 		t.Errorf("an empty batch must not validate")
 	}
-	// Other executors keep one command per row.
+	// Other executors keep one command per row, in the kind they declare.
 	if got := CommandsFromLegacyForExecutor(rows, DefaultExecutorName); len(got) != 2 || got[0].Kind != CommandKindArgs {
 		t.Errorf("kubectl rows = %+v", got)
+	}
+	if got := CommandsFromLegacyForExecutor(rows, XRCLIExecutorName); len(got) != 2 || got[0].Kind != CommandKindLine || got[0].Line != "tc qdisc replace dev eth1 root noqueue" {
+		t.Errorf("xr_cli rows = %+v", got)
+	}
+	if got := CommandsFromLegacyForExecutor(rows, "no_such_executor"); len(got) != 2 || got[0].Kind != CommandKindArgs {
+		t.Errorf("unknown executor rows = %+v", got)
 	}
 }

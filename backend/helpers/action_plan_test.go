@@ -206,6 +206,30 @@ func TestActionPlans(t *testing.T) {
 	}
 }
 
+// TestCustomExecutor: custom runs through kubectl unless the request names a
+// registered executor, and a pod without a driver can run it.
+func TestCustomExecutor(t *testing.T) {
+	driver := loadDriver(t, "VyOSRouterDriver")
+	command := json.RawMessage(`"show version"`)
+	execName, _, err := helpers.ResolveDriverExecutionPlanForPod("", "", driver, types.ActionEntry{Type: "custom", Command: command})
+	if err != nil || execName != "kubectl" {
+		t.Errorf("default executor: got %q, %v", execName, err)
+	}
+	execName, _, err = helpers.ResolveDriverExecutionPlanForPod("", "", driver, types.ActionEntry{Type: "custom", Command: command, Executor: "vyos_ssh_cli"})
+	if err != nil || execName != "vyos_ssh_cli" {
+		t.Errorf("requested executor: got %q, %v", execName, err)
+	}
+	if _, _, err := helpers.ResolveDriverExecutionPlanForPod("", "", driver, types.ActionEntry{Type: "custom", Command: command, Executor: "nope"}); err == nil || !strings.Contains(err.Error(), `"executor"`) {
+		t.Errorf("unknown executor should fail naming the field, got %v", err)
+	}
+	if _, _, err := helpers.ResolveDriverExecutionPlanForPod("", "", nil, types.ActionEntry{Type: "custom", Command: command}); err != nil {
+		t.Errorf("custom without a driver: %v", err)
+	}
+	if _, _, err := helpers.ResolveDriverExecutionPlanForPod("", "", driver, types.ActionEntry{Type: "set_ip", Iface: "eth1", CIDR: "10.0.0.1/24", Executor: "kubectl"}); err != nil {
+		t.Errorf("executor is ignored by actions that do not take it, got %v", err)
+	}
+}
+
 // TestPlanProtectsEth0 pins the one rule that runs before any capability:
 // eth0 is the pod's cluster interface and only the SNAT toggles may touch it.
 func TestPlanProtectsEth0(t *testing.T) {

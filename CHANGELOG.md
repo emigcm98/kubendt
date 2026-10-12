@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - A shaping request combines delay, jitter, loss, duplicate, corrupt, reorder and a rate in one netem, with a jitter distribution and a Gilbert-Elliott loss model as options. The panel edits all of them and offers presets, and `tc_fidelity.py` measures the composite and the models.
 - `GET /pods/tc/{namespace}/{pod}` returns the traffic control state of every interface of a pod. The Links tab uses it and marks the shaped interfaces.
 - Every action is validated before it runs: a missing or malformed field fails the action with the field named, and nothing reaches the pod.
+- A `custom` action takes an optional `executor`: `kubectl` by default, `ssh_qemu` for a shell in a VyOS guest or `vyos_ssh_cli` for an op-mode command there.
 
 ### Changed
 
@@ -23,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - The traffic control panel is per node: it lists the node's interfaces with their shaping state and edits the one picked. It opens from the node's context menu too, and the link menu and the Links tab open it on that interface.
 - Traffic control state is read from tc's JSON output in canonical units, with a `shaped` flag and the settings the old parser ignored: netem rate, reorder, Gilbert-Elliott loss and child qdiscs. A `tc` without `-j` is read through the toolbox container.
 - Actions are declared once in a registry next to their capability. `GET /drivers` lists each action's parameters with the JSON names the API takes, their kind and whether they are required, instead of the Go method names.
+- Drivers name the executor their actions run through and map guest interface names when they differ from the pod, instead of planning every action by hand. `GET /drivers` reports `vyos_api_apply` for VyOS. The configure request's action entry is now fully described in Swagger.
 
 ### Fixed
 

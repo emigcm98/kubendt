@@ -94,9 +94,9 @@ func init() {
 	MustRegister(KubectlExecutor{KubectlBase: NewKubectlBase(DefaultExecutorName, nil, DispatchAsArgs)})
 }
 
-// ExecutorMeta is embedded in driver structs to declare the default executor.
-// Drivers can still override per-action via ResolveActionExecutionPlan
-// (e.g. VyOS op-mode → vyos_ssh_cli, config-mode → vyos_api_apply).
+// ExecutorMeta is embedded in driver structs to declare the executor every
+// action of the driver runs through. Universal actions bring their own, and
+// reads pick theirs explicitly.
 type ExecutorMeta struct {
 	executorName string
 }

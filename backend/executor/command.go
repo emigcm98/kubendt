@@ -82,6 +82,23 @@ func (c Command) Validate() error {
 	}
 }
 
+// CommandKinder is implemented by executors whose commands are not plain
+// argv rows: a CLI that takes the whole command as one line, or a program
+// run in batch mode. Everything else takes args.
+type CommandKinder interface {
+	CommandKind() CommandKind
+}
+
+// KindFor returns the command kind an executor takes.
+func KindFor(executorName string) CommandKind {
+	if e, err := Get(strings.TrimSpace(executorName)); err == nil {
+		if k, ok := e.(CommandKinder); ok {
+			return k.CommandKind()
+		}
+	}
+	return CommandKindArgs
+}
+
 // CommandsFromLegacy converts the historical [][]string representation into the
 // new typed command model.
 func CommandsFromLegacy(commands [][]string) []Command {
@@ -89,36 +106,45 @@ func CommandsFromLegacy(commands [][]string) []Command {
 }
 
 // CommandsFromLegacyForExecutor converts the historical [][]string
-// representation into the new typed command model for a specific executor.
-//
-// For xr_cli we force line commands explicitly because xr_cli expects one
-// string argument representing the whole CLI command.
+// representation into the typed command model of a specific executor, in
+// the kind that executor declares.
 func CommandsFromLegacyForExecutor(commands [][]string, executorName string) []Command {
-	if strings.TrimSpace(executorName) == TCUniversalExecutorName {
-		return []Command{tcBatchFromRows(commands)}
-	}
-	out := make([]Command, 0, len(commands))
-	useLine := strings.TrimSpace(executorName) == XRCLIExecutorName
-	for _, c := range commands {
-		if useLine {
+	switch KindFor(executorName) {
+	case CommandKindBatch:
+		return []Command{batchFromRows(commands)}
+	case CommandKindLine:
+		out := make([]Command, 0, len(commands))
+		for _, c := range commands {
 			out = append(out, NewLineCommand(strings.Join(c, " ")))
-			continue
 		}
-		out = append(out, NewArgsCommand(c))
+		return out
+	default:
+		out := make([]Command, 0, len(commands))
+		for _, c := range commands {
+			out = append(out, NewArgsCommand(c))
+		}
+		return out
 	}
-	return out
 }
 
-// tcBatchFromRows turns the tc rows of one action (["tc", "qdisc", ...] each)
-// into a single `tc -b` batch, so a shaping action costs one exec whatever
-// its size: a netem is two lines, an htb tree with filters a dozen.
-func tcBatchFromRows(rows [][]string) Command {
+// batchFromRows turns the rows of one action, all invocations of the same
+// program (["tc", "qdisc", ...] each), into a single batch for that program,
+// so the action costs one exec whatever its size: a netem is two lines, an
+// htb tree with filters a dozen.
+func batchFromRows(rows [][]string) Command {
+	program := ""
 	lines := make([]string, 0, len(rows))
 	for _, row := range rows {
-		if len(row) > 0 && row[0] == "tc" {
+		if len(row) == 0 {
+			continue
+		}
+		if program == "" {
+			program = row[0]
+		}
+		if row[0] == program {
 			row = row[1:]
 		}
 		lines = append(lines, strings.Join(row, " "))
 	}
-	return NewBatchCommand("tc", lines)
+	return NewBatchCommand(program, lines)
 }

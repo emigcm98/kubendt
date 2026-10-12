@@ -23,11 +23,12 @@ type EffectiveInterfaceStateInspector interface {
 	GetEffectiveInterfaceStates(namespace, podName string) (map[string]bool, error)
 }
 
-// EffectiveActionExecutionPlanResolver is an optional interface for drivers
-// that need action-specific command plans and/or a non-default executor.
-// When handled=true, the returned executorName+commands are used directly.
-type EffectiveActionExecutionPlanResolver interface {
-	ResolveActionExecutionPlan(namespace, podName string, action ActionEntry) (executorName string, commands [][]string, handled bool, err error)
+// GuestInterfaceMapper is an optional interface for drivers whose dataplane
+// names interfaces differently from the pod (a guest OS with its own naming).
+// Every interface param of an action is passed through it before the action
+// runs, so capability methods always receive the guest name.
+type GuestInterfaceMapper interface {
+	GuestInterface(namespace, podName, podInterface string) (string, error)
 }
 
 // GuestProbeProvider is an optional interface for drivers whose dataplane
