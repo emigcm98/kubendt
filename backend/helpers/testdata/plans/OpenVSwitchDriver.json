@@ -1,0 +1,82 @@
+{
+  "add_dns_nameserver": { "unsupported": true },
+  "add_dns_search": { "unsupported": true },
+  "add_interface_to_bridge": {
+    "executor": "kubectl",
+    "commands": [
+      ["ovs-vsctl","--may-exist","add-port","br0","eth1"]
+    ]
+  },
+  "add_qdisc": {
+    "executor": "tc_universal",
+    "commands": [
+      ["tc","qdisc","replace","dev","eth1","root","noqueue"],
+      ["tc","qdisc","replace","dev","eth1","root","netem","delay","50ms","5ms","loss","1%","rate","10mbit"]
+    ]
+  },
+  "add_static_route": { "unsupported": true },
+  "del_qdisc": {
+    "executor": "tc_universal",
+    "commands": [
+      ["tc","qdisc","replace","dev","eth1","root","noqueue"],
+      ["tc","qdisc","del","dev","eth1","root"]
+    ]
+  },
+  "disable_dnat": { "unsupported": true },
+  "disable_snat": { "unsupported": true },
+  "enable_dnat": { "unsupported": true },
+  "enable_snat": { "unsupported": true },
+  "link_down": {
+    "executor": "kubectl",
+    "commands": [
+      ["ip","link","set","eth1","down"]
+    ]
+  },
+  "link_up": {
+    "executor": "kubectl",
+    "commands": [
+      ["ip","link","set","eth1","up"]
+    ]
+  },
+  "ospf_add_network": { "unsupported": true },
+  "ospf_mtu_ignore": { "unsupported": true },
+  "ospf_no_passive": { "unsupported": true },
+  "ospf_originate_default": { "unsupported": true },
+  "ospf_passive_default": { "unsupported": true },
+  "ospf_remove_mtu_ignore": { "unsupported": true },
+  "ospf_remove_network": { "unsupported": true },
+  "ospf_remove_no_passive": { "unsupported": true },
+  "ospf_remove_originate_default": { "unsupported": true },
+  "ospf_remove_passive_default": { "unsupported": true },
+  "ospf_remove_router_id": { "unsupported": true },
+  "ospf_set_router_id": { "unsupported": true },
+  "remove_default_route": { "unsupported": true },
+  "remove_dns_nameserver": { "unsupported": true },
+  "remove_dns_search": { "unsupported": true },
+  "remove_interface_from_bridge": {
+    "executor": "kubectl",
+    "commands": [
+      ["ovs-vsctl","del-port","br0","eth1"]
+    ]
+  },
+  "remove_ip": { "unsupported": true },
+  "remove_static_route": { "unsupported": true },
+  "replace_ip": { "unsupported": true },
+  "set_default_route": { "unsupported": true },
+  "set_ip": { "unsupported": true },
+  "setup_bridge": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","ovs-vsctl br-exists br0 || ovs-vsctl add-br br0"],
+      ["ip","link","set","br0","up"],
+      ["ovs-vsctl","--may-exist","add-port","br0","eth1"],
+      ["ovs-vsctl","--may-exist","add-port","br0","eth2"]
+    ]
+  },
+  "teardown_bridge": {
+    "executor": "kubectl",
+    "commands": [
+      ["ovs-vsctl","del-br","br0"]
+    ]
+  }
+}

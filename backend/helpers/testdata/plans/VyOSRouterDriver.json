@@ -1,0 +1,201 @@
+{
+  "add_dns_nameserver": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["set system name-server 8.8.8.8"]
+    ]
+  },
+  "add_dns_search": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["set system domain-search lab.local"]
+    ]
+  },
+  "add_interface_to_bridge": { "unsupported": true },
+  "add_qdisc": {
+    "executor": "tc_universal",
+    "commands": [
+      ["tc","qdisc","replace","dev","eth1","root","noqueue"],
+      ["tc","qdisc","replace","dev","eth1","root","netem","delay","50ms","5ms","loss","1%","rate","10mbit"]
+    ]
+  },
+  "add_static_route": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["set protocols static route 10.1.0.0/16 next-hop 10.0.0.254"]
+    ]
+  },
+  "del_qdisc": {
+    "executor": "tc_universal",
+    "commands": [
+      ["tc","qdisc","replace","dev","eth1","root","noqueue"],
+      ["tc","qdisc","del","dev","eth1","root"]
+    ]
+  },
+  "disable_dnat": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["delete nat destination rule 250"]
+    ]
+  },
+  "disable_snat": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["delete nat source rule 190"]
+    ]
+  },
+  "enable_dnat": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["set nat destination rule 250 inbound-interface name eth1"],
+      ["set nat destination rule 250 protocol tcp"],
+      ["set nat destination rule 250 destination port 8080"],
+      ["set nat destination rule 250 translation address 10.0.0.5"],
+      ["set nat destination rule 250 translation port 80"]
+    ]
+  },
+  "enable_snat": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["set nat source rule 190 outbound-interface name eth0"],
+      ["set nat source rule 190 source address 0.0.0.0/0"],
+      ["set nat source rule 190 translation address masquerade"]
+    ]
+  },
+  "link_down": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["set interfaces ethernet eth1 disable"]
+    ]
+  },
+  "link_up": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["delete interfaces ethernet eth1 disable"]
+    ]
+  },
+  "ospf_add_network": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["set protocols ospf area 0 network 10.0.0.0/24"]
+    ]
+  },
+  "ospf_mtu_ignore": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["set protocols ospf interface eth1 mtu-ignore"]
+    ]
+  },
+  "ospf_no_passive": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["set protocols ospf interface eth1 passive disable"]
+    ]
+  },
+  "ospf_originate_default": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["set protocols ospf default-information originate always"]
+    ]
+  },
+  "ospf_passive_default": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["set protocols ospf passive-interface default"]
+    ]
+  },
+  "ospf_remove_mtu_ignore": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["delete protocols ospf interface eth1 mtu-ignore"]
+    ]
+  },
+  "ospf_remove_network": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["delete protocols ospf area 0 network 10.0.0.0/24"]
+    ]
+  },
+  "ospf_remove_no_passive": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["delete protocols ospf interface eth1 passive disable"]
+    ]
+  },
+  "ospf_remove_originate_default": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["delete protocols ospf default-information originate"]
+    ]
+  },
+  "ospf_remove_passive_default": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["delete protocols ospf passive-interface default"]
+    ]
+  },
+  "ospf_remove_router_id": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["delete protocols ospf parameters router-id"]
+    ]
+  },
+  "ospf_set_router_id": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["set protocols ospf parameters router-id 10.255.0.1"]
+    ]
+  },
+  "remove_default_route": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["delete protocols static route 0.0.0.0/0"]
+    ]
+  },
+  "remove_dns_nameserver": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["delete system name-server 8.8.8.8"]
+    ]
+  },
+  "remove_dns_search": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["delete system domain-search lab.local"]
+    ]
+  },
+  "remove_interface_from_bridge": { "unsupported": true },
+  "remove_ip": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["delete interfaces ethernet eth1 address 10.0.0.1/24"]
+    ]
+  },
+  "remove_static_route": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["delete protocols static route 10.1.0.0/16 next-hop 10.0.0.254"]
+    ]
+  },
+  "replace_ip": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["delete interfaces ethernet eth1 address"],
+      ["set interfaces ethernet eth1 address 10.0.0.1/24"]
+    ]
+  },
+  "set_default_route": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["set protocols static route 0.0.0.0/0 next-hop 10.0.0.254"]
+    ]
+  },
+  "set_ip": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["set interfaces ethernet eth1 address 10.0.0.1/24"]
+    ]
+  },
+  "setup_bridge": { "unsupported": true },
+  "teardown_bridge": { "unsupported": true }
+}
