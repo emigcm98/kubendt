@@ -1,0 +1,195 @@
+{
+  "add_dns_nameserver": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","grep -q '^nameserver 8.8.8.8$' /etc/resolv.conf || echo 'nameserver 8.8.8.8' | tee -a /etc/resolv.conf \u003e /dev/null"]
+    ]
+  },
+  "add_dns_search": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","if grep -q '^search ' /etc/resolv.conf; then grep -q '^search .* lab.local' /etc/resolv.conf || (cat /etc/resolv.conf | sed 's/^search .*/\u0026 lab.local/' | tee /etc/resolv.conf \u003e /dev/null); else echo 'search lab.local' | tee -a /etc/resolv.conf \u003e /dev/null; fi"]
+    ]
+  },
+  "add_interface_to_bridge": { "unsupported": true },
+  "add_qdisc": {
+    "executor": "tc_universal",
+    "commands": [
+      ["tc","qdisc","replace","dev","eth1","root","noqueue"],
+      ["tc","qdisc","replace","dev","eth1","root","netem","delay","50ms","5ms","loss","1%","rate","10mbit"]
+    ]
+  },
+  "add_static_route": {
+    "executor": "kubectl",
+    "commands": [
+      ["ip","route","replace","10.1.0.0/16","via","10.0.0.254","dev","eth1"]
+    ]
+  },
+  "del_qdisc": {
+    "executor": "tc_universal",
+    "commands": [
+      ["tc","qdisc","replace","dev","eth1","root","noqueue"],
+      ["tc","qdisc","del","dev","eth1","root"]
+    ]
+  },
+  "disable_dnat": {
+    "executor": "kubectl",
+    "commands": [
+      ["iptables","-t","nat","-D","PREROUTING","-i","eth1","-p","tcp","--dport","8080","-j","DNAT","--to-destination","10.0.0.5:80"]
+    ]
+  },
+  "disable_snat": {
+    "executor": "kubectl",
+    "commands": [
+      ["iptables","-t","nat","-D","POSTROUTING","-o","eth0","-j","MASQUERADE"]
+    ]
+  },
+  "enable_dnat": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","iptables -t nat -C PREROUTING -i eth1 -p tcp --dport 8080 -j DNAT --to-destination 10.0.0.5:80 || iptables -t nat -A PREROUTING -i eth1 -p tcp --dport 8080 -j DNAT --to-destination 10.0.0.5:80"]
+    ]
+  },
+  "enable_snat": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","iptables -t nat -C POSTROUTING -o eth0 -j MASQUERADE || iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE"]
+    ]
+  },
+  "link_down": {
+    "executor": "kubectl",
+    "commands": [
+      ["ip","link","set","eth1","down"]
+    ]
+  },
+  "link_up": {
+    "executor": "kubectl",
+    "commands": [
+      ["ip","link","set","eth1","up"]
+    ]
+  },
+  "ospf_add_network": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router ospf","-c","network 10.0.0.0/24 area 0"]
+    ]
+  },
+  "ospf_mtu_ignore": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","interface eth1","-c","ip ospf mtu-ignore"]
+    ]
+  },
+  "ospf_no_passive": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router ospf","-c","no passive-interface eth1"]
+    ]
+  },
+  "ospf_originate_default": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router ospf","-c","default-information originate always"]
+    ]
+  },
+  "ospf_passive_default": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router ospf","-c","passive-interface default"]
+    ]
+  },
+  "ospf_remove_mtu_ignore": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","interface eth1","-c","no ip ospf mtu-ignore"]
+    ]
+  },
+  "ospf_remove_network": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router ospf","-c","no network 10.0.0.0/24 area 0"]
+    ]
+  },
+  "ospf_remove_no_passive": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router ospf","-c","passive-interface eth1"]
+    ]
+  },
+  "ospf_remove_originate_default": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router ospf","-c","no default-information originate"]
+    ]
+  },
+  "ospf_remove_passive_default": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router ospf","-c","no passive-interface default"]
+    ]
+  },
+  "ospf_remove_router_id": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router ospf","-c","no ospf router-id"]
+    ]
+  },
+  "ospf_set_router_id": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router ospf","-c","ospf router-id 10.255.0.1"]
+    ]
+  },
+  "remove_default_route": {
+    "executor": "kubectl",
+    "commands": [
+      ["ip","route","del","default"]
+    ]
+  },
+  "remove_dns_nameserver": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","cat /etc/resolv.conf | grep -v '^nameserver 8.8.8.8$' | tee /etc/resolv.conf \u003e /dev/null"]
+    ]
+  },
+  "remove_dns_search": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","cat /etc/resolv.conf | sed 's/^search \\(.*\\) lab.local /search \\1 /' | sed 's/^search \\(.*\\) lab.local$/search \\1/' | sed 's/ *$//' | tee /etc/resolv.conf \u003e /dev/null"]
+    ]
+  },
+  "remove_interface_from_bridge": { "unsupported": true },
+  "remove_ip": {
+    "executor": "kubectl",
+    "commands": [
+      ["ip","addr","del","10.0.0.1/24","dev","eth1"]
+    ]
+  },
+  "remove_static_route": {
+    "executor": "kubectl",
+    "commands": [
+      ["ip","route","del","10.1.0.0/16","via","10.0.0.254","dev","eth1"]
+    ]
+  },
+  "replace_ip": {
+    "executor": "kubectl",
+    "commands": [
+      ["ip","addr","flush","dev","eth1"],
+      ["ip","addr","add","10.0.0.1/24","dev","eth1"]
+    ]
+  },
+  "set_default_route": {
+    "executor": "kubectl",
+    "commands": [
+      ["ip","route","replace","default","via","10.0.0.254"]
+    ]
+  },
+  "set_ip": {
+    "executor": "kubectl",
+    "commands": [
+      ["ip","addr","add","10.0.0.1/24","dev","eth1"]
+    ]
+  },
+  "setup_bridge": { "unsupported": true },
+  "teardown_bridge": { "unsupported": true }
+}
