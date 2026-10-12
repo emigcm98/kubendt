@@ -32,6 +32,14 @@ kubectl get topologies -n <namespace>
 kubectl describe pod -n <namespace> <pod-name>
 ```
 
+## A node never becomes Ready
+
+The deploy ends with `timeout waiting for pods to be Ready: <pod> (running-not-ready, readiness probe failed: ...)`. The probe's output says what is missing. The default probe needs the `ip` command of iproute2 in the main container, and prints `ip not found in PATH, the image needs iproute2` when it is not there: add it to the image, or install it at startup through the node's `commands` as the examples do. FRR, Open vSwitch and VyOS nodes have their own probe (the vty sockets, `ovs-vsctl`, SSH into the guest), so for them the message points at the daemon that is not up yet. `kubectl describe pod -n <namespace> <pod>` shows the same events.
+
+## An action fails with "'X' is not in the pod's image"
+
+The command behind the action needs a program the image does not ship, `iptables` for NAT on a plain Linux router for instance. Add it to the image or install it at startup through the node's `commands` (`apk add iptables` on the FRR image in the examples). Traffic control needs nothing in the image, it falls back to a toolbox container.
+
 ## Backend changes not reflected during development
 
 - Make sure you are running `go run .` directly and not a stale binary.

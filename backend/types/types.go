@@ -207,14 +207,17 @@ type NodeSpec struct {
 	// the resolved driver via drivers_meta.RuntimeProvider. The field remains
 	// in the struct so downstream backend code that branches on runtime
 	// keeps working transparently.
-	Qemu       bool              `json:"-"`
-	Privileged bool              `json:"privileged,omitempty" example:"true"`
-	Replicas   int               `json:"replicas,omitempty" example:"1"`
-	Commands   []string          `json:"commands,omitempty"`
-	Env        map[string]string `json:"env,omitempty"`
-	Mounts     []MountSpec       `json:"mounts,omitempty"`
-	Devices    []DeviceSpec      `json:"devices,omitempty"`
-	Driver     string            `json:"driver,omitempty" example:"frr-router"`
+	Qemu       bool `json:"-"`
+	Privileged bool `json:"privileged,omitempty" example:"true"`
+	Replicas   int  `json:"replicas,omitempty" example:"1"`
+	// Commands replaces the image's entrypoint, `sh -c "... && sleep infinity"`
+	// in the examples. It is where an image installs what the node needs at
+	// startup, iproute2 for `ip` or iptables for NAT.
+	Commands []string          `json:"commands,omitempty"`
+	Env      map[string]string `json:"env,omitempty"`
+	Mounts   []MountSpec       `json:"mounts,omitempty"`
+	Devices  []DeviceSpec      `json:"devices,omitempty"`
+	Driver   string            `json:"driver,omitempty" example:"frr-router"`
 	// Seconds Kubernetes waits for the pod to exit on SIGTERM before it is
 	// killed. Bounds restart, delete and scale-down latency. Defaults to
 	// DefaultTerminationGracePeriodSeconds, must be >= 1 when set.

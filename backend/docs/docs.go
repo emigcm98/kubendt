@@ -4464,6 +4464,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "commands": {
+                    "description": "Commands replaces the image's entrypoint, ` + "`" + `sh -c \"... \u0026\u0026 sleep infinity\"` + "`" + `\nin the examples. It is where an image installs what the node needs at\nstartup, iproute2 for ` + "`" + `ip` + "`" + ` or iptables for NAT.",
                     "type": "array",
                     "items": {
                         "type": "string"

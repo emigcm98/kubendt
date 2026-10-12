@@ -147,7 +147,7 @@ func WaitForPodsReadyTimeline(namespace string, podNames []string, requestStart 
 		list, err := kubeclient.Clientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			if ctx.Err() != nil {
-				return timelinesOf(trackers), pendingTimeoutError(pending)
+				return timelinesOf(trackers), pendingTimeoutError(namespace, pending)
 			}
 			return timelinesOf(trackers), fmt.Errorf("listing pods in namespace '%s': %w", namespace, err)
 		}
@@ -164,7 +164,7 @@ func WaitForPodsReadyTimeline(namespace string, podNames []string, requestStart 
 		w, err := kubeclient.Clientset.CoreV1().Pods(namespace).Watch(ctx, metav1.ListOptions{ResourceVersion: list.ResourceVersion})
 		if err != nil {
 			if ctx.Err() != nil {
-				return timelinesOf(trackers), pendingTimeoutError(pending)
+				return timelinesOf(trackers), pendingTimeoutError(namespace, pending)
 			}
 			return timelinesOf(trackers), fmt.Errorf("watching pods in namespace '%s': %w", namespace, err)
 		}
@@ -178,7 +178,7 @@ func WaitForPodsReadyTimeline(namespace string, podNames []string, requestStart 
 			return timelinesOf(trackers), nil
 		}
 		if ctx.Err() != nil {
-			return timelinesOf(trackers), pendingTimeoutError(pending)
+			return timelinesOf(trackers), pendingTimeoutError(namespace, pending)
 		}
 	}
 }
@@ -295,11 +295,70 @@ func MsPtr(d time.Duration) *int64 {
 	return &ms
 }
 
-func pendingTimeoutError(pending map[string]string) error {
+// pendingTimeoutError names every pod still not Ready with its reason and,
+// for a running pod, what its readiness probe last said, so an image without
+// `ip` reads as such instead of as a bare timeout.
+func pendingTimeoutError(namespace string, pending map[string]string) error {
 	parts := make([]string, 0, len(pending))
 	for name, reason := range pending {
+		if probe := readinessProbeFailure(namespace, name); probe != "" {
+			reason += ", " + probe
+		}
 		parts = append(parts, fmt.Sprintf("%s (%s)", name, reason))
 	}
 	sort.Strings(parts)
 	return fmt.Errorf("timeout waiting for pods to be Ready: %s", strings.Join(parts, ", "))
+}
+
+// readinessProbeFailure returns the last readiness probe failure the kubelet
+// recorded for the pod, from its events.
+func readinessProbeFailure(namespace, podName string) string {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	events, err := kubeclient.Clientset.CoreV1().Events(namespace).List(ctx, metav1.ListOptions{
+		FieldSelector: "involvedObject.kind=Pod,involvedObject.name=" + podName + ",reason=Unhealthy",
+	})
+	if err != nil {
+		return ""
+	}
+	return latestReadinessFailure(events.Items)
+}
+
+// latestReadinessFailure picks the newest "Readiness probe failed" event and
+// keeps the first line of what the probe printed.
+func latestReadinessFailure(events []v1.Event) string {
+	var best *v1.Event
+	for i := range events {
+		e := &events[i]
+		if !strings.HasPrefix(e.Message, "Readiness probe failed") {
+			continue
+		}
+		if best == nil || eventTime(e).After(eventTime(best)) {
+			best = e
+		}
+	}
+	if best == nil {
+		return ""
+	}
+	msg := strings.TrimSpace(strings.TrimPrefix(best.Message, "Readiness probe failed:"))
+	if i := strings.IndexByte(msg, '\n'); i >= 0 {
+		msg = strings.TrimSpace(msg[:i])
+	}
+	if len(msg) > 160 {
+		msg = msg[:160] + "..."
+	}
+	if msg == "" {
+		return "readiness probe failed"
+	}
+	return "readiness probe failed: " + msg
+}
+
+func eventTime(e *v1.Event) time.Time {
+	if !e.LastTimestamp.IsZero() {
+		return e.LastTimestamp.Time
+	}
+	if !e.EventTime.IsZero() {
+		return e.EventTime.Time
+	}
+	return e.FirstTimestamp.Time
 }
