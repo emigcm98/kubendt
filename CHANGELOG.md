@@ -37,6 +37,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - A `tbf` request only needs `rate`, `burst` and `latency` default to `32kbit` and `50ms`. A request without `tcparams` or with an unsupported qdisc says so instead of "unrecognized or unsupported action".
 - A replayed `custom` action runs through kubectl, as it did the first time, instead of the driver's default executor.
 - An action that fails because the image lacks a program names the program, instead of the raw exec error.
+- A configure request that names a pod twice, by hand or through a `links` entry, runs its actions as one job in request order, instead of two jobs at once persisted in whichever order they landed.
 - The traffic control panel reports the backend's error when an action is rejected instead of saying it was applied, keeps tc units for rate and burst instead of whole Mbit and mislabeled kilobytes, and shows an interface on the kernel default qdisc as unshaped.
 - Opening traffic control on a node whose image has no `tc` is faster the first time: a toolbox left by capture or trace is used directly, and a new one is awaited every 200 ms instead of every second.
 
