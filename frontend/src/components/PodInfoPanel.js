@@ -1218,7 +1218,10 @@ const PodInfoPanel = ({
                     {methodPopover.params.map((param, pidx) => (
                       <div key={pidx} className="param-item">
                         <span className="param-name">{param.name}</span>
-                        <span className="param-type">{param.type}</span>
+                        <span className="param-type">
+                          {param.type}
+                          {param.required === false ? ', optional' : ''}
+                        </span>
                       </div>
                     ))}
                   </div>

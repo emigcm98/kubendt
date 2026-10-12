@@ -15,6 +15,12 @@
     ]
   },
   "add_static_route": { "unsupported": true },
+  "custom": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","echo hello"]
+    ]
+  },
   "del_qdisc": {
     "executor": "tc_universal",
     "commands": [

@@ -4,13 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"kubendt/capabilities/capabilities"
+	"kubendt/actions"
 	drivers_registry "kubendt/drivers/registry"
 	"kubendt/executor"
 	"kubendt/kubeclient"
 	"kubendt/types"
-	"log"
-	"slices"
 	"strings"
 
 	v1 "k8s.io/api/core/v1"
@@ -39,6 +37,23 @@ func NormalizeCustomCommand(raw json.RawMessage) ([]string, error) {
 		return args, nil
 	}
 	return nil, fmt.Errorf("custom action 'command' must be a string or an array of strings")
+}
+
+// custom bypasses the drivers: the command runs as given, through kubectl,
+// on any pod. Declared here with the other universal actions so replay and
+// history resolve it like the configure request does.
+func init() {
+	actions.Register[any](
+		actions.Capability{ID: "custom", Label: "Custom command", Description: "A command run as given, outside the driver."},
+		actions.Action[any]{Type: "custom", Label: "Run a command", Params: actions.P(actions.Command), Executor: executor.DefaultExecutorName,
+			Run: func(_ any, a types.ActionEntry) ([][]string, error) {
+				args, err := NormalizeCustomCommand(a.Command)
+				if err != nil {
+					return nil, err
+				}
+				return [][]string{args}, nil
+			}},
+	)
 }
 
 // ResolveActionFlags returns ActionFlags for one action.
@@ -84,54 +99,34 @@ func GetDriverForListedPod(pod *v1.Pod) (interface{}, error) {
 	return drv, nil
 }
 
-func ResolveDriverCommands(driver interface{}, action types.ActionEntry) [][]string {
-	commands, err := ResolveDriverCommandsForPod("", "", driver, action)
-	if err != nil {
-		log.Printf("❌ Could not resolve action '%s': %v", action.Type, err)
-		return nil
-	}
-	return commands
-}
-
-// checkProtectedInterface rejects actions targeting eth0 (the pod's cluster
-// interface) except the SNAT toggles, the supported way to give a topology
-// internet access. Runs before the driver planners so VyOS/XRd are covered too.
-func checkProtectedInterface(action types.ActionEntry) error {
-	const protectedInterface = "eth0"
-	protected := action.Iface == protectedInterface || action.Device == protectedInterface || slices.Contains(action.Ifaces, protectedInterface)
-	if !protected {
-		return nil
-	}
-
-	allowedOnEth0 := map[string]bool{
-		"enable_snat":  true,
-		"disable_snat": true,
-	}
-	if allowedOnEth0[action.Type] {
-		return nil
-	}
-
-	return fmt.Errorf("action '%s' is not allowed on protected interface eth0 (only enable_snat/disable_snat)", action.Type)
-}
-
-// ResolveDriverExecutionPlanForPod resolves commands and the executor name to
-// use for one action on one pod. Drivers may override this via
-// EffectiveActionExecutionPlanResolver.
+// ResolveDriverExecutionPlanForPod resolves the executor and the commands of
+// one action on one pod. The action is looked up in the registry, validated
+// and checked against the driver's capabilities before anything is built, so
+// a bad request fails here with the field named and nothing reaches the pod.
+// Universal actions bring their own executor. Drivers that plan their own
+// execution (EffectiveActionExecutionPlanResolver) are asked next, for the
+// actions they handle. The rest run the capability method and the driver's
+// default executor.
 func ResolveDriverExecutionPlanForPod(namespace, podName string, driver interface{}, action types.ActionEntry) (string, [][]string, error) {
-	if err := checkProtectedInterface(action); err != nil {
-		log.Printf("❌ %v", err)
+	desc, ok := actions.Lookup(action.Type)
+	if !ok {
+		return "", nil, fmt.Errorf("unknown action %q", action.Type)
+	}
+	if err := desc.Validate(action); err != nil {
 		return "", nil, err
 	}
+	if !desc.Supports(driver) {
+		name, typ := driverNameType(driver)
+		return "", nil, fmt.Errorf("node '%s' (type %s, driver %s) does not support %s operations, so action %q cannot be applied",
+			podName, typ, name, strings.TrimSuffix(desc.Capability, "Capable"), action.Type)
+	}
 
-	// Traffic shaping is universal: tc runs in the pod netns, so it resolves the
-	// same for every driver and executes via the tc_universal executor (the
-	// pod's own tc, or an ephemeral toolbox for images that ship none).
-	if action.Type == "add_qdisc" || action.Type == "del_qdisc" {
-		commands, err := ResolveDriverCommandsForPod(namespace, podName, driver, action)
+	if desc.Executor != "" {
+		commands, err := desc.Run(driver, action)
 		if err != nil {
 			return "", nil, err
 		}
-		return executor.TCUniversalExecutorName, commands, nil
+		return desc.Executor, commands, nil
 	}
 
 	if planner, ok := driver.(types.EffectiveActionExecutionPlanResolver); ok {
@@ -147,163 +142,15 @@ func ResolveDriverExecutionPlanForPod(namespace, podName string, driver interfac
 		}
 	}
 
-	commands, err := ResolveDriverCommandsForPod(namespace, podName, driver, action)
+	commands, err := desc.Run(driver, action)
 	if err != nil {
 		return "", nil, err
 	}
-
 	_, executorName, err := executor.ResolveForDriver(driver)
 	if err != nil {
 		return "", nil, err
 	}
-
 	return executorName, commands, nil
-}
-
-func ResolveDriverCommandsForPod(namespace, podName string, driver interface{}, action types.ActionEntry) ([][]string, error) {
-
-	// custom bypasses the driver/capability system entirely.
-	if action.Type == "custom" {
-		args, err := NormalizeCustomCommand(action.Command)
-		if err != nil {
-			return nil, err
-		}
-		return [][]string{args}, nil
-	}
-
-	if err := checkProtectedInterface(action); err != nil {
-		return nil, err
-	}
-
-	// L2 actions (switch, hosts, routers)
-	if l2, ok := driver.(capabilities.L2Capable); ok {
-		switch action.Type {
-		case "link_up":
-			return l2.LinkUp(action.Iface), nil
-		case "link_down":
-			return l2.LinkDown(action.Iface), nil
-		}
-	}
-
-	// L3 actions (hosts, routers)
-	if l3, ok := driver.(capabilities.L3Capable); ok {
-		switch action.Type {
-		case "set_ip":
-			return l3.SetIP(action.Iface, action.CIDR), nil
-		case "replace_ip":
-			return l3.ReplaceIP(action.Iface, action.CIDR), nil
-		case "remove_ip":
-			return l3.RemoveIP(action.Iface, action.CIDR), nil
-		case "set_default_route":
-			return l3.SetDefaultRoute(action.Gateway), nil
-		case "remove_default_route":
-			return l3.RemoveDefaultRoute(), nil
-		case "add_static_route":
-			return l3.AddStaticRoute(action.DstCIDR, action.Gateway, action.Device), nil
-		case "remove_static_route":
-			return l3.RemoveStaticRoute(action.DstCIDR, action.Gateway, action.Device), nil
-		case "add_dns_nameserver":
-			return l3.AddDNSNameserver(action.DNSServer), nil
-		case "remove_dns_nameserver":
-			return l3.RemoveDNSNameserver(action.DNSServer), nil
-		case "add_dns_search":
-			return l3.AddDNSSearch(action.DNSDomain), nil
-		case "remove_dns_search":
-			return l3.RemoveDNSSearch(action.DNSDomain), nil
-		}
-	}
-
-	// NAT actions (NAT, only routers)
-	if nat, ok := driver.(capabilities.NATCapable); ok {
-		switch action.Type {
-		case "enable_snat":
-			return nat.EnableSNAT(action.Iface), nil
-		case "disable_snat":
-			return nat.DisableSNAT(action.Iface), nil
-		case "enable_dnat":
-			return nat.EnableDNAT(action.Iface, action.ExternalPort, action.InternalIP, action.InternalPort, action.Protocol), nil
-		case "disable_dnat":
-			return nat.DisableDNAT(action.Iface, action.ExternalPort, action.InternalIP, action.InternalPort, action.Protocol), nil
-		}
-	}
-
-	// TC actions (traffic shaping) are universal: tc runs in the pod netns, so
-	// any pod can be shaped without a driver capability. The command builder
-	// stays shared; execution is routed to the tc_universal executor by
-	// ResolveDriverExecutionPlanForPod. A bad request is an error here, so it
-	// shows up on the action instead of as a silently different qdisc.
-	switch action.Type {
-	case "add_qdisc":
-		if action.Iface == "" {
-			return nil, fmt.Errorf("add_qdisc requires iface")
-		}
-		commands, err := buildShapingCommands(action.Iface, action.TCParams)
-		if err != nil {
-			return nil, fmt.Errorf("add_qdisc on %s: %w", action.Iface, err)
-		}
-		return commands, nil
-	case "del_qdisc":
-		if action.Iface == "" {
-			return nil, fmt.Errorf("del_qdisc requires iface")
-		}
-		return buildDelQdiscCommand(action.Iface), nil
-	}
-
-	// Switch actions (linux switch + ovswitch)
-	if sw, ok := driver.(capabilities.SwitchCapable); ok {
-
-		switch action.Type {
-		case "setup_bridge":
-			return sw.SetupBridge(action.Bridge, action.Ifaces), nil
-		case "teardown_bridge":
-			return sw.TeardownBridge(action.Bridge), nil
-		case "add_interface_to_bridge":
-			return sw.AddInterfaceToBridge(action.Iface, action.Bridge), nil
-		case "remove_interface_from_bridge":
-			return sw.RemoveInterfaceFromBridge(action.Iface, action.Bridge), nil
-		}
-	}
-
-	// OSPF actions (FRR and other OSPF-capable routers)
-	if ospf, ok := driver.(capabilities.OSPFCapable); ok {
-		switch action.Type {
-		case "ospf_add_network":
-			return ospf.OSPFAddNetwork(action.CIDR, action.OSPFArea), nil
-		case "ospf_remove_network":
-			return ospf.OSPFRemoveNetwork(action.CIDR, action.OSPFArea), nil
-		case "ospf_set_router_id":
-			return ospf.OSPFSetRouterID(action.RouterID), nil
-		case "ospf_remove_router_id":
-			return ospf.OSPFRemoveRouterID(), nil
-		case "ospf_passive_default":
-			return ospf.OSPFPassiveDefault(), nil
-		case "ospf_remove_passive_default":
-			return ospf.OSPFRemovePassiveDefault(), nil
-		case "ospf_no_passive":
-			return ospf.OSPFNoPassive(action.Iface), nil
-		case "ospf_remove_no_passive":
-			return ospf.OSPFRemoveNoPassive(action.Iface), nil
-		case "ospf_originate_default":
-			return ospf.OSPFOriginateDefault(), nil
-		case "ospf_remove_originate_default":
-			return ospf.OSPFRemoveOriginateDefault(), nil
-		case "ospf_mtu_ignore":
-			return ospf.OSPFMTUIgnore(action.Iface), nil
-		case "ospf_remove_mtu_ignore":
-			return ospf.OSPFRemoveMTUIgnore(action.Iface), nil
-		}
-	}
-
-	// No implemented capability produced commands. Distinguish a genuinely
-	// unknown action (typo) from a known action whose capability this driver /
-	// node type does not support (e.g. an L3 op like set_ip on a switch), so
-	// the caller can surface a precise message instead of a generic one.
-	if capName, known := capabilities.ActionCapability(action.Type); known {
-		name, typ := driverNameType(driver)
-		return nil, fmt.Errorf("node '%s' (type %s, driver %s) does not support %s operations, so action %q cannot be applied", podName, typ, name, capName, action.Type)
-	}
-
-	return nil, nil
 }
 
 // driverNameType best-effort extracts a driver's registered name and logical

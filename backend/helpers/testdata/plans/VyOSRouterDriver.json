@@ -25,6 +25,12 @@
       ["set protocols static route 10.1.0.0/16 next-hop 10.0.0.254"]
     ]
   },
+  "custom": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","echo hello"]
+    ]
+  },
   "del_qdisc": {
     "executor": "tc_universal",
     "commands": [

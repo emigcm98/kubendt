@@ -36,7 +36,9 @@ Drivers encode node behavior and can combine capability bases:
 - `NATCapable`
 - `OSPFCapable`
 
-Traffic control is not a driver capability. It runs on any pod through the pod's own `tc`, with an ephemeral toolbox container as fallback, so every node can be shaped.
+Every action is declared once, next to its capability interface, in the `actions` registry: type, label, parameters (JSON name, kind, required) and the method that builds its commands. Dispatch looks the action up, validates the request against the declared parameters, checks that the driver implements the capability and runs it. `GET /drivers` lists the same declarations.
+
+Traffic control is not a driver capability. It runs on any pod through the pod's own `tc`, with an ephemeral toolbox container as fallback, so every node can be shaped. It and `custom` are universal actions, registered against any driver with their own executor.
 
 The same action type can use different executors depending on driver/runtime constraints (for example guest CLI wrappers in QEMU-based platforms).
 

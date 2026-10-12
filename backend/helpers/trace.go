@@ -14,7 +14,7 @@ import (
 	"strings"
 	"sync"
 
-	capsreg "kubendt/capabilities/registry"
+	"kubendt/actions"
 	drvreg "kubendt/drivers/registry"
 	"kubendt/kubeclient"
 
@@ -641,8 +641,8 @@ func DriverIsL3Capable(driverName string) bool {
 	if err != nil {
 		return false
 	}
-	for _, cd := range capsreg.ForDriver(inst) {
-		if cd.ID() == "L3Capable" {
+	for _, cd := range actions.ForDriver(inst) {
+		if cd.ID == "L3Capable" {
 			return true
 		}
 	}

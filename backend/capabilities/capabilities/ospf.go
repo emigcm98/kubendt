@@ -1,5 +1,10 @@
 package capabilities
 
+import (
+	"kubendt/actions"
+	"kubendt/types"
+)
+
 type OSPFCapable interface {
 	OSPFAddNetwork(network, area string) [][]string
 	OSPFRemoveNetwork(network, area string) [][]string
@@ -15,17 +20,44 @@ type OSPFCapable interface {
 	OSPFRemoveMTUIgnore(iface string) [][]string
 }
 
-var OSPFMethods = map[string]string{
-	"ospf_add_network":              "OSPFAddNetwork",
-	"ospf_remove_network":           "OSPFRemoveNetwork",
-	"ospf_set_router_id":            "OSPFSetRouterID",
-	"ospf_remove_router_id":         "OSPFRemoveRouterID",
-	"ospf_passive_default":          "OSPFPassiveDefault",
-	"ospf_remove_passive_default":   "OSPFRemovePassiveDefault",
-	"ospf_no_passive":               "OSPFNoPassive",
-	"ospf_remove_no_passive":        "OSPFRemoveNoPassive",
-	"ospf_originate_default":        "OSPFOriginateDefault",
-	"ospf_remove_originate_default": "OSPFRemoveOriginateDefault",
-	"ospf_mtu_ignore":               "OSPFMTUIgnore",
-	"ospf_remove_mtu_ignore":        "OSPFRemoveMTUIgnore",
+func init() {
+	actions.Register[OSPFCapable](
+		actions.Capability{ID: "OSPFCapable", Label: "OSPF Routing", Description: "Management of OSPF routing protocol configuration."},
+		actions.Action[OSPFCapable]{Type: "ospf_add_network", Label: "Advertise network", Params: actions.P(actions.CIDR, actions.OSPFArea),
+			Run: func(c OSPFCapable, a types.ActionEntry) ([][]string, error) {
+				return c.OSPFAddNetwork(a.CIDR, a.OSPFArea), nil
+			}},
+		actions.Action[OSPFCapable]{Type: "ospf_remove_network", Label: "Stop advertising network", Params: actions.P(actions.CIDR, actions.OSPFArea),
+			Run: func(c OSPFCapable, a types.ActionEntry) ([][]string, error) {
+				return c.OSPFRemoveNetwork(a.CIDR, a.OSPFArea), nil
+			}},
+		actions.Action[OSPFCapable]{Type: "ospf_set_router_id", Label: "Set router ID", Params: actions.P(actions.RouterID),
+			Run: func(c OSPFCapable, a types.ActionEntry) ([][]string, error) {
+				return c.OSPFSetRouterID(a.RouterID), nil
+			}},
+		actions.Action[OSPFCapable]{Type: "ospf_remove_router_id", Label: "Remove router ID",
+			Run: func(c OSPFCapable, a types.ActionEntry) ([][]string, error) { return c.OSPFRemoveRouterID(), nil }},
+		actions.Action[OSPFCapable]{Type: "ospf_passive_default", Label: "Passive interfaces by default",
+			Run: func(c OSPFCapable, a types.ActionEntry) ([][]string, error) { return c.OSPFPassiveDefault(), nil }},
+		actions.Action[OSPFCapable]{Type: "ospf_remove_passive_default", Label: "Active interfaces by default",
+			Run: func(c OSPFCapable, a types.ActionEntry) ([][]string, error) { return c.OSPFRemovePassiveDefault(), nil }},
+		actions.Action[OSPFCapable]{Type: "ospf_no_passive", Label: "Make interface active", Params: actions.P(actions.Iface),
+			Run: func(c OSPFCapable, a types.ActionEntry) ([][]string, error) { return c.OSPFNoPassive(a.Iface), nil }},
+		actions.Action[OSPFCapable]{Type: "ospf_remove_no_passive", Label: "Make interface passive", Params: actions.P(actions.Iface),
+			Run: func(c OSPFCapable, a types.ActionEntry) ([][]string, error) {
+				return c.OSPFRemoveNoPassive(a.Iface), nil
+			}},
+		actions.Action[OSPFCapable]{Type: "ospf_originate_default", Label: "Originate default route",
+			Run: func(c OSPFCapable, a types.ActionEntry) ([][]string, error) { return c.OSPFOriginateDefault(), nil }},
+		actions.Action[OSPFCapable]{Type: "ospf_remove_originate_default", Label: "Stop originating default route",
+			Run: func(c OSPFCapable, a types.ActionEntry) ([][]string, error) {
+				return c.OSPFRemoveOriginateDefault(), nil
+			}},
+		actions.Action[OSPFCapable]{Type: "ospf_mtu_ignore", Label: "Ignore MTU mismatch", Params: actions.P(actions.Iface),
+			Run: func(c OSPFCapable, a types.ActionEntry) ([][]string, error) { return c.OSPFMTUIgnore(a.Iface), nil }},
+		actions.Action[OSPFCapable]{Type: "ospf_remove_mtu_ignore", Label: "Check MTU again", Params: actions.P(actions.Iface),
+			Run: func(c OSPFCapable, a types.ActionEntry) ([][]string, error) {
+				return c.OSPFRemoveMTUIgnore(a.Iface), nil
+			}},
+	)
 }

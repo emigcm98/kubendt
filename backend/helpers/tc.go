@@ -18,6 +18,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/remotecommand"
+	"kubendt/actions"
 )
 
 // tcToolboxStartTimeout bounds the wait for the netshoot toolbox to come up.
@@ -168,6 +169,25 @@ func tcResetCommand(iface string) []string {
 func buildAddQdiscCommand(iface, qdisc string, params []string) [][]string {
 	cmd := append([]string{"tc", "qdisc", "replace", "dev", iface, "root", qdisc}, params...)
 	return [][]string{tcResetCommand(iface), cmd}
+}
+
+// Shaping is universal: tc runs in the pod's netns, so any pod can be shaped
+// whatever its driver. The actions register against any driver and always
+// run through the tc_universal executor (the pod's own tc, or the toolbox).
+func init() {
+	actions.Register[any](
+		actions.Capability{ID: "tc", Label: "Traffic control", Description: "Shaping of any interface, in the pod's network namespace."},
+		actions.Action[any]{Type: "add_qdisc", Label: "Shape interface", Params: actions.P(actions.Iface, actions.TCParams), Executor: executor.TCUniversalExecutorName,
+			Run: func(_ any, a types.ActionEntry) ([][]string, error) {
+				commands, err := buildShapingCommands(a.Iface, a.TCParams)
+				if err != nil {
+					return nil, fmt.Errorf("add_qdisc on %s: %w", a.Iface, err)
+				}
+				return commands, nil
+			}},
+		actions.Action[any]{Type: "del_qdisc", Label: "Clear shaping", Params: actions.P(actions.Iface), Executor: executor.TCUniversalExecutorName,
+			Run: func(_ any, a types.ActionEntry) ([][]string, error) { return buildDelQdiscCommand(a.Iface), nil }},
+	)
 }
 
 // buildDelQdiscCommand removes whatever is on the root and leaves the

@@ -274,10 +274,10 @@ View live at: http://localhost:8080/swagger/index.html
 
 ### Adding a Custom Capability
 
-1. Define capability methods in `backend/capabilities/capabilities/your_capability.go`
-2. Register it in `backend/capabilities/register_all.go`
-3. Create a base implementation for reuse across drivers
-4. Use it in network configuration via POST `/network/configure`
+1. Define the interface and declare its actions in `backend/capabilities/capabilities/your_capability.go`: one `actions.Action` per action with its type, label, params and the method it calls
+2. Create a base implementation for reuse across drivers
+3. Add a sample of each action to `backend/helpers/testdata/actions.json` and regenerate the expected plans with `go test ./helpers -run TestActionPlans -update`
+4. Use it in network configuration via POST `/network/configure`. Dispatch, validation and `GET /drivers` follow from the declaration
 
 ### QEMU Image Documentation
 
