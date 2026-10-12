@@ -359,7 +359,7 @@ definitions:
   types.DriverMethodEntry:
     properties:
       label:
-        example: LinkUp
+        example: Bring interface up
         type: string
       name:
         example: link_up
@@ -374,8 +374,11 @@ definitions:
       name:
         example: iface
         type: string
+      required:
+        example: true
+        type: boolean
       type:
-        example: string
+        example: iface
         type: string
     type: object
   types.DriverOperationHistoryEntryDoc:

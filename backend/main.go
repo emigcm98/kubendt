@@ -8,7 +8,6 @@ package main
 import (
 	"context"
 	"kubendt/auth"
-	capabilities_base "kubendt/capabilities"
 	"kubendt/database"
 	docs "kubendt/docs"
 	drivers "kubendt/drivers"
@@ -68,8 +67,7 @@ func main() {
 		}
 	}
 
-	// Initialize capabilities and drivers registry
-	capabilities_base.RegisterAllCapabilities()
+	// Capabilities declare their actions at import time, drivers register here.
 	drivers.RegisterAllDrivers()
 
 	// host and schemes are left blank in the annotations so the spec is not tied

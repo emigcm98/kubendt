@@ -3077,7 +3077,7 @@ const docTemplate = `{
             "properties": {
                 "label": {
                     "type": "string",
-                    "example": "LinkUp"
+                    "example": "Bring interface up"
                 },
                 "name": {
                     "type": "string",
@@ -3098,9 +3098,13 @@ const docTemplate = `{
                     "type": "string",
                     "example": "iface"
                 },
+                "required": {
+                    "type": "boolean",
+                    "example": true
+                },
                 "type": {
                     "type": "string",
-                    "example": "string"
+                    "example": "iface"
                 }
             }
         },

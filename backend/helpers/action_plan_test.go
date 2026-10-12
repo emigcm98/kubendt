@@ -12,7 +12,7 @@ import (
 	"sync"
 	"testing"
 
-	caps "kubendt/capabilities/capabilities"
+	"kubendt/actions"
 	drivers_base "kubendt/drivers"
 	drivers_registry "kubendt/drivers/registry"
 	"kubendt/helpers"
@@ -53,19 +53,8 @@ func loadDriver(t *testing.T, name string) any {
 	return drv
 }
 
-// knownActionTypes lists every driver action plus the universal tc ones.
-// custom is left out, it bypasses the driver system by design.
-func knownActionTypes() []string {
-	var out []string
-	for _, m := range []map[string]string{caps.L2Methods, caps.L3Methods, caps.SwitchMethods, caps.NATMethods, caps.OSPFMethods} {
-		for actionType := range m {
-			out = append(out, actionType)
-		}
-	}
-	out = append(out, "add_qdisc", "del_qdisc")
-	sort.Strings(out)
-	return out
-}
+// knownActionTypes is every registered action, driver bound or universal.
+func knownActionTypes() []string { return actions.Types() }
 
 // loadFixtures reads testdata/actions.json and checks it holds exactly one
 // sample per known action type, so a new action cannot land without one.

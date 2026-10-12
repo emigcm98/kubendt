@@ -40,24 +40,14 @@ DRIVER RESOLUTION (on pod action):
 │     └─ Instantiate using reflection from registry
 │        → returns *FRRRouterDriver instance
 │
-└─ ResolveDriverCommands(driver, action)
-   ├─ Type assert driver.(L2Capable) → ok?
-   │  └─ Call Capability method (e.g., LinkUp(iface))
-   │     → returns [][]string{"ip", "link", "set", "eth1", "up"}
-   │
-   ├─ OR Type assert driver.(L3Capable) → ok?
-   │  └─ Call Capability method (e.g., SetIP(iface, cidr))
-   │     → returns [][]string{"ip", "addr", "add", "10.0.0.1/24", "dev", "eth1"}
-   │
-   ├─ OR Type assert driver.(NATCapable) → ok?
-   │  └─ Call Capability method (e.g., EnableSNAT(iface))
-   │     → returns iptables SNAT rule
-   │
-   ├─ OR Type assert driver.(OSPFCapable) → ok?
-   │  └─ Call Capability method (e.g., OSPFAddNetwork(network, area))
-   │     → returns [][]string{"vtysh", "-c", "configure terminal", "-c", "router ospf", "-c", "network 10.0.0.0/30 area 0"}
-   │
-   └─ Return [][]string with command(s) or nil if unsupported
+└─ ResolveDriverExecutionPlanForPod(ns, pod, driver, action)
+   ├─ actions.Lookup(action.Type)      → unknown action? error
+   ├─ desc.Validate(action)            → missing or malformed field? error naming it
+   ├─ desc.Supports(driver)            → driver lacks the capability? error
+   ├─ universal action (tc, custom)    → its own executor
+   ├─ driver plans its own execution?  → EffectiveActionExecutionPlanResolver
+   └─ desc.Run(driver, action)         → capability method, e.g. L3.SetIP(eth1, 10.0.0.1/24)
+      → [][]string{"ip", "addr", "add", "10.0.0.1/24", "dev", "eth1"} and the driver's executor
 ```
 
 ### 1.2 Driver Type Hierarchy
@@ -81,53 +71,24 @@ DRIVER RESOLUTION (on pod action):
   │                    │                       OSPFSetRouterID()
 ```
 
-### 1.3 Capability Method Resolution Chain
+### 1.3 Action Resolution
 
 ```
 Input: action = {Type: "set_ip", Iface: "eth1", CIDR: "10.0.0.1/24"}
        driver = (*FRRRouterDriver instance)
 │
-├─ L2Capable? (driver.(capabilities.L2Capable))
-│  ├─ "link_up" → LinkUp()
-│  ├─ "link_down" → LinkDown()
-│  └─ else continue
-│
-├─ L3Capable? (driver.(capabilities.L3Capable))
-│  ├─ "set_ip" → L3.SetIP(eth1, 10.0.0.1/24) ✓ MATCH
-│  │  └─ Returns: [["ip", "addr", "add", "10.0.0.1/24", "dev", "eth1"]]
-│  ├─ "replace_ip" → ReplaceIP()
-│  ├─ "remove_ip" → RemoveIP()
-│  ├─ "set_default_route" → SetDefaultRoute()
-│  ├─ ... (other L3 methods)
-│  └─ else continue
-│
-├─ NATCapable? (driver.(capabilities.NATCapable))
-│  ├─ "enable_snat" → EnableSNAT()
-│  ├─ "disable_snat" → DisableSNAT()
-│  ├─ ... (other NAT methods)
-│  └─ else continue
-│
-├─ Traffic control (add_qdisc/del_qdisc) is not a branch here. It is resolved
-│  for any pod before this chain and runs through the tc_universal executor
-│
-├─ SwitchCapable? (driver.(capabilities.SwitchCapable))
-│  ├─ "setup_bridge" → SetupBridge()
-│  ├─ ... (other bridge methods)
-│  └─ else continue
-│
-├─ OSPFCapable? (driver.(capabilities.OSPFCapable))
-│  ├─ "ospf_add_network" → OSPFAddNetwork()
-│  ├─ "ospf_remove_network" → OSPFRemoveNetwork()
-│  ├─ "ospf_set_router_id" → OSPFSetRouterID()
-│  ├─ "ospf_passive_default" → OSPFPassiveDefault()
-│  ├─ "ospf_no_passive" → OSPFNoPassive()
-│  ├─ "ospf_originate_default" → OSPFOriginateDefault()
-│  ├─ "ospf_mtu_ignore" → OSPFMTUIgnore()
-│  └─ else continue
-│
-└─ Return nil (action unsupported by this driver)
+├─ Lookup: "set_ip" is declared by L3Capable with params iface and cidr, both required
+├─ Validate: both present, eth1 is a valid name and not eth0, 10.0.0.1/24 parses
+├─ Supports: *FRRRouterDriver implements L3Capable ✓
+└─ Run: L3Capable.SetIP("eth1", "10.0.0.1/24")
 
-Output: [["ip", "addr", "add", "10.0.0.1/24", "dev", "eth1"]]
+Output: [["ip", "addr", "add", "10.0.0.1/24", "dev", "eth1"]], executor kubectl
+
+A driver without the capability (a switch and set_ip) fails at Supports with
+"does not support L3 operations". A request without cidr fails at Validate
+with the field named, before anything runs. Traffic control and custom are
+universal: declared against any driver, with the tc_universal and kubectl
+executors.
 ```
 
 ---

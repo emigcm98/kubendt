@@ -418,16 +418,19 @@ type DriversListResponse struct {
 	Drivers []DriverInfo `json:"drivers"`
 }
 
-// DriverMethodParamEntry describes one method parameter in driver capability docs.
+// DriverMethodParamEntry describes one parameter of an action: the JSON field
+// of the configure request, its kind (iface, iface_list, cidr, ip, port, text,
+// object, command) and whether the action needs it.
 type DriverMethodParamEntry struct {
-	Name string `json:"name" example:"iface"`
-	Type string `json:"type" example:"string"`
+	Name     string `json:"name" example:"iface"`
+	Type     string `json:"type" example:"iface"`
+	Required bool   `json:"required" example:"true"`
 }
 
-// DriverMethodEntry describes one callable driver method.
+// DriverMethodEntry describes one action a driver supports.
 type DriverMethodEntry struct {
 	Name   string                   `json:"name" example:"link_up"`
-	Label  string                   `json:"label" example:"LinkUp"`
+	Label  string                   `json:"label" example:"Bring interface up"`
 	Params []DriverMethodParamEntry `json:"params"`
 }
 

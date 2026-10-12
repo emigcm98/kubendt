@@ -1,6 +1,10 @@
 package types
 
-import "strings"
+import (
+	"fmt"
+	"regexp"
+	"strings"
+)
 
 // pseudoInterfaceBases lists kernel-internal virtual interfaces that are never
 // user-manageable network endpoints (PIM multicast register and the default
@@ -29,4 +33,25 @@ func IsPseudoInterface(name string) bool {
 		name = name[:i]
 	}
 	return pseudoInterfaceBases[name]
+}
+
+// validIfaceRe: 1-15 chars, no '/', ':' or whitespace (Linux IFNAMSIZ rules).
+var validIfaceRe = regexp.MustCompile(`^[^\s:/]{1,15}$`)
+
+// ValidateLinuxInterfaceName rejects names Linux can't accept as interface
+// labels (>15 chars, '/', ':', whitespace, empty).
+func ValidateLinuxInterfaceName(name string) error {
+	if name == "" {
+		return fmt.Errorf("interface name must not be empty")
+	}
+	if len(name) > 15 {
+		return fmt.Errorf("interface name exceeds 15 characters (Linux IFNAMSIZ limit): %q", name)
+	}
+	if strings.ContainsAny(name, "/: \t\n") {
+		return fmt.Errorf("interface name contains invalid characters ('/', ':', whitespace): %q", name)
+	}
+	if !validIfaceRe.MatchString(name) {
+		return fmt.Errorf("interface name %q is not valid for Linux", name)
+	}
+	return nil
 }

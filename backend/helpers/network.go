@@ -278,27 +278,6 @@ func fatalPodImageError(pod *v1.Pod) (reason, detail string, bad bool) {
 	return "", "", false
 }
 
-// validIfaceRe: 1-15 chars, no '/', ':' or whitespace (Linux IFNAMSIZ rules).
-var validIfaceRe = regexp.MustCompile(`^[^\s:/]{1,15}$`)
-
-// ValidateLinuxInterfaceName rejects names Linux can't accept as interface
-// labels (>15 chars, '/', ':', whitespace, empty).
-func ValidateLinuxInterfaceName(name string) error {
-	if name == "" {
-		return fmt.Errorf("interface name must not be empty")
-	}
-	if len(name) > 15 {
-		return fmt.Errorf("interface name exceeds 15 characters (Linux IFNAMSIZ limit): %q", name)
-	}
-	if strings.ContainsAny(name, "/: \t\n") {
-		return fmt.Errorf("interface name contains invalid characters ('/', ':', whitespace): %q", name)
-	}
-	if !validIfaceRe.MatchString(name) {
-		return fmt.Errorf("interface name %q is not valid for Linux", name)
-	}
-	return nil
-}
-
 // driverInterfaceConstraintsFor looks up a driver by name and returns its
 // declared InterfaceNameConstraints (if any). Drivers that don't implement
 // InterfaceNameConstrainer impose no extra constraint beyond Linux rules.
@@ -321,7 +300,7 @@ func driverInterfaceConstraintsFor(driverName string) (drivers_meta.InterfaceNam
 // driver-specific constraints (pattern + reserved names) if the driver
 // declares any. driverName may be empty (no driver-specific check).
 func ValidateInterfaceNameForDriver(name, driverName string) error {
-	if err := ValidateLinuxInterfaceName(name); err != nil {
+	if err := types.ValidateLinuxInterfaceName(name); err != nil {
 		return err
 	}
 	// Platform-reserved interfaces, regardless of driver: eth0 is the primary

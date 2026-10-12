@@ -20,7 +20,7 @@ KubeNDT implements network topology management for Kubernetes through five inter
   - `SwitchCapable`: Bridge operations (brctl)
   - `OSPFCapable`: OSPF routing protocol (FRR vtysh, configures running process directly)
 - **Traffic control** is not a driver capability. It runs on any pod through the pod's own `tc`, falling back to an ephemeral toolbox container for images without it, so every node can be shaped
-- **Type-Asserted Command Resolution**: `ResolveDriverCommands()` tries each interface in order, returns shell commands
+- **Action registry**: every action is declared once next to its capability (`actions.Register`), and dispatch, validation and `GET /drivers` derive from it
 
 **Concrete Drivers**:
 
@@ -194,9 +194,9 @@ KubeNDT implements network topology management for Kubernetes through five inter
 
 ### 2. Type Assertions for Plugin Architecture
 
-- `ResolveDriverCommands()` tries type assertions in order
+- `actions.Lookup()` finds the declaration, `Validate()` checks the request, `Supports()` asserts the driver to the capability interface and `Run()` calls the method
 - Driver implements subset of capabilities → right interface supported
-- Fallback: nil if no capability matches action
+- A driver without the capability fails before anything runs, with the capability named
 
 ### 3. Idempotent Shell Commands
 

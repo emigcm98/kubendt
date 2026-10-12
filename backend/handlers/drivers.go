@@ -14,8 +14,9 @@ import (
 )
 
 type ParamInfo struct {
-	Name string `json:"name"`
-	Type string `json:"type"`
+	Name     string `json:"name" example:"cidr"`
+	Type     string `json:"type" example:"cidr"`
+	Required bool   `json:"required"`
 }
 
 type MethodInfo struct {
@@ -107,25 +108,18 @@ func buildDriverOperationHistoryEntries(namespace string, ops []helpers.Persiste
 func driverCapsToResponse(d helpers.DriverCaps) DriverWithCapabilities {
 	caps := make([]CapabilityInfo, 0, len(d.Capabilities))
 	for _, cd := range d.Capabilities {
-		methodsParams := helpers.ExtractMethodParametersMap(cd.Methods())
-		methods := make([]MethodInfo, 0, len(cd.Methods()))
-		for methodName, label := range cd.Methods() {
-			params := make([]ParamInfo, 0)
-			if methParams, ok := methodsParams[methodName]; ok {
-				for _, p := range methParams {
-					params = append(params, ParamInfo{Name: p.Name, Type: p.Type})
-				}
+		methods := make([]MethodInfo, 0, len(cd.Actions))
+		for _, act := range cd.Actions {
+			params := make([]ParamInfo, 0, len(act.Params))
+			for _, p := range act.Params {
+				params = append(params, ParamInfo{Name: p.Name, Type: string(p.Kind), Required: p.Required})
 			}
-			methods = append(methods, MethodInfo{
-				Name:   methodName,
-				Label:  label,
-				Params: params,
-			})
+			methods = append(methods, MethodInfo{Name: act.Type, Label: act.Label, Params: params})
 		}
 		caps = append(caps, CapabilityInfo{
-			ID:          cd.ID(),
-			Label:       cd.Label(),
-			Description: cd.Description(),
+			ID:          cd.ID,
+			Label:       cd.Label,
+			Description: cd.Description,
 			Methods:     methods,
 		})
 	}

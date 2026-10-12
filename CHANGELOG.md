@@ -15,12 +15,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - A configure request takes a `links` section that shapes a link by one of its ends: the peer comes from the topology, `symmetric` repeats the shaping on it, `reverse` puts a different one there and `remove` clears both. The panel offers to shape the other end too, and the link menu opens it for both ends.
 - A shaping request combines delay, jitter, loss, duplicate, corrupt, reorder and a rate in one netem, with a jitter distribution and a Gilbert-Elliott loss model as options. The panel edits all of them and offers presets, and `tc_fidelity.py` measures the composite and the models.
 - `GET /pods/tc/{namespace}/{pod}` returns the traffic control state of every interface of a pod. The Links tab uses it and marks the shaped interfaces.
+- Every action is validated before it runs: a missing or malformed field fails the action with the field named, and nothing reaches the pod.
 
 ### Changed
 
 - Every traffic control action runs as one `tc -b` batch instead of one exec per command, so an apply costs one round trip whatever its size and the action's commands are reported as a single batch.
 - The traffic control panel is per node: it lists the node's interfaces with their shaping state and edits the one picked. It opens from the node's context menu too, and the link menu and the Links tab open it on that interface.
 - Traffic control state is read from tc's JSON output in canonical units, with a `shaped` flag and the settings the old parser ignored: netem rate, reorder, Gilbert-Elliott loss and child qdiscs. A `tc` without `-j` is read through the toolbox container.
+- Actions are declared once in a registry next to their capability. `GET /drivers` lists each action's parameters with the JSON names the API takes, their kind and whether they are required, instead of the Go method names.
 
 ### Fixed
 
@@ -28,6 +30,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Re-applying shaping starts from a clean root qdisc. `tc qdisc replace` kept the parameters a new request did not mention, so a `corrupt` set once survived later updates.
 - `del_qdisc` on an interface without shaping succeeds instead of failing with "Cannot delete qdisc with handle of zero".
 - A `tbf` request only needs `rate`, `burst` and `latency` default to `32kbit` and `50ms`. A request without `tcparams` or with an unsupported qdisc says so instead of "unrecognized or unsupported action".
+- A replayed `custom` action runs through kubectl, as it did the first time, instead of the driver's default executor.
 - The traffic control panel reports the backend's error when an action is rejected instead of saying it was applied, keeps tc units for rate and burst instead of whole Mbit and mislabeled kilobytes, and shows an interface on the kernel default qdisc as unshaped.
 - Opening traffic control on a node whose image has no `tc` is faster the first time: a toolbox left by capture or trace is used directly, and a new one is awaited every 200 ms instead of every second.
 
