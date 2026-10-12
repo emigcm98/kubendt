@@ -2035,6 +2035,40 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
     }
   };
 
+  // Downloads the configuration applied in this namespace as a network_conf
+  // JSON, the same file Load network conf takes.
+  const handleExportNetworkConf = async () => {
+    if (!namespace) return;
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/network/export-conf/${namespace}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+      if (!data.targets || data.targets.length === 0) {
+        setAlertModal({
+          isOpen: true,
+          type: 'warning',
+          title: 'Nothing to export',
+          message: 'No configuration has been applied in this namespace yet.',
+          onConfirm: () => setAlertModal((prev) => ({ ...prev, isOpen: false })),
+          onCancel: () => setAlertModal((prev) => ({ ...prev, isOpen: false })),
+        });
+        return;
+      }
+
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `network_conf-${namespace}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('❌ Error exporting network conf:', err);
+      showError('Export failed', err.message || 'Could not export the network configuration.');
+    }
+  };
+
   // Pure validator for the import (deploy) payload. Throws on the first error encountered.
   // Does NOT mutate the input, name resolution happens in applyImportTopology.
   const validateImportTopologyPayload = (json) => {
@@ -3654,28 +3688,8 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
             </button>
           </div>
 
-          {/* DERECHA */}
-          <div className="topbar-right">
-            <div className="topbar-right-buttons">
-              <button
-                onClick={!isBusy ? handleSavePositions : undefined}
-                disabled={nodes.length === 0 || isBusy}
-                title="Save node positions (x,y)"
-              >
-                <SaveIcon className="app-icon" aria-hidden="true" />
-                Save positions
-              </button>
-
-              <button
-                disabled={nodes.length === 0 || isBusy}
-                onClick={!isBusy ? handleExportTopology : undefined}
-                title="Export current topology as JSON"
-              >
-                <DownloadIcon className="app-icon" aria-hidden="true" />
-                Export topology
-              </button>
-            </div>
-
+          {/* CENTRO */}
+          <div className="topbar-center">
             <div className="topbar-tools-row">
               <label
                 className={`topbar-toggle${hasExternalNodes ? '' : ' disabled'}`}
@@ -3727,6 +3741,39 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
                   </button>
                 )}
               </div>
+            </div>
+          </div>
+
+          {/* DERECHA */}
+          <div className="topbar-right">
+            <div className="topbar-right-buttons">
+              <button
+                onClick={!isBusy ? handleSavePositions : undefined}
+                disabled={nodes.length === 0 || isBusy}
+                title="Save node positions (x,y)"
+              >
+                <SaveIcon className="app-icon" aria-hidden="true" />
+                Save positions
+              </button>
+
+              <button
+                disabled={nodes.length === 0 || isBusy}
+                onClick={!isBusy ? handleExportTopology : undefined}
+                title="Export current topology as JSON"
+              >
+                <DownloadIcon className="app-icon" aria-hidden="true" />
+                Export topology
+              </button>
+
+              <button
+                className="topbar-action-export-config"
+                disabled={nodes.length === 0 || isBusy}
+                onClick={!isBusy ? handleExportNetworkConf : undefined}
+                title="Export the configuration applied in this namespace as network conf JSON"
+              >
+                <DownloadIcon className="app-icon" aria-hidden="true" />
+                Export network conf
+              </button>
             </div>
           </div>
         </div>

@@ -1348,3 +1348,15 @@ func GetNetwork(c *gin.Context) {
 
 	c.Data(http.StatusOK, "application/json", responseJSON)
 }
+
+// GET /network/export-conf/:namespace -> the configuration applied in the
+// namespace as a configure request, ready for POST /network/configure.
+func ExportNetworkConf(c *gin.Context) {
+	namespace := c.Param("namespace")
+	conf, err := helpers.ExportNetworkConf(namespace)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, conf)
+}

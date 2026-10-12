@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Every action is validated before it runs: a missing or malformed field fails the action with the field named, and nothing reaches the pod.
 - A `custom` action takes an optional `executor`: `kubectl` by default, `ssh_qemu` for a shell in a VyOS guest or `vyos_ssh_cli` for an op-mode command there.
 - A deploy that times out on a node that never gets Ready quotes its readiness probe, so an image without `ip` reads as such.
+- `GET /network/export-conf/{namespace}` returns the configuration applied in a namespace as a configure request, and the dashboard downloads it with Export network conf, ready for Load network conf.
 
 ### Changed
 

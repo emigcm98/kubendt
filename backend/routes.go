@@ -115,6 +115,8 @@ func SetupRoutes(router *gin.Engine) {
 		netGroup.GET("/positions/:namespace", handlers.GetNodePositions)
 		// Configure Pods via DRIVERS (includes network config)
 		netGroup.POST("/configure/:namespace", handlers.ConfigureNetwork)
+		// The applied configuration as a configure request
+		netGroup.GET("/export-conf/:namespace", handlers.ExportNetworkConf)
 	}
 
 	// === File Control Routes ===
