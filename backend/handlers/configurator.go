@@ -38,6 +38,8 @@ func ConfigureNetwork(c *gin.Context) {
 		return
 	}
 	req.Targets = append(req.Targets, linkTargets...)
+	// One target per pod, in request order, so a pod named twice is one job.
+	req.Targets = helpers.MergeTargetsByPod(namespace, req.Targets)
 
 	type ErrorEntry struct {
 		Pod    string `json:"pod"`
