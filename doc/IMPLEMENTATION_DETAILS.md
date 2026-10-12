@@ -41,7 +41,7 @@ Registry Pattern:
 
 ### 1.2 Capability Interface Contracts
 
-**Files**: `backend/capabilities/capabilities/*.go`
+**Files**: `backend/capabilities/*.go`, `backend/actions/*.go`
 
 **Interfaces** (defining capability contracts):
 
@@ -83,25 +83,22 @@ Drivers can override methods (e.g., HostDriver overrides ReplaceIP with idempote
 3. Calls `drivers_registry.NewByName(drvName)` to instantiate driver
 4. Returns `interface{}` (to be type-asserted by consumers)
 
-**ResolveDriverCommands(driver interface{}, action types.ActionEntry) → [][]string**:
+**ResolveDriverExecutionPlanForPod(namespace, podName, driver, action) → (executor, [][]string, error)**:
 
-1. **`custom` bypass** (checked first, before any driver/capability logic):
-   - `action.type == "custom"` → reads `action.command` (string or array), returns `[["sh","-c","<cmd>"]]` or `[["arg0","arg1",...]]`
-   - No driver label required on the pod; `driver_type` is empty in history records
-2. Validates protected interface "eth0" (only SNAT/DNAT allowed)
-3. **Type assertion chain**: tries each capability interface in order
-   - L2Capable: routes link_up, link_down
-   - L3Capable: routes IP operations
-   - NATCapable: routes SNAT/DNAT
-   - SwitchCapable: routes bridge operations
-   - OSPFCapable: routes ospf_add_network, ospf_set_router_id, ospf_passive_default, ospf_no_passive, ospf_mtu_ignore, ospf_originate_default, and their remove variants
-4. Returns `[][]string` where each inner slice is a complete command (e.g., `["ip", "addr", "add", "10.0.0.1/24", "dev", "eth1"]`)
+1. `actions.Lookup(action.type)`: an unknown type is an error
+2. `Validate`: required fields, kinds (iface, cidr, ip, port, executor) and the protected interface "eth0", which only the SNAT toggles may name
+3. `Supports`: the driver must implement the action's capability interface. Universal actions (`custom`, `add_qdisc`, `del_qdisc`) match every driver, and a pod without a driver label
+4. `GuestInterfaceMapper`, when the driver implements it: every interface param is translated to the guest name before the action runs
+5. `Run`: the capability method builds the rows, e.g. `["ip", "addr", "add", "10.0.0.1/24", "dev", "eth1"]`
+6. The executor is the action's own (universal actions), the one the request names (`custom` with `executor`), or the driver's (`ExecutorMeta`)
 
 **Custom action type**:
 
-- `type: "custom"` is a protected bypass that executes arbitrary commands via `kubectl exec` without requiring a driver label on the pod.
+- `type: "custom"` executes an arbitrary command without requiring a driver label on the pod.
 - `command` field accepts a **string** (wrapped automatically in `["sh", "-c", <cmd>]`, enabling pipes/redirects) or an **array of strings** (used as-is for exact arg control).
+- `executor` (optional) names a registered executor. The default is `kubectl`, the pod's container. On a VyOS node `ssh_qemu` runs the command in the guest shell and `vyos_ssh_cli` runs it as an op-mode command there.
 - Pod does not need the `kubendt/driver` label. A pod can mix `custom` actions with driver-based actions, custom ones always succeed (if the pod exists), driver-based ones fail if no driver is found.
+- A `custom` action runs every time it is asked for, it is never skipped as already applied.
 - `driver_type` in history/response is empty (`""`) for custom actions.
 - Example:
   ```json

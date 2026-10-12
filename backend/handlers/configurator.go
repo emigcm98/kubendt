@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"kubendt/actions"
 	"kubendt/executor"
 	"kubendt/helpers"
 	"kubendt/types"
@@ -156,41 +157,17 @@ func ConfigureNetwork(c *gin.Context) {
 		for _, action := range podConfig.Actions {
 			p := plannedAction{action: action, flags: helpers.ResolveActionFlags(action)}
 
-			// custom actions bypass driver/capability entirely, always use kubectl.
-			if action.Type == "custom" {
-				args, normErr := helpers.NormalizeCustomCommand(action.Command)
-				if normErr != nil {
-					p.err = normErr
-					plans = append(plans, p)
-					continue
-				}
-				kubectlExec, execGetErr := executor.Get(executor.DefaultExecutorName)
-				if execGetErr != nil {
-					p.err = execGetErr
-					plans = append(plans, p)
-					continue
-				}
-				p.commands = [][]string{args}
-				p.execName = executor.DefaultExecutorName
-				p.execInst = kubectlExec
-				structured := executor.CommandsFromLegacyForExecutor(p.commands, executor.DefaultExecutorName)
-				strs := make([]string, 0, len(structured))
-				for _, cmd := range structured {
-					strs = append(strs, cmd.String())
-				}
-				p.cmdStrings = strs
-				plans = append(plans, p)
-				continue
-			}
-
-			// Non-custom actions require a driver. Fail if none was found.
-			if driverErr != nil {
+			// Universal actions (custom, traffic control) run on a pod without a
+			// driver label too, the rest need one.
+			desc, known := actions.Lookup(action.Type)
+			if driverErr != nil && (!known || !desc.Universal) {
 				p.err = fmt.Errorf("no driver for pod '%s': %v", podName, driverErr)
 				plans = append(plans, p)
 				continue
 			}
 
-			if p.flags.Persist {
+			// A repeatable action (custom) runs every time it is asked for.
+			if p.flags.Persist && known && !desc.Repeatable {
 				alreadyPersisted, existsErr := helpers.DriverOperationAppliedSince(namespace, podName, driverType, action, podCreated)
 				if existsErr != nil {
 					p.err = existsErr

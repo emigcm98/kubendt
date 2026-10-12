@@ -6,6 +6,7 @@ package actions
 
 import (
 	"fmt"
+	"reflect"
 	"sort"
 	"sync"
 
@@ -29,6 +30,12 @@ type Action[C any] struct {
 	// Executor pins the executor for actions that run in the pod's netns
 	// whatever the driver. Empty leaves the choice to the driver.
 	Executor string
+	// ExecutorFromRequest lets the request pick the executor in its
+	// `executor` field, checked against the registered ones.
+	ExecutorFromRequest bool
+	// Repeatable actions are never skipped as already applied: the user
+	// asked for the command to run, not for a state.
+	Repeatable bool
 	// AllowProtectedIface lets the action name eth0, the pod's cluster
 	// interface. Only the SNAT toggles do.
 	AllowProtectedIface bool
@@ -42,9 +49,14 @@ type Descriptor struct {
 	Capability          string
 	Params              []Param
 	Executor            string
+	ExecutorFromRequest bool
+	Repeatable          bool
 	AllowProtectedIface bool
-	supports            func(driver any) bool
-	run                 func(driver any, a types.ActionEntry) ([][]string, error)
+	// Universal actions are declared against any driver: they match every
+	// driver and a pod without one.
+	Universal bool
+	supports  func(driver any) bool
+	run       func(driver any, a types.ActionEntry) ([][]string, error)
 }
 
 // CapabilityActions is a capability with the actions it declares.
@@ -70,7 +82,11 @@ var (
 func Register[C any](capability Capability, acts ...Action[C]) {
 	mu.Lock()
 	defer mu.Unlock()
+	universal := isUniversal[C]()
 	supports := func(driver any) bool {
+		if universal {
+			return true
+		}
 		_, ok := driver.(C)
 		return ok
 	}
@@ -91,11 +107,14 @@ func Register[C any](capability Capability, acts ...Action[C]) {
 			Capability:          capability.ID,
 			Params:              act.Params,
 			Executor:            act.Executor,
+			ExecutorFromRequest: act.ExecutorFromRequest,
+			Repeatable:          act.Repeatable,
 			AllowProtectedIface: act.AllowProtectedIface,
+			Universal:           universal,
 			supports:            supports,
 			run: func(driver any, a types.ActionEntry) ([][]string, error) {
 				c, ok := driver.(C)
-				if !ok {
+				if !ok && !universal {
 					return nil, fmt.Errorf("driver does not implement %s", capability.ID)
 				}
 				return run(c, a)
@@ -105,6 +124,13 @@ func Register[C any](capability Capability, acts ...Action[C]) {
 		entry.Actions = append(entry.Actions, d)
 	}
 	capabilities = append(capabilities, entry)
+}
+
+// isUniversal reports whether C is the empty interface, the capability of
+// the actions that need no driver.
+func isUniversal[C any]() bool {
+	t := reflect.TypeOf((*C)(nil)).Elem()
+	return t.Kind() == reflect.Interface && t.NumMethod() == 0
 }
 
 // Lookup returns the action registered under actionType.

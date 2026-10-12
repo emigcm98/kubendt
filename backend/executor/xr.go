@@ -16,6 +16,9 @@ const (
 // e.g.: kubectl exec <pod> -- /pkg/bin/xr_cli "show version"
 type XRCLIExecutor struct{ KubectlBase }
 
+// CommandKind: xr_cli takes the whole command as one argument.
+func (XRCLIExecutor) CommandKind() CommandKind { return CommandKindLine }
+
 // XRApplyExecutor applies multi-line IOS-XR configuration blocks using the
 // ZTP helper's xrapply_string function, the only reliable method for
 // config transactions in XRd (xr_cli rejects configure-mode syntax).

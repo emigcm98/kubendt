@@ -6,7 +6,7 @@ import (
 	"context"
 	stderrors "errors"
 	"fmt"
-	"kubendt/capabilities/capabilities"
+	"kubendt/capabilities"
 	"kubendt/kubeclient"
 	"kubendt/types"
 	"log"

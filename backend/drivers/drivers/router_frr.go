@@ -3,7 +3,7 @@ package drivers
 import (
 	"fmt"
 
-	"kubendt/capabilities/capabilities"
+	"kubendt/capabilities"
 	drivers_meta "kubendt/drivers/meta"
 	"kubendt/types"
 )

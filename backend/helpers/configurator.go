@@ -39,13 +39,14 @@ func NormalizeCustomCommand(raw json.RawMessage) ([]string, error) {
 	return nil, fmt.Errorf("custom action 'command' must be a string or an array of strings")
 }
 
-// custom bypasses the drivers: the command runs as given, through kubectl,
-// on any pod. Declared here with the other universal actions so replay and
-// history resolve it like the configure request does.
+// custom bypasses the drivers: the command runs as given on any pod, through
+// kubectl unless the request names another executor (a VyOS guest shell, for
+// one). It runs every time it is asked for, and never counts as a duplicate.
 func init() {
 	actions.Register[any](
 		actions.Capability{ID: "custom", Label: "Custom command", Description: "A command run as given, outside the driver."},
-		actions.Action[any]{Type: "custom", Label: "Run a command", Params: actions.P(actions.Command), Executor: executor.DefaultExecutorName,
+		actions.Action[any]{Type: "custom", Label: "Run a command", Params: actions.P(actions.Command, actions.Executor),
+			Executor: executor.DefaultExecutorName, ExecutorFromRequest: true, Repeatable: true,
 			Run: func(_ any, a types.ActionEntry) ([][]string, error) {
 				args, err := NormalizeCustomCommand(a.Command)
 				if err != nil {
@@ -103,10 +104,9 @@ func GetDriverForListedPod(pod *v1.Pod) (interface{}, error) {
 // one action on one pod. The action is looked up in the registry, validated
 // and checked against the driver's capabilities before anything is built, so
 // a bad request fails here with the field named and nothing reaches the pod.
-// Universal actions bring their own executor. Drivers that plan their own
-// execution (EffectiveActionExecutionPlanResolver) are asked next, for the
-// actions they handle. The rest run the capability method and the driver's
-// default executor.
+// A driver that names interfaces differently in its guest maps them before
+// the capability method runs. The executor is the action's own (universal
+// actions), the one the request names (custom), or the driver's default.
 func ResolveDriverExecutionPlanForPod(namespace, podName string, driver interface{}, action types.ActionEntry) (string, [][]string, error) {
 	desc, ok := actions.Lookup(action.Type)
 	if !ok {
@@ -121,34 +121,29 @@ func ResolveDriverExecutionPlanForPod(namespace, podName string, driver interfac
 			podName, typ, name, strings.TrimSuffix(desc.Capability, "Capable"), action.Type)
 	}
 
-	if desc.Executor != "" {
-		commands, err := desc.Run(driver, action)
+	if mapper, ok := driver.(types.GuestInterfaceMapper); ok {
+		mapped, err := desc.MapInterfaces(action, func(name string) (string, error) {
+			return mapper.GuestInterface(namespace, podName, name)
+		})
 		if err != nil {
 			return "", nil, err
 		}
-		return desc.Executor, commands, nil
-	}
-
-	if planner, ok := driver.(types.EffectiveActionExecutionPlanResolver); ok {
-		executorName, commands, handled, err := planner.ResolveActionExecutionPlan(namespace, podName, action)
-		if err != nil {
-			return "", nil, err
-		}
-		if handled {
-			if strings.TrimSpace(executorName) == "" {
-				executorName = executor.DefaultExecutorName
-			}
-			return executorName, commands, nil
-		}
+		action = mapped
 	}
 
 	commands, err := desc.Run(driver, action)
 	if err != nil {
 		return "", nil, err
 	}
-	_, executorName, err := executor.ResolveForDriver(driver)
-	if err != nil {
-		return "", nil, err
+
+	executorName := desc.Executor
+	if desc.ExecutorFromRequest && action.Executor != "" {
+		executorName = action.Executor
+	}
+	if executorName == "" {
+		if _, executorName, err = executor.ResolveForDriver(driver); err != nil {
+			return "", nil, err
+		}
 	}
 	return executorName, commands, nil
 }

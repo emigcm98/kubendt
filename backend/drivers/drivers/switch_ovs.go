@@ -1,7 +1,7 @@
 package drivers
 
 import (
-	"kubendt/capabilities/capabilities"
+	"kubendt/capabilities"
 	drivers_meta "kubendt/drivers/meta"
 	"kubendt/types"
 )

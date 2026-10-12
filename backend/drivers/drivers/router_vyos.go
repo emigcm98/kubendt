@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"kubendt/capabilities/capabilities"
+	"kubendt/capabilities"
 	drivers_meta "kubendt/drivers/meta"
 	"kubendt/executor"
 	"kubendt/types"
@@ -17,15 +17,16 @@ import (
 
 func NewVyOSRouterDriver() *VyOSRouterDriver {
 	return &VyOSRouterDriver{
-		Meta:         drivers_meta.NewMeta("VyOSRouterDriver", "router"),
-		ExecutorMeta: executor.NewExecutorMeta(executor.VyOSSSHCLIExecutorName),
+		Meta: drivers_meta.NewMeta("VyOSRouterDriver", "router"),
+		// Every action is a configure-mode batch through the guest's HTTP API,
+		// one atomic commit each. Reads go through vyos_api on their own.
+		ExecutorMeta: executor.NewExecutorMeta(executor.VyOSAPIApplyExecutorName),
 	}
 }
 
 var _ capabilities.L2Capable = (*VyOSRouterDriver)(nil)
 var _ capabilities.L3Capable = (*VyOSRouterDriver)(nil)
 var _ capabilities.OSPFCapable = (*VyOSRouterDriver)(nil)
-var _ types.EffectiveActionExecutionPlanResolver = (*VyOSRouterDriver)(nil)
 var _ types.EffectiveInterfaceInspector = (*VyOSRouterDriver)(nil)
 var _ types.EffectiveSingleInterfaceInspector = (*VyOSRouterDriver)(nil)
 var _ types.EffectiveInterfaceStateInspector = (*VyOSRouterDriver)(nil)
@@ -301,144 +302,6 @@ func (VyOSRouterDriver) OSPFMTUIgnore(iface string) [][]string {
 
 func (VyOSRouterDriver) OSPFRemoveMTUIgnore(iface string) [][]string {
 	return [][]string{{"delete protocols ospf interface " + iface + " mtu-ignore"}}
-}
-
-// ─── ResolveActionExecutionPlan ───────────────────────────────────────────────
-
-// ResolveActionExecutionPlan routes configure-mode actions through
-// vyos_api_apply (one atomic /configure request per batch). The default
-// executor (vyos_ssh_cli) only covers op-mode.
-func (d *VyOSRouterDriver) ResolveActionExecutionPlan(namespace, podName string, action types.ActionEntry) (string, [][]string, bool, error) {
-	// VyOS always uses the same interface names as the pod (identity mapping),
-	// so no name translation is needed.
-	resolveIface := func(podIntf string) (string, error) { return podIntf, nil }
-
-	driver := VyOSRouterDriver{}
-
-	switch action.Type {
-	// L2
-	case "link_up":
-		g, err := resolveIface(action.Iface)
-		if err != nil {
-			return "", nil, true, err
-		}
-		return executor.VyOSAPIApplyExecutorName, driver.LinkUp(g), true, nil
-	case "link_down":
-		g, err := resolveIface(action.Iface)
-		if err != nil {
-			return "", nil, true, err
-		}
-		return executor.VyOSAPIApplyExecutorName, driver.LinkDown(g), true, nil
-
-	// L3, interfaces
-	case "set_ip":
-		g, err := resolveIface(action.Iface)
-		if err != nil {
-			return "", nil, true, err
-		}
-		return executor.VyOSAPIApplyExecutorName, driver.SetIP(g, action.CIDR), true, nil
-	case "replace_ip":
-		g, err := resolveIface(action.Iface)
-		if err != nil {
-			return "", nil, true, err
-		}
-		return executor.VyOSAPIApplyExecutorName, driver.ReplaceIP(g, action.CIDR), true, nil
-	case "remove_ip":
-		g, err := resolveIface(action.Iface)
-		if err != nil {
-			return "", nil, true, err
-		}
-		return executor.VyOSAPIApplyExecutorName, driver.RemoveIP(g, action.CIDR), true, nil
-
-	// L3, rutas y DNS (no dependen de interfaz de datos)
-	case "set_default_route":
-		return executor.VyOSAPIApplyExecutorName, driver.SetDefaultRoute(action.Gateway), true, nil
-	case "remove_default_route":
-		return executor.VyOSAPIApplyExecutorName, driver.RemoveDefaultRoute(), true, nil
-	case "add_static_route":
-		return executor.VyOSAPIApplyExecutorName, driver.AddStaticRoute(action.DstCIDR, action.Gateway, action.Device), true, nil
-	case "remove_static_route":
-		return executor.VyOSAPIApplyExecutorName, driver.RemoveStaticRoute(action.DstCIDR, action.Gateway, action.Device), true, nil
-	case "add_dns_nameserver":
-		return executor.VyOSAPIApplyExecutorName, driver.AddDNSNameserver(action.DNSServer), true, nil
-	case "remove_dns_nameserver":
-		return executor.VyOSAPIApplyExecutorName, driver.RemoveDNSNameserver(action.DNSServer), true, nil
-	case "add_dns_search":
-		return executor.VyOSAPIApplyExecutorName, driver.AddDNSSearch(action.DNSDomain), true, nil
-	case "remove_dns_search":
-		return executor.VyOSAPIApplyExecutorName, driver.RemoveDNSSearch(action.DNSDomain), true, nil
-
-	// NAT
-	case "enable_snat":
-		g, err := resolveIface(action.Iface)
-		if err != nil {
-			return "", nil, true, err
-		}
-		return executor.VyOSAPIApplyExecutorName, driver.EnableSNAT(g), true, nil
-	case "disable_snat":
-		g, err := resolveIface(action.Iface)
-		if err != nil {
-			return "", nil, true, err
-		}
-		return executor.VyOSAPIApplyExecutorName, driver.DisableSNAT(g), true, nil
-	case "enable_dnat":
-		g, err := resolveIface(action.Iface)
-		if err != nil {
-			return "", nil, true, err
-		}
-		return executor.VyOSAPIApplyExecutorName, driver.EnableDNAT(g, action.ExternalPort, action.InternalIP, action.InternalPort, action.Protocol), true, nil
-	case "disable_dnat":
-		g, err := resolveIface(action.Iface)
-		if err != nil {
-			return "", nil, true, err
-		}
-		return executor.VyOSAPIApplyExecutorName, driver.DisableDNAT(g, action.ExternalPort, action.InternalIP, action.InternalPort, action.Protocol), true, nil
-
-	// OSPF
-	case "ospf_add_network":
-		return executor.VyOSAPIApplyExecutorName, driver.OSPFAddNetwork(action.CIDR, action.OSPFArea), true, nil
-	case "ospf_remove_network":
-		return executor.VyOSAPIApplyExecutorName, driver.OSPFRemoveNetwork(action.CIDR, action.OSPFArea), true, nil
-	case "ospf_set_router_id":
-		return executor.VyOSAPIApplyExecutorName, driver.OSPFSetRouterID(action.RouterID), true, nil
-	case "ospf_remove_router_id":
-		return executor.VyOSAPIApplyExecutorName, driver.OSPFRemoveRouterID(), true, nil
-	case "ospf_passive_default":
-		return executor.VyOSAPIApplyExecutorName, driver.OSPFPassiveDefault(), true, nil
-	case "ospf_remove_passive_default":
-		return executor.VyOSAPIApplyExecutorName, driver.OSPFRemovePassiveDefault(), true, nil
-	case "ospf_no_passive":
-		g, err := resolveIface(action.Iface)
-		if err != nil {
-			return "", nil, true, err
-		}
-		return executor.VyOSAPIApplyExecutorName, driver.OSPFNoPassive(g), true, nil
-	case "ospf_remove_no_passive":
-		g, err := resolveIface(action.Iface)
-		if err != nil {
-			return "", nil, true, err
-		}
-		return executor.VyOSAPIApplyExecutorName, driver.OSPFRemoveNoPassive(g), true, nil
-	case "ospf_originate_default":
-		return executor.VyOSAPIApplyExecutorName, driver.OSPFOriginateDefault(), true, nil
-	case "ospf_remove_originate_default":
-		return executor.VyOSAPIApplyExecutorName, driver.OSPFRemoveOriginateDefault(), true, nil
-	case "ospf_mtu_ignore":
-		g, err := resolveIface(action.Iface)
-		if err != nil {
-			return "", nil, true, err
-		}
-		return executor.VyOSAPIApplyExecutorName, driver.OSPFMTUIgnore(g), true, nil
-	case "ospf_remove_mtu_ignore":
-		g, err := resolveIface(action.Iface)
-		if err != nil {
-			return "", nil, true, err
-		}
-		return executor.VyOSAPIApplyExecutorName, driver.OSPFRemoveMTUIgnore(g), true, nil
-
-	default:
-		return "", nil, false, nil
-	}
 }
 
 // ─── EffectiveInterfaceInspector ─────────────────────────────────────────────

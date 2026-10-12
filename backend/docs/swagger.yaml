@@ -26,6 +26,78 @@ definitions:
         type: array
     type: object
   types.ActionEntry:
+    properties:
+      bridge:
+        example: br0
+        type: string
+      cidr:
+        example: 192.168.1.1/24
+        type: string
+      command:
+        description: |-
+          Custom, accepts a string ("sh -c" wrapper) or an array of args.
+          Only used when type == "custom". No driver label required on the pod.
+        example: ip route show
+        type: string
+      device:
+        example: /dev/net/tun
+        type: string
+      dns_domain:
+        example: example.local
+        type: string
+      dns_server:
+        description: DNS
+        example: 8.8.8.8
+        type: string
+      dst_cidr:
+        example: 10.0.0.0/8
+        type: string
+      executor:
+        description: |-
+          Executor names where a custom command runs, kubectl (the pod's
+          container) by default. ssh_qemu is a shell in a VyOS guest, vyos_ssh_cli
+          an op-mode command there.
+        example: ssh_qemu
+        type: string
+      externalPort:
+        description: NAT
+        example: 8080
+        type: integer
+      gateway:
+        example: 192.168.1.254
+        type: string
+      iface:
+        example: eth1
+        type: string
+      ifaces:
+        items:
+          type: string
+        type: array
+      internalIP:
+        example: 10.0.0.5
+        type: string
+      internalPort:
+        example: 80
+        type: integer
+      options:
+        $ref: '#/definitions/types.ActionOptions'
+      ospf_area:
+        description: OSPF
+        example: "0"
+        type: string
+      protocol:
+        example: tcp
+        type: string
+      router_id:
+        example: 10.0.255.1
+        type: string
+      tcparams:
+        allOf:
+        - $ref: '#/definitions/types.TCParamEntry'
+        description: TC / Qdisc
+      type:
+        example: ip
+        type: string
     type: object
   types.ActionOptions:
     properties:
@@ -194,6 +266,18 @@ definitions:
         type: integer
     type: object
   types.ConfigureNetworkRequest:
+    properties:
+      links:
+        description: |-
+          Links shapes links by one of their ends. Each entry becomes add_qdisc
+          or del_qdisc actions on the interfaces of both ends, run with Targets.
+        items:
+          $ref: '#/definitions/types.LinkShaping'
+        type: array
+      targets:
+        items:
+          $ref: '#/definitions/types.PodConfig'
+        type: array
     type: object
   types.ConfigureNetworkResponse:
     properties:
@@ -543,6 +627,38 @@ definitions:
       path:
         example: /home/user/.kube/config
         type: string
+    type: object
+  types.LinkShaping:
+    properties:
+      localIntf:
+        example: eth1
+        type: string
+      node:
+        example: host-0
+        type: string
+      peerIntf:
+        example: eth1
+        type: string
+      peerNode:
+        example: switch-0
+        type: string
+      remove:
+        description: Remove clears the shaping on both ends.
+        example: false
+        type: boolean
+      reverse:
+        $ref: '#/definitions/types.TCParamEntry'
+      shaping:
+        allOf:
+        - $ref: '#/definitions/types.TCParamEntry'
+        description: Shaping goes on node's interface, the node to peer direction.
+          Delay is one-way.
+      symmetric:
+        description: |-
+          Symmetric puts the same shaping on the peer's interface. Reverse puts a
+          different one there instead. A link to the external network has no peer to shape.
+        example: true
+        type: boolean
     type: object
   types.LinkSpec:
     properties:
@@ -1363,6 +1479,16 @@ definitions:
           an interface Meshnet recreated.
         example: 1
         type: integer
+    type: object
+  types.PodConfig:
+    properties:
+      actions:
+        items:
+          $ref: '#/definitions/types.ActionEntry'
+        type: array
+      pod:
+        example: router1
+        type: string
     type: object
   types.PodDriverHistoryResponseDoc:
     properties:
