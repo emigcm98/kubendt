@@ -1363,6 +1363,10 @@ definitions:
   types.NodeSpec:
     properties:
       commands:
+        description: |-
+          Commands replaces the image's entrypoint, `sh -c "... && sleep infinity"`
+          in the examples. It is where an image installs what the node needs at
+          startup, iproute2 for `ip` or iptables for NAT.
         items:
           type: string
         type: array

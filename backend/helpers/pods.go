@@ -169,7 +169,9 @@ func resolveDriverForProbe(driverName string) any {
 
 // buildReadinessProbe returns a Kubernetes readiness probe tailored to the pod type.
 // If the driver for the node implements types.ReadinessProbeProvider, its probe
-// spec is used. Otherwise a lightweight default ("command -v ip") is returned.
+// spec is used. Otherwise the default checks the baseline every image needs,
+// the `ip` command, and says so when it is missing, since the kubelet records
+// the probe's output in the pod's events and the Ready timeout quotes it.
 func buildReadinessProbe(driver any) *v1.Probe {
 	if provider, ok := driver.(types.ReadinessProbeProvider); ok {
 		spec := provider.ReadinessProbeCommands()
@@ -194,7 +196,7 @@ func buildReadinessProbe(driver any) *v1.Probe {
 	return &v1.Probe{
 		ProbeHandler: v1.ProbeHandler{
 			Exec: &v1.ExecAction{
-				Command: []string{"sh", "-c", "command -v ip"},
+				Command: []string{"sh", "-c", "command -v ip || { echo 'ip not found in PATH, the image needs iproute2'; exit 1; }"},
 			},
 		},
 		InitialDelaySeconds: 0,

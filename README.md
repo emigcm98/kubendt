@@ -12,7 +12,7 @@
 
 **KubeNDT** is a platform for deploying and operating virtual network topologies on Kubernetes.
 
-You define your topology as a JSON file (nodes, links, images, replicas) and KubeNDT deploys it into your cluster and shows it as a live graph in the dashboard. From there you can apply a network configuration (IP addresses, routes, NAT, OSPF, bridging…) across all nodes at once, open a shell into any of them, add or remove nodes on the fly, and monitor interface states in real time. Any container image works as a node.
+You define your topology as a JSON file (nodes, links, images, replicas) and KubeNDT deploys it into your cluster and shows it as a live graph in the dashboard. From there you can apply a network configuration (IP addresses, routes, NAT, OSPF, bridging…) across all nodes at once, open a shell into any of them, add or remove nodes on the fly, and monitor interface states in real time. Any container image that ships `sh` and the `ip` command works as a node (see Requirements).
 
 Network configuration is abstracted through a **driver and capability system**: regardless of what image a node runs, the same declarative actions apply. The driver takes care of translating them into the right commands for that node type.
 
@@ -81,6 +81,8 @@ KubeNDT bundles a small set of third-party SVG icons in its frontend. See [ATTRI
 - A valid kubeconfig with cluster context
 - Docker & Docker Compose (for production deployment)
 - Optional: QEMU support for VM-based node types (requires `/dev/kvm`)
+
+**Node images.** Any container image can be a node as long as its main container has `sh` and the `ip` command of iproute2 (BusyBox's applet is enough for a host). The default readiness probe checks for `ip`, so a node without it stays NotReady and the deploy says so. Whatever else a capability needs, `iptables` for NAT or `vtysh` for OSPF, comes with the image or gets installed at startup through the node's `commands`, as the examples do.
 
 **For local development, also install:**
 

@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -163,6 +164,13 @@ func execViaKubectl(podName, namespace string, prefix []string, command []string
 		}
 		combined := strings.TrimSpace(outBuf.String() + "\n" + errBuf.String())
 		log.Printf("❌ Exec failed executor='%s' pod='%s' ns='%s' took=%s cmd=%q err=%v", executorName, podName, namespace, duration.Round(time.Millisecond), cmdText, err)
+		if prog := missingProgram(effectiveCommand, err, combined); prog != "" {
+			detail := firstLine(combined)
+			if detail == "" {
+				detail = "executable file not found in PATH"
+			}
+			return "", fmt.Errorf("'%s' is not in the pod's image: add it to the image or install it from the node's commands (%s)", prog, detail)
+		}
 		return "", fmt.Errorf("exec error: %v | output: %s", err, combined)
 	}
 
@@ -180,6 +188,34 @@ func execViaKubectl(podName, namespace string, prefix []string, command []string
 
 	// log.Printf("✅ Exec ok executor='%s' pod='%s' ns='%s' took=%s cmd=%q", executorName, podName, namespace, duration.Round(time.Millisecond), cmdText)
 	return outBuf.String(), nil
+}
+
+// notFoundRe matches the shell's complaint about a missing command: BusyBox
+// ("sh: iptables: not found"), dash ("sh: 1: iptables: not found") and bash
+// ("bash: line 1: iptables: command not found").
+var notFoundRe = regexp.MustCompile(`([^:\s]+): (?:command )?not found`)
+
+// missingProgram names the program an exec could not find: the runtime says
+// so when argv[0] is missing, the shell (exit 127) when a command inside
+// `sh -c` is. Empty for any other failure.
+func missingProgram(command []string, err error, output string) string {
+	if strings.Contains(err.Error(), "executable file not found") && len(command) > 0 {
+		return command[0]
+	}
+	if strings.Contains(err.Error(), "exit code 127") {
+		if m := notFoundRe.FindStringSubmatch(output); m != nil {
+			return m[1]
+		}
+	}
+	return ""
+}
+
+func firstLine(s string) string {
+	s = strings.TrimSpace(s)
+	if i := strings.IndexByte(s, '\n'); i >= 0 {
+		return strings.TrimSpace(s[:i])
+	}
+	return s
 }
 
 func Exec(podName, namespace string, command []string) error {

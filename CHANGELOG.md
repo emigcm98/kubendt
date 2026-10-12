@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `GET /pods/tc/{namespace}/{pod}` returns the traffic control state of every interface of a pod. The Links tab uses it and marks the shaped interfaces.
 - Every action is validated before it runs: a missing or malformed field fails the action with the field named, and nothing reaches the pod.
 - A `custom` action takes an optional `executor`: `kubectl` by default, `ssh_qemu` for a shell in a VyOS guest or `vyos_ssh_cli` for an op-mode command there.
+- A deploy that times out on a node that never gets Ready quotes its readiness probe, so an image without `ip` reads as such.
 
 ### Changed
 
@@ -34,6 +35,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `del_qdisc` on an interface without shaping succeeds instead of failing with "Cannot delete qdisc with handle of zero".
 - A `tbf` request only needs `rate`, `burst` and `latency` default to `32kbit` and `50ms`. A request without `tcparams` or with an unsupported qdisc says so instead of "unrecognized or unsupported action".
 - A replayed `custom` action runs through kubectl, as it did the first time, instead of the driver's default executor.
+- An action that fails because the image lacks a program names the program, instead of the raw exec error.
 - The traffic control panel reports the backend's error when an action is rejected instead of saying it was applied, keeps tc units for rate and burst instead of whole Mbit and mislabeled kilobytes, and shows an interface on the kernel default qdisc as unshaped.
 - Opening traffic control on a node whose image has no `tc` is faster the first time: a toolbox left by capture or trace is used directly, and a new one is awaited every 200 ms instead of every second.
 
