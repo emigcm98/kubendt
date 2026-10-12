@@ -345,3 +345,47 @@ a.navbar-brand:focus-visible {
     flex-wrap: wrap;
   }
 }
+
+/* The pill with a figure column on each side: the group is centred as one
+   and both columns have the same width, so the pill stays put whether or not
+   a side has data. The figures stay quiet, small and outside the box. */
+.navbar-center-group {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.navbar-center-group .navbar-center {
+  position: static;
+  transform: none;
+}
+
+.navbar-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 84px;
+  line-height: 1.15;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  white-space: nowrap;
+}
+
+.navbar-stat em {
+  font-style: normal;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.navbar-stat-left {
+  align-items: flex-end;
+}
+
+.navbar-stat-right {
+  align-items: flex-start;
+}

@@ -720,7 +720,13 @@ const generateEdges = (links, expandedPods, originalNodes) => {
     .filter((e) => e.source && e.target); // remove invalid edges
 };
 
-const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 0 }) => {
+const NetworkGraph = ({
+  namespace,
+  onError,
+  onImportingChange,
+  refreshTrigger = 0,
+  onTopologyStats,
+}) => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const nodesRef = useRef([]);
@@ -3353,6 +3359,22 @@ const NetworkGraph = ({ namespace, onError, onImportingChange, refreshTrigger = 
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [namespace]);
+
+  // What the navbar shows about the topology: pods, links and each pod's
+  // type, taken from the graph so it costs no call.
+  useEffect(() => {
+    if (!onTopologyStats) return;
+    const types = {};
+    let pods = 0;
+    for (const n of nodes) {
+      const type = n.data?.type;
+      if (type === 'external') continue;
+      pods += 1;
+      types[n.id] = type || 'other';
+    }
+    onTopologyStats({ pods, links: edges.length, types });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodes, edges]);
 
   // Reflect a running operation from the backend lock. Fast-polls only while a
   // lock exists; loads the topology once when it clears.

@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - A `custom` action takes an optional `executor`: `kubectl` by default, `ssh_qemu` for a shell in a VyOS guest or `vyos_ssh_cli` for an op-mode command there.
 - A deploy that times out on a node that never gets Ready quotes its readiness probe, so an image without `ip` reads as such.
 - `GET /network/export-conf/{namespace}` returns the configuration applied in a namespace as a configure request, and the dashboard downloads it with Export network conf, ready for Load network conf.
+- The namespace bar shows the pods and links of the topology on one side of the name and the vCPU and MiB the namespace uses on the other.
 
 ### Changed
 

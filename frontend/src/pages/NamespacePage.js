@@ -20,6 +20,7 @@ function NamespacePage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteResult, setDeleteResult] = useState({ success: false, message: '', action: '' });
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [topologyStats, setTopologyStats] = useState(null);
 
   const handleDeleteNamespace = async (ns, clearPositions = false, deleteFiles = false) => {
     if (clearPositions) {
@@ -112,12 +113,14 @@ function NamespacePage() {
           setRefreshTrigger((prev) => prev + 1);
         }}
         disabled={isImporting}
+        stats={topologyStats}
       />
       <NetworkGraph
         namespace={namespace}
         onError={setFetchError}
         onImportingChange={setIsImporting}
         refreshTrigger={refreshTrigger}
+        onTopologyStats={setTopologyStats}
       />
 
       {/* Deletion result modal */}
