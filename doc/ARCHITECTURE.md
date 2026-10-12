@@ -38,6 +38,8 @@ Drivers encode node behavior and can combine capability bases:
 
 Every action is declared once, next to its capability interface, in the `actions` registry: type, label, parameters (JSON name, kind, required) and the method that builds its commands. Dispatch looks the action up, validates the request against the declared parameters, checks that the driver implements the capability and runs it. `GET /drivers` lists the same declarations.
 
+The configure request, the replay after a restart, the peer replay and the link attributes of the topology run actions through one pipeline (`PlanActions`, `RunPlannedActions`): plan every action, then execute in order, merging consecutive actions that share a guest commit into one batch.
+
 Traffic control is not a driver capability. It runs on any pod through the pod's own `tc`, with an ephemeral toolbox container as fallback, so every node can be shaped. It and `custom` are universal actions, registered against any driver with their own executor.
 
 A driver names the executor its actions run through: `kubectl` for Linux images, the guest's HTTP API for VyOS. A driver whose guest names interfaces differently from the pod maps them (`GuestInterfaceMapper`) before an action runs. A `custom` action may name its executor, to reach a guest shell for instance.

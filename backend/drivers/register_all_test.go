@@ -9,9 +9,9 @@ import (
 
 // TestRegisterAllDriversSatisfyContract ensures every real driver registers
 // without tripping the per-type capability contract enforced in Register (which
-// panics on violation), and pins the intended shape: all drivers speak L2,
-// routers and hosts speak L3, switches provide bridge ops but are L2-only
-// (no L3 — a switch must not pretend to route).
+// panics on violation), and pins the minimums: all drivers speak L2, routers
+// and hosts speak L3, switches provide bridge ops. Minimums, not limits: a
+// switch may also route (an SVI on a VLAN).
 func TestRegisterAllDriversSatisfyContract(t *testing.T) {
 	// Register panics on a contract violation; a clean call is itself the
 	// baseline assertion.
@@ -38,9 +38,6 @@ func TestRegisterAllDriversSatisfyContract(t *testing.T) {
 		case "switch":
 			if !isSwitch {
 				t.Errorf("driver %q (type switch) must be SwitchCapable", d.Name)
-			}
-			if isL3 {
-				t.Errorf("driver %q is a switch but implements L3Capable; switches are expected to be L2-only", d.Name)
 			}
 		default:
 			t.Errorf("driver %q has unexpected type %q", d.Name, d.Type)

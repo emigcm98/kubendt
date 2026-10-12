@@ -5,9 +5,9 @@ import (
 	"kubendt/types"
 )
 
+// NATCapable builds NAT commands. Reading the SNAT interface back is a
+// types.SNATInterfaceInspector, NATBase provides the Linux one.
 type NATCapable interface {
-	// Non-persistent query to get the SNAT interface for a given pod
-	GetSNATInterface(namespace, podName string) (string, error)
 	EnableSNAT(iface string) [][]string
 	DisableSNAT(iface string) [][]string
 	EnableDNAT(iface string, externalPort int, internalIP string, internalPort int, protocol string) [][]string

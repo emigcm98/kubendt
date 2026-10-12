@@ -6,7 +6,6 @@ import (
 	"context"
 	stderrors "errors"
 	"fmt"
-	"kubendt/capabilities"
 	"kubendt/kubeclient"
 	"kubendt/types"
 	"log"
@@ -280,10 +279,10 @@ func GetInterfacesInNamespace(namespace string) (map[string]map[string]interface
 				intfCh <- intfResult{states: states, err: nil}
 			}()
 
-			// NAT goroutine (routers with NATCapable only)
+			// NAT goroutine (routers that can read their SNAT interface)
 			go func() {
 				if podType == "router" && drv != nil {
-					if nat, ok := drv.(capabilities.NATCapable); ok {
+					if nat, ok := drv.(types.SNATInterfaceInspector); ok {
 						iface, _ := nat.GetSNATInterface(namespace, podName)
 						natCh <- natResult{iface: iface}
 						return

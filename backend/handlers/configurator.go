@@ -3,14 +3,11 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"kubendt/actions"
-	"kubendt/executor"
 	"kubendt/helpers"
 	"kubendt/types"
 	"log"
 	"net/http"
 	"runtime"
-	"strings"
 	"sync"
 	"time"
 
@@ -94,9 +91,15 @@ func ConfigureNetwork(c *gin.Context) {
 			return result
 		}
 
-		// Driver lookup is non-fatal: custom actions don't need a driver.
-		// driverErr is checked per-action in the plan phase below.
+		// Driver lookup is non-fatal: universal actions (custom, traffic
+		// control) run without one, the rest fail in the plan.
 		driver, driverErr := helpers.GetDriverForPod(namespace, podName)
+		driverType := ""
+		if driverErr != nil {
+			log.Printf("⚠️ No driver for pod '%s': %v (universal actions will still run)", podName, driverErr)
+		} else {
+			driverType = fmt.Sprintf("%T", driver)
+		}
 
 		// History older than the pod belongs to a previous incarnation and must
 		// not make an action look already applied. Without the timestamp we fall
@@ -106,304 +109,74 @@ func ConfigureNetwork(c *gin.Context) {
 			log.Printf("⚠️ Could not read creation time of pod '%s': %v (duplicate check by payload only)", podName, podErr)
 		}
 
-		var driverType string
-		var driverExecutor executor.CommandExecutor
-		var driverExecutorName string
-
-		if driverErr != nil {
-			log.Printf("⚠️ No driver for pod '%s': %v (custom actions will still run)", podName, driverErr)
-		} else {
-			driverType = fmt.Sprintf("%T", driver)
-			var execErr error
-			driverExecutor, driverExecutorName, execErr = executor.ResolveForDriver(driver)
-			if execErr != nil {
-				log.Printf("❌ Could not resolve executor for driver '%s' on pod '%s': %v", driverType, podName, execErr)
-				for _, action := range podConfig.Actions {
-					result.errorList = append(result.errorList, ErrorEntry{
-						Pod:    podConfig.Pod,
-						Driver: driverType,
-						Error:  execErr.Error(),
-					})
-					result.actionResults = append(result.actionResults, ActionResult{
-						Pod:         podConfig.Pod,
-						ResolvedPod: podName,
-						Driver:      driverType,
-						Action:      action.Type,
-						Status:      "failed",
-						Error:       execErr.Error(),
-					})
-					result.failures++
-				}
-				return result
-			}
-			log.Printf("ℹ️ Driver '%s' on pod '%s' will use executor '%s'", driverType, podName, driverExecutorName)
-		}
-
-		// ── PLAN PHASE ──────────────────────────────────────────────────────
-		// Resolve every action upfront so we can batch consecutive same-executor
-		// actions in the EXECUTE PHASE.
-		type plannedAction struct {
-			action     types.ActionEntry
-			flags      types.ActionFlags
-			execInst   executor.CommandExecutor
-			execName   string
-			commands   [][]string
-			cmdStrings []string // pre-computed for reporting
-			skipReason string   // non-empty → skip (not an error)
-			err        error    // non-nil → fail during planning
-		}
-
-		plans := make([]plannedAction, 0, len(podConfig.Actions))
-		for _, action := range podConfig.Actions {
-			p := plannedAction{action: action, flags: helpers.ResolveActionFlags(action)}
-
-			// Universal actions (custom, traffic control) run on a pod without a
-			// driver label too, the rest need one.
-			desc, known := actions.Lookup(action.Type)
-			if driverErr != nil && (!known || !desc.Universal) {
-				p.err = fmt.Errorf("no driver for pod '%s': %v", podName, driverErr)
-				plans = append(plans, p)
-				continue
-			}
-
+		plans := helpers.PlanActions(namespace, podName, driver, driverErr, podConfig.Actions)
+		for i := range plans {
+			p := &plans[i]
 			// A repeatable action (custom) runs every time it is asked for.
-			if p.flags.Persist && known && !desc.Repeatable {
-				alreadyPersisted, existsErr := helpers.DriverOperationAppliedSince(namespace, podName, driverType, action, podCreated)
-				if existsErr != nil {
-					p.err = existsErr
-					plans = append(plans, p)
-					continue
-				}
-				if alreadyPersisted {
-					p.skipReason = "duplicate operation: already applied to this pod with the same payload"
-					plans = append(plans, p)
-					continue
-				}
-			}
-
-			actionExecutorName, commands, resolveErr := helpers.ResolveDriverExecutionPlanForPod(namespace, podName, driver, action)
-			if resolveErr != nil {
-				p.err = resolveErr
-				plans = append(plans, p)
+			if p.Err != nil || !p.Flags.Persist || (p.Desc != nil && p.Desc.Repeatable) {
 				continue
 			}
-			if commands == nil {
-				p.err = fmt.Errorf("unrecognized or unsupported action: %s", action.Type)
-				plans = append(plans, p)
-				continue
+			alreadyPersisted, existsErr := helpers.DriverOperationAppliedSince(namespace, podName, driverType, p.Action, podCreated)
+			if existsErr != nil {
+				p.Err = existsErr
+			} else if alreadyPersisted {
+				p.Skip = "duplicate operation: already applied to this pod with the same payload"
 			}
-
-			p.execName = actionExecutorName
-			p.commands = commands
-
-			execInst := driverExecutor
-			if strings.TrimSpace(actionExecutorName) != "" && actionExecutorName != driverExecutorName {
-				override, execErr := executor.Get(actionExecutorName)
-				if execErr != nil {
-					p.err = execErr
-					plans = append(plans, p)
-					continue
-				}
-				execInst = override
-			}
-			p.execInst = execInst
-
-			structured := executor.CommandsFromLegacyForExecutor(commands, actionExecutorName)
-			strs := make([]string, 0, len(structured))
-			for _, cmd := range structured {
-				strs = append(strs, cmd.String())
-			}
-			p.cmdStrings = strs
-
-			plans = append(plans, p)
 		}
 
-		// ── EXECUTE PHASE ────────────────────────────────────────────────────
-		// Merge consecutive same-batchable-executor actions (vyos_ssh_apply /
-		// xr_apply) into one Command to avoid N configure→commit round trips.
-		i := 0
-		for i < len(plans) {
-			p := plans[i]
+		outcomes, _ := helpers.RunPlannedActions(namespace, podName, plans, helpers.RunOptions{})
 
-			// ── Skip ───────────────────────────────────────────────────────
-			if p.skipReason != "" {
-				result.actionResults = append(result.actionResults, ActionResult{
-					Pod:         podConfig.Pod,
-					ResolvedPod: podName,
-					Driver:      driverType,
-					Action:      p.action.Type,
-					Status:      "skipped",
-					Error:       p.skipReason,
-				})
-				result.skipped++
-				i++
-				continue
-			}
-
-			// ── Planning error ────────────────────────────────────────────
-			if p.err != nil {
-				log.Printf("❌ Error resolving action '%s' on '%s': %v", p.action.Type, podName, p.err)
-				result.errorList = append(result.errorList, ErrorEntry{
-					Pod:    podConfig.Pod,
-					Driver: driverType,
-					Error:  p.err.Error(),
-				})
-				result.actionResults = append(result.actionResults, ActionResult{
-					Pod:         podConfig.Pod,
-					ResolvedPod: podName,
-					Driver:      driverType,
-					Action:      p.action.Type,
-					Status:      "failed",
-					Error:       p.err.Error(),
-				})
-				result.failures++
-				i++
-				continue
-			}
-
-			// ── Batchable group ───────────────────────────────────────────
-			// Collect the longest consecutive run of ready (non-skip, non-error)
-			// actions sharing the same batchable executor with no output capture.
-			if executor.BatchableExecutors[p.execName] && !p.flags.Get {
-				j := i
-				group := make([]plannedAction, 0)
-				for j < len(plans) {
-					gp := plans[j]
-					if gp.skipReason != "" || gp.err != nil || gp.execName != p.execName || gp.flags.Get {
-						break
-					}
-					group = append(group, gp)
-					j++
-				}
-
-				// Flatten all action command groups into one Args list.
-				var allArgs []string
-				for _, gp := range group {
-					for _, cmdGroup := range gp.commands {
-						allArgs = append(allArgs, cmdGroup...)
-					}
-				}
-
-				batchCmd := executor.NewArgsCommand(allArgs)
-				batchOut, execErr := p.execInst.ExecCommandAndGet(podName, namespace, batchCmd)
-				if batchOut != "" {
-					log.Printf("ℹ️ Batch exec output [%s] pod=%s:\n%s", p.execName, podName, batchOut)
-				}
-
-				for _, gp := range group {
-					if execErr != nil {
-						log.Printf("❌ Batch exec error on '%s' pod '%s': %v", gp.action.Type, podName, execErr)
-						result.errorList = append(result.errorList, ErrorEntry{
-							Pod:    podConfig.Pod,
-							Driver: driverType,
-							Error:  execErr.Error(),
-						})
-						result.actionResults = append(result.actionResults, ActionResult{
-							Pod:         podConfig.Pod,
-							ResolvedPod: podName,
-							Driver:      driverType,
-							Action:      gp.action.Type,
-							Status:      "failed",
-							Commands:    gp.cmdStrings,
-							Error:       execErr.Error(),
-						})
-						result.failures++
-					} else {
-						errText := ""
-						if gp.flags.Persist {
-							if persistErr := helpers.SaveDriverOperation(namespace, podName, driverType, gp.action); persistErr != nil {
-								errText = fmt.Sprintf("operation executed but could not persist history: %v", persistErr)
-								result.errorList = append(result.errorList, ErrorEntry{
-									Pod:    podConfig.Pod,
-									Driver: driverType,
-									Error:  errText,
-								})
-								result.failures++
-								log.Printf("❌ %s", errText)
-							}
-						}
-						actionStatus := "success"
-						if errText != "" {
-							actionStatus = "failed"
-						} else {
-							result.successes++
-						}
-						result.actionResults = append(result.actionResults, ActionResult{
-							Pod:         podConfig.Pod,
-							ResolvedPod: podName,
-							Driver:      driverType,
-							Action:      gp.action.Type,
-							Status:      actionStatus,
-							Commands:    gp.cmdStrings,
-							Error:       errText,
-						})
-					}
-				}
-
-				i = j
-				continue
-			}
-
-			// ── Normal (non-batchable) execution ──────────────────────────
-			structuredCommands := executor.CommandsFromLegacyForExecutor(p.commands, p.execName)
-			commandOutputs := make([]string, 0, len(structuredCommands))
-			actionErrors := make([]string, 0)
-			for _, cmd := range structuredCommands {
-				var execErr error
-				if p.flags.Get {
-					var output string
-					output, execErr = p.execInst.ExecCommandAndGet(podName, namespace, cmd)
-					if execErr == nil && strings.TrimSpace(output) != "" {
-						commandOutputs = append(commandOutputs, strings.TrimSpace(output))
-					}
-				} else {
-					execErr = p.execInst.ExecCommand(podName, namespace, cmd)
-				}
-				if execErr != nil {
-					log.Printf("❌ Error executing command on '%s': %v", podName, execErr)
-					result.errorList = append(result.errorList, ErrorEntry{
-						Pod:    podConfig.Pod,
-						Driver: driverType,
-						Error:  execErr.Error(),
-					})
-					actionErrors = append(actionErrors, execErr.Error())
-					result.failures++
-				} else {
-					result.successes++
-				}
-			}
-
-			actionStatus := "success"
-			actionErrorText := ""
-			if len(actionErrors) > 0 {
-				actionStatus = "failed"
-				actionErrorText = strings.Join(actionErrors, " | ")
-			} else if p.flags.Persist {
-				if persistErr := helpers.SaveDriverOperation(namespace, podName, driverType, p.action); persistErr != nil {
-					actionStatus = "failed"
-					actionErrorText = fmt.Sprintf("operation executed but could not persist history: %v", persistErr)
-					result.errorList = append(result.errorList, ErrorEntry{
-						Pod:    podConfig.Pod,
-						Driver: driverType,
-						Error:  actionErrorText,
-					})
-					result.failures++
-					log.Printf("❌ %s", actionErrorText)
-				}
-			}
-
+		fail := func(p helpers.PlannedAction, err error, commands []string) {
+			result.errorList = append(result.errorList, ErrorEntry{Pod: podConfig.Pod, Driver: driverType, Error: err.Error()})
 			result.actionResults = append(result.actionResults, ActionResult{
 				Pod:         podConfig.Pod,
 				ResolvedPod: podName,
 				Driver:      driverType,
-				Action:      p.action.Type,
-				Status:      actionStatus,
-				Commands:    p.cmdStrings,
-				Output:      strings.Join(commandOutputs, "\n"),
-				Error:       actionErrorText,
+				Action:      p.Action.Type,
+				Status:      "failed",
+				Commands:    commands,
+				Error:       err.Error(),
 			})
-
-			i++
+			result.failures++
+		}
+		for i, p := range plans {
+			o := outcomes[i]
+			switch {
+			case p.Skip != "":
+				result.actionResults = append(result.actionResults, ActionResult{
+					Pod:         podConfig.Pod,
+					ResolvedPod: podName,
+					Driver:      driverType,
+					Action:      p.Action.Type,
+					Status:      "skipped",
+					Error:       p.Skip,
+				})
+				result.skipped++
+			case p.Err != nil:
+				log.Printf("❌ Error resolving action '%s' on '%s': %v", p.Action.Type, podName, p.Err)
+				fail(p, p.Err, nil)
+			case o.Err != nil:
+				fail(p, o.Err, p.CommandStrings())
+			default:
+				if p.Flags.Persist {
+					if persistErr := helpers.SaveDriverOperation(namespace, podName, driverType, p.Action); persistErr != nil {
+						err := fmt.Errorf("operation executed but could not persist history: %v", persistErr)
+						log.Printf("❌ %v", err)
+						fail(p, err, p.CommandStrings())
+						continue
+					}
+				}
+				result.actionResults = append(result.actionResults, ActionResult{
+					Pod:         podConfig.Pod,
+					ResolvedPod: podName,
+					Driver:      driverType,
+					Action:      p.Action.Type,
+					Status:      "success",
+					Commands:    p.CommandStrings(),
+					Output:      o.Output,
+				})
+				result.successes++
+			}
 		}
 
 		// Stamp per-pod timing on every ActionResult of this pod.

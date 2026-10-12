@@ -177,13 +177,11 @@ FOR round = 1 TO maxRounds:
 
 1. List all persisted operations for pod (ordered by ID)
 2. Resolve driver from pod labels
-3. For each operation:
-   - Call `ResolveDriverCommands()` to get shell commands
-   - Execute commands via kubectl exec
-   - If unsupported by current driver: delete stale entry
-   - If execution fails: delete entry (assume manual fix needed)
-   - If success: increment replayed counter
-4. Return DriverReplayStats{Total, Replayed, Pruned}
+3. `PlanActions` resolves every operation; one that no longer resolves (unknown, invalid, unsupported by the current driver) is pruned
+4. `RunPlannedActions` executes them in order with retries: consecutive operations on one guest commit go as a single batch, a transient transport error (SSH not up yet) aborts the replay and keeps the operations, a permanent failure prunes the operation
+5. Return DriverReplayStats{Total, Replayed, Pruned}
+
+**One pipeline**: `PlanActions` and `RunPlannedActions` (`backend/helpers/action_pipeline.go`) are shared by the configure request, the replay, the peer replay after a restart and the link attributes of the topology. Each caller only adds its own bookkeeping: duplicate skips and results for configure, pruning for replay, warnings for link attributes.
 
 **Persistence**: Operations stored in SQLite `driver_operation_history` table during modify/configure operations
 
