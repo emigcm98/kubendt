@@ -16,8 +16,15 @@
 }
 
 .topbar-left,
+.topbar-center,
 .topbar-right {
   pointer-events: auto;
+}
+
+/* Search and the external toggle sit in the middle, level with the first
+   row of buttons on either side. */
+.topbar-center {
+  align-self: flex-start;
 }
 
 /* --- Animación de carga inicial (puntos sutiles) --- */
@@ -282,6 +289,13 @@
   background: color-mix(in srgb, var(--info-bg), var(--primary) var(--tonal-btn-tint));
   border-color: color-mix(in srgb, var(--primary) 30%, transparent);
   color: var(--primary);
+}
+
+/* Export network conf: amber tonal, matching Load network conf. */
+.topbar-right-buttons button.topbar-action-export-config {
+  background: color-mix(in srgb, var(--warning-bg), var(--warning) var(--tonal-btn-tint));
+  border-color: var(--warning-border);
+  color: var(--warning-strong);
 }
 
 .topbar button:active:not(:disabled) {

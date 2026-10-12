@@ -897,3 +897,15 @@ var _ = types.PodMetricsUnavailableResponse{}
 var _ = types.TraceReportResponse{}
 var _ = types.TraceHopDoc{}
 var _ = types.TraceMetricsDoc{}
+
+// swaggerExportNetworkConf godoc
+//
+//	@Summary      Export the applied network configuration
+//	@Description  Returns the operations persisted for the pods of a namespace as a configure request (one target per pod, actions in the order they were applied), ready to be loaded again with POST /network/configure.
+//	@Tags         network
+//	@Produce      json
+//	@Param        namespace  path      string  true  "Namespace name"
+//	@Success      200        {object}  types.ConfigureNetworkRequest
+//	@Failure      500        {object}  types.ErrorResponse
+//	@Router       /network/export-conf/{namespace} [get]
+func swaggerExportNetworkConf() {}

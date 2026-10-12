@@ -3473,6 +3473,31 @@ paths:
       summary: Deploy network topology
       tags:
       - network
+  /network/export-conf/{namespace}:
+    get:
+      description: Returns the operations persisted for the pods of a namespace as
+        a configure request (one target per pod, actions in the order they were applied),
+        ready to be loaded again with POST /network/configure.
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.ConfigureNetworkRequest'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Export the applied network configuration
+      tags:
+      - network
   /network/get-network/{namespace}:
     get:
       description: Returns the current network topology deployed in a namespace.

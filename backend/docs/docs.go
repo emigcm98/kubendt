@@ -1873,6 +1873,41 @@ const docTemplate = `{
                 }
             }
         },
+        "/network/export-conf/{namespace}": {
+            "get": {
+                "description": "Returns the operations persisted for the pods of a namespace as a configure request (one target per pod, actions in the order they were applied), ready to be loaded again with POST /network/configure.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "network"
+                ],
+                "summary": "Export the applied network configuration",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.ConfigureNetworkRequest"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/network/get-network/{namespace}": {
             "get": {
                 "description": "Returns the current network topology deployed in a namespace.",
