@@ -76,6 +76,8 @@ func SetupRoutes(router *gin.Engine) {
 		podGroup.GET("/tc/:namespace/:podName", handlers.ShowPodQdiscs)
 		// 5. Get pod CPU/RAM metrics (requires metrics-server)
 		podGroup.GET("/metrics/:namespace/:podName", handlers.GetPodMetrics)
+		// 6. Kernel counters of every interface (bytes, packets, errors, drops)
+		podGroup.GET("/counters/:namespace/:podName", handlers.GetPodInterfaceCounters)
 	}
 
 	nsGroup := router.Group("/namespaces")

@@ -3,6 +3,7 @@ import './PodInfoPanel.css';
 import './LinkInfoPanel.css';
 import usePanelClose from './usePanelClose';
 import { API_BASE_URL } from '../config';
+import { useCounters, CountersRows } from './counters';
 import { ReactComponent as PcapIcon } from '../assets/images/icons/pcap.svg';
 import { ReactComponent as SlidersIcon } from '../assets/images/icons/sliders.svg';
 import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
@@ -61,6 +62,10 @@ const LinkInfoPanel = ({
   const peerIntf = link?.data?.peerIntf;
   const sourceIsExternal = sourceNode?.type === 'external';
   const targetIsExternal = targetNode?.type === 'external';
+
+  // Counters of both ends, read while the panel is open.
+  const countersA = useCounters(namespace, sourceIsExternal ? null : link?.source, !!link);
+  const countersB = useCounters(namespace, targetIsExternal ? null : link?.target, !!link);
 
   useEffect(() => {
     const onKey = (e) => {
@@ -213,6 +218,9 @@ const LinkInfoPanel = ({
               <span className="link-detail-val link-detail-mono" title={info?.mac || ''}>
                 {info?.mac || '—'}
               </span>
+            </div>
+            <div className="link-endpoint-counters">
+              <CountersRows samples={side === 'a' ? countersA : countersB} iface={ifaceName} />
             </div>
           </>
         )}

@@ -1,0 +1,34 @@
+/* Interface counters: two rows, rx and tx, in the detail of an interface and
+   under each end of a link. */
+.counters-grid {
+  display: grid;
+  grid-template-columns: auto 1fr 1fr 1fr;
+  column-gap: 0.6rem;
+  row-gap: 2px;
+  align-items: baseline;
+  font-size: 0.8rem;
+  color: var(--text-body);
+}
+
+.counters-key {
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+}
+
+.counters-val {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.counters-muted {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.counters-note {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}

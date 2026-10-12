@@ -2146,6 +2146,54 @@
                 }
             }
         },
+        "/pods/counters/{namespace}/{podName}": {
+            "get": {
+                "description": "Returns the kernel counters (bytes, packets, errors, drops, per direction) of every data interface of a pod, read from /proc/net/dev with one exec. `at` is the read time in Unix milliseconds, so two reads give rates.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pods"
+                ],
+                "summary": "Interface counters of a pod",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pod name",
+                        "name": "podName",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.PodCountersResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/pods/ips/{namespace}/{podName}": {
             "get": {
                 "description": "Returns interface list (name, MAC, IPv4) for a single pod. By\ndefault the result is scoped to the interfaces declared in the\npod's topology (its link endpoints), excluding the reserved CNI\nmanagement interface, loopback and kernel pseudo-interfaces. Use\nscope=all for the full set including the management interface.",
@@ -3403,6 +3451,43 @@
                 }
             }
         },
+        "types.InterfaceCounters": {
+            "type": "object",
+            "properties": {
+                "rx_bytes": {
+                    "type": "integer",
+                    "example": 32308
+                },
+                "rx_dropped": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "rx_errors": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "rx_packets": {
+                    "type": "integer",
+                    "example": 507
+                },
+                "tx_bytes": {
+                    "type": "integer",
+                    "example": 696
+                },
+                "tx_dropped": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "tx_errors": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "tx_packets": {
+                    "type": "integer",
+                    "example": 10
+                }
+            }
+        },
         "types.InterfaceDetail": {
             "type": "object",
             "properties": {
@@ -4656,6 +4741,25 @@
                 "pod": {
                     "type": "string",
                     "example": "router1"
+                }
+            }
+        },
+        "types.PodCountersResponse": {
+            "type": "object",
+            "properties": {
+                "at": {
+                    "type": "integer",
+                    "example": 1760260000000
+                },
+                "interfaces": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/types.InterfaceCounters"
+                    }
+                },
+                "pod": {
+                    "type": "string",
+                    "example": "router1-0"
                 }
             }
         },

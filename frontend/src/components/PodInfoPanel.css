@@ -658,31 +658,6 @@
   border-color: #d4dce5;
 }
 
-.tc-links-open {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  padding: 0.5rem 0.9rem;
-  border: 1px solid var(--primary);
-  border-radius: var(--radius-sm);
-  background: var(--primary);
-  color: #fff;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.tc-links-open:hover {
-  background: var(--primary-hover);
-}
-
-.tc-links-open .app-icon {
-  width: 15px;
-  height: 15px;
-}
-
 .error-text {
   color: #c0392b;
   font-size: 0.85rem;
