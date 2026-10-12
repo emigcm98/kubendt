@@ -213,6 +213,27 @@
   color: var(--text-body);
 }
 
+/* Logs button: third top-left action, after delete and restart */
+.logs-btn {
+  position: absolute;
+  top: 12px;
+  left: 84px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 4px 6px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  z-index: 10;
+}
+
+.logs-btn:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: var(--text-body);
+}
+
 /* Delete button: destructive top-left action */
 .delete-btn {
   position: absolute;

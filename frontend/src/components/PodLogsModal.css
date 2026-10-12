@@ -1,0 +1,113 @@
+/* Log viewer window: the shell window's chrome (header, buttons, size and
+   resize come from PodInteractiveShellModal.css) with a toolbar and a plain
+   text body instead of a terminal. */
+.logs-modal {
+  display: flex;
+  flex-direction: column;
+  padding-top: 50px; /* the absolute header */
+  user-select: text;
+}
+
+.logs-title-icon {
+  width: 15px;
+  height: 15px;
+  color: var(--term-accent);
+  flex-shrink: 0;
+}
+
+.logs-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--term-border);
+  background: var(--term-bg-raised);
+  font-size: 0.78rem;
+  color: var(--text-subtle);
+  flex-wrap: wrap;
+}
+
+.logs-filter {
+  flex: 1 1 160px;
+  min-width: 120px;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--term-border);
+  border-radius: var(--radius-sm);
+  background: var(--term-bg);
+  color: var(--term-fg);
+  font-size: 0.78rem;
+}
+
+.logs-filter:focus {
+  outline: none;
+  border-color: var(--term-accent);
+}
+
+.logs-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.logs-select {
+  height: 26px;
+  border: 1px solid var(--term-border);
+  border-radius: var(--radius-sm);
+  background: var(--term-bg);
+  color: var(--term-fg);
+  font-size: 0.78rem;
+  padding: 0 4px;
+}
+
+.logs-count {
+  margin-left: auto;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.logs-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--term-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-subtle);
+  cursor: pointer;
+}
+
+.logs-icon-btn:hover {
+  color: var(--term-accent);
+  border-color: var(--term-accent);
+}
+
+.logs-icon-btn .app-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.logs-body {
+  flex: 1;
+  overflow: auto;
+  padding: 8px 10px;
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--term-fg);
+}
+
+.logs-line {
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.logs-empty {
+  color: var(--text-subtle);
+  font-style: italic;
+}

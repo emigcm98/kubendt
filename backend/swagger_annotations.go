@@ -923,3 +923,22 @@ func swaggerExportNetworkConf() {}
 //	@Failure      500        {object}  types.ErrorResponse
 //	@Router       /pods/counters/{namespace}/{podName} [get]
 func swaggerGetPodInterfaceCounters() {}
+
+// swaggerGetPodLogs godoc
+//
+//	@Summary      Container log of a pod
+//	@Description  Returns the log of one container of a pod as text, like kubectl logs, read from the kubelet through the API server (no exec). The main container by default. `tail` is 500 lines unless given, 0 reads everything. The same log can be followed over WebSocket at /pods/logs/ws/{namespace}/{podName} with the same query: a first text frame with the metadata (containers, restarts), one binary frame per line, and a final text frame when the stream ends.
+//	@Tags         pods
+//	@Produce      plain
+//	@Param        namespace   path      string  true   "Namespace name"
+//	@Param        podName     path      string  true   "Pod name"
+//	@Param        container   query     string  false  "Container to read, the main one by default"
+//	@Param        tail        query     int     false  "Lines from the end, 0 for the whole log"  default(500)
+//	@Param        since       query     int     false  "Only lines newer than this many seconds"
+//	@Param        timestamps  query     bool    false  "Prefix every line with its timestamp"
+//	@Param        previous    query     bool    false  "Read the log of the previous instance of the container, after a restart"
+//	@Success      200         {string}  string  "The log"
+//	@Failure      400         {object}  types.ErrorResponse
+//	@Failure      500         {object}  types.ErrorResponse
+//	@Router       /pods/logs/{namespace}/{podName} [get]
+func swaggerGetPodLogs() {}
