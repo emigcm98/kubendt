@@ -20,9 +20,6 @@ import (
 )
 
 const (
-	// How long to wait for the debug container to come up. The first image pull
-	// dominates this.
-	traceStartTimeout = 120 * time.Second
 	// Cap on a whole run. A total black hole would stall for ~60s with -m 30
 	// -w 2, and 90s leaves headroom for DNS and slow first hops.
 	traceRunTimeout = 90 * time.Second
@@ -42,8 +39,8 @@ type traceHopFrame struct {
 //
 // It sends JSON text frames tagged by "type": a "meta" frame, "status" frames
 // (starting, resolving, tracing, done), one "hop" frame per hop, and "error".
-// The probe runs in the shared debug container exec'd into the pod netns, so the
-// source image needs no traceroute of its own. Closing the socket kills it.
+// The probe runs in the pod's toolbox, so the source image needs no traceroute
+// of its own. Closing the socket kills it.
 func TraceWebSocket(c *gin.Context) {
 	namespace := c.Param("namespace")
 	podRef := c.Param("podName")
@@ -98,9 +95,9 @@ func TraceWebSocket(c *gin.Context) {
 
 	// Guest-VM drivers (VyOS) run the probe inside the guest through their
 	// wrapper. The pod netns has no connectivity there, and the trace must use
-	// the guest routing table anyway. Everyone else gets the debug container.
-	// A guest driver without probe support gets a clean error instead of a
-	// debug container that cannot reach anything.
+	// the guest routing table anyway. Everyone else gets the toolbox. A guest
+	// driver without probe support gets a clean error instead of a toolbox
+	// that cannot reach anything.
 	var probeWrapper []string
 	container := ""
 	if drv, _ := helpers.GetDriverForListedPod(podObj); drv != nil {
@@ -114,24 +111,17 @@ func TraceWebSocket(c *gin.Context) {
 	}
 	if probeWrapper == nil {
 		var reused bool
-		container, reused, err = helpers.EnsureDebugContainer(namespace, pod)
+		container, reused, err = helpers.EnsureToolbox(namespace, pod, func() {
+			sendCtl(gin.H{"type": "status", "state": "starting"})
+		})
 		if err != nil {
-			log.Printf("❌ Trace: ensure debug container failed for %s/%s: %v", namespace, pod, err)
+			log.Printf("❌ Trace: toolbox failed for %s/%s: %v", namespace, pod, err)
 			sendCtl(gin.H{"type": "error", "message": err.Error()})
 			return
 		}
 		log.Printf("🧭 Trace: %s %s from %s/%s to %q (method=%s)",
 			map[bool]string{true: "reusing", false: "injected"}[reused], container, namespace, pod, dest, method)
 		sendCtl(gin.H{"type": "meta", "source": pod, "dest": dest, "method": method, "container": container, "reused": reused})
-
-		if !reused {
-			sendCtl(gin.H{"type": "status", "state": "starting"})
-			if err := helpers.WaitEphemeralRunning(namespace, pod, container, traceStartTimeout); err != nil {
-				log.Printf("❌ Trace: container %s did not start: %v", container, err)
-				sendCtl(gin.H{"type": "error", "message": err.Error()})
-				return
-			}
-		}
 	} else {
 		log.Printf("🧭 Trace: in-guest probe from %s/%s to %q (method=%s)", namespace, pod, dest, method)
 		sendCtl(gin.H{"type": "meta", "source": pod, "dest": dest, "method": method, "container": container, "reused": true})
@@ -207,7 +197,7 @@ func TraceReport(c *gin.Context) {
 		return
 	}
 
-	// Same guest-vs-debug-container split as the WebSocket handler.
+	// Same guest-vs-toolbox split as the WebSocket handler.
 	var probeWrapper []string
 	container := ""
 	if drv, _ := helpers.GetDriverForListedPod(podObj); drv != nil {
@@ -220,17 +210,10 @@ func TraceReport(c *gin.Context) {
 		}
 	}
 	if probeWrapper == nil {
-		var reused bool
-		container, reused, err = helpers.EnsureDebugContainer(namespace, pod)
+		container, _, err = helpers.EnsureToolbox(namespace, pod, nil)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
-		}
-		if !reused {
-			if err := helpers.WaitEphemeralRunning(namespace, pod, container, traceStartTimeout); err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				return
-			}
 		}
 	}
 

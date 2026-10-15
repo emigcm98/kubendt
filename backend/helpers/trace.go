@@ -23,7 +23,7 @@ import (
 )
 
 // Helpers for the traceroute path visualization. A real traceroute runs in the
-// shared debug container inside the source pod's netns, and each L3 hop is
+// pod's toolbox inside the source pod's netns, and each L3 hop is
 // mapped back to a topology node so the frontend can animate the packet.
 
 var (
@@ -600,35 +600,6 @@ func BFSPath(adj map[string][]string, src, dst string) []string {
 		}
 	}
 	return nil
-}
-
-// FindRunningDebugContainer returns the name of a running debug container in the
-// pod (the ephemeral netshoot husk capture and trace inject), or "" if there is
-// none. Trace and capture share one per pod. A pod can only accumulate ephemeral
-// containers, Kubernetes never lets us remove them, so reusing keeps them from
-// piling up.
-func FindRunningDebugContainer(namespace, podName string) string {
-	pod, err := kubeclient.Clientset.CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
-	if err != nil {
-		return ""
-	}
-	for _, cs := range pod.Status.EphemeralContainerStatuses {
-		if ValidCaptureContainer(cs.Name) && cs.State.Running != nil {
-			return cs.Name
-		}
-	}
-	return ""
-}
-
-// EnsureDebugContainer reuses a running debug container in the pod when one
-// exists (injected by a previous trace or by capture), or injects a fresh one.
-// Returns the container name and whether it was reused.
-func EnsureDebugContainer(namespace, podName string) (string, bool, error) {
-	if existing := FindRunningDebugContainer(namespace, podName); existing != "" {
-		return existing, true, nil
-	}
-	name, err := InjectCaptureContainer(namespace, podName)
-	return name, false, err
 }
 
 // DriverIsL3Capable reports whether the named driver exposes the L3Capable
