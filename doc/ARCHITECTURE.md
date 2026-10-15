@@ -28,6 +28,8 @@ Login checks the admin password (bcrypt) and issues an HttpOnly session cookie. 
 
 ## Drivers and Capabilities
 
+How to write a driver, and every optional interface the platform asks of one, is in [DRIVERS.md](DRIVERS.md).
+
 Drivers encode node behavior and can combine capability bases:
 
 - `L2Capable`

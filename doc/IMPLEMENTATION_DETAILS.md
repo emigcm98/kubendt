@@ -29,7 +29,7 @@ Registry Pattern:
 3. Stores reflect.Type in registry with validation that Name/Type are non-empty
 4. NewByName() uses reflection to instantiate new instances from stored type
 
-**Registered Drivers** (in register_all.go):
+**Registered Drivers** (in register_all.go; how to write one is in [DRIVERS.md](DRIVERS.md)):
 
 - `BasicHostDriver` (type: host), basic IP manipulation
 - `HostDriver` (type: host), L2, L3, TC with ReplaceIP override
@@ -721,11 +721,12 @@ Interfaces operational
 
 ## 10. Extensibility Points
 
-1. **New Drivers**: Embed capability bases, register with RegisterAllDrivers()
-2. **New Capabilities**: Define interface, create base with default implementation, add type assertions in ResolveDriverCommands()
-3. **New Actions**: Extend types.ActionEntry fields, add mapping in capability Interface & L3/NAT/TC/SwitchMethods maps
-4. **Heal Strategy**: Modify HealMissingInterfaces algorithm (restart logic, retry count)
-5. **State Recovery**: Alternative backends possible (Etcd, gRPC) by replacing SQLite DB layer
+1. **New drivers**: one struct with `Meta`, the capability bases or interfaces of its type, an executor when needed, and the optional interfaces the node has; registered in `RegisterAllDrivers()`. The guide is [DRIVERS.md](DRIVERS.md).
+2. **New capabilities**: an interface in `backend/capabilities`, a base with the Linux commands, and its actions declared next to it with `actions.Register`; dispatch, validation, `GET /drivers`, Swagger and the expected plans derive from that declaration.
+3. **New actions**: a field in `types.ActionEntry` with its JSON name, a `Param` of the right kind in `backend/actions/params.go`, and an `actions.Action` entry in the capability's `init`; then `go test ./helpers -run TestActionPlans -update` and a review of the plans.
+4. **New executors**: a `KubectlBase` registered in an `init` of `backend/executor`, with `CommandKinder` when it takes lines or batches.
+5. **Heal strategy**: `HealMissingInterfaces` (restart logic, retry count).
+6. **State recovery**: alternative backends possible (Etcd, gRPC) by replacing the SQLite layer.
 
 ## 11. Packet Capture
 
