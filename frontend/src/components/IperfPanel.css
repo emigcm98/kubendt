@@ -1,0 +1,344 @@
+/* Throughput test window, of the trace panel's family. */
+.iperf-panel {
+  position: fixed;
+  width: 420px;
+  min-width: 360px;
+  max-width: 90vw;
+  display: flex;
+  flex-direction: column;
+  background: var(--tool-bg);
+  color: var(--tool-text-body);
+  border: 1px solid var(--tool-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+  overflow: hidden;
+  user-select: none;
+}
+
+.iperf-panel-min {
+  display: none;
+}
+
+.iperf-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--tool-header-bg);
+  border-bottom: 1px solid var(--tool-border);
+  cursor: move;
+}
+
+.iperf-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: var(--tool-text);
+}
+
+.iperf-title-icon {
+  width: 15px;
+  height: 15px;
+}
+
+.iperf-status {
+  margin-left: auto;
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.iperf-status-connecting,
+.iperf-status-starting,
+.iperf-status-running {
+  color: var(--tool-accent);
+}
+
+.iperf-status-done {
+  color: var(--tool-success);
+}
+
+.iperf-status-error,
+.iperf-status-lost {
+  color: var(--tool-danger);
+}
+
+.iperf-form {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--tool-border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.iperf-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.iperf-label {
+  width: 44px;
+  color: var(--tool-text-muted);
+  flex-shrink: 0;
+}
+
+.iperf-input,
+.iperf-select {
+  flex: 1;
+  min-width: 0;
+  background: var(--tool-bg-well);
+  color: var(--tool-text);
+  border: 1px solid var(--tool-border);
+  border-radius: var(--radius-sm);
+  padding: 4px 6px;
+  font-size: 12px;
+  outline: none;
+}
+
+.iperf-input:focus,
+.iperf-select:focus {
+  border-color: var(--tool-accent);
+}
+
+.iperf-input-short {
+  flex: 0 0 52px;
+  text-align: right;
+}
+
+.iperf-input-bad,
+.iperf-input-bad:focus {
+  border-color: var(--tool-danger);
+}
+
+.iperf-form-error {
+  color: var(--tool-danger);
+  font-size: 11px;
+  padding-left: 52px;
+}
+
+.iperf-unit {
+  color: var(--tool-text-muted);
+}
+
+.iperf-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--tool-text-dim);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.iperf-seg {
+  display: inline-flex;
+  border: 1px solid var(--tool-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.iperf-seg-btn {
+  background: var(--tool-bg-well);
+  color: var(--tool-text-muted);
+  border: none;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.iperf-seg-btn + .iperf-seg-btn {
+  border-left: 1px solid var(--tool-border);
+}
+
+.iperf-seg-active {
+  background: var(--tool-bg-raised);
+  color: var(--tool-text);
+  font-weight: 600;
+}
+
+.iperf-btn {
+  background: var(--tool-bg-raised);
+  color: var(--tool-text-body);
+  border: 1px solid var(--tool-border-strong);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.iperf-btn:hover:not(:disabled) {
+  background: var(--tool-border-strong);
+}
+
+.iperf-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.iperf-btn-run {
+  background: var(--tool-success-solid);
+  border-color: var(--tool-success-strong);
+  color: var(--tool-text);
+  font-weight: 600;
+  padding: 5px 14px;
+}
+
+.iperf-btn-run:hover:not(:disabled) {
+  background: var(--tool-success-solid-hover);
+}
+
+.iperf-btn-stop {
+  background: var(--tool-danger-bg);
+  border-color: var(--tool-danger-border);
+  color: var(--tool-danger);
+  font-weight: 600;
+  padding: 5px 14px;
+}
+
+.iperf-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 7px;
+  background: transparent;
+  border-color: transparent;
+  color: var(--tool-text-muted);
+}
+
+.iperf-btn-icon:hover:not(:disabled) {
+  background: var(--tool-bg-raised);
+  color: var(--tool-text);
+}
+
+.iperf-btn-icon .app-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.iperf-btn-close:hover {
+  background: var(--tool-danger-bg);
+  border-color: var(--tool-danger-border);
+}
+
+.iperf-error {
+  padding: 6px 10px;
+  background: var(--tool-danger-bg);
+  color: var(--tool-danger);
+  border-bottom: 1px solid var(--tool-danger-border);
+  font-size: 11px;
+  word-break: break-word;
+}
+
+.iperf-chart-wrap {
+  padding: 8px 10px 4px;
+}
+
+.iperf-chart-head {
+  display: flex;
+  justify-content: space-between;
+  min-height: 14px;
+  margin-bottom: 2px;
+  color: var(--tool-text-subtle);
+  font-size: 10px;
+  font-family: ui-monospace, monospace;
+}
+
+.iperf-chart-rate {
+  color: var(--tool-text-dim);
+}
+
+.iperf-chart-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.iperf-chart-axis {
+  position: relative;
+  flex: 0 0 64px;
+}
+
+.iperf-chart-axis span {
+  position: absolute;
+  right: 0;
+  transform: translateY(-50%);
+  color: var(--tool-text-subtle);
+  font-size: 10px;
+  font-family: ui-monospace, monospace;
+  white-space: nowrap;
+}
+
+.iperf-chart {
+  display: block;
+  flex: 1;
+  min-width: 0;
+}
+
+.iperf-legend {
+  min-height: 12px;
+  margin-top: 2px;
+  color: var(--tool-text-subtle);
+  font-size: 10px;
+  text-align: right;
+}
+
+.iperf-bar {
+  fill: var(--tool-accent);
+}
+
+.iperf-bar-retx {
+  fill: var(--tool-warning);
+}
+
+.iperf-grid {
+  stroke: var(--tool-border);
+  stroke-dasharray: 2 3;
+}
+
+.iperf-axis {
+  fill: var(--tool-text-subtle);
+  font-size: 10px;
+  font-family: ui-monospace, monospace;
+}
+
+.iperf-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  text-align: center;
+  font-style: italic;
+}
+
+.iperf-summary {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 10px;
+  padding: 6px 10px 8px;
+  border-top: 1px solid var(--tool-border);
+}
+
+.iperf-summary-key {
+  color: var(--tool-text-muted);
+}
+
+.iperf-summary-val {
+  color: var(--tool-text);
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+}
+
+.iperf-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-top: 1px solid var(--tool-border);
+  background: var(--tool-bg-sunken);
+}
+
+.iperf-controls .iperf-btn-clear {
+  margin-left: auto;
+}

@@ -4,9 +4,10 @@ import { ReactComponent as PcapIcon } from '../assets/images/icons/pcap.svg';
 import { ReactComponent as InfoIcon } from '../assets/images/icons/info.svg';
 import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
 import { ReactComponent as SlidersIcon } from '../assets/images/icons/sliders.svg';
+import { ReactComponent as GaugeIcon } from '../assets/images/icons/gauge.svg';
 
-// Right-click menu of a link. Capture and traffic control are groups with one
-// entry per end, so the menu stays at five rows.
+// Right-click menu of a link. Capture, traffic control and the throughput
+// test are groups with one entry per end, so the menu stays at six rows.
 const EdgeContextMenu = ({
   x,
   y,
@@ -21,10 +22,14 @@ const EdgeContextMenu = ({
   onTCSource,
   onTCTarget,
   onTCLink,
+  onIperfSourceToTarget,
+  onIperfTargetToSource,
 }) => {
   if (!edge) return null;
   const a = `${sourceLabel || edge.source}:${edge.data?.localIntf || '?'}`;
   const b = `${targetLabel || edge.target}:${edge.data?.peerIntf || '?'}`;
+  const na = sourceLabel || edge.source;
+  const nb = targetLabel || edge.target;
 
   const items = [
     onOpenInfoPanel && { label: 'Open info panel', icon: <InfoIcon />, onClick: onOpenInfoPanel },
@@ -48,6 +53,22 @@ const EdgeContextMenu = ({
           label: 'on both ends',
           alone: 'Traffic control on both ends',
           onClick: onTCLink,
+        },
+      ],
+    },
+    {
+      label: 'Throughput test',
+      icon: <GaugeIcon />,
+      children: [
+        onIperfSourceToTarget && {
+          label: `${na} to ${nb}`,
+          alone: `Throughput test ${na} to ${nb}`,
+          onClick: onIperfSourceToTarget,
+        },
+        onIperfTargetToSource && {
+          label: `${nb} to ${na}`,
+          alone: `Throughput test ${nb} to ${na}`,
+          onClick: onIperfTargetToSource,
         },
       ],
     },

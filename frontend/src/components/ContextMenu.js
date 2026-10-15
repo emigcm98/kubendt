@@ -4,6 +4,7 @@ import { ReactComponent as TraceIcon } from '../assets/images/icons/trace-icon.s
 import { ReactComponent as SlidersIcon } from '../assets/images/icons/sliders.svg';
 import { ReactComponent as TerminalIcon } from '../assets/images/icons/terminal.svg';
 import { ReactComponent as WrenchIcon } from '../assets/images/icons/wrench.svg';
+import { ReactComponent as GaugeIcon } from '../assets/images/icons/gauge.svg';
 import { ReactComponent as LogsIcon } from '../assets/images/icons/logs.svg';
 import { ReactComponent as RefreshIcon } from '../assets/images/icons/refresh.svg';
 import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
@@ -21,6 +22,7 @@ const ContextMenu = ({
   onRestartPod,
   onOpenInfoPanel,
   onStartTrace,
+  onStartIperf,
   onStartTC,
   onDelete,
 }) => {
@@ -63,6 +65,12 @@ const ContextMenu = ({
             label: 'Traceroute from here',
             icon: <TraceIcon />,
             onClick: onStartTrace,
+          },
+        onStartIperf &&
+          info.l3capable && {
+            label: 'Throughput test from here',
+            icon: <GaugeIcon />,
+            onClick: onStartIperf,
           },
         onStartTC && { label: 'Traffic control', icon: <SlidersIcon />, onClick: onStartTC },
       ],

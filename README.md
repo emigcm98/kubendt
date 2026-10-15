@@ -61,7 +61,7 @@ KubeNDT bundles a small set of third-party SVG icons in its frontend. See [ATTRI
 - **Network diagnostics**: Real-time interface status, IP address tracking, traffic analysis
 - **Live packet capture**: Wireshark-like per-interface capture streamed to the dashboard, with `.pcap` export
 - **Packet-path visualization**: run a traceroute from any node and watch the packet hop across the graph, with tunnel and drop/delivery detection and optional per-hop latency stats. Also available as a REST endpoint
-- **Throughput tests**: iperf3 between two nodes through the API, TCP or UDP, with the server started by the platform on the destination node
+- **Throughput tests**: iperf3 between two nodes from the dashboard or the API, TCP or UDP, with the server started by the platform on the destination node and one bar per second while it runs
 
 ### Enterprise Features
 
