@@ -333,7 +333,7 @@ func GetExistingNodes(namespace string) ([]types.NodeSpec, error) {
 			Replicas:                      replicas,
 			Type:                          sts.Spec.Template.Labels["kubendt/type"],
 			Driver:                        sts.Spec.Template.Labels["kubendt/driver"],
-			Qemu:                          sts.Spec.Template.Labels["kubendt/qemu"] == "true" || sts.Spec.Template.Labels["kubendt/runtime"] == "qemu",
+			Qemu:                          IsGuestVM(sts.Spec.Template.Labels),
 			TerminationGracePeriodSeconds: gracePeriod,
 			NodeSelector:                  sts.Spec.Template.Spec.NodeSelector,
 			NodeName:                      sts.Spec.Template.Spec.NodeName,

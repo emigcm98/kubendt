@@ -1145,13 +1145,13 @@ func GetNetwork(c *gin.Context) {
 			if labels["app"] == name {
 				podType = labels["kubendt/type"]
 				driver = labels["kubendt/driver"]
-				runtime = labels["kubendt/runtime"]
+				runtime = helpers.RuntimeOf(labels)
 				shellMode = labels["kubendt/shell-mode"]
 				break
 			}
 		}
 
-		isQemu := runtime == "qemu"
+		isQemu := runtime == helpers.RuntimeLabelQEMU
 
 		container := sts.Spec.Template.Spec.Containers[0]
 

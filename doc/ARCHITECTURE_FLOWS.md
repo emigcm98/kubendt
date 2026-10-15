@@ -223,7 +223,6 @@ HealMissingInterfaces(namespace, nodes, links, maxRounds=2)
  │    3. Create StatefulSets        │
  │       └─ Pods get labels:        │
  │         - kubendt/driver         │
- │         - kubendt/qemu           │
  │         - kubendt/runtime        │
  └──────┬───────────────────────────┘
         │
@@ -280,7 +279,6 @@ CREATION:
     - Labels from StatefulSet template:
       * kubendt/type: "router"
       * kubendt/driver: "FRRRouterDriver"
-      * kubendt/qemu: "false"
       * kubendt/runtime: "k8s-linux"
     - Mounts ConfigMaps
 
@@ -439,7 +437,6 @@ Step 5: Return Stats
 ```
                         CONTAINER POD              QEMU POD
 ────────────────────────────────────────────────────────────────
-Label: kubendt/qemu     "false"                    "true"
 Label: kubendt/runtime  "k8s-linux"                "qemu"
 ────────────────────────────────────────────────────────────────
 Driver Assignment       Yes (default by type)      No (empty) by default;

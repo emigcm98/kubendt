@@ -238,8 +238,7 @@ FOR round = 1 TO maxRounds:
     - Pod template includes labels:
       kubendt/type: node.Type
       kubendt/driver: node.Driver
-      kubendt/runtime: "qemu" | "k8s-linux"   (derived from the driver via drivers_meta.RuntimeProvider)
-      kubendt/qemu: "true" | "false"         (same source as runtime, kept for backwards compat with handlers/shell.go)
+      kubendt/runtime: "qemu" | "k8s-linux"   (derived from the driver via drivers_meta.RuntimeProvider; read everywhere through helpers.RuntimeOf, which also understands the kubendt/qemu label of pods from older versions)
     - Annotation: k8s.v1.cni.cncf.io/networks = meshnet
     - terminationGracePeriodSeconds from the node (default 2 s, not the Kubernetes 30 s)
     - nodeSelector / nodeName from the node, when set
@@ -477,7 +476,7 @@ The schema version is tracked with `PRAGMA user_version` and advanced by `applyM
 
 - A node is QEMU-based when its resolved driver implements `drivers_meta.RuntimeProvider` and returns `RuntimeQEMU` (e.g. `VyOSRouterDriver`). The internal `NodeSpec.Qemu` field is populated by `ResolveDriversForNodes` from that source; it is not user-input and is not exposed in the request/response JSON.
 - Pod labels at deployment time:
-  - `kubendt/qemu: "true"` and `kubendt/runtime: "qemu"` (both set from the same source, kept in parallel so legacy readers keep working)
+  - `kubendt/runtime: "qemu"`; the backend reads it through `helpers.RuntimeOf`, which still understands the `kubendt/qemu` label that older versions set
 
 ### 5.2 Detection & Adaptation
 
@@ -486,8 +485,7 @@ The schema version is tracked with `PRAGMA user_version` and advanced by `applyM
 **QEMU Detection**:
 
 ```go
-isQemuPod := podObj.Labels["kubendt/qemu"] == "true" ||
-            podObj.Labels["kubendt/runtime"] == "qemu"
+helpers.IsGuestVM(podObj.Labels) // kubendt/runtime, or kubendt/qemu on pods from older versions
 ```
 
 **Shell Mode Adaptation**:

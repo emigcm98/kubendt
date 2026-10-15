@@ -146,7 +146,7 @@ KubeNDT implements network topology management for Kubernetes through five inter
 **QEMU Definition**:
 
 - Derived from the driver: a node is QEMU-based when its resolved driver implements `drivers_meta.RuntimeProvider` and returns `RuntimeQEMU` (e.g. `VyOSRouterDriver`). The topology JSON does NOT carry a `qemu` field.
-- Pod labeled: `kubendt/qemu: "true"` and `kubendt/runtime: "qemu"`
+- Pod labeled `kubendt/runtime: "qemu"`, read through `helpers.RuntimeOf` (which also understands the `kubendt/qemu` label of older versions)
 
 **Detection & Shell Adaptation**:
 

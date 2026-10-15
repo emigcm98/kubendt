@@ -17,7 +17,7 @@ var (
 )
 
 func hasSerialConsole(pod *v1.Pod) bool {
-	return pod.Labels["kubendt/runtime"] == "qemu" || pod.Labels["kubendt/qemu"] == "true" || pod.Labels["kubendt/shell-mode"] == "serial"
+	return IsGuestVM(pod.Labels) || pod.Labels["kubendt/shell-mode"] == "serial"
 }
 
 // PodShells lists the shells of a pod, the pod shell first.

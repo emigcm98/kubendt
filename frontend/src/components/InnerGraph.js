@@ -541,14 +541,14 @@ const InnerGraph = ({
     }
   }, [matchedNodeIds, nodes, getViewport, setCenter]);
 
-  // Pick the most useful shell for a given pod: QEMU/serial-capable → "serial",
-  // FRRouterDriver → "vtysh", otherwise the default "sh".
+  // The shell a double-click opens, from the shells the node publishes: the
+  // driver's own console first (vtysh, the VyOS CLI), then the serial
+  // console, then the pod shell.
   const pickPreferredShellMode = (info) => {
-    if (!info) return 'sh';
-    if (info.runtime === 'qemu' || info.serialShell || info.shellMode === 'serial') {
-      return 'serial';
-    }
-    if (info.driver === 'FRRRouterDriver') return 'vtysh';
+    const shells = info?.shells || [];
+    const own = shells.find((s) => s.mode !== 'sh' && s.mode !== 'serial');
+    if (own) return own.mode;
+    if (shells.some((s) => s.mode === 'serial')) return 'serial';
     return 'sh';
   };
 

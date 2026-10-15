@@ -27,7 +27,7 @@ func TestResolveEffectiveDevicesForNode(t *testing.T) {
 	if got := paths(ResolveEffectiveDevicesForNode(node)); got != "/dev/net/tun,/dev/kvm" {
 		t.Errorf("the topology's devices come first, got %s", got)
 	}
-	if got := paths(ResolveEffectiveDevicesForNode(types.NodeSpec{Qemu: true})); got != "/dev/kvm" {
-		t.Errorf("a qemu node without a driver still gets kvm, got %s", got)
+	if got := paths(ResolveEffectiveDevicesForNode(types.NodeSpec{Qemu: true})); got != "" {
+		t.Errorf("only the driver adds devices, got %s", got)
 	}
 }
