@@ -6,6 +6,8 @@ import { ReactComponent as GaugeIcon } from '../assets/images/icons/gauge.svg';
 import { ReactComponent as DownloadIcon } from '../assets/images/icons/download.svg';
 import { ReactComponent as MinusIcon } from '../assets/images/icons/minus.svg';
 import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
+import { ReactComponent as ChevronDownIcon } from '../assets/images/icons/chevron-down.svg';
+import { ReactComponent as WarningIcon } from '../assets/images/icons/warning.svg';
 
 // Throughput test window: an iperf3 run from the source pod toward an
 // address, streamed by /iperf/ws. The backend starts the server on the node
@@ -160,6 +162,69 @@ const Chart = ({ intervals, slots, proto, running, empty }) => {
   );
 };
 
+// The node picker is a list of our own rather than a select, so a node that
+// cannot host the server shows a warning and its reason on hover instead of
+// a sentence inside the option.
+const NodePicker = ({ value, nodes, disabled, onPick }) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDown = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+  const current = nodes.find((n) => n.id === value);
+  return (
+    <div className="iperf-picker" ref={ref}>
+      <button
+        type="button"
+        className={`iperf-select iperf-picker-btn${current ? '' : ' iperf-picker-empty'}`}
+        disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <span className="iperf-picker-text">{current ? current.label : 'pick a node…'}</span>
+        <ChevronDownIcon className="iperf-picker-chevron" />
+      </button>
+      {open && (
+        <ul className="iperf-picker-list" role="listbox">
+          {nodes.map((n) => (
+            <li
+              key={n.id}
+              role="option"
+              aria-selected={n.id === value}
+              aria-disabled={n.blocked || undefined}
+              title={n.blocked ? n.note : undefined}
+              className={`iperf-picker-item${n.blocked ? ' iperf-picker-item-blocked' : ''}${
+                n.id === value ? ' iperf-picker-item-current' : ''
+              }`}
+              onClick={() => {
+                if (n.blocked) return;
+                onPick(n.id);
+                setOpen(false);
+              }}
+            >
+              <span className="iperf-picker-text">{n.label}</span>
+              {n.blocked && <WarningIcon className="iperf-picker-warn" />}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};
+
 const IperfPanel = ({
   namespace,
   source,
@@ -178,6 +243,7 @@ const IperfPanel = ({
   const onHeaderMouseDown = useDraggableWindow({ containerRef, onBringToFront });
 
   const [dest, setDest] = useState('');
+  const [destNode, setDestNode] = useState(initialDest?.pod || ''); // the node picked, '' when typed
   const [serverMode, setServerMode] = useState('auto'); // auto: started by the backend; none: already running
   const [port, setPort] = useState('');
   const [proto, setProto] = useState('tcp');
@@ -193,10 +259,30 @@ const IperfPanel = ({
 
   const running = status === 'connecting' || status === 'starting' || status === 'running';
   const formError = validate({ duration, parallel, bandwidth, serverMode, port });
+  // Candidates to pick: every node but this one and the external network. With
+  // the server on the node, a guest VM cannot host it: listed, but disabled
+  // and saying why, so the node is not missing but explained.
   const destNodes = useMemo(
-    () => nodes.filter((n) => n.data?.type && n.data.type !== 'external' && n.id !== source),
-    [nodes, source]
+    () =>
+      nodes
+        .filter((n) => n.data?.type && n.data.type !== 'external' && n.id !== source)
+        .map((n) => {
+          const guest = n.data.fullInfo?.runtime === 'qemu';
+          const blocked = serverMode === 'auto' && guest;
+          return {
+            id: n.id,
+            label: n.data?.label || n.id,
+            blocked,
+            note: blocked
+              ? `${n.data.fullInfo?.driver || 'its driver'} cannot host the server on a guest VM yet`
+              : '',
+          };
+        }),
+    [nodes, source, serverMode]
   );
+  useEffect(() => {
+    if (destNode && destNodes.some((n) => n.id === destNode && n.blocked)) setDestNode('');
+  }, [destNode, destNodes]);
   const nodeLabel = useMemo(() => {
     const m = {};
     for (const n of nodes) m[n.id] = n.data?.label || n.id;
@@ -460,27 +546,23 @@ const IperfPanel = ({
             placeholder="IP address"
             value={dest}
             disabled={running}
-            onChange={(e) => setDest(e.target.value)}
+            onChange={(e) => {
+              setDest(e.target.value);
+              setDestNode('');
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Enter') run();
             }}
           />
-          <select
-            className="iperf-select"
-            value=""
+          <NodePicker
+            value={destNode}
+            nodes={destNodes}
             disabled={running}
-            onChange={(e) => {
-              pickDestNode(e.target.value);
-              e.target.value = '';
+            onPick={(id) => {
+              setDestNode(id);
+              pickDestNode(id);
             }}
-          >
-            <option value="">pick a node…</option>
-            {destNodes.map((n) => (
-              <option key={n.id} value={n.id}>
-                {n.data?.label || n.id}
-              </option>
-            ))}
-          </select>
+          />
         </div>
         <div className="iperf-row">
           <span className="iperf-label">Server</span>

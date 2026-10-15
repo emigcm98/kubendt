@@ -66,11 +66,14 @@ const ContextMenu = ({
             icon: <TraceIcon />,
             onClick: onStartTrace,
           },
+        // A guest VM has no iperf3 reachable from the pod yet; see PLAN, tool runner.
         onStartIperf &&
           info.l3capable && {
             label: 'Throughput test from here',
             icon: <GaugeIcon />,
             onClick: onStartIperf,
+            disabled: info.runtime === 'qemu',
+            note: `${info.driver || 'This driver'} does not support it on a guest VM yet`,
           },
         onStartTC && { label: 'Traffic control', icon: <SlidersIcon />, onClick: onStartTC },
       ],

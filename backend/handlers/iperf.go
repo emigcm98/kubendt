@@ -100,7 +100,7 @@ func resolveIperfRun(namespace, podRef string, q iperfRequest) (iperfRun, int, e
 		return iperfRun{}, http.StatusBadRequest, errors.New("source node is not L3-capable")
 	}
 	if podObj.Labels["kubendt/runtime"] == "qemu" {
-		return iperfRun{}, http.StatusBadRequest, errors.New("throughput tests are not supported on this node type yet")
+		return iperfRun{}, http.StatusBadRequest, guestVMError(pod, podObj, "run a throughput test")
 	}
 	run := iperfRun{source: pod}
 	switch q.server {
@@ -130,9 +130,19 @@ func resolveIperfRun(namespace, podRef string, q iperfRequest) (iperfRun, int, e
 		return run, http.StatusNotFound, fmt.Errorf("server pod %q not found", run.serverPod)
 	}
 	if srv.Labels["kubendt/runtime"] == "qemu" {
-		return run, http.StatusBadRequest, errors.New("a server cannot run on this node type yet")
+		return run, http.StatusBadRequest, guestVMError(run.serverPod, srv, "host the server")
 	}
 	return run, 0, nil
+}
+
+// guestVMError names the node and its driver: the toolbox sits in a pod
+// netns that a guest VM leaves without an IP stack.
+func guestVMError(pod string, obj *v1.Pod, what string) error {
+	driver := obj.Labels["kubendt/driver"]
+	if driver == "" {
+		driver = "its driver"
+	}
+	return fmt.Errorf("%s cannot %s yet: %s runs a guest VM and iperf3 is not reachable from the pod", pod, what, driver)
 }
 
 // prepareIperf readies the toolboxes of both ends and picks the server port.

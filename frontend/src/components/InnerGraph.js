@@ -1223,13 +1223,21 @@ const InnerGraph = ({
           const tgtIntf = edge.data?.peerIntf;
           const srcInfo = nodes.find((n) => n.id === edge.source)?.data?.fullInfo;
           const tgtInfo = nodes.find((n) => n.id === edge.target)?.data?.fullInfo;
-          // A test needs an address on both ends, so both must be L3.
+          // A test needs an address on both ends, so both must be L3. A guest VM
+          // has no iperf3 reachable from the pod yet: the entry stays, dimmed,
+          // and says which end cannot.
           const iperfEnds =
             onStartIperf &&
             !srcExternal &&
             !tgtExternal &&
             srcInfo?.l3capable &&
             tgtInfo?.l3capable;
+          const guestNote = (info, label) =>
+            info?.runtime === 'qemu'
+              ? `${label} runs a guest VM, ${info.driver || 'its driver'} does not support it yet`
+              : null;
+          const srcNote = guestNote(srcInfo, edgeContextMenu.sourceLabel || edge.source);
+          const tgtNote = guestNote(tgtInfo, edgeContextMenu.targetLabel || edge.target);
           return (
             <EdgeContextMenu
               x={edgeContextMenu.x}
@@ -1280,6 +1288,8 @@ const InnerGraph = ({
                   ? () => onStartIperf(tgtInfo, { pod: edge.source, iface: srcIntf })
                   : null
               }
+              iperfSourceToTargetNote={srcNote || tgtNote}
+              iperfTargetToSourceNote={tgtNote || srcNote}
             />
           );
         })()}

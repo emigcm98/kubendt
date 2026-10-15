@@ -102,6 +102,93 @@
   border-color: var(--tool-accent);
 }
 
+.iperf-picker {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.iperf-picker-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.iperf-picker-btn:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.iperf-picker-empty .iperf-picker-text {
+  color: var(--tool-text-muted);
+}
+
+.iperf-picker-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.iperf-picker-chevron {
+  width: 14px;
+  height: 14px;
+  color: var(--tool-text-muted);
+  flex-shrink: 0;
+}
+
+.iperf-picker-list {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  z-index: 5;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  max-height: 200px;
+  overflow: auto;
+  background: var(--tool-bg);
+  border: 1px solid var(--tool-border-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+}
+
+.iperf-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  color: var(--tool-text);
+  cursor: pointer;
+}
+
+.iperf-picker-item:hover {
+  background: var(--tool-bg-raised);
+}
+
+.iperf-picker-item-current {
+  color: var(--tool-accent);
+}
+
+.iperf-picker-item-blocked,
+.iperf-picker-item-blocked:hover {
+  color: var(--tool-text-subtle);
+  background: transparent;
+  cursor: default;
+}
+
+.iperf-picker-warn {
+  width: 13px;
+  height: 13px;
+  color: var(--warning);
+  flex-shrink: 0;
+}
+
 .iperf-input-short {
   flex: 0 0 52px;
   text-align: right;
