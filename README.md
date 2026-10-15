@@ -164,6 +164,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full list of required tools and v
 The full technical details were moved out of this top-level README to keep first-time onboarding concise.
 
 - Architecture and execution model: [doc/ARCHITECTURE.md](doc/ARCHITECTURE.md)
+- Writing a driver: [doc/DRIVERS.md](doc/DRIVERS.md)
 - Deployment modes and environment variables: [doc/DEPLOYMENT.md](doc/DEPLOYMENT.md)
 - Troubleshooting: [doc/TROUBLESHOOTING.md](doc/TROUBLESHOOTING.md)
 - Deep implementation notes: [doc/IMPLEMENTATION_DETAILS.md](doc/IMPLEMENTATION_DETAILS.md)
