@@ -88,7 +88,7 @@ func ReapplyPeerInterfaceState(namespace string, recreated []string) PeerReplayS
 	qemuPods := map[string]bool{}
 	if podList, err := kubeclient.Clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{}); err == nil {
 		for _, p := range podList.Items {
-			if p.Labels["kubendt/runtime"] == "qemu" || p.Labels["kubendt/qemu"] == "true" {
+			if IsGuestVM(p.Labels) {
 				qemuPods[p.Name] = true
 			}
 		}

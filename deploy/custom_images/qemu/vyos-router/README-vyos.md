@@ -571,7 +571,7 @@ All runtime behaviour of `entrypoint.sh` can be tuned without rebuilding the ima
 
 `VyOSRouterDriver` implements `drivers_meta.RuntimeProvider` and returns `RuntimeQEMU`. That single declaration is what tells the rest of the backend that VyOS pods need the QEMU pod spec (`/dev/kvm` device, privileged mode, the `kubendt-internal-iface-counts` ConfigMap mount, serial shell as default). Users never write `qemu: true` in topology JSON. The runtime is a property of the driver, not of the topology.
 
-The same value also propagates to the pod's `kubendt/runtime` and `kubendt/qemu` labels at StatefulSet creation time, and is surfaced via the `runtime` field of `GET /pods/{namespace}` for the frontend.
+The same value also propagates to the pod's `kubendt/runtime` label at StatefulSet creation time, and is surfaced via the `runtime` field of `GET /pods/{namespace}` for the frontend.
 
 ### Interface-name constraints (deploy/modify validation)
 

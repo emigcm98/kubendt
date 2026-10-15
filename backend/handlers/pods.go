@@ -85,26 +85,15 @@ func ListPods(c *gin.Context) {
 			// rest dimmed.
 			"tools": helpers.PodTools(&pod),
 			// The shells this node offers, mode and label, the pod shell first.
-			"shells": helpers.PodShells(&pod),
-			"runtime": func() string {
-				runtime := pod.Labels["kubendt/runtime"]
-				if runtime == "" {
-					return "k8s-linux"
-				}
-				return runtime
-			}(),
-			"shellMode": pod.Labels["kubendt/shell-mode"],
-			"serialShell": func() bool {
-				if pod.Labels["kubendt/qemu"] == "true" {
-					return true
-				}
-				return pod.Labels["kubendt/shell-mode"] == "serial"
-			}(),
-			"namespace": pod.Namespace,
-			"image":     pod.Spec.Containers[0].Image,
-			"node":      pod.Spec.NodeName,
-			"status":    status,
-			"createdAt": createdAt.Format("2006-01-02 15:04:05"),
+			"shells":      helpers.PodShells(&pod),
+			"runtime":     helpers.RuntimeOf(pod.Labels),
+			"shellMode":   pod.Labels["kubendt/shell-mode"],
+			"serialShell": helpers.IsGuestVM(pod.Labels) || pod.Labels["kubendt/shell-mode"] == "serial",
+			"namespace":   pod.Namespace,
+			"image":       pod.Spec.Containers[0].Image,
+			"node":        pod.Spec.NodeName,
+			"status":      status,
+			"createdAt":   createdAt.Format("2006-01-02 15:04:05"),
 			"uptime": fmt.Sprintf("%d days, %d hours, %d minutes",
 				int(uptime.Hours())/24, int(uptime.Hours())%24, int(uptime.Minutes())%60),
 		}

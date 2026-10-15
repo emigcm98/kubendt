@@ -388,19 +388,8 @@ func CreateNetworkStatefulSet(namespace string, node types.NodeSpec, validMounts
 				"kubendt/shell-mode": func() string {
 					return shellMode
 				}(),
-				"kubendt/runtime": func() string {
-					if node.Qemu {
-						return "qemu"
-					}
-					return "k8s-linux"
-				}(),
-				"kubendt/qemu": func() string {
-					if node.Qemu {
-						return "true"
-					}
-					return "false"
-				}(),
-				"app": node.Name,
+				"kubendt/runtime": RuntimeLabelValue(node.Qemu),
+				"app":             node.Name,
 			},
 			Annotations: map[string]string{
 				"k8s.v1.cni.cncf.io/networks": fmt.Sprintf(`[{"name":"meshnet", "namespace":"%s"}]`, namespace),

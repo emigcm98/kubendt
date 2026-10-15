@@ -245,13 +245,10 @@ func GetNamespaceSummary(c *gin.Context) {
 		}
 		driverCounts[driver] += replicas
 
-		runtime := sts.Spec.Template.Labels["kubendt/runtime"]
-		if runtime == "" {
-			if sts.Spec.Template.Labels["kubendt/qemu"] == "true" {
-				runtime = "qemu"
-			} else {
-				runtime = "container"
-			}
+		// The summary counts "container" and "qemu", its own names since v1.1.
+		runtime := "container"
+		if helpers.IsGuestVM(sts.Spec.Template.Labels) {
+			runtime = helpers.RuntimeLabelQEMU
 		}
 		runtimeCounts[runtime] += replicas
 	}

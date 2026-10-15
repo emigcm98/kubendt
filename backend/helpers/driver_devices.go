@@ -9,8 +9,7 @@ import (
 )
 
 // ResolveEffectiveDevicesForNode merges the devices the topology lists with
-// what the driver declares, deduplicated by path. A qemu node without a
-// driver still gets /dev/kvm.
+// what the driver declares, deduplicated by path.
 func ResolveEffectiveDevicesForNode(node types.NodeSpec) []types.DeviceSpec {
 	effective := append([]types.DeviceSpec{}, node.Devices...)
 	seen := map[string]bool{}
@@ -29,9 +28,6 @@ func ResolveEffectiveDevicesForNode(node types.NodeSpec) []types.DeviceSpec {
 	}
 	for _, p := range DriverDevices(node.Driver) {
 		appendDevice(p)
-	}
-	if node.Qemu {
-		appendDevice("/dev/kvm")
 	}
 	return effective
 }
