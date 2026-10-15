@@ -22,6 +22,7 @@ import PodLogsModal from './PodLogsModal';
 import CapturePanel from './CapturePanel';
 import TCPanel from './TCPanel';
 import TracePanel from './TracePanel';
+import IperfPanel from './IperfPanel';
 import { ReactComponent as PcapIcon } from '../assets/images/icons/pcap.svg';
 import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
 import { ReactComponent as LogsIcon } from '../assets/images/icons/logs.svg';
@@ -29,6 +30,7 @@ import { ReactComponent as UploadIcon } from '../assets/images/icons/upload.svg'
 import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
 import { ReactComponent as EditIcon } from '../assets/images/icons/edit.svg';
 import { ReactComponent as SlidersIcon } from '../assets/images/icons/sliders.svg';
+import { ReactComponent as GaugeIcon } from '../assets/images/icons/gauge.svg';
 import { ReactComponent as SaveIcon } from '../assets/images/icons/save.svg';
 import { ReactComponent as DownloadIcon } from '../assets/images/icons/download.svg';
 import InnerGraph from './InnerGraph';
@@ -758,6 +760,7 @@ const NetworkGraph = ({
   const openShellsRef = useRef(openShells);
   const [openCaptures, setOpenCaptures] = useState([]); // Array of {id, pod, iface, zIndex, minimized}
   const [openTCs, setOpenTCs] = useState([]); // Array of {id, pod, iface, zIndex, minimized}
+  const [openIperfs, setOpenIperfs] = useState([]); // Array of {id, source, sourceLabel, initialDest, zIndex, minimized}
   const [maxZIndex, setMaxZIndex] = useState(1000);
 
   // Traceroute visualization: one session at a time. traceSession opens the
@@ -1362,6 +1365,37 @@ const NetworkGraph = ({
   // Traffic-control panels are per pod. Opening a pod again focuses its
   // window and selects the interface asked for, if any, instead of stacking a
   // second editor. focusToken tells the panel it was asked again.
+  // --- Throughput test panels, one per run the user opens ---
+  const openIperf = (fullInfo, initialDest = null) => {
+    if (!fullInfo || !fullInfo.name) return;
+    const id = `iperf-${Date.now()}-${Math.random()}`;
+    setMaxZIndex((prev) => prev + 1);
+    setOpenIperfs((prev) => [
+      ...prev,
+      {
+        id,
+        source: fullInfo.name,
+        sourceLabel: fullInfo.baseName || fullInfo.name,
+        initialDest,
+        zIndex: maxZIndex + 1,
+        minimized: false,
+      },
+    ]);
+  };
+  const closeIperf = (id) => setOpenIperfs((prev) => prev.filter((t) => t.id !== id));
+  const minimizeIperf = (id) =>
+    setOpenIperfs((prev) => prev.map((t) => (t.id === id ? { ...t, minimized: true } : t)));
+  const bringIperfToFront = (id) => {
+    setMaxZIndex((prev) => prev + 1);
+    setOpenIperfs((prev) => prev.map((t) => (t.id === id ? { ...t, zIndex: maxZIndex + 1 } : t)));
+  };
+  const restoreIperf = (id) => {
+    setMaxZIndex((prev) => prev + 1);
+    setOpenIperfs((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, minimized: false, zIndex: maxZIndex + 1 } : t))
+    );
+  };
+
   const openTC = (pod, iface = null, { symmetric = false } = {}) => {
     if (!pod) return;
     setMaxZIndex((prev) => prev + 1);
@@ -3870,6 +3904,7 @@ const NetworkGraph = ({
             onStartCapture={openCapture}
             onStartTC={openTC}
             onStartTrace={openTrace}
+            onStartIperf={openIperf}
             trace={traceViz}
           />
         </ReactFlowProvider>
@@ -3940,6 +3975,23 @@ const NetworkGraph = ({
         />
       ))}
 
+      {/* Render open throughput test panels */}
+      {openIperfs.map((t) => (
+        <IperfPanel
+          key={t.id}
+          namespace={namespace}
+          source={t.source}
+          sourceLabel={t.sourceLabel}
+          nodes={nodes}
+          initialDest={t.initialDest}
+          zIndex={t.zIndex}
+          minimized={!!t.minimized}
+          onClose={() => closeIperf(t.id)}
+          onMinimize={() => minimizeIperf(t.id)}
+          onBringToFront={() => bringIperfToFront(t.id)}
+        />
+      ))}
+
       {/* Traceroute control panel (packet animation renders on the graph) */}
       {traceSession && (
         <TracePanel
@@ -3959,7 +4011,8 @@ const NetworkGraph = ({
       {(openShells.some((s) => s.minimized) ||
         openLogs.some((l) => l.minimized) ||
         openCaptures.some((c) => c.minimized) ||
-        openTCs.some((t) => t.minimized)) && (
+        openTCs.some((t) => t.minimized) ||
+        openIperfs.some((t) => t.minimized)) && (
         <div className="shell-taskbar" role="toolbar" aria-label="Minimized windows">
           {openShells
             .filter((s) => s.minimized)
@@ -4058,6 +4111,32 @@ const NetworkGraph = ({
                   className="shell-taskbar-chip-close"
                   onClick={() => closeTC(tc.id)}
                   title="Close traffic control"
+                >
+                  <CloseIcon className="app-icon" />
+                </button>
+              </div>
+            ))}
+          {openIperfs
+            .filter((t) => t.minimized)
+            .map((t) => (
+              <div key={t.id} className="shell-taskbar-chip">
+                <button
+                  type="button"
+                  className="shell-taskbar-chip-restore"
+                  onClick={() => restoreIperf(t.id)}
+                  title={`Restore throughput test: ${t.sourceLabel}`}
+                >
+                  <span className="shell-taskbar-chip-icon">
+                    <GaugeIcon className="app-icon" />
+                  </span>
+                  <span className="shell-taskbar-chip-name">{t.sourceLabel}</span>
+                  <span className="shell-taskbar-chip-mode">iperf</span>
+                </button>
+                <button
+                  type="button"
+                  className="shell-taskbar-chip-close"
+                  onClick={() => closeIperf(t.id)}
+                  title="Close throughput test"
                 >
                   <CloseIcon className="app-icon" />
                 </button>

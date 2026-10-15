@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `GET /pods/counters/{namespace}/{pod}` returns the kernel counters of every interface of a pod. The interface detail of the node panel and both ends of the link panel show rates, packets, errors and drops, read every 5 s while open.
 - View logs in the node menu and a button in the node panel open a floating viewer that follows the log, with filter, timestamps, the previous instance after a restart and download. `GET /pods/logs/{namespace}/{pod}` returns it as text and the WebSocket variant streams it.
 - `GET /iperf/run/{namespace}/{pod}` runs an iperf3 throughput test from a pod toward an address of the namespace, TCP or UDP, with the server started by the backend on the destination node or one the lab already runs, and the WebSocket variant streams it interval by interval.
+- New iperf (througput test) window opens from Tools in the node menu: destination node or address, the server started by KubeNDT or one already running, TCP or UDP, duration, rate, streams and reverse, with one bar per second as it runs, the end totals and a JSON export.
 
 ### Changed
 

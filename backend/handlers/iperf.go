@@ -169,17 +169,14 @@ func iperfMeta(run iperfRun, q iperfRequest, server *helpers.IperfServer, client
 
 // IperfWebSocket streams a throughput test: a "meta" frame, "status" frames
 // (starting, running, done), one "interval" frame per second, a "summary"
-// frame, or "error". Closing the socket stops the test.
+// frame, or "error". Closing the socket stops the test. A destination the
+// backend cannot place is reported as an error frame, after the upgrade, so
+// the panel can show why.
 func IperfWebSocket(c *gin.Context) {
 	namespace := c.Param("namespace")
 	q, err := parseIperfQuery(c)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	run, code, err := resolveIperfRun(namespace, c.Param("podName"), q)
-	if err != nil {
-		c.JSON(code, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -198,6 +195,12 @@ func IperfWebSocket(c *gin.Context) {
 			_ = ws.WriteMessage(websocket.TextMessage, b)
 			writeMu.Unlock()
 		}
+	}
+
+	run, _, err := resolveIperfRun(namespace, c.Param("podName"), q)
+	if err != nil {
+		sendCtl(gin.H{"type": "error", "message": err.Error()})
+		return
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(q.opts.Duration)*time.Second+iperfSetupTimeout)

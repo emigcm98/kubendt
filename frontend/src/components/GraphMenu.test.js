@@ -17,6 +17,7 @@ const nodeMenu = (fullInfo, extra = {}) =>
       onOpenLogs={noop}
       onRestartPod={noop}
       onStartTrace={noop}
+      onStartIperf={noop}
       onStartTC={noop}
       onDelete={noop}
       {...extra}
@@ -44,6 +45,7 @@ test('an FRR router groups its shells and tools', () => {
   expect(labels()).not.toContain('serial (attach)');
   fireEvent.mouseEnter(screen.getByText('Tools'));
   expect(labels()).toContain('Traceroute from here');
+  expect(labels()).toContain('Throughput test from here');
   expect(labels()).toContain('Traffic control');
   expect(labels()).not.toContain('vtysh');
 });
@@ -108,13 +110,24 @@ test('a link groups capture and traffic control per end', () => {
       onTCSource={noop}
       onTCTarget={noop}
       onTCLink={noop}
+      onIperfSourceToTarget={noop}
+      onIperfTargetToSource={noop}
     />
   );
-  expect(labels()).toEqual(['Open info panel', 'Capture', 'Traffic control', 'Delete link']);
+  expect(labels()).toEqual([
+    'Open info panel',
+    'Capture',
+    'Traffic control',
+    'Throughput test',
+    'Delete link',
+  ]);
   fireEvent.mouseEnter(screen.getByText('Traffic control'));
   expect(labels()).toContain('on router1-0:eth1');
   expect(labels()).toContain('on host-0:eth1');
   expect(labels()).toContain('on both ends');
+  fireEvent.mouseEnter(screen.getByText('Throughput test'));
+  expect(labels()).toContain('router1-0 to host-0');
+  expect(labels()).toContain('host-0 to router1-0');
 });
 
 test('a link to the external network collapses capture into its one end', () => {

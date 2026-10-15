@@ -170,6 +170,7 @@ const InnerGraph = ({
   onStartCapture,
   onStartTC,
   onStartTrace,
+  onStartIperf,
   trace = null,
 }) => {
   const containerRef = useRef(null);
@@ -1179,6 +1180,14 @@ const InnerGraph = ({
                 }
               : null
           }
+          onStartIperf={
+            onStartIperf
+              ? () => {
+                  const info = nodes.find((n) => n.id === contextMenu.nodeId)?.data?.fullInfo;
+                  if (info) onStartIperf(info);
+                }
+              : null
+          }
           onStartTC={onStartTC ? () => onStartTC(contextMenu.nodeId, null) : null}
           onRestartPod={
             isBusy
@@ -1212,6 +1221,15 @@ const InnerGraph = ({
           const tgtExternal = nodes.find((n) => n.id === edge.target)?.data?.type === 'external';
           const srcIntf = edge.data?.localIntf;
           const tgtIntf = edge.data?.peerIntf;
+          const srcInfo = nodes.find((n) => n.id === edge.source)?.data?.fullInfo;
+          const tgtInfo = nodes.find((n) => n.id === edge.target)?.data?.fullInfo;
+          // A test needs an address on both ends, so both must be L3.
+          const iperfEnds =
+            onStartIperf &&
+            !srcExternal &&
+            !tgtExternal &&
+            srcInfo?.l3capable &&
+            tgtInfo?.l3capable;
           return (
             <EdgeContextMenu
               x={edgeContextMenu.x}
@@ -1250,6 +1268,16 @@ const InnerGraph = ({
               onTCLink={
                 onStartTC && !srcExternal && !tgtExternal && srcIntf
                   ? () => onStartTC(edge.source, srcIntf, { symmetric: true })
+                  : null
+              }
+              onIperfSourceToTarget={
+                iperfEnds && tgtIntf
+                  ? () => onStartIperf(srcInfo, { pod: edge.target, iface: tgtIntf })
+                  : null
+              }
+              onIperfTargetToSource={
+                iperfEnds && srcIntf
+                  ? () => onStartIperf(tgtInfo, { pod: edge.source, iface: srcIntf })
                   : null
               }
             />
