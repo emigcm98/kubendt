@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"kubendt/executor"
 	"kubendt/kubeclient"
@@ -21,10 +20,6 @@ import (
 	"kubendt/actions"
 )
 
-// tcToolboxStartTimeout bounds the wait for the netshoot toolbox to come up.
-// The first pull of the image dominates it; later shaping reuses the container.
-const tcToolboxStartTimeout = 120 * time.Second
-
 // tcUseToolbox remembers per pod whether shaping goes through the netshoot
 // toolbox (true) or the pod's own tc (false). A pod lands on the toolbox when
 // its image ships no tc, or when a toolbox left by capture or trace was
@@ -32,10 +27,6 @@ const tcToolboxStartTimeout = 120 * time.Second
 // prove tc is missing. A running pod never gains or loses the binary, so the
 // choice is stable; after a recreation the toolbox path re-injects on its own.
 var tcUseToolbox sync.Map // "namespace/pod" -> bool
-
-// tcToolboxLocks serializes toolbox creation per pod, so concurrent shaping
-// calls reuse one container instead of each injecting its own.
-var tcToolboxLocks sync.Map // "namespace/pod" -> *sync.Mutex
 
 func init() {
 	// Wire the tc_universal executor to the pod-exec + toolbox machinery here,
@@ -61,7 +52,7 @@ func RunTCBatch(namespace, podName string, lines []string) (stdout, stderr strin
 func runTCWith(namespace, podName string, args []string, stdin string) (stdout, stderr string, err error) {
 	key := namespace + "/" + podName
 	choice, known := tcUseToolbox.Load(key)
-	if !known && FindRunningDebugContainer(namespace, podName) != "" {
+	if !known && findRunningToolbox(namespace, podName) != "" {
 		choice, known = true, true
 		tcUseToolbox.Store(key, true)
 	}
@@ -79,13 +70,12 @@ func runTCWith(namespace, podName string, args []string, stdin string) (stdout, 
 	return stdout, stderr, err
 }
 
-// runTCInToolbox runs the tc command inside a shared netshoot debug container,
-// injecting one and waiting for it to start if the pod has none yet. Creation
-// is serialized per pod so parallel shaping calls converge on one container.
+// runTCInToolbox runs the tc command inside the pod's toolbox, injecting one
+// when the pod has none yet.
 func runTCInToolbox(namespace, podName string, args []string, stdin string) (string, string, error) {
-	container, err := ensureTCToolbox(namespace, podName)
+	container, _, err := EnsureToolbox(namespace, podName, nil)
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("could not ensure the toolbox: %w", err)
 	}
 	return execTC(namespace, podName, container, args, stdin)
 }
@@ -118,27 +108,6 @@ func execTC(namespace, podName, container string, args []string, stdin string) (
 	}
 	err = exec.StreamWithContext(context.TODO(), opts)
 	return strings.TrimSpace(outBuf.String()), strings.TrimSpace(errBuf.String()), err
-}
-
-func ensureTCToolbox(namespace, podName string) (string, error) {
-	key := namespace + "/" + podName
-	lkAny, _ := tcToolboxLocks.LoadOrStore(key, &sync.Mutex{})
-	lk := lkAny.(*sync.Mutex)
-	lk.Lock()
-	defer lk.Unlock()
-
-	container, reused, err := EnsureDebugContainer(namespace, podName)
-	if err != nil {
-		return "", fmt.Errorf("could not ensure tc toolbox container: %w", err)
-	}
-	// A freshly injected container is not exec-ready yet; block until it runs so
-	// the caller does not race a "container not found" exec.
-	if !reused {
-		if werr := WaitEphemeralRunning(namespace, podName, container, tcToolboxStartTimeout); werr != nil {
-			return "", fmt.Errorf("tc toolbox container did not start: %w", werr)
-		}
-	}
-	return container, nil
 }
 
 // isBinaryNotFound reports whether an exec failed because tc is absent from the

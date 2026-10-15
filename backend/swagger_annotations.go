@@ -681,13 +681,13 @@ func swaggerInteractiveShellWebSocket() {}
 // swaggerCaptureWebSocket godoc
 //
 //	@Summary      Live packet capture (WebSocket)
-//	@Description  Injects an ephemeral tshark container into the pod (sharing its network namespace) and streams a live capture of one interface. Control frames are JSON ({type:"meta"|"status"|"error"}); every other text frame is one packet row as tab-separated Wireshark columns (No, Time, Source, Destination, Protocol, Length, Info). Closing the socket stops the capture. Optional `filter` is a BPF capture filter; optional `container` reuses an existing capture container on reconnect.
+//	@Description  Runs tshark in the pod's toolbox (an ephemeral container sharing its network namespace) and streams a live capture of one interface. Control frames are JSON ({type:"meta"|"status"|"error"}); every other text frame is one packet row as tab-separated Wireshark columns (No, Time, Source, Destination, Protocol, Length, Info). Closing the socket stops the capture. Optional `filter` is a BPF capture filter; optional `container` reuses an existing capture container on reconnect.
 //	@Tags         capture
 //	@Param        namespace  path   string  true   "Namespace name"
 //	@Param        podName    path   string  true   "Pod name"
 //	@Param        interface  path   string  true   "Interface to capture (e.g. eth1)"
 //	@Param        filter     query  string  false  "BPF capture filter"
-//	@Param        container  query  string  false  "Existing capture container to reuse"
+//	@Param        container  query  string  false  "Toolbox to reuse, the one holding the previous run's pcap"
 //	@Router       /capture/ws/{namespace}/{podName}/{interface} [get]
 func swaggerCaptureWebSocket() {}
 
@@ -699,7 +699,7 @@ func swaggerCaptureWebSocket() {}
 //	@Produce      application/octet-stream
 //	@Param        namespace  path   string  true   "Namespace name"
 //	@Param        podName    path   string  true   "Pod name"
-//	@Param        container  path   string  true   "Capture container id"
+//	@Param        container  path   string  true   "Toolbox that holds the pcap"
 //	@Param        pcap       query  string  true   "Capture run id"
 //	@Param        frames     query  string  false  "Frame numbers/ranges to export (e.g. 1-5,9,12-20)"
 //	@Success      200  {file}    binary
@@ -715,7 +715,7 @@ func swaggerDownloadCapturePcap() {}
 //	@Produce      json
 //	@Param        namespace  path   string  true  "Namespace name"
 //	@Param        podName    path   string  true  "Pod name"
-//	@Param        container  path   string  true  "Capture container id"
+//	@Param        container  path   string  true  "Toolbox that holds the pcap"
 //	@Param        pcap       query  string  true  "Capture run id"
 //	@Success      200  {object}  types.MessageResponse
 //	@Failure      400  {object}  types.ErrorResponse
@@ -731,7 +731,7 @@ func swaggerClearCapture() {}
 //	@Produce      json
 //	@Param        namespace  path   string  true  "Namespace name"
 //	@Param        podName    path   string  true  "Pod name"
-//	@Param        container  path   string  true  "Capture container id"
+//	@Param        container  path   string  true  "Toolbox that holds the pcap"
 //	@Param        num        path   int     true  "Frame number"
 //	@Param        pcap       query  string  true  "Capture run id"
 //	@Success      200  {string}  string  "Wireshark JSON dissection"
@@ -815,7 +815,7 @@ func swaggerDeleteAPIToken() {}
 // swaggerTraceReport godoc
 //
 //	@Summary      Traceroute / metrics report
-//	@Description  Runs a traceroute (or mtr when metrics=1) from a source pod toward an IP or hostname and returns the whole result as one JSON document, each hop resolved to a topology node. Blocks until the probe finishes. The source node must be L3-capable. The probe runs in a shared debug container in the pod, so the pod image needs no traceroute of its own. A live animated version streams the same hops over WebSocket at /trace/ws/{namespace}/{podName}.
+//	@Description  Runs a traceroute (or mtr when metrics=1) from a source pod toward an IP or hostname and returns the whole result as one JSON document, each hop resolved to a topology node. Blocks until the probe finishes. The source node must be L3-capable. The probe runs in the pod's toolbox, so the pod image needs no traceroute of its own. A live animated version streams the same hops over WebSocket at /trace/ws/{namespace}/{podName}.
 //	@Tags         trace
 //	@Produce      json
 //	@Param        namespace  path      string   true   "Namespace"

@@ -215,7 +215,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Capture container id",
+                        "description": "Toolbox that holds the pcap",
                         "name": "container",
                         "in": "path",
                         "required": true
@@ -277,7 +277,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Capture container id",
+                        "description": "Toolbox that holds the pcap",
                         "name": "container",
                         "in": "path",
                         "required": true
@@ -346,7 +346,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Capture container id",
+                        "description": "Toolbox that holds the pcap",
                         "name": "container",
                         "in": "path",
                         "required": true
@@ -383,7 +383,7 @@ const docTemplate = `{
         },
         "/capture/ws/{namespace}/{podName}/{interface}": {
             "get": {
-                "description": "Injects an ephemeral tshark container into the pod (sharing its network namespace) and streams a live capture of one interface. Control frames are JSON ({type:\"meta\"|\"status\"|\"error\"}); every other text frame is one packet row as tab-separated Wireshark columns (No, Time, Source, Destination, Protocol, Length, Info). Closing the socket stops the capture. Optional ` + "`" + `filter` + "`" + ` is a BPF capture filter; optional ` + "`" + `container` + "`" + ` reuses an existing capture container on reconnect.",
+                "description": "Runs tshark in the pod's toolbox (an ephemeral container sharing its network namespace) and streams a live capture of one interface. Control frames are JSON ({type:\"meta\"|\"status\"|\"error\"}); every other text frame is one packet row as tab-separated Wireshark columns (No, Time, Source, Destination, Protocol, Length, Info). Closing the socket stops the capture. Optional ` + "`" + `filter` + "`" + ` is a BPF capture filter; optional ` + "`" + `container` + "`" + ` reuses an existing capture container on reconnect.",
                 "tags": [
                     "capture"
                 ],
@@ -418,7 +418,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Existing capture container to reuse",
+                        "description": "Toolbox to reuse, the one holding the previous run's pcap",
                         "name": "container",
                         "in": "query"
                     }
@@ -2650,7 +2650,7 @@ const docTemplate = `{
         },
         "/trace/run/{namespace}/{podName}": {
             "get": {
-                "description": "Runs a traceroute (or mtr when metrics=1) from a source pod toward an IP or hostname and returns the whole result as one JSON document, each hop resolved to a topology node. Blocks until the probe finishes. The source node must be L3-capable. The probe runs in a shared debug container in the pod, so the pod image needs no traceroute of its own. A live animated version streams the same hops over WebSocket at /trace/ws/{namespace}/{podName}.",
+                "description": "Runs a traceroute (or mtr when metrics=1) from a source pod toward an IP or hostname and returns the whole result as one JSON document, each hop resolved to a topology node. Blocks until the probe finishes. The source node must be L3-capable. The probe runs in the pod's toolbox, so the pod image needs no traceroute of its own. A live animated version streams the same hops over WebSocket at /trace/ws/{namespace}/{podName}.",
                 "produces": [
                     "application/json"
                 ],

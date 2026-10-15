@@ -77,6 +77,7 @@ File storage and the SQLite database are persisted in named Docker volumes (`kub
 - `KUBENDT_VERSION`: optional build version metadata.
 - `KUBENDT_COMMIT`: optional build commit metadata.
 - `KUBENDT_BUILD_DATE`: optional build date metadata.
+- `KUBENDT_TOOLBOX_IMAGE`: image of the toolbox, the ephemeral container injected into a pod for capture, traceroute, traffic control and throughput tests (default `nicolaka/netshoot:v0.16`; a slim build is in `deploy/custom_images/toolbox/`). `KUBENDT_CAPTURE_IMAGE` is still read.
 
 #### Authentication
 

@@ -50,7 +50,7 @@ func parseLogQuery(c *gin.Context) podLogQuery {
 }
 
 // podLogMeta says what can be read: the containers of the pod, the main one
-// first and then the ephemeral ones (a capture toolbox), and how many times
+// first and then the ephemeral ones (the toolbox), and how many times
 // the chosen container restarted inside this pod object, the only case in
 // which "previous" has a log to show.
 type podLogMeta struct {

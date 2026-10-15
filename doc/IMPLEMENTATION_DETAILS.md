@@ -733,11 +733,13 @@ Interfaces operational
 
 Live per-interface capture surfaced in the UI as a Wireshark-like panel (packet list, protocol-tree detail, display filter, `.pcap` export).
 
-### 11.1 Ephemeral-container model
+### 11.1 The toolbox
 
-There is no dedicated capture pod. An **ephemeral container** is injected into the _target pod_ and runs `tshark` there. Since all containers in a pod share the network namespace, it sees the pod's data-plane interfaces (`ethN` from Meshnet, `tapN` created by the QEMU entrypoint) — a single code path covers both `k8s-linux` and QEMU nodes, and capture is always pod-side (`ethN`/`tapN`), never inside a guest VM. See `helpers.InjectCaptureContainer` / `EnsureCaptureContainer`.
+There is no dedicated capture pod. `tshark` runs in the pod's **toolbox**, an ephemeral container injected into the target pod. Since all containers in a pod share the network namespace, it sees the pod's data-plane interfaces (`ethN` from Meshnet, `tapN` created by the QEMU entrypoint): one code path covers both `k8s-linux` and QEMU nodes, and capture is always pod-side (`ethN`/`tapN`), never inside a guest VM.
 
-Image: anything with `tshark`/`dumpcap` + a shell. Default `nicolaka/netshoot:v0.16` (no build step); override with `KUBENDT_CAPTURE_IMAGE`; slim image in `deploy/custom_images/capture/`. The container is granted `NET_RAW`+`NET_ADMIN`. Requires cluster support for ephemeral containers (GA since k8s 1.25).
+Capture, traceroute and traffic control share one toolbox per pod. `helpers.EnsureToolbox` reuses the running one, whichever tool injected it, or injects a fresh `toolbox-*` container and waits for it, serialized per pod so concurrent tools converge on one. Kubernetes never removes an ephemeral container, so a self-terminating sleeper bounds its life and the pod's deletion collects it. Code: `backend/helpers/toolbox.go`.
+
+Image: `nicolaka/netshoot:v0.16` by default (no build step), which ships every tool the toolbox runs; override with `KUBENDT_TOOLBOX_IMAGE` (`KUBENDT_CAPTURE_IMAGE` still works); a slim build lives in `deploy/custom_images/toolbox/`. The container is granted `NET_RAW`+`NET_ADMIN`. Requires cluster support for ephemeral containers (GA since k8s 1.25).
 
 ### 11.2 One tshark, two outputs
 
@@ -752,7 +754,7 @@ A reused container hosts successive runs (start/stop/reconnect/clear); each run 
 
 ### 11.4 Connection & lifecycle
 
-WebSocket keepalive (server pings + read deadline; the browser auto-pongs) keeps an idle-interface capture alive; on a drop the panel reconnects, reusing the same ephemeral container. The capture process dies on stop/close; the idle container husk cannot be removed (a Kubernetes limitation), is bounded by a self-terminating sleeper, and is garbage-collected with the pod/topology.
+WebSocket keepalive (server pings + read deadline; the browser auto-pongs) keeps an idle-interface capture alive; on a drop the panel reconnects, naming the toolbox that holds its pcap. The capture process dies on stop/close; the toolbox stays, as 11.1 explains.
 
 Endpoints live under `/capture/*` (Swagger tag **capture**): `ws` (stream), `pcap` (download), `clear`, `packet` (detail). Code: `backend/helpers/capture.go`, `backend/handlers/capture.go`, `backend/routes.go`; UI: `frontend/src/components/CapturePanel.js` with entry points in `EdgeContextMenu.js` and `LinkInfoPanel.js`.
 
@@ -760,9 +762,9 @@ Endpoints live under `/capture/*` (Swagger tag **capture**): `ws` (stream), `pca
 
 Traces the real L3 path from a source pod to any IP or hostname and animates it on the graph. An envelope hops node by node along the lit edges, with step and scrub controls, a red ✕ when it is dropped or a green ✓ when it arrives, and an optional per-hop latency and loss table. The pods run a real dataplane (Meshnet) so this is the actual path the traffic takes, not a simulation.
 
-### 12.1 Shared debug container
+### 12.1 The toolbox
 
-The probe does not run in the node image. It runs in an ephemeral `nicolaka/netshoot` container injected into the source pod's network namespace, so any image works (busybox, FRR, mongo) with nothing to install. Trace and capture share one debug container per pod. `helpers.EnsureDebugContainer` reuses a running `capture-*` husk (`FindRunningDebugContainer`) when there is one, otherwise it injects a fresh one. The container gets `NET_RAW` and `NET_ADMIN` for the ICMP sockets and for `tcptraceroute`.
+The probe does not run in the node image. It runs in the pod's toolbox (11.1), so any image works (busybox, FRR, mongo) with nothing to install. `NET_RAW` covers the ICMP sockets and `tcptraceroute`.
 
 ### 12.2 Resolving hops to topology nodes
 
@@ -794,4 +796,4 @@ Code lives in `backend/helpers/trace.go`, `backend/handlers/trace.go` and `backe
 
 ### 12.5 Limitations
 
-IPv4 only (`ip -o -4`, no `-6`). One trace at a time, unlike capture. TCP probes hit port 80. Loss and latency on intermediate hops can mislead because routers often rate-limit ICMP while still forwarding, so only the final hop's numbers are fully trustworthy. The idle debug-container husk cannot be removed, the same Kubernetes limitation as capture.
+IPv4 only (`ip -o -4`, no `-6`). One trace at a time, unlike capture. TCP probes hit port 80. Loss and latency on intermediate hops can mislead because routers often rate-limit ICMP while still forwarding, so only the final hop's numbers are fully trustworthy.

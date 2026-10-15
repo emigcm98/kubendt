@@ -32,6 +32,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Drivers name the executor their actions run through and map guest interface names when they differ from the pod, instead of planning every action by hand. `GET /drivers` reports `vyos_api_apply` for VyOS. The configure request's action entry is now fully described in Swagger.
 - The configure request, the replay after a restart, the peer replay and the link attributes run actions through one pipeline. An action stops at its first failing command and the configure summary counts actions, not commands.
 - The node and link menus of the graph group the shells, the tools, the captures and the traffic control entries into submenus, so each menu stays at five or six rows.
+- Capture, traceroute and traffic control share one `toolbox-*` ephemeral container per pod, reused whichever tool injected it, and `KUBENDT_TOOLBOX_IMAGE` names its image. The slim image moves to `deploy/custom_images/toolbox` and ships every tool the toolbox runs.
 
 ### Fixed
 

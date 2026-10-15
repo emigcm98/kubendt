@@ -18,10 +18,6 @@ import (
 )
 
 const (
-	// captureStartTimeout bounds how long we wait for the ephemeral capture
-	// container to come up. The first pull of the capture image dominates this.
-	captureStartTimeout = 120 * time.Second
-
 	// Keepalive: ping the client regularly and expect pong traffic back, so an
 	// idle interface (no packets) doesn't let a proxy or the browser drop the
 	// socket. The browser auto-replies to pings, resetting the read deadline.
@@ -31,10 +27,10 @@ const (
 )
 
 // CaptureWebSocket streams a live packet capture of one pod interface to the
-// browser. It injects (or reuses, on reconnect) an ephemeral tshark container
-// in the pod, execs tshark inside it, and forwards the standard Wireshark
-// columns as tab-separated text frames. Control messages (container id,
-// status, errors) are sent as JSON text frames.
+// browser. It runs tshark in the pod's toolbox (the one named by the client on
+// a reconnect, else any running one, else a fresh injection) and forwards the
+// standard Wireshark columns as tab-separated text frames. Control messages
+// (container id, status, errors) are sent as JSON text frames.
 //
 // Protocol on the wire:
 //   - JSON object with a "type" field  → control ("meta"|"status"|"error")
@@ -43,8 +39,8 @@ const (
 //
 // Query params:
 //   - filter:    optional BPF capture filter
-//   - container: optional existing capture container to reuse (reconnect /
-//     start-after-stop), instead of injecting a new one
+//   - container: optional toolbox to reuse (reconnect / start-after-stop),
+//     the one that holds the previous run's pcap
 //
 // Closing the socket cancels the exec, which kills tshark; the pcap it wrote
 // stays in the container for later download via DownloadCapturePcap.
@@ -91,11 +87,19 @@ func CaptureWebSocket(c *gin.Context) {
 		}
 	}
 
-	container, reused, err := helpers.EnsureCaptureContainer(namespace, pod, reuse)
-	if err != nil {
-		log.Printf("❌ Capture: ensure container failed for %s/%s: %v", namespace, pod, err)
-		sendCtl(gin.H{"type": "error", "message": err.Error()})
-		return
+	container, reused := reuse, false
+	if container != "" && helpers.ValidToolboxName(container) && helpers.ToolboxRunning(namespace, pod, container) {
+		reused = true
+	} else {
+		var err error
+		container, reused, err = helpers.EnsureToolbox(namespace, pod, func() {
+			sendCtl(gin.H{"type": "status", "state": "starting"})
+		})
+		if err != nil {
+			log.Printf("❌ Capture: toolbox failed for %s/%s: %v", namespace, pod, err)
+			sendCtl(gin.H{"type": "error", "message": err.Error()})
+			return
+		}
 	}
 	// Each run writes its own pcap file so an overlapping previous tshark (one
 	// that hasn't fully exited on reconnect/restart) can't corrupt this one.
@@ -104,14 +108,6 @@ func CaptureWebSocket(c *gin.Context) {
 	log.Printf("📡 Capture: %s %s on %s/%s (iface=%s filter=%q run=%s)",
 		map[bool]string{true: "reusing", false: "injected"}[reused], container, namespace, pod, iface, bpf, runID)
 	sendCtl(gin.H{"type": "meta", "container": container, "pod": pod, "namespace": namespace, "iface": iface, "reused": reused, "pcap": runID})
-	if !reused {
-		sendCtl(gin.H{"type": "status", "state": "starting"})
-		if err := helpers.WaitEphemeralRunning(namespace, pod, container, captureStartTimeout); err != nil {
-			log.Printf("❌ Capture: container %s did not start: %v", container, err)
-			sendCtl(gin.H{"type": "error", "message": err.Error()})
-			return
-		}
-	}
 	sendCtl(gin.H{"type": "status", "state": "capturing"})
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -206,8 +202,8 @@ func DownloadCapturePcap(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if !helpers.ValidCaptureContainer(container) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid capture id"})
+	if !helpers.ValidToolboxName(container) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid toolbox name"})
 		return
 	}
 	if !helpers.ValidPcapId(pcapID) {
@@ -254,8 +250,8 @@ func ClearCapture(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if !helpers.ValidCaptureContainer(container) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid capture id"})
+	if !helpers.ValidToolboxName(container) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid toolbox name"})
 		return
 	}
 	if !helpers.ValidPcapId(pcapID) {
@@ -285,8 +281,8 @@ func GetCapturePacketDetail(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if !helpers.ValidCaptureContainer(container) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid capture id"})
+	if !helpers.ValidToolboxName(container) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid toolbox name"})
 		return
 	}
 	if !helpers.ValidPcapId(pcapID) {
