@@ -5,6 +5,9 @@ import (
 	"testing"
 
 	"kubendt/types"
+
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestMergeTargets(t *testing.T) {
@@ -42,5 +45,29 @@ func TestMergeTargets(t *testing.T) {
 	// The request is left untouched.
 	if len(targets[0].Actions) != 2 {
 		t.Errorf("input mutated: %+v", targets[0])
+	}
+}
+
+func TestPodResolver(t *testing.T) {
+	pod := func(name, node string) v1.Pod {
+		return v1.Pod{ObjectMeta: metav1.ObjectMeta{Name: name, Labels: map[string]string{"app": node}}}
+	}
+	resolve := podResolver([]v1.Pod{
+		pod("router1-0", "router1"),
+		pod("host-0", "host"),
+		pod("host-1", "host"),
+	})
+	cases := map[string]string{
+		"router1-0": "router1-0", // exact name
+		"router1":   "router1-0", // base name of a node with one pod
+		"host":      "host",      // two replicas, ambiguous, left as written
+		"host-1":    "host-1",
+		"host-7":    "host-7", // indexed name that does not exist
+		"nope":      "nope",
+	}
+	for ref, want := range cases {
+		if got := resolve(ref); got != want {
+			t.Errorf("resolve(%q) = %q, want %q", ref, got, want)
+		}
 	}
 }
