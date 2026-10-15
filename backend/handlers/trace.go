@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
+	drivers_meta "kubendt/drivers/meta"
 	"kubendt/helpers"
 	"kubendt/kubeclient"
-	"kubendt/types"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -93,39 +93,20 @@ func TraceWebSocket(c *gin.Context) {
 		}
 	}
 
-	// Guest-VM drivers (VyOS) run the probe inside the guest through their
-	// wrapper. The pod netns has no connectivity there, and the trace must use
-	// the guest routing table anyway. Everyone else gets the toolbox. A guest
-	// driver without probe support gets a clean error instead of a toolbox
-	// that cannot reach anything.
-	var probeWrapper []string
-	container := ""
-	if drv, _ := helpers.GetDriverForListedPod(podObj); drv != nil {
-		if gp, ok := drv.(types.GuestProbeProvider); ok {
-			probeWrapper = gp.GuestProbeWrapper()
-			container = podObj.Spec.Containers[0].Name
-		} else if podObj.Labels["kubendt/runtime"] == "qemu" {
-			sendCtl(gin.H{"type": "error", "message": "traceroute is not supported on this node type"})
-			return
-		}
+	// The toolbox, or the guest through the driver's wrapper (the pod netns
+	// of a VM has no connectivity and the trace must use the guest routes).
+	run, err := helpers.ToolRunner(podObj, drivers_meta.ToolTrace, func() {
+		sendCtl(gin.H{"type": "status", "state": "starting"})
+	})
+	if err != nil {
+		log.Printf("❌ Trace: no runner for %s/%s: %v", namespace, pod, err)
+		sendCtl(gin.H{"type": "error", "message": err.Error()})
+		return
 	}
-	if probeWrapper == nil {
-		var reused bool
-		container, reused, err = helpers.EnsureToolbox(namespace, pod, func() {
-			sendCtl(gin.H{"type": "status", "state": "starting"})
-		})
-		if err != nil {
-			log.Printf("❌ Trace: toolbox failed for %s/%s: %v", namespace, pod, err)
-			sendCtl(gin.H{"type": "error", "message": err.Error()})
-			return
-		}
-		log.Printf("🧭 Trace: %s %s from %s/%s to %q (method=%s)",
-			map[bool]string{true: "reusing", false: "injected"}[reused], container, namespace, pod, dest, method)
-		sendCtl(gin.H{"type": "meta", "source": pod, "dest": dest, "method": method, "container": container, "reused": reused})
-	} else {
-		log.Printf("🧭 Trace: in-guest probe from %s/%s to %q (method=%s)", namespace, pod, dest, method)
-		sendCtl(gin.H{"type": "meta", "source": pod, "dest": dest, "method": method, "container": container, "reused": true})
-	}
+	container, probeWrapper := run.Container, run.Wrapper
+	log.Printf("🧭 Trace: %s from %s/%s to %q (method=%s, container=%s)",
+		map[bool]string{true: "reusing", false: "injected"}[run.Reused], namespace, pod, dest, method, container)
+	sendCtl(gin.H{"type": "meta", "source": pod, "dest": dest, "method": method, "container": container, "reused": run.Reused})
 
 	// Build the IP-to-node index and the adjacency up front so hops can be
 	// annotated as they arrive.
@@ -197,25 +178,12 @@ func TraceReport(c *gin.Context) {
 		return
 	}
 
-	// Same guest-vs-toolbox split as the WebSocket handler.
-	var probeWrapper []string
-	container := ""
-	if drv, _ := helpers.GetDriverForListedPod(podObj); drv != nil {
-		if gp, ok := drv.(types.GuestProbeProvider); ok {
-			probeWrapper = gp.GuestProbeWrapper()
-			container = podObj.Spec.Containers[0].Name
-		} else if podObj.Labels["kubendt/runtime"] == "qemu" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "traceroute is not supported on this node type"})
-			return
-		}
+	run, err := helpers.ToolRunner(podObj, drivers_meta.ToolTrace, nil)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
-	if probeWrapper == nil {
-		container, _, err = helpers.EnsureToolbox(namespace, pod, nil)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-	}
+	container, probeWrapper := run.Container, run.Wrapper
 
 	ipIndex, err := helpers.BuildTraceIPIndex(namespace)
 	if err != nil {

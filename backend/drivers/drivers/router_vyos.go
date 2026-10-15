@@ -31,7 +31,7 @@ var _ types.EffectiveInterfaceInspector = (*VyOSRouterDriver)(nil)
 var _ types.EffectiveSingleInterfaceInspector = (*VyOSRouterDriver)(nil)
 var _ types.EffectiveInterfaceStateInspector = (*VyOSRouterDriver)(nil)
 var _ types.ReadinessProbeProvider = (*VyOSRouterDriver)(nil)
-var _ types.GuestProbeProvider = (*VyOSRouterDriver)(nil)
+var _ drivers_meta.GuestToolProvider = (*VyOSRouterDriver)(nil)
 var _ drivers_meta.InterfaceNameConstrainer = (*VyOSRouterDriver)(nil)
 var _ drivers_meta.RuntimeProvider = (*VyOSRouterDriver)(nil)
 
@@ -80,11 +80,17 @@ func (VyOSRouterDriver) ReadinessProbeCommands() types.ReadinessProbeSpec {
 	}
 }
 
-// GuestProbeWrapper runs traceroute/mtr inside the guest over ssh_qemu, with
-// sudo for raw sockets. The pod netns has no connectivity (the cluster IP
-// lives in the guest) and the probe must use the guest routing table anyway.
-func (VyOSRouterDriver) GuestProbeWrapper() []string {
+// GuestWrapper runs a Linux argv inside the guest over ssh_qemu, with sudo
+// for raw sockets. The pod netns has no connectivity (the cluster IP lives
+// in the guest) and a tool must use the guest routing table anyway.
+func (VyOSRouterDriver) GuestWrapper() []string {
 	return []string{"ssh_qemu", "sudo"}
+}
+
+// GuestTools lists what the guest image ships: traceroute and mtr. iperf3
+// joins once customize-qcow2.sh installs a 3.17 or later.
+func (VyOSRouterDriver) GuestTools() []string {
+	return []string{drivers_meta.ToolTrace}
 }
 
 type VyOSRouterDriver struct {

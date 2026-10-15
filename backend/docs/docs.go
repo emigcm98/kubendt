@@ -3438,6 +3438,16 @@ const docTemplate = `{
                     "type": "string",
                     "example": "frr-router"
                 },
+                "tools": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "trace",
+                        "iperf"
+                    ]
+                },
                 "type": {
                     "type": "string",
                     "example": "router"

@@ -35,6 +35,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - The configure request, the replay after a restart, the peer replay and the link attributes run actions through one pipeline. An action stops at its first failing command and the configure summary counts actions, not commands.
 - The node and link menus of the graph group the shells, the tools, the captures and the traffic control entries into submenus, so each menu stays at five or six rows.
 - Capture, traceroute and traffic control share one `toolbox-*` ephemeral container per pod, reused whichever tool injected it, and `KUBENDT_TOOLBOX_IMAGE` names its image. The slim image moves to `deploy/custom_images/toolbox` and ships every tool the toolbox runs.
+- Where a tool runs on a node is declared by its driver: a guest VM driver implements `GuestToolProvider` with the wrapper into the guest and the tools its image ships, the trace and the throughput test go through one runner, and the pod listing and `GET /drivers` publish `tools`.
 
 ### Fixed
 

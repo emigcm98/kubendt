@@ -48,6 +48,9 @@ type DriverWithCapabilities struct {
 	IsDefault                bool                          `json:"isDefault"`
 	Capabilities             []CapabilityInfo              `json:"capabilities"`
 	InterfaceNameConstraints *InterfaceNameConstraintsInfo `json:"interfaceNameConstraints,omitempty"`
+	// The tools the driver's nodes offer: trace and iperf through the toolbox
+	// for a container node, what a guest VM driver declares.
+	Tools []string `json:"tools"`
 }
 
 type DriverOperationHistoryEntry struct {
@@ -146,6 +149,7 @@ func driverCapsToResponse(d helpers.DriverCaps) DriverWithCapabilities {
 		IsDefault:                d.IsDefault,
 		Capabilities:             caps,
 		InterfaceNameConstraints: constraints,
+		Tools:                    d.Tools,
 	}
 }
 
