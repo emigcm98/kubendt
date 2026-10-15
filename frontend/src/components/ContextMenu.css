@@ -94,6 +94,23 @@
   width: auto;
 }
 
+/* An entry the node cannot do: dimmed, a warning at the end, the reason as tooltip. */
+.graph-context-menu-item-disabled,
+.graph-context-menu-item-disabled:hover {
+  color: var(--text-subtle);
+  background: transparent;
+  cursor: default;
+  padding-left: 16px;
+}
+
+.graph-context-menu-warn {
+  width: 14px;
+  height: 14px;
+  margin-left: 4px;
+  color: var(--warning);
+  flex-shrink: 0;
+}
+
 /* An entry that opens a submenu keeps its highlight while the submenu shows. */
 .graph-context-menu-item-open {
   background: var(--menu-hover);

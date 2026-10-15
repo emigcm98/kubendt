@@ -2,12 +2,15 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import './ContextMenu.css';
 import { ReactComponent as ChevronIcon } from '../assets/images/icons/chevron-right.svg';
+import { ReactComponent as WarningIcon } from '../assets/images/icons/warning.svg';
 
 // The context menu of the graph, shared by nodes and links. Entries are
 // {label, icon, onClick, danger} or a group with children, shown as a
 // submenu to the right of the entry (to the left when it would not fit).
 // A group with one visible child collapses into that child, so callers can
-// declare groups without counting what applies to the node.
+// declare groups without counting what applies to the node. An entry with
+// {disabled, note} is shown dimmed with a warning and the note as its
+// tooltip: the node cannot do it, and the menu says so instead of hiding it.
 
 export const DIVIDER = 'divider';
 
@@ -177,18 +180,26 @@ const GraphMenu = ({ x, y, title, items, onClose }) => {
     const cls = ['graph-context-menu-item'];
     if (entry.danger) cls.push('graph-context-menu-item-danger');
     if (parent) cls.push('graph-context-menu-item-parent');
+    if (entry.disabled) cls.push('graph-context-menu-item-disabled');
     if (!inSub && open === i && parent) cls.push('graph-context-menu-item-open');
+    const onClick = () => {
+      if (entry.disabled) return;
+      if (parent) showSub(open === i ? null : i);
+      else run(entry);
+    };
     return (
       <div
         key={i}
         data-index={inSub ? undefined : i}
         className={cls.join(' ')}
+        title={entry.disabled ? entry.note : undefined}
         onMouseEnter={inSub ? undefined : () => showSub(parent ? i : null)}
-        onClick={() => (parent ? showSub(open === i ? null : i) : run(entry))}
+        onClick={onClick}
       >
         <Icon entry={entry} />
         <span className="graph-context-menu-label">{entry.label}</span>
         {parent && <ChevronIcon className="graph-context-menu-chevron" />}
+        {entry.disabled && <WarningIcon className="graph-context-menu-warn" />}
       </div>
     );
   };

@@ -24,6 +24,8 @@ const EdgeContextMenu = ({
   onTCLink,
   onIperfSourceToTarget,
   onIperfTargetToSource,
+  iperfSourceToTargetNote,
+  iperfTargetToSourceNote,
 }) => {
   if (!edge) return null;
   const a = `${sourceLabel || edge.source}:${edge.data?.localIntf || '?'}`;
@@ -64,11 +66,15 @@ const EdgeContextMenu = ({
           label: `${na} to ${nb}`,
           alone: `Throughput test ${na} to ${nb}`,
           onClick: onIperfSourceToTarget,
+          disabled: Boolean(iperfSourceToTargetNote),
+          note: iperfSourceToTargetNote,
         },
         onIperfTargetToSource && {
           label: `${nb} to ${na}`,
           alone: `Throughput test ${nb} to ${na}`,
           onClick: onIperfTargetToSource,
+          disabled: Boolean(iperfTargetToSourceNote),
+          note: iperfTargetToSourceNote,
         },
       ],
     },

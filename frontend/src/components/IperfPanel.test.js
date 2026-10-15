@@ -55,6 +55,48 @@ test('an out-of-range duration shows in red and holds Run', () => {
   expect(FakeSocket.last.url).toContain('duration=30');
 });
 
+const topology = [
+  { id: 'host-0', data: { type: 'host', label: 'host', fullInfo: { runtime: 'k8s-linux' } } },
+  { id: 'web-0', data: { type: 'host', label: 'web', fullInfo: { runtime: 'k8s-linux' } } },
+  {
+    id: 'router-0',
+    data: {
+      type: 'router',
+      label: 'router',
+      fullInfo: { runtime: 'qemu', driver: 'VyOSRouterDriver' },
+    },
+  },
+  { id: 'ext', data: { type: 'external', label: 'external' } },
+];
+
+test('the picker keeps the node chosen, drops it when the address is typed, and marks guest VMs while the server is managed', async () => {
+  global.fetch = jest.fn(() =>
+    Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve({ interfaces: [{ ipv4: '192.168.3.10/24' }] }),
+    })
+  );
+  render(<IperfPanel namespace="lab" source="host-0" nodes={topology} onClose={() => {}} />);
+  fireEvent.click(screen.getByText('pick a node…'));
+  const items = () => screen.getAllByRole('option');
+  expect(items().map((o) => o.textContent)).toEqual(['web', 'router']);
+  const router = items()[1];
+  expect(router.className).toContain('iperf-picker-item-blocked');
+  expect(router.title).toBe('VyOSRouterDriver cannot host the server on a guest VM yet');
+  expect(router.querySelector('.iperf-picker-warn')).not.toBeNull();
+  fireEvent.click(router);
+  expect(screen.getByText('pick a node…')).toBeInTheDocument();
+  fireEvent.click(items()[0]);
+  expect(await screen.findByDisplayValue('192.168.3.10')).toBeInTheDocument();
+  expect(screen.queryByRole('option')).toBeNull();
+  expect(screen.getByText('web')).toBeInTheDocument();
+  fireEvent.change(screen.getByPlaceholderText('IP address'), { target: { value: '10.0.0.1' } });
+  expect(screen.getByText('pick a node…')).toBeInTheDocument();
+  fireEvent.click(screen.getByText('Already running'));
+  fireEvent.click(screen.getByText('pick a node…'));
+  expect(items()[1].className).not.toContain('iperf-picker-item-blocked');
+});
+
 test('an address outside the topology gets the hint about an existing server', () => {
   render(<IperfPanel namespace="lab" source="host-0" nodes={[]} onClose={() => {}} />);
   fireEvent.change(screen.getByPlaceholderText('IP address'), { target: { value: '8.8.8.8' } });
