@@ -11,7 +11,6 @@ import (
 	"kubendt/capabilities"
 	drivers_meta "kubendt/drivers/meta"
 	"kubendt/executor"
-	"kubendt/types"
 )
 
 type XRDRouterDriver struct {
@@ -31,11 +30,11 @@ func NewXRDRouterDriver() *XRDRouterDriver {
 
 var _ capabilities.L2Capable = (*XRDRouterDriver)(nil)
 var _ capabilities.L3Capable = (*XRDRouterDriver)(nil)
-var _ types.EffectiveInterfaceInspector = (*XRDRouterDriver)(nil)
-var _ types.EffectiveSingleInterfaceInspector = (*XRDRouterDriver)(nil)
-var _ types.EffectiveInterfaceStateInspector = (*XRDRouterDriver)(nil)
-var _ types.GuestInterfaceMapper = (*XRDRouterDriver)(nil)
-var _ types.ReadinessProbeProvider = (*XRDRouterDriver)(nil)
+var _ drivers_meta.EffectiveInterfaceInspector = (*XRDRouterDriver)(nil)
+var _ drivers_meta.EffectiveSingleInterfaceInspector = (*XRDRouterDriver)(nil)
+var _ drivers_meta.EffectiveInterfaceStateInspector = (*XRDRouterDriver)(nil)
+var _ drivers_meta.GuestInterfaceMapper = (*XRDRouterDriver)(nil)
+var _ drivers_meta.ReadinessProbeProvider = (*XRDRouterDriver)(nil)
 var _ drivers_meta.DeviceProvider = (*XRDRouterDriver)(nil)
 
 // ReadinessProbeCommands gates pod readiness on Loopback0 being up, that
@@ -45,8 +44,8 @@ var _ drivers_meta.DeviceProvider = (*XRDRouterDriver)(nil)
 // because xr_cli can take >8s while startup-config is processing (8s was
 // counting busy-but-alive XR as failed, ~18s wasted per false negative);
 // envelope ≈ 170s, matching the VyOS probe.
-func (XRDRouterDriver) ReadinessProbeCommands() types.ReadinessProbeSpec {
-	return types.ReadinessProbeSpec{
+func (XRDRouterDriver) ReadinessProbeCommands() drivers_meta.ReadinessProbeSpec {
+	return drivers_meta.ReadinessProbeSpec{
 		Command: []string{"sh", "-c",
 			`/pkg/bin/xr_cli "show interfaces Loopback0" 2>&1 | grep -q "Loopback0 is up, line protocol is up"`,
 		},
@@ -158,7 +157,7 @@ func xrCIDRToIPMask(cidr string) (ip, mask string, err error) {
 // when XRd init starts and manages its namespaces.
 const xrdIfaceMapPath = "/var/lib/xrd/iface-map.json"
 
-// GetEffectiveInterfaces implements types.EffectiveInterfaceInspector.
+// GetEffectiveInterfaces implements drivers_meta.EffectiveInterfaceInspector.
 // It reads the interface map written by the XRD entrypoint at boot,
 // then queries XR once and parses all GigabitEthernet interfaces in bulk.
 // This method is read-only and never persists anything.

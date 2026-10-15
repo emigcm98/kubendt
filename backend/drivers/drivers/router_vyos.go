@@ -27,10 +27,10 @@ func NewVyOSRouterDriver() *VyOSRouterDriver {
 var _ capabilities.L2Capable = (*VyOSRouterDriver)(nil)
 var _ capabilities.L3Capable = (*VyOSRouterDriver)(nil)
 var _ capabilities.OSPFCapable = (*VyOSRouterDriver)(nil)
-var _ types.EffectiveInterfaceInspector = (*VyOSRouterDriver)(nil)
-var _ types.EffectiveSingleInterfaceInspector = (*VyOSRouterDriver)(nil)
-var _ types.EffectiveInterfaceStateInspector = (*VyOSRouterDriver)(nil)
-var _ types.ReadinessProbeProvider = (*VyOSRouterDriver)(nil)
+var _ drivers_meta.EffectiveInterfaceInspector = (*VyOSRouterDriver)(nil)
+var _ drivers_meta.EffectiveSingleInterfaceInspector = (*VyOSRouterDriver)(nil)
+var _ drivers_meta.EffectiveInterfaceStateInspector = (*VyOSRouterDriver)(nil)
+var _ drivers_meta.ReadinessProbeProvider = (*VyOSRouterDriver)(nil)
 var _ drivers_meta.GuestToolProvider = (*VyOSRouterDriver)(nil)
 var _ drivers_meta.DeviceProvider = (*VyOSRouterDriver)(nil)
 var _ drivers_meta.ShellProvider = (*VyOSRouterDriver)(nil)
@@ -71,8 +71,8 @@ func (VyOSRouterDriver) InterfaceNameConstraints() drivers_meta.InterfaceNameCon
 // the router could not yet be configured. Probing starts at 30 s (boot
 // optimisations pulled the envelope below the historical ~73 s) with the
 // same total failure budget as before, 30 + 5*21 = 135 s.
-func (VyOSRouterDriver) ReadinessProbeCommands() types.ReadinessProbeSpec {
-	return types.ReadinessProbeSpec{
+func (VyOSRouterDriver) ReadinessProbeCommands() drivers_meta.ReadinessProbeSpec {
+	return drivers_meta.ReadinessProbeSpec{
 		Command: []string{"sh", "-c",
 			`ssh_qemu echo ok >/dev/null && vyos_api retrieve '{"op":"showConfig","path":["system","host-name"]}' >/dev/null`},
 		InitialDelaySeconds: 30,
@@ -112,7 +112,7 @@ type VyOSRouterDriver struct {
 }
 
 var _ capabilities.NATCapable = (*VyOSRouterDriver)(nil)
-var _ types.SNATInterfaceInspector = (*VyOSRouterDriver)(nil)
+var _ drivers_meta.SNATInterfaceInspector = (*VyOSRouterDriver)(nil)
 
 // ─── NAT ─────────────────────────────────────────────────────────────────────
 
@@ -486,7 +486,7 @@ func vyosInterfaceEntry(iface string, node map[string]interface{}) map[string]st
 	return entry
 }
 
-// GetEffectiveInterfaces implements types.EffectiveInterfaceInspector.
+// GetEffectiveInterfaces implements drivers_meta.EffectiveInterfaceInspector.
 // Returns IP, MAC and state for all data interfaces from one cached
 // /retrieve call. VyOS always uses the same interface names as the pod, so
 // the interface name doubles as the guest interface name.
@@ -513,7 +513,7 @@ func (d *VyOSRouterDriver) GetEffectiveInterfaces(namespace, podName string) ([]
 	return result, nil
 }
 
-// GetEffectiveInterface implements types.EffectiveSingleInterfaceInspector.
+// GetEffectiveInterface implements drivers_meta.EffectiveSingleInterfaceInspector.
 // Returns the state of a single interface, used for the hover tooltip.
 // VyOS uses the same interface name as the pod, so no name translation is needed.
 func (d *VyOSRouterDriver) GetEffectiveInterface(namespace, podName, podInterface string) (map[string]string, error) {
@@ -534,7 +534,7 @@ func (d *VyOSRouterDriver) GetEffectiveInterface(namespace, podName, podInterfac
 	return entry, nil
 }
 
-// GetEffectiveInterfaceStates implements types.EffectiveInterfaceStateInspector.
+// GetEffectiveInterfaceStates implements drivers_meta.EffectiveInterfaceStateInspector.
 // Returns up/down state for all data interfaces from the cached /retrieve call.
 func (d *VyOSRouterDriver) GetEffectiveInterfaceStates(namespace, podName string) (map[string]bool, error) {
 	cfg, err := vyosRetrieveConfig(namespace, podName)

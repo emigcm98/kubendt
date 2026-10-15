@@ -37,19 +37,19 @@ var _ capabilities.NATCapable = (*AcmeRouterDriver)(nil)
 
 ## What the platform asks a driver
 
-Everything beyond the minimum is an optional interface. Implement what the node has, say nothing about the rest, and add a `var _ Interface = (*Driver)(nil)` line per interface so the compiler keeps it true.
+Everything beyond the minimum is an optional interface, all of them in `backend/drivers/meta`. Implement what the node has, say nothing about the rest, and add a `var _ Interface = (*Driver)(nil)` line per interface so the compiler keeps it true.
 
-| Interface | Package | Method | When it is missing | Today |
-| --- | --- | --- | --- | --- |
-| `RuntimeProvider` | `drivers/meta` | `Runtime() string` | A container node | VyOS |
-| `DeviceProvider` | `drivers/meta` | `Devices() []string` | No host devices | VyOS |
-| `ShellProvider` | `drivers/meta` | `Shells() []ShellSpec` | The pod shell, plus the serial console on a VM | FRR, VyOS |
-| `GuestToolProvider` | `drivers/meta` | `GuestWrapper() []string`, `GuestTools() []string` | A container runs every tool in its toolbox; a VM offers none | VyOS |
-| `InterfaceNameConstrainer` | `drivers/meta` | `InterfaceNameConstraints()` | The kernel's rules only | VyOS |
-| `ReadinessProbeProvider` | `types` | `ReadinessProbeCommands()` | `command -v ip`, the node is Ready when its image has `ip` | FRR, OVS, VyOS |
-| `EffectiveInterfaceInspector`, `EffectiveSingleInterfaceInspector`, `EffectiveInterfaceStateInspector` | `types` | `GetEffectiveInterfaces`, `GetEffectiveInterface`, `GetEffectiveInterfaceStates` | The pod's own `ip a` and link states | VyOS |
-| `SNATInterfaceInspector` | `types` | `GetSNATInterface()` | The namespace summary shows no NAT interface | VyOS |
-| `GuestInterfaceMapper` | `types` | `GuestInterface(ns, pod, iface)` | Interface names reach the actions as the pod names them | Guest-named dataplanes |
+| Interface | Method | When it is missing | Today |
+| --- | --- | --- | --- |
+| `RuntimeProvider` | `Runtime() string` | A container node | VyOS |
+| `DeviceProvider` | `Devices() []string` | No host devices | VyOS |
+| `ShellProvider` | `Shells() []ShellSpec` | The pod shell, plus the serial console on a VM | FRR, VyOS |
+| `GuestToolProvider` | `GuestWrapper() []string`, `GuestTools() []string` | A container runs every tool in its toolbox; a VM offers none | VyOS |
+| `InterfaceNameConstrainer` | `InterfaceNameConstraints()` | The kernel's rules only | VyOS |
+| `ReadinessProbeProvider` | `ReadinessProbeCommands()` | `command -v ip`, the node is Ready when its image has `ip` | FRR, OVS, VyOS |
+| `EffectiveInterfaceInspector`, `EffectiveSingleInterfaceInspector`, `EffectiveInterfaceStateInspector` | `GetEffectiveInterfaces`, `GetEffectiveInterface`, `GetEffectiveInterfaceStates` | The pod's own `ip a` and link states | VyOS |
+| `SNATInterfaceInspector` | `GetSNATInterface()` | The namespace summary shows no NAT interface | VyOS |
+| `GuestInterfaceMapper` | `GuestInterface(ns, pod, iface)` | Interface names reach the actions as the pod names them | Guest-named dataplanes |
 
 What each one feeds:
 
