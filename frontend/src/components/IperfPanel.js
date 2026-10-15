@@ -260,21 +260,21 @@ const IperfPanel = ({
   const running = status === 'connecting' || status === 'starting' || status === 'running';
   const formError = validate({ duration, parallel, bandwidth, serverMode, port });
   // Candidates to pick: every node but this one and the external network. With
-  // the server on the node, a guest VM cannot host it: listed, but disabled
-  // and saying why, so the node is not missing but explained.
+  // the server on the node, a node whose driver does not provide the tool
+  // cannot host it: listed, but disabled and saying why.
   const destNodes = useMemo(
     () =>
       nodes
         .filter((n) => n.data?.type && n.data.type !== 'external' && n.id !== source)
         .map((n) => {
-          const guest = n.data.fullInfo?.runtime === 'qemu';
-          const blocked = serverMode === 'auto' && guest;
+          const info = n.data.fullInfo || {};
+          const blocked = serverMode === 'auto' && !(info.tools || []).includes('iperf');
           return {
             id: n.id,
             label: n.data?.label || n.id,
             blocked,
             note: blocked
-              ? `${n.data.fullInfo?.driver || 'its driver'} cannot host the server on a guest VM yet`
+              ? `${info.driver || 'its driver'} does not provide it, so no server here`
               : '',
           };
         }),

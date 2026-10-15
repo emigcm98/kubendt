@@ -37,14 +37,6 @@ type SNATInterfaceInspector interface {
 	GetSNATInterface(namespace, podName string) (string, error)
 }
 
-// GuestProbeProvider is an optional interface for drivers whose dataplane
-// lives inside a guest VM. Network probes (traceroute, mtr) run there,
-// wrapped with the returned command prefix, instead of in the pod's debug
-// container, whose netns has no connectivity nor the guest routing table.
-type GuestProbeProvider interface {
-	GuestProbeWrapper() []string
-}
-
 // ReadinessProbeProvider is an optional interface for drivers that require a
 // custom Kubernetes readiness probe instead of the default ("command -v ip").
 // The returned probe is used when creating the pod's StatefulSet spec.

@@ -49,9 +49,9 @@ type IperfOptions struct {
 
 // IperfServer is a server the backend runs for the test.
 type IperfServer struct {
-	Pod       string
-	Container string
-	Port      int
+	Pod  string
+	Run  ToolRun
+	Port int
 }
 
 func (o IperfOptions) Validate() error {
@@ -196,7 +196,7 @@ func ParseIperfEvent(line []byte) (IperfEvent, error) {
 // With a server, it is started first and the client waits for its listening
 // line, so the client never races it. Cancelling ctx stops both: iperf3
 // ignores the closed stream, so a cancelled run is killed by name.
-func RunIperf(ctx context.Context, namespace, clientPod, clientContainer string, server *IperfServer, o IperfOptions, emit func(types.IperfInterval)) (*types.IperfSummary, error) {
+func RunIperf(ctx context.Context, namespace, clientPod string, client ToolRun, server *IperfServer, o IperfOptions, emit func(types.IperfInterval)) (*types.IperfSummary, error) {
 	port := o.Port
 	if server != nil {
 		port = server.Port
@@ -237,14 +237,14 @@ func RunIperf(ctx context.Context, namespace, clientPod, clientContainer string,
 		}
 	}()
 	clientCmd := BuildIperfClientCommand(o, port)
-	execErr := ExecStreamIntoContainer(ctx, namespace, clientPod, clientContainer, clientCmd, pw)
+	execErr := ExecStreamIntoContainer(ctx, namespace, clientPod, client.Container, client.Wrap(clientCmd), pw)
 	_ = pw.Close()
 	<-done
 
 	if ctx.Err() != nil {
-		killIperf(namespace, clientPod, clientContainer, clientCmd[:5])
+		killIperf(namespace, clientPod, client, clientCmd[:5])
 		if server != nil {
-			killIperf(namespace, server.Pod, server.Container, BuildIperfServerCommand(port)[:5])
+			killIperf(namespace, server.Pod, server.Run, BuildIperfServerCommand(port)[:5])
 		}
 		return summary, ctx.Err()
 	}
@@ -262,8 +262,8 @@ func RunIperf(ctx context.Context, namespace, clientPod, clientContainer string,
 
 // killIperf ends the iperf3 whose command line starts with prefix, after a
 // cancelled run. The port makes the prefix specific to this test.
-func killIperf(namespace, pod, container string, prefix []string) {
-	_, _, _ = ExecInContainer(namespace, pod, container, []string{"pkill", "-f", "^" + strings.Join(prefix, " ")})
+func killIperf(namespace, pod string, run ToolRun, prefix []string) {
+	_, _, _ = ExecInContainer(namespace, pod, run.Container, run.Wrap([]string{"pkill", "-f", "^" + strings.Join(prefix, " ")}))
 }
 
 // startIperfServer execs the server in its toolbox and returns once it
@@ -273,7 +273,7 @@ func startIperfServer(ctx context.Context, namespace string, server *IperfServer
 	listening := make(chan struct{})
 	exited := make(chan error, 1)
 	go func() {
-		err := ExecStreamIntoContainer(ctx, namespace, server.Pod, server.Container, BuildIperfServerCommand(server.Port), pw)
+		err := ExecStreamIntoContainer(ctx, namespace, server.Pod, server.Run.Container, server.Run.Wrap(BuildIperfServerCommand(server.Port)), pw)
 		_ = pw.Close()
 		exited <- err
 	}()

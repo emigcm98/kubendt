@@ -56,14 +56,14 @@ test('an out-of-range duration shows in red and holds Run', () => {
 });
 
 const topology = [
-  { id: 'host-0', data: { type: 'host', label: 'host', fullInfo: { runtime: 'k8s-linux' } } },
-  { id: 'web-0', data: { type: 'host', label: 'web', fullInfo: { runtime: 'k8s-linux' } } },
+  { id: 'host-0', data: { type: 'host', label: 'host', fullInfo: { tools: ['trace', 'iperf'] } } },
+  { id: 'web-0', data: { type: 'host', label: 'web', fullInfo: { tools: ['trace', 'iperf'] } } },
   {
     id: 'router-0',
     data: {
       type: 'router',
       label: 'router',
-      fullInfo: { runtime: 'qemu', driver: 'VyOSRouterDriver' },
+      fullInfo: { runtime: 'qemu', driver: 'VyOSRouterDriver', tools: ['trace'] },
     },
   },
   { id: 'ext', data: { type: 'external', label: 'external' } },
@@ -82,7 +82,7 @@ test('the picker keeps the node chosen, drops it when the address is typed, and 
   expect(items().map((o) => o.textContent)).toEqual(['web', 'router']);
   const router = items()[1];
   expect(router.className).toContain('iperf-picker-item-blocked');
-  expect(router.title).toBe('VyOSRouterDriver cannot host the server on a guest VM yet');
+  expect(router.title).toBe('VyOSRouterDriver does not provide it, so no server here');
   expect(router.querySelector('.iperf-picker-warn')).not.toBeNull();
   fireEvent.click(router);
   expect(screen.getByText('pick a node…')).toBeInTheDocument();

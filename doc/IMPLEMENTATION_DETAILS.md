@@ -762,9 +762,9 @@ Endpoints live under `/capture/*` (Swagger tag **capture**): `ws` (stream), `pca
 
 Traces the real L3 path from a source pod to any IP or hostname and animates it on the graph. An envelope hops node by node along the lit edges, with step and scrub controls, a red ✕ when it is dropped or a green ✓ when it arrives, and an optional per-hop latency and loss table. The pods run a real dataplane (Meshnet) so this is the actual path the traffic takes, not a simulation.
 
-### 12.1 The toolbox
+### 12.1 Where a tool runs
 
-The probe does not run in the node image. It runs in the pod's toolbox (11.1), so any image works (busybox, FRR, mongo) with nothing to install. `NET_RAW` covers the ICMP sockets and `tcptraceroute`.
+The probe does not run in the node image. On a container node it runs in the pod's toolbox (11.1), so any image works (busybox, FRR, mongo) with nothing to install; `NET_RAW` covers the ICMP sockets and `tcptraceroute`. On a guest VM node the pod netns has no IP stack, so the tool runs inside the guest: the driver implements `drivers_meta.GuestToolProvider`, whose `GuestWrapper` prefixes the argv (`ssh_qemu sudo` on VyOS) and whose `GuestTools` lists the tools its image ships. `helpers.ToolRunner` is the one place that decides, for the trace and the throughput test alike, and a VM driver that does not declare a tool gets an error naming the node and the driver. The pod listing and `GET /drivers` publish `tools`, so the menus and the throughput panel only ask and show what is missing dimmed with the reason.
 
 ### 12.2 Resolving hops to topology nodes
 
@@ -806,4 +806,4 @@ Options: `proto` tcp or udp, `duration` 1 to 120 s, `bandwidth` (iperf3 `-b`, th
 
 Endpoints under `/iperf/*` (Swagger tag **iperf**): `GET /iperf/ws/{namespace}/{podName}` streams `meta`, `status`, `interval`, `summary` and `error` frames and closing the socket stops the test; `GET /iperf/run/{namespace}/{podName}` returns the same run as one document. The source must be L3-capable and, for now, a container node: a VyOS guest cannot be reached from the pod netns where the toolbox lives. Code: `backend/helpers/iperf.go`, `backend/handlers/iperf.go`; the parser's tests run on recorded `--json-stream` output in `helpers/testdata`.
 
-The panel (`frontend/src/components/IperfPanel.js`) is a floating window of the trace family, opened from Tools in the node menu or from the link menu in either direction, which fills the address of the other end. It takes the destination from a node or an address, whether the backend starts the server or one already runs, TCP or UDP, duration, offered rate, streams and reverse, draws one bar per interval in plain SVG as the frames arrive, shows the end totals and exports the run as the same JSON the REST endpoint returns.
+The panel (`frontend/src/components/IperfPanel.js`) is a floating window of the trace family, opened from Tools in the node menu or from the link menu in either direction, which fills the address of the other end. Both ends run through `helpers.ToolRunner` (12.1), so a VyOS node is offered once its image ships iperf3 and the driver declares it. It takes the destination from a node or an address, whether the backend starts the server or one already runs, TCP or UDP, duration, offered rate, streams and reverse, draws one bar per interval in plain SVG as the frames arrive, shows the end totals and exports the run as the same JSON the REST endpoint returns.

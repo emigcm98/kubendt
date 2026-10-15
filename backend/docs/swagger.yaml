@@ -436,6 +436,13 @@ definitions:
       name:
         example: frr-router
         type: string
+      tools:
+        example:
+        - trace
+        - iperf
+        items:
+          type: string
+        type: array
       type:
         example: router
         type: string

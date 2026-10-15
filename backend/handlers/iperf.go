@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	drivers_meta "kubendt/drivers/meta"
 	"kubendt/helpers"
 	"kubendt/kubeclient"
 	"kubendt/types"
@@ -36,11 +37,12 @@ type iperfRequest struct {
 	server string // auto, none, or a pod reference
 }
 
-// iperfRun is a request resolved to pods. serverPod is empty when the lab
-// runs its own server at the destination.
+// iperfRun is a request resolved to pods. server is nil when the lab runs
+// its own server at the destination.
 type iperfRun struct {
 	source    string
-	serverPod string
+	sourceObj *v1.Pod
+	serverObj *v1.Pod
 }
 
 type iperfIntervalFrame struct {
@@ -85,8 +87,7 @@ func getPod(namespace, name string) (*v1.Pod, error) {
 }
 
 // resolveIperfRun names the source and the server pods. The source must be
-// L3-capable. Guest-VM nodes are out for now: their toolbox sits in a pod
-// netns with no connectivity, like the trace before its guest wrapper.
+// L3-capable, and both ends must offer the tool, which the runner checks.
 func resolveIperfRun(namespace, podRef string, q iperfRequest) (iperfRun, int, error) {
 	pod, err := helpers.ResolvePodReference(namespace, podRef)
 	if err != nil {
@@ -99,10 +100,8 @@ func resolveIperfRun(namespace, podRef string, q iperfRequest) (iperfRun, int, e
 	if !helpers.DriverIsL3Capable(podObj.Labels["kubendt/driver"]) {
 		return iperfRun{}, http.StatusBadRequest, errors.New("source node is not L3-capable")
 	}
-	if podObj.Labels["kubendt/runtime"] == "qemu" {
-		return iperfRun{}, http.StatusBadRequest, guestVMError(pod, podObj, "run a throughput test")
-	}
-	run := iperfRun{source: pod}
+	run := iperfRun{source: pod, sourceObj: podObj}
+	var serverPod string
 	switch q.server {
 	case "none":
 		return run, 0, nil
@@ -115,61 +114,48 @@ func resolveIperfRun(namespace, podRef string, q iperfRequest) (iperfRun, int, e
 		if !ok {
 			return run, http.StatusBadRequest, fmt.Errorf("%q is not an address of a node in the namespace; run your own server there and pass server=none", q.opts.Dest)
 		}
-		run.serverPod = node.Pod
+		serverPod = node.Pod
 	default:
-		run.serverPod, err = helpers.ResolvePodReference(namespace, q.server)
+		serverPod, err = helpers.ResolvePodReference(namespace, q.server)
 		if err != nil {
 			return run, http.StatusBadRequest, err
 		}
 	}
-	if run.serverPod == run.source {
+	if serverPod == run.source {
 		return run, http.StatusBadRequest, errors.New("the server must run on another pod")
 	}
-	srv, err := getPod(namespace, run.serverPod)
+	run.serverObj, err = getPod(namespace, serverPod)
 	if err != nil {
-		return run, http.StatusNotFound, fmt.Errorf("server pod %q not found", run.serverPod)
-	}
-	if srv.Labels["kubendt/runtime"] == "qemu" {
-		return run, http.StatusBadRequest, guestVMError(run.serverPod, srv, "host the server")
+		return run, http.StatusNotFound, fmt.Errorf("server pod %q not found", serverPod)
 	}
 	return run, 0, nil
 }
 
-// guestVMError names the node and its driver: the toolbox sits in a pod
-// netns that a guest VM leaves without an IP stack.
-func guestVMError(pod string, obj *v1.Pod, what string) error {
-	driver := obj.Labels["kubendt/driver"]
-	if driver == "" {
-		driver = "its driver"
-	}
-	return fmt.Errorf("%s cannot %s yet: %s runs a guest VM and iperf3 is not reachable from the pod", pod, what, driver)
-}
-
-// prepareIperf readies the toolboxes of both ends and picks the server port.
-func prepareIperf(namespace string, run iperfRun, q iperfRequest, onInject func()) (client string, server *helpers.IperfServer, err error) {
-	client, _, err = helpers.EnsureToolbox(namespace, run.source, onInject)
+// prepareIperf readies where each end runs and picks the server port.
+func prepareIperf(run iperfRun, q iperfRequest, onInject func()) (client helpers.ToolRun, server *helpers.IperfServer, err error) {
+	client, err = helpers.ToolRunner(run.sourceObj, drivers_meta.ToolIperf, onInject)
 	if err != nil {
-		return "", nil, err
+		return client, nil, err
 	}
-	if run.serverPod == "" {
+	if run.serverObj == nil {
 		return client, nil, nil
 	}
-	container, _, err := helpers.EnsureToolbox(namespace, run.serverPod, onInject)
+	srv, err := helpers.ToolRunner(run.serverObj, drivers_meta.ToolIperf, onInject)
 	if err != nil {
-		return "", nil, err
+		return client, nil, fmt.Errorf("cannot host the server: %w", err)
 	}
 	port := q.opts.Port
 	if port == 0 {
 		port = helpers.PickIperfPort()
 	}
-	return client, &helpers.IperfServer{Pod: run.serverPod, Container: container, Port: port}, nil
+	return client, &helpers.IperfServer{Pod: run.serverObj.Name, Run: srv, Port: port}, nil
 }
 
-func iperfMeta(run iperfRun, q iperfRequest, server *helpers.IperfServer, client string) gin.H {
+func iperfMeta(run iperfRun, q iperfRequest, server *helpers.IperfServer, client helpers.ToolRun) gin.H {
 	meta := gin.H{
 		"type": "meta", "source": run.source, "dest": q.opts.Dest, "proto": q.opts.Proto,
 		"duration": q.opts.Duration, "bandwidth": q.opts.Bandwidth, "parallel": q.opts.Parallel,
-		"reverse": q.opts.Reverse, "container": client, "server": nil,
+		"reverse": q.opts.Reverse, "container": client.Container, "server": nil,
 	}
 	if server != nil {
 		meta["server"] = gin.H{"pod": server.Pod, "port": server.Port}
@@ -212,6 +198,10 @@ func IperfWebSocket(c *gin.Context) {
 		sendCtl(gin.H{"type": "error", "message": err.Error()})
 		return
 	}
+	serverName := ""
+	if run.serverObj != nil {
+		serverName = run.serverObj.Name
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(q.opts.Duration)*time.Second+iperfSetupTimeout)
 	defer cancel()
@@ -224,15 +214,15 @@ func IperfWebSocket(c *gin.Context) {
 		}
 	}()
 
-	client, server, err := prepareIperf(namespace, run, q, func() { sendCtl(gin.H{"type": "status", "state": "starting"}) })
+	client, server, err := prepareIperf(run, q, func() { sendCtl(gin.H{"type": "status", "state": "starting"}) })
 	if err != nil {
-		log.Printf("❌ Iperf: toolbox failed for %s/%s: %v", namespace, run.source, err)
+		log.Printf("❌ Iperf: no runner for %s/%s: %v", namespace, run.source, err)
 		sendCtl(gin.H{"type": "error", "message": err.Error()})
 		return
 	}
 	sendCtl(iperfMeta(run, q, server, client))
 	sendCtl(gin.H{"type": "status", "state": "running"})
-	log.Printf("📶 Iperf: %s from %s/%s to %s (server=%s)", q.opts.Proto, namespace, run.source, q.opts.Dest, run.serverPod)
+	log.Printf("📶 Iperf: %s from %s/%s to %s (server=%s)", q.opts.Proto, namespace, run.source, q.opts.Dest, serverName)
 
 	summary, err := helpers.RunIperf(ctx, namespace, run.source, client, server, q.opts, func(iv types.IperfInterval) {
 		sendCtl(iperfIntervalFrame{Type: "interval", IperfInterval: iv})
@@ -265,9 +255,9 @@ func IperfReport(c *gin.Context) {
 		c.JSON(code, gin.H{"error": err.Error()})
 		return
 	}
-	client, server, err := prepareIperf(namespace, run, q, nil)
+	client, server, err := prepareIperf(run, q, nil)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(q.opts.Duration)*time.Second+iperfSetupTimeout)

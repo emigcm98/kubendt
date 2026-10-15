@@ -33,6 +33,14 @@ const ContextMenu = ({
     info.runtime === 'qemu' || info.serialShell || info.shellMode === 'serial'
   );
   const isFRR = info.driver === 'FRRRouterDriver';
+  // The tools a node offers come from its driver through the pod listing; a
+  // missing one shows dimmed with the reason, not hidden.
+  const tools = info.tools || [];
+  const toolEntry = (tool, entry) => ({
+    ...entry,
+    disabled: !tools.includes(tool),
+    note: `${info.driver || 'This driver'} does not provide it on this node`,
+  });
 
   const items = [
     onOpenInfoPanel && { label: 'Open info panel', icon: <InfoIcon />, onClick: onOpenInfoPanel },
@@ -61,20 +69,19 @@ const ContextMenu = ({
       icon: <WrenchIcon />,
       children: [
         onStartTrace &&
-          info.l3capable && {
+          info.l3capable &&
+          toolEntry('trace', {
             label: 'Traceroute from here',
             icon: <TraceIcon />,
             onClick: onStartTrace,
-          },
-        // A guest VM has no iperf3 reachable from the pod yet; see PLAN, tool runner.
+          }),
         onStartIperf &&
-          info.l3capable && {
+          info.l3capable &&
+          toolEntry('iperf', {
             label: 'Throughput test from here',
             icon: <GaugeIcon />,
             onClick: onStartIperf,
-            disabled: info.runtime === 'qemu',
-            note: `${info.driver || 'This driver'} does not support it on a guest VM yet`,
-          },
+          }),
         onStartTC && { label: 'Traffic control', icon: <SlidersIcon />, onClick: onStartTC },
       ],
     },

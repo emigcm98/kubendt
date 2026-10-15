@@ -411,6 +411,7 @@ type DriverInfo struct {
 	IsDefault                bool                         `json:"isDefault" example:"true"`
 	Capabilities             []CapabilityEntry            `json:"capabilities"`
 	InterfaceNameConstraints *InterfaceNameConstraintsDoc `json:"interfaceNameConstraints,omitempty"`
+	Tools                    []string                     `json:"tools" example:"trace,iperf"`
 }
 
 // DriversListResponse is returned by GET /drivers/.

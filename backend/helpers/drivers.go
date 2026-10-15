@@ -20,6 +20,7 @@ type DriverCaps struct {
 	IsDefault                bool
 	Capabilities             []actions.CapabilityActions
 	InterfaceNameConstraints *drivers_meta.InterfaceNameConstraints
+	Tools                    []string
 }
 
 // ResolveDriverCaps: resolves type + capabilities for a driver by name.
@@ -49,6 +50,7 @@ func ResolveDriverCaps(name string) (DriverCaps, error) {
 		IsDefault:                drvreg.IsDefaultForType(name),
 		Capabilities:             actions.ForDriver(inst),
 		InterfaceNameConstraints: constraints,
+		Tools:                    DriverTools(inst),
 	}, nil
 }
 

@@ -29,8 +29,10 @@ const labels = () =>
     el.textContent.trim()
   );
 
+const ALL_TOOLS = ['trace', 'iperf'];
+
 test('an FRR router groups its shells and tools', () => {
-  nodeMenu({ driver: 'FRRRouterDriver', l3capable: true });
+  nodeMenu({ driver: 'FRRRouterDriver', l3capable: true, tools: ALL_TOOLS });
   expect(labels()).toEqual([
     'Open info panel',
     'View logs',
@@ -50,14 +52,18 @@ test('an FRR router groups its shells and tools', () => {
   expect(labels()).not.toContain('vtysh');
 });
 
-test('a guest VM node shows the throughput test dimmed with the reason', () => {
+test('a node whose driver lacks a tool shows it dimmed with the reason', () => {
   const onStartIperf = jest.fn();
-  nodeMenu({ driver: 'VyOSRouterDriver', l3capable: true, runtime: 'qemu' }, { onStartIperf });
+  nodeMenu(
+    { driver: 'VyOSRouterDriver', l3capable: true, runtime: 'qemu', tools: ['trace'] },
+    { onStartIperf }
+  );
   fireEvent.mouseEnter(screen.getByText('Tools'));
-  expect(labels()).toContain('Traceroute from here');
+  const trace = screen.getByText('Traceroute from here').closest('.graph-context-menu-item');
+  expect(trace.className).not.toContain('graph-context-menu-item-disabled');
   const entry = screen.getByText('Throughput test from here').closest('.graph-context-menu-item');
   expect(entry.className).toContain('graph-context-menu-item-disabled');
-  expect(entry.title).toBe('VyOSRouterDriver does not support it on a guest VM yet');
+  expect(entry.title).toBe('VyOSRouterDriver does not provide it on this node');
   expect(entry.querySelector('.graph-context-menu-warn')).not.toBeNull();
   fireEvent.click(entry);
   expect(onStartIperf).not.toHaveBeenCalled();
@@ -78,7 +84,10 @@ test('a group with one entry collapses into it', () => {
 test('a submenu entry runs its action and closes the menu', () => {
   const onOpenShell = jest.fn();
   const onClose = jest.fn();
-  nodeMenu({ driver: 'FRRRouterDriver', l3capable: true }, { onOpenShell, onClose });
+  nodeMenu(
+    { driver: 'FRRRouterDriver', l3capable: true, tools: ALL_TOOLS },
+    { onOpenShell, onClose }
+  );
   fireEvent.mouseEnter(screen.getByText('Shell'));
   fireEvent.click(screen.getByText('vtysh'));
   expect(onOpenShell).toHaveBeenCalledWith('vtysh');
