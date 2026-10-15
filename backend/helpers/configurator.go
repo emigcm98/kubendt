@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"kubendt/actions"
+	drivers_meta "kubendt/drivers/meta"
 	drivers_registry "kubendt/drivers/registry"
 	"kubendt/executor"
 	"kubendt/kubeclient"
@@ -121,7 +122,7 @@ func ResolveDriverExecutionPlanForPod(namespace, podName string, driver interfac
 			podName, typ, name, strings.TrimSuffix(desc.Capability, "Capable"), action.Type)
 	}
 
-	if mapper, ok := driver.(types.GuestInterfaceMapper); ok {
+	if mapper, ok := driver.(drivers_meta.GuestInterfaceMapper); ok {
 		mapped, err := desc.MapInterfaces(action, func(name string) (string, error) {
 			return mapper.GuestInterface(namespace, podName, name)
 		})

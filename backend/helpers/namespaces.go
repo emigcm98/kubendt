@@ -6,8 +6,8 @@ import (
 	"context"
 	stderrors "errors"
 	"fmt"
+	drivers_meta "kubendt/drivers/meta"
 	"kubendt/kubeclient"
-	"kubendt/types"
 	"log"
 	"os"
 	"regexp"
@@ -266,7 +266,7 @@ func GetInterfacesInNamespace(namespace string) (map[string]map[string]interface
 			go func() {
 				states := make(map[string]bool)
 				if drv != nil {
-					if inspector, ok := drv.(types.EffectiveInterfaceStateInspector); ok {
+					if inspector, ok := drv.(drivers_meta.EffectiveInterfaceStateInspector); ok {
 						s, inspectErr := inspector.GetEffectiveInterfaceStates(namespace, podName)
 						if inspectErr != nil {
 							log.Printf("⚠️ EffectiveInterfaceStateInspector failed for %s/%s: %v, falling back to ip a", namespace, podName, inspectErr)
@@ -282,7 +282,7 @@ func GetInterfacesInNamespace(namespace string) (map[string]map[string]interface
 			// NAT goroutine (routers that can read their SNAT interface)
 			go func() {
 				if podType == "router" && drv != nil {
-					if nat, ok := drv.(types.SNATInterfaceInspector); ok {
+					if nat, ok := drv.(drivers_meta.SNATInterfaceInspector); ok {
 						iface, _ := nat.GetSNATInterface(namespace, podName)
 						natCh <- natResult{iface: iface}
 						return

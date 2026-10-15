@@ -3,7 +3,6 @@ package drivers
 import (
 	"kubendt/capabilities"
 	drivers_meta "kubendt/drivers/meta"
-	"kubendt/types"
 )
 
 type OpenVSwitchDriver struct {
@@ -20,14 +19,14 @@ func NewOpenVSwitchDriver() *OpenVSwitchDriver {
 
 var _ capabilities.L2Capable = (*OpenVSwitchDriver)(nil)
 var _ capabilities.SwitchCapable = (*OpenVSwitchDriver)(nil)
-var _ types.ReadinessProbeProvider = (*OpenVSwitchDriver)(nil)
+var _ drivers_meta.ReadinessProbeProvider = (*OpenVSwitchDriver)(nil)
 
 // ReadinessProbeCommands makes the pod Ready only once ovs-vsctl can talk to
 // ovsdb-server. The default probe (`command -v ip`) passes as soon as the
 // image has iproute2, seconds before the OVS daemons listen, and a bridge
 // setup or a replay landing in that window fails.
-func (OpenVSwitchDriver) ReadinessProbeCommands() types.ReadinessProbeSpec {
-	return types.ReadinessProbeSpec{
+func (OpenVSwitchDriver) ReadinessProbeCommands() drivers_meta.ReadinessProbeSpec {
+	return drivers_meta.ReadinessProbeSpec{
 		Command:             []string{"sh", "-c", "ovs-vsctl --timeout=2 show >/dev/null"},
 		InitialDelaySeconds: 0,
 		PeriodSeconds:       2,

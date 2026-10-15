@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	drivers_meta "kubendt/drivers/meta"
 	drvers_registry "kubendt/drivers/registry"
 	"kubendt/kubeclient"
 	"kubendt/types"
@@ -168,12 +169,12 @@ func resolveDriverForProbe(driverName string) any {
 }
 
 // buildReadinessProbe returns a Kubernetes readiness probe tailored to the pod type.
-// If the driver for the node implements types.ReadinessProbeProvider, its probe
+// If the driver for the node implements drivers_meta.ReadinessProbeProvider, its probe
 // spec is used. Otherwise the default checks the baseline every image needs,
 // the `ip` command, and says so when it is missing, since the kubelet records
 // the probe's output in the pod's events and the Ready timeout quotes it.
 func buildReadinessProbe(driver any) *v1.Probe {
-	if provider, ok := driver.(types.ReadinessProbeProvider); ok {
+	if provider, ok := driver.(drivers_meta.ReadinessProbeProvider); ok {
 		spec := provider.ReadinessProbeCommands()
 		return &v1.Probe{
 			ProbeHandler: v1.ProbeHandler{

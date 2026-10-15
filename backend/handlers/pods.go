@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	drivers_meta "kubendt/drivers/meta"
 	"log"
 	"net/http"
 	"sort"
@@ -85,15 +86,13 @@ func ListPods(c *gin.Context) {
 			// rest dimmed.
 			"tools": helpers.PodTools(&pod),
 			// The shells this node offers, mode and label, the pod shell first.
-			"shells":      helpers.PodShells(&pod),
-			"runtime":     helpers.RuntimeOf(pod.Labels),
-			"shellMode":   pod.Labels["kubendt/shell-mode"],
-			"serialShell": helpers.IsGuestVM(pod.Labels) || pod.Labels["kubendt/shell-mode"] == "serial",
-			"namespace":   pod.Namespace,
-			"image":       pod.Spec.Containers[0].Image,
-			"node":        pod.Spec.NodeName,
-			"status":      status,
-			"createdAt":   createdAt.Format("2006-01-02 15:04:05"),
+			"shells":    helpers.PodShells(&pod),
+			"runtime":   helpers.RuntimeOf(pod.Labels),
+			"namespace": pod.Namespace,
+			"image":     pod.Spec.Containers[0].Image,
+			"node":      pod.Spec.NodeName,
+			"status":    status,
+			"createdAt": createdAt.Format("2006-01-02 15:04:05"),
 			"uptime": fmt.Sprintf("%d days, %d hours, %d minutes",
 				int(uptime.Hours())/24, int(uptime.Hours())%24, int(uptime.Minutes())%60),
 		}
@@ -247,7 +246,7 @@ func GetInterfacesFromPod(c *gin.Context) {
 	// EffectiveInterfaceInspector or if the inspection fails.
 	if drv, drvErr := helpers.GetDriverForPod(namespace, pod); drvErr == nil {
 		if requestedIntf != "" {
-			if singleInspector, ok := drv.(types.EffectiveSingleInterfaceInspector); ok {
+			if singleInspector, ok := drv.(drivers_meta.EffectiveSingleInterfaceInspector); ok {
 				entry, inspErr := singleInspector.GetEffectiveInterface(namespace, pod, requestedIntf)
 				if inspErr != nil {
 					log.Printf("⚠️ EffectiveSingleInterfaceInspector failed for %s/%s intf=%s: %v, falling back", namespace, pod, requestedIntf, inspErr)
@@ -258,7 +257,7 @@ func GetInterfacesFromPod(c *gin.Context) {
 			}
 		}
 
-		if inspector, ok := drv.(types.EffectiveInterfaceInspector); ok {
+		if inspector, ok := drv.(drivers_meta.EffectiveInterfaceInspector); ok {
 			result, inspErr := inspector.GetEffectiveInterfaces(namespace, pod)
 			if inspErr != nil {
 				log.Printf("⚠️ EffectiveInterfaceInspector failed for %s/%s: %v, falling back to ip a", namespace, pod, inspErr)

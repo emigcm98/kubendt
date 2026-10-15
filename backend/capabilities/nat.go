@@ -6,7 +6,7 @@ import (
 )
 
 // NATCapable builds NAT commands. Reading the SNAT interface back is a
-// types.SNATInterfaceInspector, NATBase provides the Linux one.
+// drivers_meta.SNATInterfaceInspector, NATBase provides the Linux one.
 type NATCapable interface {
 	EnableSNAT(iface string) [][]string
 	DisableSNAT(iface string) [][]string
