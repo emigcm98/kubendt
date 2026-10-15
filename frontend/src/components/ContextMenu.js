@@ -1,13 +1,16 @@
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import './ContextMenu.css';
+import React from 'react';
+import GraphMenu, { DIVIDER } from './GraphMenu';
 import { ReactComponent as TraceIcon } from '../assets/images/icons/trace-icon.svg';
 import { ReactComponent as SlidersIcon } from '../assets/images/icons/sliders.svg';
 import { ReactComponent as TerminalIcon } from '../assets/images/icons/terminal.svg';
+import { ReactComponent as WrenchIcon } from '../assets/images/icons/wrench.svg';
 import { ReactComponent as LogsIcon } from '../assets/images/icons/logs.svg';
 import { ReactComponent as RefreshIcon } from '../assets/images/icons/refresh.svg';
 import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
 import { ReactComponent as InfoIcon } from '../assets/images/icons/info.svg';
 
+// Right-click menu of a node. The shells and the tools are groups, so the
+// menu stays at six rows however many a node supports.
 const ContextMenu = ({
   x,
   y,
@@ -21,184 +24,60 @@ const ContextMenu = ({
   onStartTC,
   onDelete,
 }) => {
-  const menuRef = useRef(null);
-  const leaveTimerRef = useRef(null);
-  const isExternal = node?.type === 'external';
-  const isSerialCapablePod = useMemo(() => {
-    if (!node?.fullInfo) return false;
-    return Boolean(
-      node.fullInfo.runtime === 'qemu' ||
-      node.fullInfo.serialShell ||
-      node.fullInfo.shellMode === 'serial'
-    );
-  }, [node]);
-
-  const isFRRPod = useMemo(() => {
-    return node?.fullInfo?.driver === 'FRRRouterDriver';
-  }, [node]);
-
-  useEffect(() => {
-    const AWAY_MARGIN = 50; // px around the menu before considering the cursor "away"
-    const CLOSE_DELAY = 250; // ms after the cursor stays outside
-
-    const handleClick = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
-        onClose();
-      }
-    };
-    const handleKey = (e) => {
-      if (e.key === 'Escape') onClose();
-    };
-    const handleMouseMove = (e) => {
-      if (!menuRef.current) return;
-      const r = menuRef.current.getBoundingClientRect();
-      const outside =
-        e.clientX < r.left - AWAY_MARGIN ||
-        e.clientX > r.right + AWAY_MARGIN ||
-        e.clientY < r.top - AWAY_MARGIN ||
-        e.clientY > r.bottom + AWAY_MARGIN;
-
-      if (outside) {
-        if (!leaveTimerRef.current) {
-          leaveTimerRef.current = setTimeout(() => {
-            leaveTimerRef.current = null;
-            onClose();
-          }, CLOSE_DELAY);
-        }
-      } else if (leaveTimerRef.current) {
-        clearTimeout(leaveTimerRef.current);
-        leaveTimerRef.current = null;
-      }
-    };
-
-    document.addEventListener('mousedown', handleClick);
-    document.addEventListener('keydown', handleKey);
-    document.addEventListener('mousemove', handleMouseMove);
-    return () => {
-      document.removeEventListener('mousedown', handleClick);
-      document.removeEventListener('keydown', handleKey);
-      document.removeEventListener('mousemove', handleMouseMove);
-      if (leaveTimerRef.current) clearTimeout(leaveTimerRef.current);
-    };
-  }, [onClose]);
-
-  const [pos, setPos] = useState({ top: y, left: x });
-
-  useLayoutEffect(() => {
-    if (!menuRef.current) return;
-    const rect = menuRef.current.getBoundingClientRect();
-    const MARGIN = 8;
-    let top = y;
-    let left = x;
-    if (left + rect.width > window.innerWidth - MARGIN)
-      left = window.innerWidth - rect.width - MARGIN;
-    if (top + rect.height > window.innerHeight - MARGIN)
-      top = window.innerHeight - rect.height - MARGIN;
-    if (left < MARGIN) left = MARGIN;
-    if (top < MARGIN) top = MARGIN;
-    setPos({ top, left });
-  }, [x, y]);
-
   if (!node) return null;
-
-  const handleOptionClick = (action) => {
-    action();
-    onClose();
-  };
-
-  return (
-    <div
-      ref={menuRef}
-      className="graph-context-menu"
-      style={{
-        position: 'fixed',
-        top: `${pos.top}px`,
-        left: `${pos.left}px`,
-      }}
-    >
-      <div className="graph-context-menu-header">
-        <span className="graph-context-menu-title">{node.label}</span>
-      </div>
-      <div className="graph-context-menu-divider" />
-
-      {onOpenInfoPanel && (
-        <div className="graph-context-menu-item" onClick={() => handleOptionClick(onOpenInfoPanel)}>
-          <InfoIcon className="graph-context-menu-icon" />
-          <span className="graph-context-menu-label">Open info panel</span>
-        </div>
-      )}
-
-      {!isExternal && onOpenShell && (
-        <div
-          className="graph-context-menu-item"
-          onClick={() => handleOptionClick(() => onOpenShell('sh'))}
-        >
-          <TerminalIcon className="graph-context-menu-icon" />
-          <span className="graph-context-menu-label">Open pod shell (sh)</span>
-        </div>
-      )}
-
-      {!isExternal && isSerialCapablePod && (
-        <div
-          className="graph-context-menu-item"
-          onClick={() => handleOptionClick(() => onOpenShell('serial'))}
-        >
-          <TerminalIcon className="graph-context-menu-icon" />
-          <span className="graph-context-menu-label">Open serial shell (attach)</span>
-        </div>
-      )}
-
-      {!isExternal && isFRRPod && (
-        <div
-          className="graph-context-menu-item"
-          onClick={() => handleOptionClick(() => onOpenShell('vtysh'))}
-        >
-          <TerminalIcon className="graph-context-menu-icon" />
-          <span className="graph-context-menu-label">Open vtysh console</span>
-        </div>
-      )}
-
-      {!isExternal && onOpenLogs && (
-        <div className="graph-context-menu-item" onClick={() => handleOptionClick(onOpenLogs)}>
-          <LogsIcon className="graph-context-menu-icon" />
-          <span className="graph-context-menu-label">View logs</span>
-        </div>
-      )}
-
-      {!isExternal && onStartTrace && node?.fullInfo?.l3capable && (
-        <div className="graph-context-menu-item" onClick={() => handleOptionClick(onStartTrace)}>
-          <TraceIcon className="graph-context-menu-icon" />
-          <span className="graph-context-menu-label">Traceroute from here</span>
-        </div>
-      )}
-
-      {!isExternal && onStartTC && (
-        <div className="graph-context-menu-item" onClick={() => handleOptionClick(onStartTC)}>
-          <SlidersIcon className="graph-context-menu-icon" />
-          <span className="graph-context-menu-label">Traffic control</span>
-        </div>
-      )}
-
-      {!isExternal && onRestartPod && (
-        <div className="graph-context-menu-item" onClick={() => handleOptionClick(onRestartPod)}>
-          <RefreshIcon className="graph-context-menu-icon" />
-          <span className="graph-context-menu-label">Restart pod</span>
-        </div>
-      )}
-
-      {onDelete && (
-        <div
-          className="graph-context-menu-item graph-context-menu-item-danger"
-          onClick={() => handleOptionClick(onDelete)}
-        >
-          <TrashIcon className="graph-context-menu-icon" />
-          <span className="graph-context-menu-label">
-            {isExternal ? 'Delete external network' : 'Delete pod'}
-          </span>
-        </div>
-      )}
-    </div>
+  const info = node.fullInfo || {};
+  const isPod = node.type !== 'external';
+  const hasSerial = Boolean(
+    info.runtime === 'qemu' || info.serialShell || info.shellMode === 'serial'
   );
+  const isFRR = info.driver === 'FRRRouterDriver';
+
+  const items = [
+    onOpenInfoPanel && { label: 'Open info panel', icon: <InfoIcon />, onClick: onOpenInfoPanel },
+    isPod && onOpenLogs && { label: 'View logs', icon: <LogsIcon />, onClick: onOpenLogs },
+    DIVIDER,
+    isPod &&
+      onOpenShell && {
+        label: 'Shell',
+        icon: <TerminalIcon />,
+        children: [
+          { label: 'sh', alone: 'Open pod shell (sh)', onClick: () => onOpenShell('sh') },
+          hasSerial && {
+            label: 'serial (attach)',
+            alone: 'Open serial shell (attach)',
+            onClick: () => onOpenShell('serial'),
+          },
+          isFRR && {
+            label: 'vtysh',
+            alone: 'Open vtysh console',
+            onClick: () => onOpenShell('vtysh'),
+          },
+        ],
+      },
+    isPod && {
+      label: 'Tools',
+      icon: <WrenchIcon />,
+      children: [
+        onStartTrace &&
+          info.l3capable && {
+            label: 'Traceroute from here',
+            icon: <TraceIcon />,
+            onClick: onStartTrace,
+          },
+        onStartTC && { label: 'Traffic control', icon: <SlidersIcon />, onClick: onStartTC },
+      ],
+    },
+    DIVIDER,
+    isPod && onRestartPod && { label: 'Restart pod', icon: <RefreshIcon />, onClick: onRestartPod },
+    onDelete && {
+      label: isPod ? 'Delete pod' : 'Delete external network',
+      icon: <TrashIcon />,
+      onClick: onDelete,
+      danger: true,
+    },
+  ];
+
+  return <GraphMenu x={x} y={y} title={node.label} items={items} onClose={onClose} />;
 };
 
 export default ContextMenu;

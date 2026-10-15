@@ -1,10 +1,12 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import './ContextMenu.css';
+import React from 'react';
+import GraphMenu, { DIVIDER } from './GraphMenu';
 import { ReactComponent as PcapIcon } from '../assets/images/icons/pcap.svg';
 import { ReactComponent as InfoIcon } from '../assets/images/icons/info.svg';
 import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
 import { ReactComponent as SlidersIcon } from '../assets/images/icons/sliders.svg';
 
+// Right-click menu of a link. Capture and traffic control are groups with one
+// entry per end, so the menu stays at five rows.
 const EdgeContextMenu = ({
   x,
   y,
@@ -20,156 +22,40 @@ const EdgeContextMenu = ({
   onTCTarget,
   onTCLink,
 }) => {
-  const menuRef = useRef(null);
-  const leaveTimerRef = useRef(null);
-
-  useEffect(() => {
-    const AWAY_MARGIN = 50;
-    const CLOSE_DELAY = 250;
-
-    const handleClick = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
-        onClose();
-      }
-    };
-    const handleKey = (e) => {
-      if (e.key === 'Escape') onClose();
-    };
-    const handleMouseMove = (e) => {
-      if (!menuRef.current) return;
-      const r = menuRef.current.getBoundingClientRect();
-      const outside =
-        e.clientX < r.left - AWAY_MARGIN ||
-        e.clientX > r.right + AWAY_MARGIN ||
-        e.clientY < r.top - AWAY_MARGIN ||
-        e.clientY > r.bottom + AWAY_MARGIN;
-
-      if (outside) {
-        if (!leaveTimerRef.current) {
-          leaveTimerRef.current = setTimeout(() => {
-            leaveTimerRef.current = null;
-            onClose();
-          }, CLOSE_DELAY);
-        }
-      } else if (leaveTimerRef.current) {
-        clearTimeout(leaveTimerRef.current);
-        leaveTimerRef.current = null;
-      }
-    };
-
-    document.addEventListener('mousedown', handleClick);
-    document.addEventListener('keydown', handleKey);
-    document.addEventListener('mousemove', handleMouseMove);
-    return () => {
-      document.removeEventListener('mousedown', handleClick);
-      document.removeEventListener('keydown', handleKey);
-      document.removeEventListener('mousemove', handleMouseMove);
-      if (leaveTimerRef.current) clearTimeout(leaveTimerRef.current);
-    };
-  }, [onClose]);
-
-  const [pos, setPos] = useState({ top: y, left: x });
-
-  useLayoutEffect(() => {
-    if (!menuRef.current) return;
-    const rect = menuRef.current.getBoundingClientRect();
-    const MARGIN = 8;
-    let top = y;
-    let left = x;
-    if (left + rect.width > window.innerWidth - MARGIN)
-      left = window.innerWidth - rect.width - MARGIN;
-    if (top + rect.height > window.innerHeight - MARGIN)
-      top = window.innerHeight - rect.height - MARGIN;
-    if (left < MARGIN) left = MARGIN;
-    if (top < MARGIN) top = MARGIN;
-    setPos({ top, left });
-  }, [x, y]);
-
   if (!edge) return null;
+  const a = `${sourceLabel || edge.source}:${edge.data?.localIntf || '?'}`;
+  const b = `${targetLabel || edge.target}:${edge.data?.peerIntf || '?'}`;
 
-  const handleOptionClick = (action) => {
-    action();
-    onClose();
-  };
+  const items = [
+    onOpenInfoPanel && { label: 'Open info panel', icon: <InfoIcon />, onClick: onOpenInfoPanel },
+    DIVIDER,
+    {
+      label: 'Capture',
+      icon: <PcapIcon />,
+      wideIcon: true,
+      children: [
+        onCaptureSource && { label: `on ${a}`, alone: `Capture on ${a}`, onClick: onCaptureSource },
+        onCaptureTarget && { label: `on ${b}`, alone: `Capture on ${b}`, onClick: onCaptureTarget },
+      ],
+    },
+    {
+      label: 'Traffic control',
+      icon: <SlidersIcon />,
+      children: [
+        onTCSource && { label: `on ${a}`, alone: `Traffic control on ${a}`, onClick: onTCSource },
+        onTCTarget && { label: `on ${b}`, alone: `Traffic control on ${b}`, onClick: onTCTarget },
+        onTCLink && {
+          label: 'on both ends',
+          alone: 'Traffic control on both ends',
+          onClick: onTCLink,
+        },
+      ],
+    },
+    DIVIDER,
+    onDelete && { label: 'Delete link', icon: <TrashIcon />, onClick: onDelete, danger: true },
+  ];
 
-  const linkLabel = `${sourceLabel || edge.source}:${edge.data?.localIntf || '?'} ↔ ${targetLabel || edge.target}:${edge.data?.peerIntf || '?'}`;
-
-  return (
-    <div
-      ref={menuRef}
-      className="graph-context-menu"
-      style={{ position: 'fixed', top: `${pos.top}px`, left: `${pos.left}px` }}
-    >
-      <div className="graph-context-menu-header">
-        <span className="graph-context-menu-title">{linkLabel}</span>
-      </div>
-      <div className="graph-context-menu-divider" />
-
-      {onOpenInfoPanel && (
-        <div className="graph-context-menu-item" onClick={() => handleOptionClick(onOpenInfoPanel)}>
-          <InfoIcon className="graph-context-menu-icon" />
-          <span className="graph-context-menu-label">Open info panel</span>
-        </div>
-      )}
-
-      {onCaptureSource && (
-        <div className="graph-context-menu-item" onClick={() => handleOptionClick(onCaptureSource)}>
-          <span className="graph-context-menu-icon graph-context-menu-icon-pcap">
-            <PcapIcon />
-          </span>
-          <span className="graph-context-menu-label">
-            Capture on {sourceLabel || edge.source}:{edge.data?.localIntf || '?'}
-          </span>
-        </div>
-      )}
-
-      {onCaptureTarget && (
-        <div className="graph-context-menu-item" onClick={() => handleOptionClick(onCaptureTarget)}>
-          <span className="graph-context-menu-icon graph-context-menu-icon-pcap">
-            <PcapIcon />
-          </span>
-          <span className="graph-context-menu-label">
-            Capture on {targetLabel || edge.target}:{edge.data?.peerIntf || '?'}
-          </span>
-        </div>
-      )}
-
-      {onTCSource && (
-        <div className="graph-context-menu-item" onClick={() => handleOptionClick(onTCSource)}>
-          <SlidersIcon className="graph-context-menu-icon" />
-          <span className="graph-context-menu-label">
-            Traffic control on {sourceLabel || edge.source}:{edge.data?.localIntf || '?'}
-          </span>
-        </div>
-      )}
-
-      {onTCTarget && (
-        <div className="graph-context-menu-item" onClick={() => handleOptionClick(onTCTarget)}>
-          <SlidersIcon className="graph-context-menu-icon" />
-          <span className="graph-context-menu-label">
-            Traffic control on {targetLabel || edge.target}:{edge.data?.peerIntf || '?'}
-          </span>
-        </div>
-      )}
-
-      {onTCLink && (
-        <div className="graph-context-menu-item" onClick={() => handleOptionClick(onTCLink)}>
-          <SlidersIcon className="graph-context-menu-icon" />
-          <span className="graph-context-menu-label">Traffic control on both ends</span>
-        </div>
-      )}
-
-      {onDelete && (
-        <div
-          className="graph-context-menu-item graph-context-menu-item-danger"
-          onClick={() => handleOptionClick(onDelete)}
-        >
-          <TrashIcon className="graph-context-menu-icon" />
-          <span className="graph-context-menu-label">Delete link</span>
-        </div>
-      )}
-    </div>
-  );
+  return <GraphMenu x={x} y={y} title={`${a} ↔ ${b}`} items={items} onClose={onClose} />;
 };
 
 export default EdgeContextMenu;
