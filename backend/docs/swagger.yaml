@@ -628,6 +628,115 @@ definitions:
           type: string
         type: array
     type: object
+  types.IperfInterval:
+    properties:
+      bitsPerSecond:
+        example: 100663296
+        type: number
+      bytes:
+        example: 12582912
+        type: integer
+      end:
+        example: 1
+        type: number
+      packets:
+        description: 'UDP: datagrams sent in the interval.'
+        example: 86
+        type: integer
+      retransmits:
+        description: 'TCP: retransmissions the sender saw in the interval.'
+        example: 0
+        type: integer
+      start:
+        example: 0
+        type: number
+    type: object
+  types.IperfReportResponse:
+    properties:
+      bandwidth:
+        example: 10M
+        type: string
+      destination:
+        example: 192.168.3.10
+        type: string
+      duration:
+        example: 10
+        type: integer
+      finishedAt:
+        example: "2026-10-15T14:30:11Z"
+        type: string
+      intervals:
+        items:
+          $ref: '#/definitions/types.IperfInterval'
+        type: array
+      parallel:
+        example: 1
+        type: integer
+      proto:
+        example: tcp
+        type: string
+      reverse:
+        example: false
+        type: boolean
+      server:
+        $ref: '#/definitions/types.IperfServerDoc'
+      source:
+        example: host-0
+        type: string
+      startedAt:
+        example: "2026-10-15T14:30:00Z"
+        type: string
+      summary:
+        $ref: '#/definitions/types.IperfSummary'
+    type: object
+  types.IperfServerDoc:
+    properties:
+      pod:
+        example: web-0
+        type: string
+      port:
+        example: 5312
+        type: integer
+    type: object
+  types.IperfSummary:
+    properties:
+      cpuClientPercent:
+        example: 3.2
+        type: number
+      cpuServerPercent:
+        example: 2.9
+        type: number
+      jitterMs:
+        example: 0.021
+        type: number
+      lostPackets:
+        example: 4
+        type: integer
+      lostPercent:
+        example: 0.46
+        type: number
+      packets:
+        example: 860
+        type: integer
+      receivedBitsPerSecond:
+        example: 100663296
+        type: number
+      receivedBytes:
+        example: 125829120
+        type: integer
+      retransmits:
+        example: 3
+        type: integer
+      seconds:
+        example: 10
+        type: number
+      sentBitsPerSecond:
+        example: 100663296
+        type: number
+      sentBytes:
+        example: 125829120
+        type: integer
+    type: object
   types.KubeConfigInfo:
     properties:
       configured:
@@ -3114,6 +3223,84 @@ paths:
       summary: Liveness check
       tags:
       - system
+  /iperf/run/{namespace}/{podName}:
+    get:
+      description: 'Runs iperf3 from a source pod toward an address and returns the
+        whole run as one JSON document: one entry per second and the end totals (bytes,
+        bits per second, retransmissions for TCP, jitter and loss for UDP). By default
+        the backend starts the server on the pod that owns the destination address,
+        in its toolbox, on a port of its own; server=none uses a server the lab already
+        runs at the destination (port 5201 unless port says otherwise) and server=<pod>
+        names the pod to run it on. The source node must be L3-capable. A live version
+        streams the same intervals over WebSocket at /iperf/ws/{namespace}/{podName}.'
+      parameters:
+      - description: Namespace
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: Source pod (base name or indexed pod name); must be L3-capable
+        in: path
+        name: podName
+        required: true
+        type: string
+      - description: Destination IPv4 address or hostname
+        in: query
+        name: dest
+        required: true
+        type: string
+      - description: tcp (default) or udp
+        in: query
+        name: proto
+        type: string
+      - description: Seconds, 1 to 120 (default 10)
+        in: query
+        name: duration
+        type: integer
+      - description: Offered rate in bits per second with an optional k, M or G, e.g.
+          10M (UDP default 1M, TCP unlimited)
+        in: query
+        name: bandwidth
+        type: string
+      - description: Parallel streams, 1 to 8 (default 1)
+        in: query
+        name: parallel
+        type: integer
+      - description: Set 1 to have the server send and the client receive
+        in: query
+        name: reverse
+        type: integer
+      - description: auto (default), none, or the pod to run the server on
+        in: query
+        name: server
+        type: string
+      - description: 'Server port: the one to use with server=none (default 5201),
+          or the one to listen on for a managed server'
+        in: query
+        name: port
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.IperfReportResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Throughput test report
+      tags:
+      - iperf
   /kube/config:
     get:
       description: Returns information about the currently loaded kubeconfig (contexts,

@@ -797,3 +797,11 @@ Code lives in `backend/helpers/trace.go`, `backend/handlers/trace.go` and `backe
 ### 12.5 Limitations
 
 IPv4 only (`ip -o -4`, no `-6`). One trace at a time, unlike capture. TCP probes hit port 80. Loss and latency on intermediate hops can mislead because routers often rate-limit ICMP while still forwarding, so only the final hop's numbers are fully trustworthy.
+
+## 13. Throughput Tests
+
+An iperf3 run between two pods, through their toolboxes (11.1). The backend starts the server on the pod that owns the destination address, on a port of its own from 5301 up so it never collides with a server the lab runs in the pod (the toolbox shares the netns), waits for its listening line, then runs the client with `--json-stream` and forwards each interval as it is printed. The server serves one test (`-1`) and exits. `server=none` skips that and points the client at a server the lab already runs, as example 4's iperf-server; `server=<pod>` names the pod explicitly.
+
+Options: `proto` tcp or udp, `duration` 1 to 120 s, `bandwidth` (iperf3 `-b`, the offered rate for UDP), `parallel` streams, `reverse`, `port`. The report carries one entry per interval (bytes, bits per second, retransmissions for TCP, datagrams for UDP) and the end totals from both sides, with jitter and loss for UDP and the CPU each end burned.
+
+Endpoints under `/iperf/*` (Swagger tag **iperf**): `GET /iperf/ws/{namespace}/{podName}` streams `meta`, `status`, `interval`, `summary` and `error` frames and closing the socket stops the test; `GET /iperf/run/{namespace}/{podName}` returns the same run as one document. The source must be L3-capable and, for now, a container node: a VyOS guest cannot be reached from the pod netns where the toolbox lives. Code: `backend/helpers/iperf.go`, `backend/handlers/iperf.go`; the parser's tests run on recorded `--json-stream` output in `helpers/testdata`.

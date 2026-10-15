@@ -8,7 +8,7 @@
    <a href="https://doi.org/10.5281/zenodo.21276320"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.21276320.svg" alt="DOI" /></a>
 </p>
 
-> Last reviewed: 12 Oct 2026
+> Last reviewed: 15 Oct 2026
 
 **KubeNDT** is a platform for deploying and operating virtual network topologies on Kubernetes.
 
@@ -61,6 +61,7 @@ KubeNDT bundles a small set of third-party SVG icons in its frontend. See [ATTRI
 - **Network diagnostics**: Real-time interface status, IP address tracking, traffic analysis
 - **Live packet capture**: Wireshark-like per-interface capture streamed to the dashboard, with `.pcap` export
 - **Packet-path visualization**: run a traceroute from any node and watch the packet hop across the graph, with tunnel and drop/delivery detection and optional per-hop latency stats. Also available as a REST endpoint
+- **Throughput tests**: iperf3 between two nodes through the API, TCP or UDP, with the server started by the platform on the destination node
 
 ### Enterprise Features
 
