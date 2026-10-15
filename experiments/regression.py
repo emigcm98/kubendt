@@ -75,6 +75,22 @@ class Example:
     def note(self, msg): self.notes.append(msg); log(f"  note: {msg}")
     def timing(self, key, value): self.timings[key] = value; log(f"  {key}: {value}")
 
+def iperf_check(ex, label, path, server_pod=None):
+    """One throughput test through the API. The call and its report are the check; a
+    transfer that moves no bytes is a note, not a failure: full-size segments are dropped
+    without ICMP where a 1450 bridge port sits between two 1500 ends, which depends on
+    placement until the platform sets the MTU itself (PLAN section 7)."""
+    st, r = api("GET", path, timeout=120)
+    summary = (r.get("summary") or {}) if isinstance(r, dict) else {}
+    server = (r.get("server") or {}) if isinstance(r, dict) else {}
+    ok = st == 200 and bool(summary) and (server_pod is None or server.get("pod") == server_pod)
+    bps = summary.get("receivedBitsPerSecond") or 0
+    ex.check(label, ok, f"{bps / 1e6:.1f} Mbit/s" if ok else r)
+    if ok and bps < 1e6:
+        ex.note(f"{label}: {summary.get('sentBytes', 0)} bytes sent, {summary.get('retransmits')} retransmissions; "
+                "full-size segments dropped on this placement (MTU, PLAN section 7)")
+
+
 def deploy(ex, topo_path):
     st, r = api("POST", f"/network/deploy-network/{ex.ns}", body=json.load(open(topo_path)))
     ok = st == 200
@@ -156,6 +172,8 @@ def ex2():
         ok, det, w = retry(contains(ex.ns, "router1-0", 'vtysh -c "show ip ospf neighbor"', "Full"), 120); ex.check("router1 OSPF neighbor Full", ok, det, w)
         for ip in ("192.168.1.52", "192.168.2.51", "192.168.3.10"):
             ok, det, w = retry(ping(ex.ns, "host-0", ip), 60); ex.check(f"host-0 ping {ip}", ok, det, w)
+        # A throughput test across the two routers, the server started by the backend on web-0.
+        iperf_check(ex, "host-0 iperf3 to web-0 through the routers (managed server)", f"/iperf/run/{ex.ns}/host-0?dest=192.168.3.10&duration=3", server_pod="web-0")
         if restart(ex, "router1-0"):
             ok, det, w = retry(contains(ex.ns, "router1-0", 'vtysh -c "show ip ospf neighbor"', "Full"), 150); ex.check("router1 OSPF Full after restart (replay)", ok, det, w)
             ok, det, w = retry(ping(ex.ns, "host-0", "192.168.2.51"), 60); ex.check("host-0 ping 192.168.2.51 after restart", ok, det, w)
@@ -233,6 +251,8 @@ def ex4():
         ok, det, w = retry(contains(ex.ns, "user-0", "nslookup web-internal 2>&1", "Address"), 90); ex.check("user-0 nslookup web-internal", ok, det, w)
         ok, det, w = retry(contains(ex.ns, "user-0", "wget -qO- http://web-internal.kubendt.local 2>&1", "<"), 60); ex.check("user-0 wget web-internal (mounted page)", ok, det, w)
         ok, det, w = retry(contains(ex.ns, "user-0", "wget -qO- http://web-public.kubendt.local 2>&1", "<"), 60); ex.check("user-0 wget web-public", ok, det, w)
+        # The iperf-server node runs its own server on 5201, so the client goes alone.
+        iperf_check(ex, "user-0 iperf3 to iperf-server-1 (server=none)", f"/iperf/run/{ex.ns}/user-0?dest=192.168.10.10&duration=3&server=none")
         # README step 13: shaping on user-0 eth1 applied and read back through the API,
         # felt by a ping, then removed. One netem carries the delay and the rate.
         shaping = {"qdisc": "netem", "delay": "30ms", "rate": "1mbit"}

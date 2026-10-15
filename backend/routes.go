@@ -63,6 +63,14 @@ func SetupRoutes(router *gin.Engine) {
 		traceGroup.GET("/run/:namespace/:podName", handlers.TraceReport)
 	}
 
+	iperfGroup := router.Group("/iperf")
+	{
+		// Throughput test (iperf3) from a pod toward an address of the namespace,
+		// streamed interval by interval, and the same run as one JSON document.
+		iperfGroup.GET("/ws/:namespace/:podName", handlers.IperfWebSocket)
+		iperfGroup.GET("/run/:namespace/:podName", handlers.IperfReport)
+	}
+
 	podGroup := router.Group("/pods")
 	{
 		// 1. Get pod list

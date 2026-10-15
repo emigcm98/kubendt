@@ -1298,6 +1298,109 @@ const docTemplate = `{
                 }
             }
         },
+        "/iperf/run/{namespace}/{podName}": {
+            "get": {
+                "description": "Runs iperf3 from a source pod toward an address and returns the whole run as one JSON document: one entry per second and the end totals (bytes, bits per second, retransmissions for TCP, jitter and loss for UDP). By default the backend starts the server on the pod that owns the destination address, in its toolbox, on a port of its own; server=none uses a server the lab already runs at the destination (port 5201 unless port says otherwise) and server=\u003cpod\u003e names the pod to run it on. The source node must be L3-capable. A live version streams the same intervals over WebSocket at /iperf/ws/{namespace}/{podName}.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "iperf"
+                ],
+                "summary": "Throughput test report",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Source pod (base name or indexed pod name); must be L3-capable",
+                        "name": "podName",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Destination IPv4 address or hostname",
+                        "name": "dest",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "tcp (default) or udp",
+                        "name": "proto",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Seconds, 1 to 120 (default 10)",
+                        "name": "duration",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Offered rate in bits per second with an optional k, M or G, e.g. 10M (UDP default 1M, TCP unlimited)",
+                        "name": "bandwidth",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Parallel streams, 1 to 8 (default 1)",
+                        "name": "parallel",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Set 1 to have the server send and the client receive",
+                        "name": "reverse",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "auto (default), none, or the pod to run the server on",
+                        "name": "server",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Server port: the one to use with server=none (default 5201), or the one to listen on for a managed server",
+                        "name": "port",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.IperfReportResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/kube/config": {
             "get": {
                 "description": "Returns information about the currently loaded kubeconfig (contexts, current context, server URLs).",
@@ -3606,6 +3709,156 @@ const docTemplate = `{
                     "example": [
                         "eth0"
                     ]
+                }
+            }
+        },
+        "types.IperfInterval": {
+            "type": "object",
+            "properties": {
+                "bitsPerSecond": {
+                    "type": "number",
+                    "example": 100663296
+                },
+                "bytes": {
+                    "type": "integer",
+                    "example": 12582912
+                },
+                "end": {
+                    "type": "number",
+                    "example": 1
+                },
+                "packets": {
+                    "description": "UDP: datagrams sent in the interval.",
+                    "type": "integer",
+                    "example": 86
+                },
+                "retransmits": {
+                    "description": "TCP: retransmissions the sender saw in the interval.",
+                    "type": "integer",
+                    "example": 0
+                },
+                "start": {
+                    "type": "number",
+                    "example": 0
+                }
+            }
+        },
+        "types.IperfReportResponse": {
+            "type": "object",
+            "properties": {
+                "bandwidth": {
+                    "type": "string",
+                    "example": "10M"
+                },
+                "destination": {
+                    "type": "string",
+                    "example": "192.168.3.10"
+                },
+                "duration": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "finishedAt": {
+                    "type": "string",
+                    "example": "2026-10-15T14:30:11Z"
+                },
+                "intervals": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.IperfInterval"
+                    }
+                },
+                "parallel": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "proto": {
+                    "type": "string",
+                    "example": "tcp"
+                },
+                "reverse": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "server": {
+                    "$ref": "#/definitions/types.IperfServerDoc"
+                },
+                "source": {
+                    "type": "string",
+                    "example": "host-0"
+                },
+                "startedAt": {
+                    "type": "string",
+                    "example": "2026-10-15T14:30:00Z"
+                },
+                "summary": {
+                    "$ref": "#/definitions/types.IperfSummary"
+                }
+            }
+        },
+        "types.IperfServerDoc": {
+            "type": "object",
+            "properties": {
+                "pod": {
+                    "type": "string",
+                    "example": "web-0"
+                },
+                "port": {
+                    "type": "integer",
+                    "example": 5312
+                }
+            }
+        },
+        "types.IperfSummary": {
+            "type": "object",
+            "properties": {
+                "cpuClientPercent": {
+                    "type": "number",
+                    "example": 3.2
+                },
+                "cpuServerPercent": {
+                    "type": "number",
+                    "example": 2.9
+                },
+                "jitterMs": {
+                    "type": "number",
+                    "example": 0.021
+                },
+                "lostPackets": {
+                    "type": "integer",
+                    "example": 4
+                },
+                "lostPercent": {
+                    "type": "number",
+                    "example": 0.46
+                },
+                "packets": {
+                    "type": "integer",
+                    "example": 860
+                },
+                "receivedBitsPerSecond": {
+                    "type": "number",
+                    "example": 100663296
+                },
+                "receivedBytes": {
+                    "type": "integer",
+                    "example": 125829120
+                },
+                "retransmits": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "seconds": {
+                    "type": "number",
+                    "example": 10
+                },
+                "sentBitsPerSecond": {
+                    "type": "number",
+                    "example": 100663296
+                },
+                "sentBytes": {
+                    "type": "integer",
+                    "example": 125829120
                 }
             }
         },

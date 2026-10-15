@@ -831,6 +831,31 @@ func swaggerDeleteAPIToken() {}
 //	@Router       /trace/run/{namespace}/{podName} [get]
 func swaggerTraceReport() {}
 
+// ─── Iperf (throughput tests) ────────────────────────────────────────────────
+
+// swaggerIperfReport godoc
+//
+//	@Summary      Throughput test report
+//	@Description  Runs iperf3 from a source pod toward an address and returns the whole run as one JSON document: one entry per second and the end totals (bytes, bits per second, retransmissions for TCP, jitter and loss for UDP). By default the backend starts the server on the pod that owns the destination address, in its toolbox, on a port of its own; server=none uses a server the lab already runs at the destination (port 5201 unless port says otherwise) and server=<pod> names the pod to run it on. The source node must be L3-capable. A live version streams the same intervals over WebSocket at /iperf/ws/{namespace}/{podName}.
+//	@Tags         iperf
+//	@Produce      json
+//	@Param        namespace  path      string   true   "Namespace"
+//	@Param        podName    path      string   true   "Source pod (base name or indexed pod name); must be L3-capable"
+//	@Param        dest       query     string   true   "Destination IPv4 address or hostname"
+//	@Param        proto      query     string   false  "tcp (default) or udp"
+//	@Param        duration   query     integer  false  "Seconds, 1 to 120 (default 10)"
+//	@Param        bandwidth  query     string   false  "Offered rate in bits per second with an optional k, M or G, e.g. 10M (UDP default 1M, TCP unlimited)"
+//	@Param        parallel   query     integer  false  "Parallel streams, 1 to 8 (default 1)"
+//	@Param        reverse    query     integer  false  "Set 1 to have the server send and the client receive"
+//	@Param        server     query     string   false  "auto (default), none, or the pod to run the server on"
+//	@Param        port       query     integer  false  "Server port: the one to use with server=none (default 5201), or the one to listen on for a managed server"
+//	@Success      200  {object}  types.IperfReportResponse
+//	@Failure      400  {object}  types.ErrorResponse
+//	@Failure      404  {object}  types.ErrorResponse
+//	@Failure      500  {object}  types.ErrorResponse
+//	@Router       /iperf/run/{namespace}/{podName} [get]
+func swaggerIperfReport() {}
+
 // ─── Type aliases used by Swagger (to force inclusion in generated docs) ─────
 
 // Ensure referenced types appear in the generated OpenAPI schema.
