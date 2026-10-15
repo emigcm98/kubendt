@@ -26,6 +26,7 @@ var _ capabilities.L3Capable = (*FRRRouterDriver)(nil)
 var _ capabilities.NATCapable = (*FRRRouterDriver)(nil)
 var _ capabilities.OSPFCapable = (*FRRRouterDriver)(nil)
 var _ types.ReadinessProbeProvider = (*FRRRouterDriver)(nil)
+var _ drivers_meta.ShellProvider = (*FRRRouterDriver)(nil)
 
 // ReadinessProbeCommands makes the pod Ready only when zebra, and every
 // daemon enabled in /etc/frr/daemons, answer on their vty socket. The
@@ -94,4 +95,9 @@ func (FRRRouterDriver) OSPFMTUIgnore(iface string) [][]string {
 
 func (FRRRouterDriver) OSPFRemoveMTUIgnore(iface string) [][]string {
 	return [][]string{{"vtysh", "-c", "configure terminal", "-c", fmt.Sprintf("interface %s", iface), "-c", "no ip ospf mtu-ignore"}}
+}
+
+// Shells: vtysh, the FRR console.
+func (FRRRouterDriver) Shells() []drivers_meta.ShellSpec {
+	return []drivers_meta.ShellSpec{{Mode: "vtysh", Label: "vtysh console", Command: []string{"vtysh"}}}
 }

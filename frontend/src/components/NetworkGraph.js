@@ -1262,6 +1262,7 @@ const NetworkGraph = ({
   }, [modifyingTopology]);
 
   const openInteractiveShell = (pod, shellMode = 'sh') => {
+    const shellLabel = (pod?.shells || []).find((s) => s.mode === shellMode)?.label || shellMode;
     const shellId = `shell-${Date.now()}-${Math.random()}`;
     setMaxZIndex((prev) => prev + 1);
     setOpenShells((prev) => [
@@ -1271,6 +1272,7 @@ const NetworkGraph = ({
         podName: pod?.metadata?.name || pod?.name,
         pod,
         shellMode,
+        shellLabel,
         zIndex: maxZIndex + 1,
         minimized: false,
       },
@@ -3918,6 +3920,7 @@ const NetworkGraph = ({
           podName={shell.podName}
           namespace={namespace}
           shellMode={shell.shellMode}
+          shellLabel={shell.shellLabel}
           zIndex={shell.zIndex}
           minimized={!!shell.minimized}
           onClose={() => closeInteractiveShell(shell.id)}

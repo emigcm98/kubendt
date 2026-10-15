@@ -36,6 +36,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - The node and link menus of the graph group the shells, the tools, the captures and the traffic control entries into submenus, so each menu stays at five or six rows.
 - Capture, traceroute and traffic control share one `toolbox-*` ephemeral container per pod, reused whichever tool injected it, and `KUBENDT_TOOLBOX_IMAGE` names its image. The slim image moves to `deploy/custom_images/toolbox` and ships every tool the toolbox runs.
 - Where a tool runs on a node is declared by its driver: a guest VM driver implements `GuestToolProvider` with the wrapper into the guest and the tools its image ships, the trace and the throughput test go through one runner, and the pod listing and `GET /drivers` publish `tools`.
+- A driver declares the devices its pods need and the shells its nodes offer (`DeviceProvider`, `ShellProvider`). The pod listing publishes `shells`, the node menu builds its Shell group from it, and the shell endpoint takes any declared mode.
 
 ### Fixed
 

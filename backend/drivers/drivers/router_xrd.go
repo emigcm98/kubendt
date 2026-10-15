@@ -36,6 +36,7 @@ var _ types.EffectiveSingleInterfaceInspector = (*XRDRouterDriver)(nil)
 var _ types.EffectiveInterfaceStateInspector = (*XRDRouterDriver)(nil)
 var _ types.GuestInterfaceMapper = (*XRDRouterDriver)(nil)
 var _ types.ReadinessProbeProvider = (*XRDRouterDriver)(nil)
+var _ drivers_meta.DeviceProvider = (*XRDRouterDriver)(nil)
 
 // ReadinessProbeCommands gates pod readiness on Loopback0 being up, that
 // only happens once XR has applied the generated startup-config.
@@ -414,3 +415,6 @@ func parseXRIPv4(output string) string {
 	}
 	return m[1]
 }
+
+// Devices: the dataplane opens taps and mounts a fuse filesystem.
+func (XRDRouterDriver) Devices() []string { return []string{"/dev/net/tun", "/dev/fuse"} }

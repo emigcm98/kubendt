@@ -12,6 +12,7 @@ const PodInteractiveShellModal = ({
   podName,
   namespace,
   shellMode = 'sh',
+  shellLabel = '',
   onClose,
   onMinimize,
   minimized = false,
@@ -422,15 +423,7 @@ const PodInteractiveShellModal = ({
             title={`Status: ${connectionState}`}
           />
           <span className="shell-pod-name">{podName}</span>
-          <span className="shell-pod-status">
-            {' '}
-            -{' '}
-            {shellMode === 'serial'
-              ? 'Serial Shell'
-              : shellMode === 'vtysh'
-                ? 'vtysh Console'
-                : 'Pod Shell (sh)'}
-          </span>
+          <span className="shell-pod-status"> - {shellLabel || shellMode}</span>
         </div>
         <div className="shell-modal-buttons">
           <button

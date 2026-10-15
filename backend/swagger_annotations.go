@@ -668,11 +668,11 @@ func swaggerLoadKubeConfig() {}
 // swaggerInteractiveShellWebSocket godoc
 //
 //	@Summary      Interactive shell (WebSocket)
-//	@Description  Opens a WebSocket connection providing an interactive shell inside a pod. Query parameter `mode` controls shell type: `auto` (default), `sh`, or `serial`.
+//	@Description  Opens a WebSocket connection providing an interactive shell inside a pod. Query parameter `mode` picks the shell: `auto` (default, the serial console when the node has one, else the pod shell), `sh`, `serial`, or a mode the node's driver declares (`vtysh` on FRR, `vyos` on VyOS); the pod listing's `shells` field says which a node offers.
 //	@Tags         shell
 //	@Param        namespace  path  string  true  "Namespace name"
 //	@Param        podName    path  string  true  "Pod name"
-//	@Param        mode       query string  false "Shell mode: auto|sh|serial" Enums(auto,sh,serial) default(auto)
+//	@Param        mode       query string  false "Shell mode: auto, sh, serial, or one the driver declares" default(auto)
 //	@Router       /shell/ws/{namespace}/{podName} [get]
 func swaggerInteractiveShellWebSocket() {}
 

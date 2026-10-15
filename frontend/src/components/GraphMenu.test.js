@@ -30,9 +30,12 @@ const labels = () =>
   );
 
 const ALL_TOOLS = ['trace', 'iperf'];
+const SH = { mode: 'sh', label: 'pod shell (sh)' };
+const VTYSH = { mode: 'vtysh', label: 'vtysh console' };
+const SERIAL = { mode: 'serial', label: 'serial console (attach)' };
 
 test('an FRR router groups its shells and tools', () => {
-  nodeMenu({ driver: 'FRRRouterDriver', l3capable: true, tools: ALL_TOOLS });
+  nodeMenu({ driver: 'FRRRouterDriver', l3capable: true, tools: ALL_TOOLS, shells: [SH, VTYSH] });
   expect(labels()).toEqual([
     'Open info panel',
     'View logs',
@@ -42,22 +45,30 @@ test('an FRR router groups its shells and tools', () => {
     'Delete pod',
   ]);
   fireEvent.mouseEnter(screen.getByText('Shell'));
-  expect(labels()).toContain('vtysh');
-  expect(labels()).toContain('sh');
-  expect(labels()).not.toContain('serial (attach)');
+  expect(labels()).toContain('vtysh console');
+  expect(labels()).toContain('pod shell (sh)');
+  expect(labels()).not.toContain('serial console (attach)');
   fireEvent.mouseEnter(screen.getByText('Tools'));
   expect(labels()).toContain('Traceroute from here');
   expect(labels()).toContain('Throughput test from here');
   expect(labels()).toContain('Traffic control');
-  expect(labels()).not.toContain('vtysh');
+  expect(labels()).not.toContain('vtysh console');
 });
 
 test('a node whose driver lacks a tool shows it dimmed with the reason', () => {
   const onStartIperf = jest.fn();
   nodeMenu(
-    { driver: 'VyOSRouterDriver', l3capable: true, runtime: 'qemu', tools: ['trace'] },
+    {
+      driver: 'VyOSRouterDriver',
+      l3capable: true,
+      runtime: 'qemu',
+      tools: ['trace'],
+      shells: [SH, SERIAL],
+    },
     { onStartIperf }
   );
+  fireEvent.mouseEnter(screen.getByText('Shell'));
+  expect(labels()).toContain('serial console (attach)');
   fireEvent.mouseEnter(screen.getByText('Tools'));
   const trace = screen.getByText('Traceroute from here').closest('.graph-context-menu-item');
   expect(trace.className).not.toContain('graph-context-menu-item-disabled');
@@ -70,7 +81,7 @@ test('a node whose driver lacks a tool shows it dimmed with the reason', () => {
 });
 
 test('a group with one entry collapses into it', () => {
-  nodeMenu({ driver: 'HostDriver', l3capable: false });
+  nodeMenu({ driver: 'HostDriver', l3capable: false, shells: [SH] });
   expect(labels()).toEqual([
     'Open info panel',
     'View logs',
@@ -85,11 +96,11 @@ test('a submenu entry runs its action and closes the menu', () => {
   const onOpenShell = jest.fn();
   const onClose = jest.fn();
   nodeMenu(
-    { driver: 'FRRRouterDriver', l3capable: true, tools: ALL_TOOLS },
+    { driver: 'FRRRouterDriver', l3capable: true, tools: ALL_TOOLS, shells: [SH, VTYSH] },
     { onOpenShell, onClose }
   );
   fireEvent.mouseEnter(screen.getByText('Shell'));
-  fireEvent.click(screen.getByText('vtysh'));
+  fireEvent.click(screen.getByText('vtysh console'));
   expect(onOpenShell).toHaveBeenCalledWith('vtysh');
   expect(onClose).toHaveBeenCalled();
 });

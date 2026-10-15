@@ -492,11 +492,11 @@ isQemuPod := podObj.Labels["kubendt/qemu"] == "true" ||
 
 **Shell Mode Adaptation**:
 
+- The modes a node offers come from `helpers.PodShells`: `sh` for every container, `serial` for a guest VM or a node with `shellMode: serial`, plus what the driver declares through `drivers_meta.ShellProvider` (`vtysh` on FRR, `vyos` on VyOS). The pod listing publishes them as `shells` and the node menu builds its Shell group from that list.
 - `mode="serial"`: Uses k8s attach API (direct console, no pty allocation)
-- `mode="sh"/"bash"`: Uses k8s exec API with bash/sh shell
-- `mode="auto"` (default):
-  - QEMU pods: use attach (serial console fallback)
-  - Non-QEMU: use exec with bash/sh
+- `mode="sh"`: Uses k8s exec API with bash when the image has it, sh otherwise
+- A declared mode: exec of the driver's command with a TTY
+- `mode="auto"` (default): the serial console when there is one, the pod shell otherwise
 
 ### 5.3 Configuration Differences
 
