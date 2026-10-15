@@ -63,5 +63,10 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "jest": {
+    "moduleNameMapper": {
+      "\\.svg$": "<rootDir>/src/__mocks__/svgMock.js"
+    }
   }
 }

@@ -77,12 +77,40 @@
   justify-content: center;
 }
 
+.graph-context-menu-icon > svg {
+  width: 18px;
+  height: 18px;
+}
+
 /* Wide icons (e.g. the PCAP tag) must escape the fixed 18px square, otherwise
    they get squashed to a sliver. */
 .graph-context-menu-icon-pcap {
   width: auto;
   min-width: auto;
   max-width: none;
+}
+
+.graph-context-menu-icon-pcap > svg {
+  width: auto;
+}
+
+/* An entry that opens a submenu keeps its highlight while the submenu shows. */
+.graph-context-menu-item-open {
+  background: var(--menu-hover);
+  color: var(--menu-accent);
+}
+
+.graph-context-menu-chevron {
+  width: 14px;
+  height: 14px;
+  margin-left: 4px;
+  opacity: 0.7;
+}
+
+.graph-context-menu-sub {
+  min-width: 180px;
+  padding: 4px 0;
+  z-index: 10001;
 }
 
 .graph-context-menu-label {

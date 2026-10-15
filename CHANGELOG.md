@@ -31,6 +31,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Actions are declared once in a registry next to their capability. `GET /drivers` lists each action's parameters with the JSON names the API takes, their kind and whether they are required, instead of the Go method names.
 - Drivers name the executor their actions run through and map guest interface names when they differ from the pod, instead of planning every action by hand. `GET /drivers` reports `vyos_api_apply` for VyOS. The configure request's action entry is now fully described in Swagger.
 - The configure request, the replay after a restart, the peer replay and the link attributes run actions through one pipeline. An action stops at its first failing command and the configure summary counts actions, not commands.
+- The node and link menus of the graph group the shells, the tools, the captures and the traffic control entries into submenus, so each menu stays at five or six rows.
 
 ### Fixed
 
