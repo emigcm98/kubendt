@@ -2715,7 +2715,7 @@ const docTemplate = `{
         },
         "/shell/ws/{namespace}/{podName}": {
             "get": {
-                "description": "Opens a WebSocket connection providing an interactive shell inside a pod. Query parameter ` + "`" + `mode` + "`" + ` controls shell type: ` + "`" + `auto` + "`" + ` (default), ` + "`" + `sh` + "`" + `, or ` + "`" + `serial` + "`" + `.",
+                "description": "Opens a WebSocket connection providing an interactive shell inside a pod. Query parameter ` + "`" + `mode` + "`" + ` picks the shell: ` + "`" + `auto` + "`" + ` (default, the serial console when the node has one, else the pod shell), ` + "`" + `sh` + "`" + `, ` + "`" + `serial` + "`" + `, or a mode the node's driver declares (` + "`" + `vtysh` + "`" + ` on FRR, ` + "`" + `vyos` + "`" + ` on VyOS); the pod listing's ` + "`" + `shells` + "`" + ` field says which a node offers.",
                 "tags": [
                     "shell"
                 ],
@@ -2736,14 +2736,9 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "enum": [
-                            "auto",
-                            "sh",
-                            "serial"
-                        ],
                         "type": "string",
                         "default": "auto",
-                        "description": "Shell mode: auto|sh|serial",
+                        "description": "Shell mode: auto, sh, serial, or one the driver declares",
                         "name": "mode",
                         "in": "query"
                     }

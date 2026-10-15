@@ -32,6 +32,8 @@ var _ types.EffectiveSingleInterfaceInspector = (*VyOSRouterDriver)(nil)
 var _ types.EffectiveInterfaceStateInspector = (*VyOSRouterDriver)(nil)
 var _ types.ReadinessProbeProvider = (*VyOSRouterDriver)(nil)
 var _ drivers_meta.GuestToolProvider = (*VyOSRouterDriver)(nil)
+var _ drivers_meta.DeviceProvider = (*VyOSRouterDriver)(nil)
+var _ drivers_meta.ShellProvider = (*VyOSRouterDriver)(nil)
 var _ drivers_meta.InterfaceNameConstrainer = (*VyOSRouterDriver)(nil)
 var _ drivers_meta.RuntimeProvider = (*VyOSRouterDriver)(nil)
 
@@ -91,6 +93,15 @@ func (VyOSRouterDriver) GuestWrapper() []string {
 // joins once customize-qcow2.sh installs a 3.17 or later.
 func (VyOSRouterDriver) GuestTools() []string {
 	return []string{drivers_meta.ToolTrace}
+}
+
+// Devices: the VM needs KVM.
+func (VyOSRouterDriver) Devices() []string { return []string{"/dev/kvm"} }
+
+// Shells: the VyOS CLI, an ssh session into the guest over the same channel
+// the executors use, which lands in the operational shell.
+func (VyOSRouterDriver) Shells() []drivers_meta.ShellSpec {
+	return []drivers_meta.ShellSpec{{Mode: "vyos", Label: "VyOS CLI (ssh)", Command: []string{"ssh_qemu"}}}
 }
 
 type VyOSRouterDriver struct {

@@ -11,7 +11,8 @@ import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
 import { ReactComponent as InfoIcon } from '../assets/images/icons/info.svg';
 
 // Right-click menu of a node. The shells and the tools are groups, so the
-// menu stays at six rows however many a node supports.
+// menu stays at six rows however many a node supports. What a node offers
+// comes from the pod listing, the menu knows no driver.
 const ContextMenu = ({
   x,
   y,
@@ -29,10 +30,9 @@ const ContextMenu = ({
   if (!node) return null;
   const info = node.fullInfo || {};
   const isPod = node.type !== 'external';
-  const hasSerial = Boolean(
-    info.runtime === 'qemu' || info.serialShell || info.shellMode === 'serial'
-  );
-  const isFRR = info.driver === 'FRRRouterDriver';
+  // The shells a node offers come from its driver through the pod listing.
+  const shells =
+    info.shells && info.shells.length ? info.shells : [{ mode: 'sh', label: 'pod shell (sh)' }];
   // The tools a node offers come from its driver through the pod listing; a
   // missing one shows dimmed with the reason, not hidden.
   const tools = info.tools || [];
@@ -50,19 +50,11 @@ const ContextMenu = ({
       onOpenShell && {
         label: 'Shell',
         icon: <TerminalIcon />,
-        children: [
-          { label: 'sh', alone: 'Open pod shell (sh)', onClick: () => onOpenShell('sh') },
-          hasSerial && {
-            label: 'serial (attach)',
-            alone: 'Open serial shell (attach)',
-            onClick: () => onOpenShell('serial'),
-          },
-          isFRR && {
-            label: 'vtysh',
-            alone: 'Open vtysh console',
-            onClick: () => onOpenShell('vtysh'),
-          },
-        ],
+        children: shells.map((sh) => ({
+          label: sh.label,
+          alone: `Open ${sh.label}`,
+          onClick: () => onOpenShell(sh.mode),
+        })),
       },
     isPod && {
       label: 'Tools',

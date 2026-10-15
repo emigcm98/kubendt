@@ -150,10 +150,11 @@ KubeNDT implements network topology management for Kubernetes through five inter
 
 **Detection & Shell Adaptation**:
 
-- `InteractiveShellWebSocket()` checks pods labels
-- `mode="serial"`: Uses k8s attach API (QEMU serial console fallback)
-- `mode="sh"/"bash"`: Uses k8s exec API with shell
-- `mode="auto"` (default): Uses attach for QEMU pods, exec for others
+- `InteractiveShellWebSocket()` looks the mode up in the shells the node offers (`helpers.PodShells`): the pod shell for every container, the serial console for a guest VM, and what the driver declares through `drivers_meta.ShellProvider` (`vtysh` on FRR, `vyos` on VyOS, an ssh session into the guest)
+- `mode="serial"`: Uses k8s attach API (QEMU serial console)
+- `mode="sh"`: Uses k8s exec API with bash when the image has it, sh otherwise
+- A declared mode: exec of the driver's command with a TTY
+- `mode="auto"` (default): the serial console when there is one, the pod shell otherwise
 
 **Pod Configuration Differences**:
 

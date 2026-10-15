@@ -84,6 +84,8 @@ func ListPods(c *gin.Context) {
 			// The tools this node offers, from its driver; the menus show the
 			// rest dimmed.
 			"tools": helpers.PodTools(&pod),
+			// The shells this node offers, mode and label, the pod shell first.
+			"shells": helpers.PodShells(&pod),
 			"runtime": func() string {
 				runtime := pod.Labels["kubendt/runtime"]
 				if runtime == "" {

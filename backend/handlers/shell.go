@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"kubendt/helpers"
 	"kubendt/kubeclient"
@@ -52,24 +53,19 @@ func InteractiveShellWebSocket(c *gin.Context) {
 		return
 	}
 
-	isQemuPod := false
-	isSerialShellPod := false
-	if podObj.Labels != nil {
-		isQemuPod = podObj.Labels["kubendt/qemu"] == "true" || podObj.Labels["kubendt/runtime"] == "qemu"
-		isSerialShellPod = isQemuPod || podObj.Labels["kubendt/shell-mode"] == "serial"
+	// The shells this node offers, from its runtime and its driver. auto is
+	// the serial console when there is one, the pod shell otherwise.
+	shells := helpers.PodShells(podObj)
+	shell := helpers.DefaultShell(shells)
+	if mode != "auto" {
+		var ok bool
+		if shell, ok = helpers.FindShell(shells, mode); !ok {
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("shell mode %q is not available on this node", mode)})
+			return
+		}
 	}
-
-	if mode != "auto" && mode != "sh" && mode != "serial" && mode != "vtysh" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid shell mode"})
-		return
-	}
-
-	if mode == "serial" && !isSerialShellPod {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "serial shell is not enabled for this pod"})
-		return
-	}
-
-	useAttach := (mode == "serial") || (mode == "auto" && isSerialShellPod)
+	mode = shell.Mode
+	useAttach := shell.Mode == "serial"
 
 	containerName := ""
 	if len(podObj.Spec.Containers) > 0 {
@@ -84,11 +80,11 @@ func InteractiveShellWebSocket(c *gin.Context) {
 
 	defer ws.Close()
 
-	// Keep backwards-compatible "auto" mode while allowing explicit shell selection.
+	// A declared shell has its command; the pod shell probes for bash.
 	shellToUse := "sh"
 	var shellCmd []string
-	if mode == "vtysh" {
-		shellCmd = []string{"vtysh"}
+	if len(shell.Command) > 0 {
+		shellCmd = shell.Command
 	} else if !useAttach {
 		checkReq := kubeclient.Clientset.CoreV1().RESTClient().
 			Post().

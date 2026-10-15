@@ -23,7 +23,7 @@ REGISTRATION TIME (Backend Startup):
 │  │  └─ Extracts Name="FRRRouterDriver", Type="router"
 │  └─ Register(NewVyOSRouterDriver)
 │     └─ Extracts Name="VyOSRouterDriver", Type="router"
-│        Also registers /dev/kvm device for this driver
+│        The driver declares /dev/kvm through DeviceProvider
 │
 └─ DefaultDriverByType = {
      "host": "BasicHostDriver" (default; "HostDriver" is opt-in)
