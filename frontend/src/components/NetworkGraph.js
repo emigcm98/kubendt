@@ -677,18 +677,44 @@ const generateNodes = ({
   });
 };
 
+// Distance between two links drawn between the same pair of nodes, and the
+// most a bundle may spread so its cables still leave the node body.
+const PARALLEL_LINK_GAP = 16;
+const PARALLEL_LINK_SPREAD = NODE_SIZE * 0.56;
+
 const generateEdges = (links, expandedPods, originalNodes) => {
   const podNames = expandedPods.map((p) => p.name);
+  const resolve = (name) => (podNames.includes(name) ? name : resolvePodName(name, originalNodes));
+  const ends = links.map((link) => ({ src: resolve(link.node), dst: resolve(link.peerNode) }));
+
+  // Links between the same two pods are spread sideways so none hides
+  // another. The sign follows the sorted pair, so both directions agree.
+  const pairKey = (a, b) => (a < b ? `${a}|${b}` : `${b}|${a}`);
+  const siblings = new Map();
+  ends.forEach(({ src, dst }, i) => {
+    const key = pairKey(src, dst);
+    if (!siblings.has(key)) siblings.set(key, []);
+    siblings.get(key).push(i);
+  });
+  const parallelOf = (i, src, dst) => {
+    const group = siblings.get(pairKey(src, dst));
+    if (group.length < 2) return { offset: 0, labelStep: 0 };
+    const gap = Math.min(PARALLEL_LINK_GAP, PARALLEL_LINK_SPREAD / (group.length - 1));
+    const rank = group.indexOf(i);
+    const slot = rank - (group.length - 1) / 2;
+    // Cables closer than a label is tall (about NODE_SIZE / 5) spread their
+    // labels over as many columns along the cable as needed.
+    const columns = Math.max(1, Math.ceil(NODE_SIZE / 5 / gap));
+    return {
+      offset: slot * gap * (src < dst ? 1 : -1),
+      labelStep: rank % columns,
+      labelColumns: columns,
+    };
+  };
 
   return links
     .map((link, index) => {
-      const src = podNames.includes(link.node)
-        ? link.node
-        : resolvePodName(link.node, originalNodes);
-
-      const dst = podNames.includes(link.peerNode)
-        ? link.peerNode
-        : resolvePodName(link.peerNode, originalNodes);
+      const { src, dst } = ends[index];
 
       return {
         id: `${src}-${dst}-${index}`,
@@ -696,12 +722,13 @@ const generateEdges = (links, expandedPods, originalNodes) => {
         target: dst,
         sourceHandle: 'center',
         targetHandle: 'center',
-        type: 'straight',
+        type: 'link',
         animated: false,
         data: {
           localIntf: link.localIntf,
           peerIntf: link.peerIntf,
           uid: link.uid,
+          ...parallelOf(index, src, dst),
           linkName: link.name || null,
           // Declared link properties, shown in the link panel.
           attributes:

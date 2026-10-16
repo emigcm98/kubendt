@@ -23,7 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `GET /pods/counters/{namespace}/{pod}` returns the kernel counters of every interface of a pod. The interface detail of the node panel and both ends of the link panel show rates, packets, errors and drops, read every 5 s while open.
 - View logs in the node menu and a button in the node panel open a floating viewer that follows the log, with filter, timestamps, the previous instance after a restart and download. `GET /pods/logs/{namespace}/{pod}` returns it as text and the WebSocket variant streams it.
 - `GET /iperf/run/{namespace}/{pod}` runs an iperf3 throughput test from a pod toward an address of the namespace, TCP or UDP, with the server started by the backend on the destination node or one the lab already runs, and the WebSocket variant streams it interval by interval.
-- New iperf (througput test) window opens from Tools in the node menu: destination node or address, the server started by KubeNDT or one already running, TCP or UDP, duration, rate, streams and reverse, with one bar per second as it runs, the end totals and a JSON export.
+- New iperf (throughput test) window opens from Tools in the node menu: destination node or address, the server started by KubeNDT or one already running, TCP or UDP, duration, rate, streams and reverse, with one bar per second as it runs, the end totals and a JSON export.
 - `doc/DRIVERS.md` explains how to write a driver: the minimum per node type, every optional interface and what happens when it is missing, where a tool runs, and the tests a new driver has to pass.
 - Throughput tests run on VyOS nodes too, as source or as server: the image build puts a static iperf3 3.21 in the guest, since VyOS ships 3.12, and the driver declares it.
 
@@ -47,12 +47,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Traffic control rejects a malformed or out-of-range value instead of dropping it and reporting success. The error names the field and the accepted range.
 - Re-applying shaping starts from a clean root qdisc. `tc qdisc replace` kept the parameters a new request did not mention, so a `corrupt` set once survived later updates.
 - `del_qdisc` on an interface without shaping succeeds instead of failing with "Cannot delete qdisc with handle of zero".
-- A `tbf` request only needs `rate`, `burst` and `latency` default to `32kbit` and `50ms`. A request without `tcparams` or with an unsupported qdisc says so instead of "unrecognized or unsupported action".
+- A `tbf` request only needs `rate`. `burst` and `latency` default to `32kbit` and `50ms`. A request without `tcparams` or with an unsupported qdisc says so instead of "unrecognized or unsupported action".
 - A replayed `custom` action runs through kubectl, as it did the first time, instead of the driver's default executor.
 - An action that fails because the image lacks a program names the program, instead of the raw exec error.
 - A configure request that names a pod twice, by hand or through a `links` entry, runs its actions as one job in request order, instead of two jobs at once persisted in whichever order they landed.
 - The traffic control panel reports the backend's error when an action is rejected instead of saying it was applied, keeps tc units for rate and burst instead of whole Mbit and mislabeled kilobytes, and shows an interface on the kernel default qdisc as unshaped.
 - Opening traffic control on a node whose image has no `tc` is faster the first time: a toolbox left by capture or trace is used directly, and a new one is awaited every 200 ms instead of every second.
+- Two links between the same two nodes are both returned by `GET /network/get-network` and drawn side by side on the graph. The read deduplicated links by node pair, so a second parallel link never reached the graph or the export, and the graph drew the two on top of each other.
+- The chip that counts a multi-node selection sits under the search row of the graph instead of over it.
 
 ## [1.4.0] - 2026-09-26
 

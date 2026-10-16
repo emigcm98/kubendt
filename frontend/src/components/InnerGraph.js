@@ -8,6 +8,7 @@ import {
   useReactFlow,
   useStoreApi,
 } from 'reactflow';
+import LinkEdge from './LinkEdge';
 import 'reactflow/dist/style.css';
 import MiniMapOverlay from './MiniMapOverlay.js';
 import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
@@ -35,6 +36,7 @@ const GRAPH_MIN_ZOOM = 0.4;
 const GRAPH_MAX_ZOOM = 3.5;
 
 const nodeTypes = { custom: CustomNode };
+const edgeTypes = { link: LinkEdge };
 
 const EdgeLabel = ({ x, y, intfName, status, loading, dimmed, onClick, onHover, onRightClick }) => {
   const ref = useRef(null);
@@ -118,6 +120,7 @@ const RADIUS_V = NODE_SIZE * 0.54; // up / down (switch, router)
 const RADIUS_H = NODE_SIZE * 0.72; // left / right (switch, router)
 const HOST_DELTA = NODE_SIZE * 0.12; // host: +on V, -on H
 const SHIFT = 5; // downward nudge (px)
+const LABEL_STAGGER = NODE_SIZE * 0.45; // a bundle's alternate labels sit this much further along
 
 // --- Auto-fit tuning (single place for both the auto-fit and the fit button) ---
 // FIT_PADDING is a FRACTION of the viewport (0.25 = 25% margin), not pixels;
@@ -731,6 +734,7 @@ const InnerGraph = ({
           setInterfaceContextMenu(null);
         }}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
       >
         <MiniMapOverlay nodes={nodes} selectedNodeId={selectedNodeInfo?.id} />
         {/* Custom controls: zoom and fit are animated with a duration so they
@@ -822,6 +826,11 @@ const InnerGraph = ({
 
             const ux = dx / length;
             const uy = dy / length;
+            // Parallel links are drawn shifted along the normal (LinkEdge),
+            // so their labels move with them.
+            const offset = edge.data?.offset || 0;
+            const ox = -uy * offset;
+            const oy = ux * offset;
             // Place the label ON the cable line (along the real link direction),
             // at the distance where that direction crosses the node's ellipse
             // (radius h sideways, v up/down). This keeps the V/H tuning but,
@@ -834,21 +843,32 @@ const InnerGraph = ({
             const vfactor = Math.abs(uy);
             const srcR = 1 / Math.hypot(ux / sr.h, uy / sr.v);
             const tgtR = 1 / Math.hypot(ux / tr.h, uy / tr.v);
+            // Staggered labels of a bundle move along the cable by column, with
+            // the columns squeezed together when the cable is short.
+            const columns = edge.data?.labelColumns || 1;
+            const stagger =
+              columns > 1
+                ? (edge.data?.labelStep || 0) *
+                  Math.min(
+                    LABEL_STAGGER,
+                    Math.max(0, (length - srcR - tgtR - LABEL_STAGGER) / (2 * (columns - 1)))
+                  )
+                : 0;
             const srcPt = {
-              x: sourceCenter.x + ux * srcR,
-              y: sourceCenter.y + uy * srcR + sr.s * vfactor,
+              x: sourceCenter.x + ux * (srcR + stagger) + ox,
+              y: sourceCenter.y + uy * (srcR + stagger) + sr.s * vfactor + oy,
             };
             const tgtPt = {
-              x: targetCenter.x - ux * tgtR,
-              y: targetCenter.y - uy * tgtR + tr.s * vfactor,
+              x: targetCenter.x - ux * (tgtR + stagger) + ox,
+              y: targetCenter.y - uy * (tgtR + stagger) + tr.s * vfactor + oy,
             };
 
             const localStatus = interfacesData?.[edge.source]?.interfaces?.[edge.data?.localIntf];
             const peerStatus = interfacesData?.[edge.target]?.interfaces?.[edge.data?.peerIntf];
 
             // Centre point for the optional link-name badge
-            const midX = (sourceCenter.x + targetCenter.x) / 2;
-            const midY = (sourceCenter.y + targetCenter.y) / 2;
+            const midX = (sourceCenter.x + targetCenter.x) / 2 + ox;
+            const midY = (sourceCenter.y + targetCenter.y) / 2 + oy;
 
             // Dim labels too on edges that don't touch a search match.
             const dimmedByLabel =

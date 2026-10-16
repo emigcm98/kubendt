@@ -90,17 +90,25 @@
   pointer-events: none;
 }
 
-/* A node in the multi-selection, told apart from the one open in the panel. */
+/* A node in the multi-selection: a filled name tag and a halo, so the group
+   reads at a glance next to the nodes left out. */
 .react-flow__node.selected .custom-node:not(.node-selected) .node-icon {
-  filter: drop-shadow(0 0 4px var(--primary)) drop-shadow(0 0 9px rgba(25, 118, 210, 0.4));
+  filter: drop-shadow(0 0 2px var(--primary)) drop-shadow(0 0 8px var(--primary))
+    drop-shadow(0 0 16px rgba(25, 118, 210, 0.5));
 }
 
 .react-flow__node.selected .custom-node:not(.node-selected) .label {
-  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary-hover);
+  box-shadow: 0 0 8px rgba(25, 118, 210, 0.5);
 }
 
-/* How many nodes are selected, with a way to drop the selection. */
+/* How many nodes are selected, with a way to drop the selection. The panel
+   starts level with the search row of the top bar, so it sits under it, and
+   without the side margin of a react-flow panel so it is centered on it. */
 .graph-selection-chip {
+  margin: calc(15px + var(--topbar-row-h) + 10px) 0 0;
   display: flex;
   align-items: center;
   gap: 6px;

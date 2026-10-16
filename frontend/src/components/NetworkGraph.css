@@ -139,6 +139,7 @@
 :root {
   --topbar-btn-w: 195px;
   --topbar-btn-gap: 12px;
+  --topbar-row-h: 36px;
 }
 
 .topbar-right-buttons {
@@ -549,7 +550,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 0 8px;
-  height: 36px;
+  height: var(--topbar-row-h);
   /* Match the combined width of the two right-column action buttons
      (Save positions + Export topology) so the search bar visually spans
      the same area underneath them. */
