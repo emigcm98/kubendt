@@ -1259,8 +1259,9 @@ func GetNetwork(c *gin.Context) {
 		return
 	}
 
-	// Process links
-	seenLinks := make(map[string]bool)
+	// Process links. Both ends of a link carry the same uid, so that is the
+	// key: the node pair would drop a second link between the same two pods.
+	seenLinks := make(map[int]bool)
 	var links []types.LinkSpec
 	linkAttrs, err := helpers.LoadLinkAttributes(namespace)
 	if err != nil {
@@ -1297,14 +1298,12 @@ func GetNetwork(c *gin.Context) {
 				peerPod = helpers.ConvertToNodeNameIfSingleReplica(peerPod, replicaCount)
 			}
 
-			linkKey := fmt.Sprintf("%s-%s", pod, peerPod)
-			reverseKey := fmt.Sprintf("%s-%s", peerPod, pod)
-			if seenLinks[linkKey] || seenLinks[reverseKey] {
+			uidValue := int(linkMap["uid"].(int64))
+			if seenLinks[uidValue] {
 				continue
 			}
-			seenLinks[linkKey] = true
+			seenLinks[uidValue] = true
 
-			uidValue := int(linkMap["uid"].(int64))
 			link := types.LinkSpec{
 				Node:      pod,
 				LocalIntf: linkMap["local_intf"].(string),
