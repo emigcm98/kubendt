@@ -48,12 +48,21 @@
   display: flex;
   align-items: baseline;
   gap: 5px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 12px;
   min-width: 0;
+  white-space: nowrap;
+}
+
+/* The words stay in the panel's font and never wrap; the pod and the
+   interface are the monospace part, and only the pod name may truncate. */
+.tc-title-label {
+  flex-shrink: 0;
+  font-weight: 600;
+  color: var(--tool-text);
 }
 
 .tc-title-pod {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-weight: 600;
   color: var(--tool-text);
   overflow: hidden;
@@ -62,6 +71,7 @@
 }
 
 .tc-title-iface {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   color: var(--tool-accent);
   flex: 0 0 auto;
 }

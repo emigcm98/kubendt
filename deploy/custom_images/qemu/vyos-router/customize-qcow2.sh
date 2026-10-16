@@ -15,12 +15,14 @@
 #       that copies the per-pod config.boot from the seed CD-ROM at boot)
 #   - /etc/udev/rules.d/64-kubendt-net.rules  (interface-naming fix)
 #   - /usr/local/bin/kubendt-net-name         (helper called by the rule)
+#   - /usr/local/bin/iperf3                   (the static iperf3 the throughput
+#       test needs, built by Dockerfile.kubendt; VyOS's own is too old)
 #
-# All three live on /dev/sda3 inside /boot/<version>/rw/, which is the upper
+# All of them live on /dev/sda3 inside /boot/<version>/rw/, which is the upper
 # layer of the overlayfs that VyOS mounts as / at runtime. <version> is
 # detected dynamically so this script keeps working across VyOS releases.
 #
-# Asset files (the three named above) are read from the current working
+# Asset files (the four named above) are read from the current working
 # directory.
 
 set -eu
@@ -32,7 +34,7 @@ if [ ! -f "$QCOW2" ]; then
     exit 1
 fi
 
-for f in vyos-preconfig-bootup.script 64-kubendt-net.rules kubendt-net-name; do
+for f in vyos-preconfig-bootup.script 64-kubendt-net.rules kubendt-net-name iperf3; do
     if [ ! -f "$f" ]; then
         echo "ERROR: asset not found in CWD: $f" >&2
         exit 1
@@ -107,6 +109,8 @@ chmod 0644 ${RW}/etc/udev/rules.d/64-kubendt-net.rules
 mkdir-p ${RW}/usr/local/bin
 upload kubendt-net-name ${RW}/usr/local/bin/kubendt-net-name
 chmod 0755 ${RW}/usr/local/bin/kubendt-net-name
+upload iperf3 ${RW}/usr/local/bin/iperf3
+chmod 0755 ${RW}/usr/local/bin/iperf3
 
 ${GRUB_UPLOADS}
 upload ${TMPDIR}/config.boot ${STOCKCFG}

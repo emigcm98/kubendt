@@ -57,7 +57,14 @@ func TestToolRunWrap(t *testing.T) {
 		t.Errorf("toolbox run leaves the argv alone, got %v", got)
 	}
 	guest := ToolRun{Container: "vyos", Wrapper: []string{"ssh_qemu", "sudo"}}
-	if got := guest.Wrap([]string{"mtr", "-n"}); strings.Join(got, " ") != "ssh_qemu sudo mtr -n" {
-		t.Errorf("guest run prefixes the argv, got %v", got)
+	if got := guest.Wrap([]string{"mtr", "-n"}); strings.Join(got, " ") != "ssh_qemu sudo 'mtr' '-n'" {
+		t.Errorf("guest run prefixes and quotes the argv, got %v", got)
+	}
+	// The guest's shell splits the line again: a pattern with spaces stays one argument.
+	if got := guest.Wrap([]string{"pkill", "-f", "^iperf3 -c 10.0.0.2 -p 5301"}); got[4] != "'^iperf3 -c 10.0.0.2 -p 5301'" {
+		t.Errorf("an argument with spaces is quoted whole, got %q", got[4])
+	}
+	if got := shellQuote("it's"); got != `'it'\''s'` {
+		t.Errorf("a quote inside is escaped, got %s", got)
 	}
 }

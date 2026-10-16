@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `GET /iperf/run/{namespace}/{pod}` runs an iperf3 throughput test from a pod toward an address of the namespace, TCP or UDP, with the server started by the backend on the destination node or one the lab already runs, and the WebSocket variant streams it interval by interval.
 - New iperf (througput test) window opens from Tools in the node menu: destination node or address, the server started by KubeNDT or one already running, TCP or UDP, duration, rate, streams and reverse, with one bar per second as it runs, the end totals and a JSON export.
 - `doc/DRIVERS.md` explains how to write a driver: the minimum per node type, every optional interface and what happens when it is missing, where a tool runs, and the tests a new driver has to pass.
+- Throughput tests run on VyOS nodes too, as source or as server: the image build puts a static iperf3 3.21 in the guest, since VyOS ships 3.12, and the driver declares it.
 
 ### Changed
 
@@ -39,6 +40,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Where a tool runs on a node is declared by its driver: a guest VM driver implements `GuestToolProvider` with the wrapper into the guest and the tools its image ships, the trace and the throughput test go through one runner, and the pod listing and `GET /drivers` publish `tools`.
 - A driver declares the devices its pods need and the shells its nodes offer (`DeviceProvider`, `ShellProvider`). The pod listing publishes `shells`, the node menu builds its Shell group from it, and the shell endpoint takes any declared mode.
 - Pods carry the `kubendt/runtime` label only. The `kubendt/qemu` label is no longer set, and the backend reads the runtime in one place, still understanding that label on pods from older versions. A double-click on a node opens the driver's own console when it has one.
+- The VyOS disk build pins the rolling release the image is validated with instead of taking the newest because rollings from 2026.09 on rename the interfaces at boot before the per-pod configuration lands.
 
 ### Fixed
 

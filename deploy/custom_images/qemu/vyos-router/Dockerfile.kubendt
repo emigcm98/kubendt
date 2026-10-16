@@ -17,6 +17,27 @@
 #     falls back to TCG. It's slower but doesn't need a privileged build.
 #   - The /boot/vmlinuz read permission is the most common silent failure;
 #     fixing it up here covers Debian's default of 0600 on the kernel image.
+# ---------- Stage 0: the guest tools the driver declares --------------------
+# VyOS ships iperf3 3.12, too old for the --json-stream the throughput test
+# reads, so the version the toolbox has is built statically here and put in
+# the guest's overlay by customize-qcow2.sh, ahead of the stock one on PATH.
+# Pinned tarball, checked by hash: the build stays reproducible and offline
+# mirrors can host the same file.
+FROM alpine:3.20 AS tools
+
+ARG IPERF_VERSION=3.21
+ARG IPERF_SHA256=656e4405ebd620121de7ceca3eaf43a88f79ea1b857d041a6a0b1314801acdd8
+
+RUN apk add --no-cache build-base curl
+RUN curl -fsSL -o iperf.tar.gz "https://github.com/esnet/iperf/releases/download/${IPERF_VERSION}/iperf-${IPERF_VERSION}.tar.gz" \
+    && echo "${IPERF_SHA256}  iperf.tar.gz" | sha256sum -c - \
+    && tar xzf iperf.tar.gz \
+    && cd "iperf-${IPERF_VERSION}" \
+    && ./configure --enable-static-bin --without-openssl \
+    && make -j"$(nproc)" \
+    && strip src/iperf3 \
+    && cp src/iperf3 /iperf3
+
 FROM debian:bookworm-slim AS customizer
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -34,6 +55,7 @@ COPY 64-kubendt-net.rules            /work/64-kubendt-net.rules
 COPY kubendt-net-name                /work/kubendt-net-name
 COPY vyos-preconfig-bootup.script    /work/vyos-preconfig-bootup.script
 COPY customize-qcow2.sh              /work/customize-qcow2.sh
+COPY --from=tools /iperf3            /work/iperf3
 
 # rm: libguestfs' supermin appliance (~1 GB under /var/tmp) must not be
 # committed into the layer; has to happen in the same RUN.
