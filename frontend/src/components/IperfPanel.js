@@ -228,7 +228,6 @@ const NodePicker = ({ value, nodes, disabled, onPick }) => {
 const IperfPanel = ({
   namespace,
   source,
-  sourceLabel,
   nodes = [],
   initialDest = null,
   zIndex = 1000,
@@ -510,7 +509,7 @@ const IperfPanel = ({
       <div className="iperf-header" onMouseDown={onHeaderMouseDown}>
         <span className="iperf-title">
           <GaugeIcon className="iperf-title-icon" />
-          Throughput {sourceLabel || source}
+          Throughput test from {source}
         </span>
         <span className={`iperf-status iperf-status-${status}`}>
           {STATUS_LABEL[status] || status}

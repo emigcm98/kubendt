@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"fmt"
+	"strings"
 
 	drivers_meta "kubendt/drivers/meta"
 
@@ -22,12 +23,23 @@ type ToolRun struct {
 	Reused    bool // a toolbox that was already running
 }
 
-// Wrap prefixes an argv for the run.
+// Wrap prefixes an argv for the run. A guest wrapper is an ssh-like channel
+// that joins its arguments into one line and lets the guest's shell split it
+// again, so each argument is quoted for that shell: a pkill pattern with
+// spaces has to arrive whole.
 func (r ToolRun) Wrap(argv []string) []string {
 	if len(r.Wrapper) == 0 {
 		return argv
 	}
-	return append(append([]string{}, r.Wrapper...), argv...)
+	out := append([]string{}, r.Wrapper...)
+	for _, a := range argv {
+		out = append(out, shellQuote(a))
+	}
+	return out
+}
+
+func shellQuote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
 }
 
 func isGuestVM(driver any) bool {

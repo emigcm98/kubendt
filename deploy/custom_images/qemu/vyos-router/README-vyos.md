@@ -94,9 +94,10 @@ This section walks through building a VyOS router from complete scratch.
 > [!TIP] This whole phase is automated by [`build-vyos-qcow2.sh`](build-vyos-qcow2.sh). VyOS publishes rolling releases as ISO only (there is no qcow2 asset to download), so the interactive installer has to run once, and the script does it for you. It resolves the release tag via the GitHub API, downloads the ISO (cached in `./iso-cache/`, and an ISO already sitting in the current directory or next to the script is reused instead of re-downloaded), then boots it inside a throwaway container and answers every `install image` prompt over the serial console with expect. The result is the same virgin `vyos.qcow2` this walkthrough produces by hand.
 >
 > ```bash
-> ./build-vyos-qcow2.sh                            # latest rolling → ./vyos.qcow2
+> ./build-vyos-qcow2.sh                            # the pinned rolling → ./vyos.qcow2
+> ./build-vyos-qcow2.sh latest                     # the newest rolling, to be tested first
 > ./build-vyos-qcow2.sh --list                     # what's available, newest first
-> ./build-vyos-qcow2.sh 2026.07.29-0032-rolling    # pin a specific release
+> ./build-vyos-qcow2.sh 2026.07.29-0032-rolling    # a specific release
 > ./build-vyos-qcow2.sh -o /tmp/vyos.qcow2 -s 20   # custom output path / disk size (GB)
 > ./build-vyos-qcow2.sh --engine docker            # force a container engine
 > ```
@@ -221,6 +222,10 @@ The full file (`entrypoint.sh`) sits next to this README, it's the canonical ref
 ```
 
 ---
+
+#### Why the release is pinned
+
+The script builds `2026.07.29-0032-rolling` unless told otherwise, because that is the release the image is validated with (example 6 of `experiments/regression.py`), and the rollings from 2026.09 on do not work with this image as it is. VyOS reworked interface naming (T3871): `vyos-router` now runs `vyos-net-name-resolve.service` right after the config migration and before the preconfig hook, so the naming pass only sees the stock `config.boot` of the qcow2, whose `ethernet eth0` node has no `hw-id` (the customizer strips them so the netmap names win at udev time). The pass treats such a node as pending, hands the NICs fresh bootstrap names, and prints `interface 'eth0' still has no hw-id configured after this boot's naming pass`; then the per-pod `config.boot` lands from the seed CD-ROM, references names that no longer exist, and the load ends in `Configuration error`, with no ssh and no API. The same misclassification was reported upstream (vyos-1x PR 5455) and set aside for a larger rework (PR 5479) that binds names to PCI slots through a persistent store and drops `hw-id` altogether. That design fits this image, whose PCI slot layout is fixed by the entrypoint, so the next move is to adapt the naming to it once it ships in a rolling, not to chase the transitional pass. To try a newer release: `./build-vyos-qcow2.sh latest`, build the image, and run `python3 experiments/regression.py 6` against a cluster with it; if the routers never get Ready, read the serial console in the pod log for the naming warning above.
 
 ### Phase 3: Create Dockerfile
 
@@ -455,6 +460,10 @@ What this buys
 PCI slot layout matters here. The guest kernel names NICs in slot order, so the passthrough NIC sits at `0x05` (kernel `eth0`, rename no-op), data NICs keep `0x06+`, and the slirp NIC moves to `0x1e` so its rename to `eth999` never collides. Without the passthrough (no `eth0` or no IPv4 in the pod), slirp takes `0x05` as before and the guest has no `eth0`.
 
 On the security side, the guest's sshd still binds `listen-address 192.168.255.15` (slirp IP), so the management key is not exposed on the cluster network. SSH at the cluster IP is a deliberate user action (`set service ssh listen-address <podIP>`), not a side effect.
+
+### Guest tools
+
+The driver declares, through `GuestToolProvider`, which of the platform's tools run inside the guest: the trace and the throughput test. VyOS already ships `traceroute`, `tcptraceroute` and `mtr`. Its `iperf3` is the 3.12 of Debian 12, which lacks the `--json-stream` the backend reads, so `Dockerfile.kubendt` builds a static iperf3 of the version the toolbox has (pinned tarball, checked by hash) and `customize-qcow2.sh` uploads it to `/usr/local/bin/iperf3` in the overlay, ahead of the stock binary on `PATH` and on sudo's `secure_path`. That is the pattern for any tool a driver promises: the image build puts it in the guest, the driver declares it, and nothing is installed at boot.
 
 ### Interface Naming Inside The Guest
 

@@ -66,7 +66,7 @@ What each one feeds:
 
 Capture, interface counters and traffic control watch the wire: they run in the pod on `ethN`, or on `tapN` for a VM, whatever the driver. The trace and the throughput test send traffic from the node's addresses, so they need its IP stack: a container node runs them in its toolbox, the ephemeral container the backend injects, and a VM node runs them inside the guest through `GuestToolProvider`. A VM driver that declares nothing offers neither, and the menus say so instead of failing. `helpers.ToolRunner` is the one place that decides.
 
-A guest that declares `trace` ships `traceroute`, `tcptraceroute` for the tcp method and `mtr` with `--json`. One that declares `iperf` ships iperf3 3.17 or later, for `--json-stream`. The toolbox images already do; a guest image is the driver author's to build, see `deploy/custom_images/qemu/vyos-router/README-vyos.md` for how the VyOS one is made.
+A guest that declares `trace` ships `traceroute`, `tcptraceroute` for the tcp method and `mtr` with `--json`. One that declares `iperf` ships iperf3 3.17 or later, for `--json-stream`. The toolbox images already do; a guest image is the driver author's to build. The VyOS build shows the pattern: a static iperf3 built in a stage of `Dockerfile.kubendt` and uploaded into the guest's overlay by `customize-qcow2.sh`, since the version VyOS ships is too old; see `deploy/custom_images/qemu/vyos-router/README-vyos.md`.
 
 ## Tests and the rest
 

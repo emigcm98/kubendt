@@ -1168,6 +1168,7 @@ const TCPanel = ({
       <div className="tc-header" onMouseDown={onHeaderMouseDown}>
         <SlidersIcon className="tc-header-icon" />
         <span className="tc-title">
+          <span className="tc-title-label">Traffic control</span>
           <span className="tc-title-pod">{pod}</span>
           {selected && <span className="tc-title-iface">· {selected}</span>}
         </span>

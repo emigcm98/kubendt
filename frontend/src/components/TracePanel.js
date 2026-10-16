@@ -592,7 +592,7 @@ const TracePanel = ({
       <div className="trace-header" onMouseDown={onHeaderMouseDown}>
         <span className="trace-title">
           <TraceIcon className="trace-title-icon" width="15" height="15" />
-          Traceroute {source}
+          Traceroute from {source}
         </span>
         <span className={`trace-status trace-status-${status}`}>
           {STATUS_LABEL[status] || status}

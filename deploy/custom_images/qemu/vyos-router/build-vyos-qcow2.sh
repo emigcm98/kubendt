@@ -16,6 +16,12 @@ set -euo pipefail
 REPO="vyos/vyos-nightly-build"
 API="https://api.github.com/repos/${REPO}"
 
+# The release the image is validated with (example 6 of the regression). It
+# is the default on purpose: rollings from 2026.09 on run a boot-time
+# interface naming pass (VyOS T3871) before the per-pod config lands, which
+# renames the NICs away from what that config expects, so a newer release is
+# an explicit choice to test, not a default to drift into.
+PINNED_VERSION="2026.07.29-0032-rolling"
 VERSION=""
 OUTPUT="./vyos.qcow2"
 DISK_GB="10"
@@ -32,8 +38,9 @@ Builds a virgin VyOS qcow2 (the input for Dockerfile.kubendt) by running
 the VyOS installer unattended inside a container (podman or docker).
 
 Arguments:
-  VERSION              Rolling release tag, e.g. 2026.07.29-0032-rolling.
-                       Omit it to build the latest release.
+  VERSION              Rolling release tag, e.g. 2026.07.29-0032-rolling,
+                       or "latest". Omit it to build the pinned release the
+                       image is validated with (${PINNED_VERSION}).
 
 Options:
   -l, --list           List the most recent rolling releases and exit.
@@ -46,9 +53,10 @@ Options:
   -h, --help           This text.
 
 Examples:
-  $(basename "$0")                          # latest rolling → ./vyos.qcow2
+  $(basename "$0")                          # pinned rolling → ./vyos.qcow2
+  $(basename "$0") latest                   # newest rolling, to be tested
   $(basename "$0") --list                   # see what's available
-  $(basename "$0") 2026.07.29-0032-rolling  # pin a specific release
+  $(basename "$0") 2026.07.29-0032-rolling  # a specific release
   $(basename "$0") -o /tmp/vyos.qcow2 -s 20
 EOF
 }
@@ -159,7 +167,10 @@ if [[ -e "${OUTPUT}" ]]; then
 fi
 
 if [[ -z "${VERSION}" ]]; then
-  info "No version given, resolving latest rolling release..."
+  VERSION="${PINNED_VERSION}"
+  info "No version given, building the pinned release ${VERSION} (pass 'latest' or a tag for another)"
+elif [[ "${VERSION}" == "latest" ]]; then
+  info "Resolving the latest rolling release..."
   VERSION="$(latest_version)"
   [[ -n "${VERSION}" ]] || die "could not resolve the latest release tag"
 fi

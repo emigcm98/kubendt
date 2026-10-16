@@ -760,7 +760,7 @@ const NetworkGraph = ({
   const openShellsRef = useRef(openShells);
   const [openCaptures, setOpenCaptures] = useState([]); // Array of {id, pod, iface, zIndex, minimized}
   const [openTCs, setOpenTCs] = useState([]); // Array of {id, pod, iface, zIndex, minimized}
-  const [openIperfs, setOpenIperfs] = useState([]); // Array of {id, source, sourceLabel, initialDest, zIndex, minimized}
+  const [openIperfs, setOpenIperfs] = useState([]); // Array of {id, source, initialDest, zIndex, minimized}
   const [maxZIndex, setMaxZIndex] = useState(1000);
 
   // Traceroute visualization: one session at a time. traceSession opens the
@@ -1377,7 +1377,6 @@ const NetworkGraph = ({
       {
         id,
         source: fullInfo.name,
-        sourceLabel: fullInfo.baseName || fullInfo.name,
         initialDest,
         zIndex: maxZIndex + 1,
         minimized: false,
@@ -3984,7 +3983,6 @@ const NetworkGraph = ({
           key={t.id}
           namespace={namespace}
           source={t.source}
-          sourceLabel={t.sourceLabel}
           nodes={nodes}
           initialDest={t.initialDest}
           zIndex={t.zIndex}
@@ -4127,12 +4125,12 @@ const NetworkGraph = ({
                   type="button"
                   className="shell-taskbar-chip-restore"
                   onClick={() => restoreIperf(t.id)}
-                  title={`Restore throughput test: ${t.sourceLabel}`}
+                  title={`Restore throughput test: ${t.source}`}
                 >
                   <span className="shell-taskbar-chip-icon">
                     <GaugeIcon className="app-icon" />
                   </span>
-                  <span className="shell-taskbar-chip-name">{t.sourceLabel}</span>
+                  <span className="shell-taskbar-chip-name">{t.source}</span>
                   <span className="shell-taskbar-chip-mode">iperf</span>
                 </button>
                 <button

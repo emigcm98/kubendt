@@ -89,10 +89,11 @@ func (VyOSRouterDriver) GuestWrapper() []string {
 	return []string{"ssh_qemu", "sudo"}
 }
 
-// GuestTools lists what the guest image ships: traceroute and mtr. iperf3
-// joins once customize-qcow2.sh installs a 3.17 or later.
+// GuestTools lists what the guest image ships: traceroute, tcptraceroute and
+// mtr from VyOS itself, and the static iperf3 that Dockerfile.kubendt puts
+// in the overlay, since VyOS's own 3.12 has no --json-stream.
 func (VyOSRouterDriver) GuestTools() []string {
-	return []string{drivers_meta.ToolTrace}
+	return []string{drivers_meta.ToolTrace, drivers_meta.ToolIperf}
 }
 
 // Devices: the VM needs KVM.
