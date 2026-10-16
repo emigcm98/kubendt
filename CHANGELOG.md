@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-10-16
+
 ### Added
 
 - Several nodes can be selected on the graph with a box (the wheel zooms while it is open) or with Shift or Ctrl and a click, and moved together.
@@ -195,7 +197,8 @@ Initial public release. KubeNDT deploys and operates virtual network topologies 
 - Health, readiness and version endpoints, and Swagger docs at `/swagger`.
 - Container images published to GHCR and a Docker Compose deployment.
 
-[Unreleased]: https://github.com/emigcm98/kubendt/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/emigcm98/kubendt/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/emigcm98/kubendt/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/emigcm98/kubendt/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/emigcm98/kubendt/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/emigcm98/kubendt/compare/v1.1.0...v1.2.0
