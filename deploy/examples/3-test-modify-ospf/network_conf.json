@@ -27,8 +27,7 @@
         { "type": "ospf_add_network", "cidr": "10.0.1.0/24", "ospf_area": "0" },
         { "type": "ospf_add_network", "cidr": "10.0.254.0/30", "ospf_area": "0" },
         { "type": "ospf_passive_default" },
-        { "type": "ospf_no_passive", "iface": "eth2" },
-        { "type": "ospf_mtu_ignore", "iface": "eth2" }
+        { "type": "ospf_no_passive", "iface": "eth2" }
       ]
     },
     {
@@ -38,8 +37,7 @@
         { "type": "ospf_add_network", "cidr": "10.0.2.0/24", "ospf_area": "0" },
         { "type": "ospf_add_network", "cidr": "10.0.254.0/30", "ospf_area": "0" },
         { "type": "ospf_passive_default" },
-        { "type": "ospf_no_passive", "iface": "eth2" },
-        { "type": "ospf_mtu_ignore", "iface": "eth2" }
+        { "type": "ospf_no_passive", "iface": "eth2" }
       ]
     },
     {

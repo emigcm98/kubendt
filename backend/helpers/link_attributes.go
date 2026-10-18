@@ -3,17 +3,19 @@ package helpers
 import (
 	"fmt"
 	"log"
+	"net"
 	"strings"
 
 	"kubendt/kubeclient"
 	"kubendt/types"
 )
 
-// Link attributes are the shaping a topology declares on a link and the
-// platform imposes after wiring it: a netem with the delay, jitter, loss and
-// bandwidth, symmetric on both ends. They are kept in their own table so
-// GET /network/get-network can echo them, and applied as ordinary operations
-// of each end, so a restart replays them.
+// Link attributes are the properties a topology declares on a link and the
+// platform imposes after wiring it, symmetric on both ends: a netem with the
+// delay, jitter, loss and bandwidth, and the MTU. They are kept in their own
+// table so GET /network/get-network can echo them. The shaping is applied as
+// ordinary operations of each end, so a restart replays it; the MTU is
+// applied by the MTU pass, which runs after every wiring anyway.
 
 // LinkAttrs are the declared properties of one link.
 type LinkAttrs struct {
@@ -21,14 +23,19 @@ type LinkAttrs struct {
 	Jitter    string
 	Loss      string
 	Bandwidth string
+	MTU       int
 }
 
 func attrsOf(l types.LinkSpec) LinkAttrs {
-	return LinkAttrs{Delay: l.Delay, Jitter: l.Jitter, Loss: l.Loss, Bandwidth: l.Bandwidth}
+	return LinkAttrs{Delay: l.Delay, Jitter: l.Jitter, Loss: l.Loss, Bandwidth: l.Bandwidth, MTU: l.MTU}
 }
 
 func (a LinkAttrs) empty() bool {
-	return a.Delay == "" && a.Jitter == "" && a.Loss == "" && a.Bandwidth == ""
+	return !a.hasShaping() && a.MTU == 0
+}
+
+func (a LinkAttrs) hasShaping() bool {
+	return a.Delay != "" || a.Jitter != "" || a.Loss != "" || a.Bandwidth != ""
 }
 
 // shaping is the netem the delay, jitter, loss and bandwidth make.
@@ -37,18 +44,46 @@ func (a LinkAttrs) shaping() *types.TCParamEntry {
 }
 
 // ValidateLinkAttributes checks the shaping declared on links with the rules
-// of a shaping request, before anything is created.
+// of a shaping request, and the MTU, before anything is created.
 func ValidateLinkAttributes(links []types.LinkSpec) error {
 	for i, l := range links {
 		a := attrsOf(l)
-		if a.empty() {
-			continue
+		if a.hasShaping() {
+			if _, _, err := buildTCParams(a.shaping()); err != nil {
+				msg := strings.ReplaceAll(err.Error(), "tcparams.rate", "bandwidth")
+				msg = strings.ReplaceAll(msg, "tcparams.", "")
+				return fmt.Errorf("link[%d]: %s", i, msg)
+			}
 		}
-		if _, _, err := buildTCParams(a.shaping()); err != nil {
-			msg := strings.ReplaceAll(err.Error(), "tcparams.rate", "bandwidth")
-			msg = strings.ReplaceAll(msg, "tcparams.", "")
-			return fmt.Errorf("link[%d]: %s", i, msg)
+		if err := ValidateLinkMTU(a.MTU, l.LocalIP, l.PeerIP); err != nil {
+			return fmt.Errorf("link[%d]: %w", i, err)
 		}
+	}
+	return nil
+}
+
+// ValidateLinkMTU checks an MTU asked for one link: 0 means the platform's
+// value; otherwise within the kernel's range, at least 1280 when either end
+// has an IPv6 address, and never above what the operator said the cluster
+// carries, since the link would just not work.
+func ValidateLinkMTU(mtu int, localIP, peerIP string) error {
+	if mtu == 0 {
+		return nil
+	}
+	if mtu < MinLinkMTU || mtu > MaxLinkMTU {
+		return fmt.Errorf("mtu %d is not between %d and %d", mtu, MinLinkMTU, MaxLinkMTU)
+	}
+	for _, cidr := range []string{localIP, peerIP} {
+		if ip, _, err := net.ParseCIDR(cidr); err == nil && ip.To4() == nil && mtu < 1280 {
+			return fmt.Errorf("mtu %d is below 1280, the least IPv6 needs", mtu)
+		}
+	}
+	platform, _, err := PlatformLinkMTU()
+	if err != nil {
+		return err
+	}
+	if mtu > platform {
+		return fmt.Errorf("mtu %d is above %s (%d)", mtu, LinkMTUEnv, platform)
 	}
 	return nil
 }
@@ -69,7 +104,7 @@ func LinkAttributeActions(links []types.LinkSpec, nodes []types.NodeSpec) []type
 	}
 	for _, l := range links {
 		a := attrsOf(l)
-		if a.empty() {
+		if !a.hasShaping() {
 			continue
 		}
 		ends := []struct{ pod, iface string }{{ResolvePodNameFromLink(l.Node, nodes), l.LocalIntf}}
@@ -150,9 +185,9 @@ func SaveLinkAttributes(namespace string, links []types.LinkSpec, nodes []types.
 			}
 			continue
 		}
-		if _, err := DB.Exec(`INSERT OR REPLACE INTO link_attributes (cluster_id, namespace, node, intf, peer_node, peer_intf, delay, jitter, loss, bandwidth)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			clusterID, namespace, node, l.LocalIntf, peer, l.PeerIntf, a.Delay, a.Jitter, a.Loss, a.Bandwidth); err != nil {
+		if _, err := DB.Exec(`INSERT OR REPLACE INTO link_attributes (cluster_id, namespace, node, intf, peer_node, peer_intf, delay, jitter, loss, bandwidth, mtu)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			clusterID, namespace, node, l.LocalIntf, peer, l.PeerIntf, a.Delay, a.Jitter, a.Loss, a.Bandwidth, a.MTU); err != nil {
 			return fmt.Errorf("error saving link attributes for %s:%s: %w", node, l.LocalIntf, err)
 		}
 	}
@@ -170,7 +205,7 @@ func LoadLinkAttributes(namespace string) (map[string]LinkAttrs, error) {
 	if err != nil {
 		return nil, err
 	}
-	rows, err := DB.Query(`SELECT node, intf, peer_node, peer_intf, delay, jitter, loss, bandwidth FROM link_attributes WHERE cluster_id = ? AND namespace = ?`, clusterID, namespace)
+	rows, err := DB.Query(`SELECT node, intf, peer_node, peer_intf, delay, jitter, loss, bandwidth, mtu FROM link_attributes WHERE cluster_id = ? AND namespace = ?`, clusterID, namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +213,7 @@ func LoadLinkAttributes(namespace string) (map[string]LinkAttrs, error) {
 	for rows.Next() {
 		var node, intf, peer, peerIntf string
 		var a LinkAttrs
-		if err := rows.Scan(&node, &intf, &peer, &peerIntf, &a.Delay, &a.Jitter, &a.Loss, &a.Bandwidth); err != nil {
+		if err := rows.Scan(&node, &intf, &peer, &peerIntf, &a.Delay, &a.Jitter, &a.Loss, &a.Bandwidth, &a.MTU); err != nil {
 			return nil, err
 		}
 		out[node+"/"+intf] = a
@@ -251,5 +286,29 @@ func FillLinkAttributes(link *types.LinkSpec, podName, peerPod string, attrs map
 	if !ok {
 		return
 	}
-	link.Delay, link.Jitter, link.Loss, link.Bandwidth = a.Delay, a.Jitter, a.Loss, a.Bandwidth
+	link.Delay, link.Jitter, link.Loss, link.Bandwidth, link.MTU = a.Delay, a.Jitter, a.Loss, a.Bandwidth, a.MTU
+}
+
+// SetLinkMTU records the MTU asked for a running link through the links
+// section of a configure request, on the row of whichever end the topology
+// named, so the next MTU pass and every restart apply it. 0 clears it.
+func SetLinkMTU(namespace, pod, iface, peerPod, peerIntf string, mtu int) error {
+	if DB == nil {
+		return fmt.Errorf("database not initialized")
+	}
+	clusterID, err := kubeclient.CurrentClusterID()
+	if err != nil {
+		return err
+	}
+	res, err := DB.Exec(`UPDATE link_attributes SET mtu = ? WHERE cluster_id = ? AND namespace = ? AND ((node = ? AND intf = ?) OR (node = ? AND intf = ?))`,
+		mtu, clusterID, namespace, pod, iface, peerPod, peerIntf)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n > 0 || mtu == 0 {
+		return nil
+	}
+	_, err = DB.Exec(`INSERT INTO link_attributes (cluster_id, namespace, node, intf, peer_node, peer_intf, mtu) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		clusterID, namespace, pod, iface, peerPod, peerIntf, mtu)
+	return err
 }

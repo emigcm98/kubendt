@@ -732,12 +732,13 @@ const generateEdges = (links, expandedPods, originalNodes) => {
           linkName: link.name || null,
           // Declared link properties, shown in the link panel.
           attributes:
-            link.delay || link.jitter || link.loss || link.bandwidth
+            link.delay || link.jitter || link.loss || link.bandwidth || link.mtu
               ? {
                   delay: link.delay,
                   jitter: link.jitter,
                   loss: link.loss,
                   bandwidth: link.bandwidth,
+                  mtu: link.mtu,
                 }
               : null,
         },

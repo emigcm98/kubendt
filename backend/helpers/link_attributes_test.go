@@ -76,3 +76,41 @@ func TestFillLinkAttributes(t *testing.T) {
 		t.Errorf("a link without attributes must stay empty, got %+v", other)
 	}
 }
+
+func TestValidateLinkMTU(t *testing.T) {
+	t.Setenv(LinkMTUEnv, "")
+	cases := []struct {
+		name    string
+		mtu     int
+		local   string
+		peer    string
+		wantErr string
+	}{
+		{"unset", 0, "10.0.0.1/24", "10.0.0.2/24", ""},
+		{"fits", 1400, "10.0.0.1/24", "10.0.0.2/24", ""},
+		{"the platform value", 1450, "", "", ""},
+		{"above the variable", 1500, "", "", "above KUBENDT_LINK_MTU (1450)"},
+		{"below the kernel", 60, "", "", "not between 68 and 65535"},
+		{"ipv6 floor", 1200, "fd00::1/64", "fd00::2/64", "below 1280"},
+		{"ipv4 may go low", 1200, "10.0.0.1/24", "", ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := ValidateLinkMTU(tc.mtu, tc.local, tc.peer)
+			if tc.wantErr == "" && err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if tc.wantErr != "" && (err == nil || !strings.Contains(err.Error(), tc.wantErr)) {
+				t.Fatalf("want %q, got %v", tc.wantErr, err)
+			}
+		})
+	}
+	t.Setenv(LinkMTUEnv, "8950")
+	if err := ValidateLinkMTU(9000, "", ""); err == nil || !strings.Contains(err.Error(), "(8950)") {
+		t.Fatalf("the ceiling follows the variable: %v", err)
+	}
+	t.Setenv(LinkMTUEnv, "")
+	if err := ValidateLinkAttributes([]types.LinkSpec{{Node: "a", LocalIntf: "eth1", PeerNode: "b", PeerIntf: "eth1", MTU: 9001}}); err == nil || !strings.Contains(err.Error(), "link[0]") {
+		t.Fatalf("the link index is named: %v", err)
+	}
+}

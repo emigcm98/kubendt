@@ -178,7 +178,7 @@ func RestartPod(c *gin.Context) {
 
 	// The pod and the ends its neighbours face came back at the kernel's
 	// defaults; the pass writes the platform MTU on what differs.
-	mtuPass, mtuErr := helpers.ApplyPlatformMTU(namespace, nil)
+	mtuPass, mtuErr := helpers.ApplyPlatformMTU(namespace, nil, nil)
 	if mtuErr != nil {
 		log.Printf("❌ MTU pass after restarting %s/%s: %v", namespace, podName, mtuErr)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": mtuErr.Error()})

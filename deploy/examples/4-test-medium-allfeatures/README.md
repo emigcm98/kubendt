@@ -408,7 +408,7 @@ To shape a whole link, name one end in a `links` section and the backend finds t
 ## Troubleshooting
 
 - **Node stuck in `Init` / crash loop**: the most common cause is a missing mounted file. Verify all six files from the [Files In This Folder](#files-in-this-folder) table exist in the Namespace File Manager.
-- **OSPF neighbors not forming**: verify the `10.0.255.0/24` links are up on all three routers, and that `ospf_mtu_ignore` was applied on the backbone interfaces (the default MTU mismatch between nodes can prevent adjacency).
+- **OSPF neighbors not forming**: verify the `10.0.255.0/24` links are up on all three routers. Both ends of every link get the same MTU from the platform, so an adjacency stuck in ExStart points at the configuration, not at an MTU mismatch.
 - **DNS not resolving**: check that `dns-server-0` is in `Running` state and that its zone files were loaded correctly, open a shell on it and run `named-checkzone kubendt.local /etc/bind/db.kubendt.local`. Also confirm `user-*` nodes have `192.168.10.15` in `/etc/resolv.conf` after applying the conf.
 - **iperf3 internal test fails**: verify `user-*` nodes can reach `192.168.10.0/24` via ping first. If not, check OSPF routes on `room-router-0` and `svc-router-0`.
 - **iperf3 external DNAT fails**: check that the DNAT rule appears in `iptables -t nat -L PREROUTING` on `edge-router-0`. Also confirm `iperf-server-0` has a default route via `10.0.255.254`.
