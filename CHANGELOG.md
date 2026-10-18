@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Every link gets the same MTU once it is wired, 1450 by default and `KUBENDT_LINK_MTU` to change it, on both ends and inside a VyOS guest, so throughput and OSPF adjacencies no longer depend on where each pod landed. The interface listing and the link panel show it, and the pass is the `mtu` phase of the operation timeline.
 
+### Changed
+
+- The heal pass lists each pod's interfaces once instead of running one exec per link endpoint, and the MTU pass reuses what it read. A VyOS pod receives `KUBENDT_LINK_MTU` in its environment and sets it at boot, and the pass asks a guest before committing, so a deploy or a restart no longer commits in the guest.
+
 ## [1.5.0] - 2026-10-16
 
 ### Added

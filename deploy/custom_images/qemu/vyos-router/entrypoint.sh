@@ -14,6 +14,10 @@ SSH_PUBLIC_KEY="${SSH_PUBLIC_KEY:-/ssh_key.pub}"
 
 # Guest HTTP API (used by the backend for reads and configure batches)
 HTTPS_FORWARD_PORT="${HTTPS_FORWARD_PORT:-8443}"
+# The platform's link MTU, handed over by the backend. Set on the pod's data
+# interfaces, their taps and the guest's config at boot, so the backend's MTU
+# pass finds nothing to commit. Empty leaves everything at the kernel's own.
+LINK_MTU="${KUBENDT_LINK_MTU:-}"
 API_KEY_FILE="${API_KEY_FILE:-/run/kubendt/api-key}"
 
 # Management network for QEMU user-mode networking
@@ -206,16 +210,26 @@ generate_eth0_block() {
   } >> "${output_file}"
 }
 
+# A host uplink is a macvlan on the worker's NIC: the platform leaves its MTU
+# to the host network, so the link MTU is only written on Meshnet's links.
+is_uplink_iface() {
+  ip -d link show "$1" 2>/dev/null | grep -q " macvlan "
+}
+
 generate_interfaces_block() {
   local output_file="$1"
   : > "${output_file}"
 
-  local eth_if guest_mac guest_ipv4
+  local eth_if guest_mac guest_ipv4 iface_mtu
 
   while IFS= read -r eth_if; do
     [[ -z "${eth_if}" ]] && continue
     guest_mac="$(get_iface_mac "${eth_if}")"
     guest_ipv4="$(get_iface_ipv4 "${eth_if}")"
+    iface_mtu="${LINK_MTU}"
+    if is_uplink_iface "${eth_if}"; then
+      iface_mtu=""
+    fi
 
     {
       echo "    ethernet ${eth_if} {"
@@ -224,6 +238,9 @@ generate_interfaces_block() {
       fi
       echo "        description \"KubeNDT ${eth_if}\""
       echo "        hw-id \"${guest_mac}\""
+      if [[ -n "${iface_mtu}" ]]; then
+        echo "        mtu \"${iface_mtu}\""
+      fi
       echo "        offload {"
       echo "            gro"
       echo "            gso"
@@ -533,6 +550,13 @@ for eth_if in "${DATA_IFACES[@]}"; do
   echo "[INFO] ${eth_if} PCI addr: ${pci_addr}"
 
   wire_iface_to_tap "${eth_if}" "${tap_if}"
+
+  if [[ -n "${LINK_MTU}" ]] && ! is_uplink_iface "${eth_if}"; then
+    # A VXLAN end born below the value refuses it; the backend's pass settles that.
+    ip link set dev "${eth_if}" mtu "${LINK_MTU}" 2>/dev/null \
+      || echo "[WARN] ${eth_if} refused mtu ${LINK_MTU}, the backend's MTU pass will settle it"
+    ip link set dev "${tap_if}" mtu "${LINK_MTU}" 2>/dev/null || true
+  fi
 
   echo "[INFO]     kubendt-netmap:${guest_mac}=${eth_if}"
 

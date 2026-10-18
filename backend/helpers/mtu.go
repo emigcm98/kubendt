@@ -62,9 +62,6 @@ var (
 	workerCeiling = map[string]int{}
 	// The value the last pass left on each namespace, for GET /network/links.
 	namespaceMTU = map[string]int{}
-	// What the guest of each VM pod was last told, by pod UID, so a pass
-	// commits again only on a pod that was recreated or whose value moved.
-	guestMTUApplied = map[string]int{}
 )
 
 func recordWorkerCeiling(worker string, mtu int) {
@@ -119,11 +116,13 @@ type refusedEnd struct {
 
 // ApplyPlatformMTU sets the platform MTU on every end of every link of the
 // namespace, pod side and guest side, and is run after each wiring: deploy,
-// modify and restart. It reads what the pods have, learns the VXLAN ceiling
-// of each worker from the fresh devices, settles the value for the whole
-// namespace and changes only what differs. An operator value that no end can
-// carry is an error; the default that does not fit is lowered with a warning.
-func ApplyPlatformMTU(namespace string) (MTUPass, error) {
+// modify and restart. It reads what the pods have (or takes the heal pass's
+// reads, per pod the interfaces with their MTU, for the pods it has), learns
+// the VXLAN ceiling of each worker from the fresh devices, settles the value
+// for the whole namespace and changes only what differs. An operator value
+// that no end can carry is an error; the default that does not fit is lowered
+// with a warning.
+func ApplyPlatformMTU(namespace string, known map[string]map[string]int) (MTUPass, error) {
 	target, explicit, err := PlatformLinkMTU()
 	if err != nil {
 		return MTUPass{}, err
@@ -146,8 +145,9 @@ func ApplyPlatformMTU(namespace string) (MTUPass, error) {
 		return MTUPass{MTU: target, Warnings: []types.Warning{}}, nil
 	}
 
-	// One read per pod, in parallel, of every interface the pod has.
-	current := readPodMTUs(namespace, endsByPod(ends))
+	// One read per pod, in parallel, of every interface the pod has, skipping
+	// the pods the caller already read.
+	current := readPodMTUs(namespace, endsByPod(ends), known)
 
 	for _, e := range ends {
 		if e.Cross && e.Fresh {
@@ -270,11 +270,14 @@ func settleMTU(target int, explicit bool, ends []mtuEnd) (int, []types.Warning, 
 }
 
 // readPodMTUs returns, per pod, the MTU of every interface it has.
-func readPodMTUs(namespace string, byPod map[string][]mtuEnd) map[string]map[string]int {
+func readPodMTUs(namespace string, byPod map[string][]mtuEnd, known map[string]map[string]int) map[string]map[string]int {
 	out := map[string]map[string]int{}
 	var mu sync.Mutex
 	forEachPod(byPod, func(pod string, ends []mtuEnd) {
-		mtus := podLinkMTUs(namespace, pod, ends)
+		mtus, ok := known[pod]
+		if !ok {
+			mtus = podLinkMTUs(namespace, pod, ends)
+		}
 		mu.Lock()
 		out[pod] = mtus
 		mu.Unlock()
@@ -457,15 +460,10 @@ func setLinkMTUs(namespace string, eff int, ends []mtuEnd, current map[string]ma
 }
 
 // setGuestMTU commits the MTU of the pod's link interfaces inside its guest,
-// once per pod incarnation and value.
+// unless the guest already reports it: a read is a fraction of a commit, and
+// a guest booted with the value (the VyOS image takes it from its env) or set
+// by an earlier pass costs nothing.
 func setGuestMTU(namespace string, pod *v1.Pod, ends []mtuEnd, eff int) *types.Warning {
-	uid := string(pod.UID)
-	ceilingMu.Lock()
-	done := guestMTUApplied[uid] == eff
-	ceilingMu.Unlock()
-	if done {
-		return nil
-	}
 	drv, err := GetDriverForListedPod(pod)
 	if err != nil {
 		return &types.Warning{Node: pod.Name, Kind: "link_mtu_not_set", Detail: "guest MTU: " + err.Error()}
@@ -473,6 +471,11 @@ func setGuestMTU(namespace string, pod *v1.Pod, ends []mtuEnd, eff int) *types.W
 	setter, ok := drv.(drivers_meta.GuestMTUSetter)
 	if !ok {
 		return &types.Warning{Node: pod.Name, Kind: "link_mtu_not_set", Detail: fmt.Sprintf("guest MTU: driver %s cannot set the MTU inside its guest", pod.Labels["kubendt/driver"])}
+	}
+	if inspector, ok := drv.(drivers_meta.EffectiveInterfaceInspector); ok {
+		if entries, err := inspector.GetEffectiveInterfaces(namespace, pod.Name); err == nil && !guestNeedsMTU(entries, ends, eff) {
+			return nil
+		}
 	}
 	exec, _, err := executor.ResolveForDriver(drv)
 	if err != nil {
@@ -490,10 +493,24 @@ func setGuestMTU(namespace string, pod *v1.Pod, ends []mtuEnd, eff int) *types.W
 	if err := exec.ExecCommand(pod.Name, namespace, executor.NewArgsCommand(lines)); err != nil {
 		return &types.Warning{Node: pod.Name, Kind: "link_mtu_not_set", Detail: fmt.Sprintf("guest MTU %d: %v", eff, err)}
 	}
-	ceilingMu.Lock()
-	guestMTUApplied[uid] = eff
-	ceilingMu.Unlock()
 	return nil
+}
+
+// guestNeedsMTU says whether any link interface of the guest reports an MTU
+// other than eff; an interface the guest does not report counts as needing it.
+func guestNeedsMTU(entries []map[string]string, ends []mtuEnd, eff int) bool {
+	have := map[string]int{}
+	for _, e := range entries {
+		if n, err := strconv.Atoi(e["mtu"]); err == nil {
+			have[e["interface"]] = n
+		}
+	}
+	for _, e := range ends {
+		if have[e.Iface] != eff {
+			return true
+		}
+	}
+	return false
 }
 
 // forEachPod runs fn for every pod with a bounded number in flight.

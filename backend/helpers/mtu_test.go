@@ -6,6 +6,7 @@ import (
 
 	"kubendt/drivers/drivers"
 	drivers_meta "kubendt/drivers/meta"
+	"kubendt/types"
 )
 
 func TestParsePlatformLinkMTU(t *testing.T) {
@@ -175,5 +176,62 @@ func TestSetScriptAndFailures(t *testing.T) {
 	}
 	if len(parseSetFailures("")) != 0 {
 		t.Fatalf("no output means no failure")
+	}
+}
+
+func TestGuestNeedsMTU(t *testing.T) {
+	ends := []mtuEnd{{Pod: "r-0", Iface: "eth1"}, {Pod: "r-0", Iface: "eth2"}}
+	both := []map[string]string{{"interface": "eth1", "mtu": "1450"}, {"interface": "eth2", "mtu": "1450"}, {"interface": "eth4"}}
+	if guestNeedsMTU(both, ends, 1450) {
+		t.Fatalf("a guest already at the value needs no commit")
+	}
+	one := []map[string]string{{"interface": "eth1", "mtu": "1450"}, {"interface": "eth2"}}
+	if !guestNeedsMTU(one, ends, 1450) {
+		t.Fatalf("an interface without an mtu needs the commit")
+	}
+	other := []map[string]string{{"interface": "eth1", "mtu": "1500"}, {"interface": "eth2", "mtu": "1450"}}
+	if !guestNeedsMTU(other, ends, 1450) {
+		t.Fatalf("an interface at another value needs the commit")
+	}
+	if !guestNeedsMTU(nil, ends, 1450) {
+		t.Fatalf("nothing reported means commit")
+	}
+}
+
+func TestGuestLinkMTUEnv(t *testing.T) {
+	t.Setenv(LinkMTUEnv, "")
+	if env := guestLinkMTUEnv(types.NodeSpec{Name: "host", Qemu: false}); env != nil {
+		t.Fatalf("a container node gets no env, got %v", env)
+	}
+	env := guestLinkMTUEnv(types.NodeSpec{Name: "router", Qemu: true})
+	if len(env) != 1 || env[0].Name != LinkMTUEnv || env[0].Value != "1450" {
+		t.Fatalf("a VM node gets the default, got %v", env)
+	}
+	t.Setenv(LinkMTUEnv, "8950")
+	if env := guestLinkMTUEnv(types.NodeSpec{Name: "router", Qemu: true}); len(env) != 1 || env[0].Value != "8950" {
+		t.Fatalf("a VM node gets the operator's value, got %v", env)
+	}
+	t.Setenv(LinkMTUEnv, "abc")
+	if env := guestLinkMTUEnv(types.NodeSpec{Name: "router", Qemu: true}); env != nil {
+		t.Fatalf("an unusable value hands nothing over, got %v", env)
+	}
+}
+
+func TestForgetReads(t *testing.T) {
+	reads := map[string]map[string]int{"a-0": {"eth1": 1450}, "b-0": {"eth1": 1450}, "c-0": {"eth1": 1450}, "d-0": {"eth1": 1450}}
+	desired := []desiredLink{{PodA: "a-0", IfA: "eth1", PodB: "b-0", IfB: "eth1"}, {PodA: "c-0", IfA: "eth1", PodB: "d-0", IfB: "eth1"}}
+	forgetReads(reads, []string{"a-0"}, desired)
+	if _, ok := reads["a-0"]; ok {
+		t.Fatalf("the restarted pod must be forgotten")
+	}
+	if _, ok := reads["b-0"]; ok {
+		t.Fatalf("its neighbour must be forgotten, Meshnet rebuilt the facing end")
+	}
+	if len(reads) != 2 {
+		t.Fatalf("the other link keeps its reads, got %v", reads)
+	}
+	mergeReads(reads, map[string]map[string]int{"a-0": {"eth1": 1500}})
+	if reads["a-0"]["eth1"] != 1500 {
+		t.Fatalf("merge adds the new read")
 	}
 }
