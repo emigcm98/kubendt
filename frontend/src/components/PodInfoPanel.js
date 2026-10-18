@@ -1071,6 +1071,7 @@ const PodInfoPanel = ({
                           </div>
                           <div className="interface-detail">IPv4: {intf.ipv4}</div>
                           <div className="interface-detail">MAC: {intf.mac}</div>
+                          {intf.mtu && <div className="interface-detail">MTU: {intf.mtu}</div>}
                         </div>
                       ))
                     )}

@@ -219,6 +219,20 @@ const LinkInfoPanel = ({
                 {info?.mac || '—'}
               </span>
             </div>
+            <div className="link-endpoint-detail">
+              <span className="link-detail-key">MTU</span>
+              <span
+                className="link-detail-val"
+                title={
+                  link?.data?.maxMtus?.[podName]
+                    ? `The worker carries at most ${link.data.maxMtus[podName]} over VXLAN`
+                    : ''
+                }
+              >
+                {info?.mtu || '—'}
+                {link?.data?.maxMtus?.[podName] ? ` · max ${link.data.maxMtus[podName]}` : ''}
+              </span>
+            </div>
             <div className="link-endpoint-counters">
               <CountersRows samples={side === 'a' ? countersA : countersB} iface={ifaceName} />
             </div>

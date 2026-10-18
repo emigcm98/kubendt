@@ -62,6 +62,10 @@ func BuildLinkStatus(namespace string) ([]types.LinkStatus, error) {
 			st.Name = names[*l.UID]
 		}
 		st.Realization = linkRealization(st.NodeWorker, st.PeerWorker, external)
+		if st.Realization == LinkRealizationVxlan {
+			st.NodeMaxMTU = knownCeiling(st.NodeWorker)
+			st.PeerMaxMTU = knownCeiling(st.PeerWorker)
+		}
 		out = append(out, st)
 	}
 	sort.Slice(out, func(i, j int) bool {
@@ -71,6 +75,14 @@ func BuildLinkStatus(namespace string) ([]types.LinkStatus, error) {
 		return out[i].LocalIntf < out[j].LocalIntf
 	})
 	return out, nil
+}
+
+// knownCeiling is the worker's VXLAN ceiling as a pointer, nil while unknown.
+func knownCeiling(worker string) *int {
+	if c := WorkerVXLANCeiling(worker); c > 0 {
+		return &c
+	}
+	return nil
 }
 
 // linkRealization derives how Meshnet wired a link from where its ends run.

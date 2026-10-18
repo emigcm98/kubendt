@@ -32,6 +32,7 @@ var _ drivers_meta.EffectiveSingleInterfaceInspector = (*VyOSRouterDriver)(nil)
 var _ drivers_meta.EffectiveInterfaceStateInspector = (*VyOSRouterDriver)(nil)
 var _ drivers_meta.ReadinessProbeProvider = (*VyOSRouterDriver)(nil)
 var _ drivers_meta.GuestToolProvider = (*VyOSRouterDriver)(nil)
+var _ drivers_meta.GuestMTUSetter = (*VyOSRouterDriver)(nil)
 var _ drivers_meta.DeviceProvider = (*VyOSRouterDriver)(nil)
 var _ drivers_meta.ShellProvider = (*VyOSRouterDriver)(nil)
 var _ drivers_meta.InterfaceNameConstrainer = (*VyOSRouterDriver)(nil)
@@ -98,6 +99,12 @@ func (VyOSRouterDriver) GuestTools() []string {
 
 // Devices: the VM needs KVM.
 func (VyOSRouterDriver) Devices() []string { return []string{"/dev/kvm"} }
+
+// GuestMTUCommands sets the MTU of a guest interface through the API; the
+// pod's ethN and tapN are set by the platform itself.
+func (VyOSRouterDriver) GuestMTUCommands(iface string, mtu int) [][]string {
+	return [][]string{{"set interfaces ethernet " + iface + " mtu " + strconv.Itoa(mtu)}}
+}
 
 // Shells: the VyOS CLI, an ssh session into the guest over the same channel
 // the executors use, which lands in the operational shell.
@@ -483,6 +490,9 @@ func vyosInterfaceEntry(iface string, node map[string]interface{}) map[string]st
 	}
 	if ip, ok := cfgLeaf(node, "address"); ok {
 		entry["ipv4"] = ip
+	}
+	if mtu, ok := cfgLeaf(node, "mtu"); ok {
+		entry["mtu"] = mtu
 	}
 	return entry
 }

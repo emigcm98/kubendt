@@ -136,6 +136,12 @@ definitions:
         description: Interface validation and healing after the pods are Ready.
         example: 380
         type: integer
+      mtu:
+        description: |-
+          The platform MTU set on every link once the pods are Ready, both pod
+          ends and the guest of a VM node.
+        example: 650
+        type: integer
       peer_replay:
         description: |-
           Re-application, on the neighbours of the recreated pods, of the operations
@@ -866,6 +872,12 @@ definitions:
       node:
         example: router1-0
         type: string
+      nodeMaxMtu:
+        description: |-
+          The most a VXLAN end can carry on its worker (the NIC's MTU minus the
+          encapsulation), known once a cross-worker link has been wired there.
+        example: 1450
+        type: integer
       nodeWorker:
         example: k8s-worker1
         type: string
@@ -875,6 +887,9 @@ definitions:
       peerIp:
         example: 10.0.0.2/30
         type: string
+      peerMaxMtu:
+        example: 1450
+        type: integer
       peerNode:
         example: router2-0
         type: string
@@ -897,6 +912,12 @@ definitions:
         items:
           $ref: '#/definitions/types.LinkStatus'
         type: array
+      mtu:
+        description: |-
+          The MTU the platform set on every link of the namespace, 0 before the
+          first pass.
+        example: 1450
+        type: integer
     type: object
   types.LoginRequest:
     properties:
@@ -3236,10 +3257,10 @@ paths:
         whole run as one JSON document: one entry per second and the end totals (bytes,
         bits per second, retransmissions for TCP, jitter and loss for UDP). By default
         the backend starts the server on the pod that owns the destination address,
-        in its toolbox, on a port of its own; server=none uses a server the lab already
-        runs at the destination (port 5201 unless port says otherwise) and server=<pod>
-        names the pod to run it on. The source node must be L3-capable. A live version
-        streams the same intervals over WebSocket at /iperf/ws/{namespace}/{podName}.'
+        in its toolbox, on a port of its own; `server=none` uses a server the lab
+        already runs at the destination (port 5201 unless `port` says otherwise) and
+        `server=<pod>` names the pod to run it on. The source node must be L3-capable.
+        A live version streams the same intervals over WebSocket at /iperf/ws/{namespace}/{podName}.'
       parameters:
       - description: Namespace
         in: path

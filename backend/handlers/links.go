@@ -33,5 +33,5 @@ func GetLinks(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"links": links})
+	c.JSON(http.StatusOK, gin.H{"mtu": helpers.NamespaceLinkMTU(namespace), "links": links})
 }

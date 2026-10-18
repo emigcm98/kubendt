@@ -174,6 +174,17 @@ func RestartPod(c *gin.Context) {
 	peerReplayAt := time.Now()
 	peerStats := helpers.ReapplyPeerInterfaceState(namespace, []string{podName})
 	peerReplayDur := time.Since(peerReplayAt)
+	mtuAt := time.Now()
+
+	// The pod and the ends its neighbours face came back at the kernel's
+	// defaults; the pass writes the platform MTU on what differs.
+	mtuPass, mtuErr := helpers.ApplyPlatformMTU(namespace)
+	if mtuErr != nil {
+		log.Printf("❌ MTU pass after restarting %s/%s: %v", namespace, podName, mtuErr)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": mtuErr.Error()})
+		return
+	}
+	mtuDur := time.Since(mtuAt)
 
 	nudgePodAndTopology("soft", podName)
 
@@ -183,6 +194,8 @@ func RestartPod(c *gin.Context) {
 		"replayed_operations": replayStats.Replayed,
 		"replay":              replayStats,
 		"peer_replay":         peerStats,
+		"link_mtu":            mtuPass,
+		"warnings":            mtuPass.Warnings,
 		"took_time": gin.H{
 			"total":       fmt.Sprintf("%.2fs", time.Since(startedAt).Seconds()),
 			"pod_restart": fmt.Sprintf("%.2fs", podRestartDur.Seconds()),
@@ -196,6 +209,7 @@ func RestartPod(c *gin.Context) {
 				WaitReady:  helpers.MsPtr(waitDur),
 				Replay:     helpers.MsPtr(replayDur),
 				PeerReplay: helpers.MsPtr(peerReplayDur),
+				MTU:        helpers.MsPtr(mtuDur),
 			}),
 	})
 }

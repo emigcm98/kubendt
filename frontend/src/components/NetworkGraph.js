@@ -1905,9 +1905,13 @@ const NetworkGraph = ({
         const workers = {};
         if (st.nodeWorker) workers[st.node] = st.nodeWorker;
         if (st.peerWorker) workers[st.peerNode] = st.peerWorker;
+        // The most a VXLAN end can carry on its worker, once the backend knows it.
+        const maxMtus = {};
+        if (st.nodeMaxMtu) maxMtus[st.node] = st.nodeMaxMtu;
+        if (st.peerMaxMtu) maxMtus[st.peerNode] = st.peerMaxMtu;
         return {
           ...e,
-          data: { ...e.data, realization: st.realization, workers },
+          data: { ...e.data, realization: st.realization, workers, maxMtus },
         };
       });
 

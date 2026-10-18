@@ -78,6 +78,7 @@ File storage and the SQLite database are persisted in named Docker volumes (`kub
 - `KUBENDT_COMMIT`: optional build commit metadata.
 - `KUBENDT_BUILD_DATE`: optional build date metadata.
 - `KUBENDT_TOOLBOX_IMAGE`: image of the toolbox, the ephemeral container injected into a pod for capture, traceroute, traffic control and throughput tests (default `nicolaka/netshoot:v0.16`; a slim build is in `deploy/custom_images/toolbox/`). `KUBENDT_CAPTURE_IMAGE` is still read.
+- `KUBENDT_LINK_MTU`: the MTU the platform sets on every link after wiring, both pod ends and the guest of a VM node (default `1450`, the most a VXLAN link carries on a 1500 underlay). Set it to what your cluster carries, `8950` on a jumbo underlay for instance; a value a worker cannot carry fails the operation naming the link and the worker, while the default is lowered with a warning when it does not fit. See the cluster guide.
 
 #### Authentication
 
