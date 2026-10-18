@@ -836,7 +836,7 @@ func swaggerTraceReport() {}
 // swaggerIperfReport godoc
 //
 //	@Summary      Throughput test report
-//	@Description  Runs iperf3 from a source pod toward an address and returns the whole run as one JSON document: one entry per second and the end totals (bytes, bits per second, retransmissions for TCP, jitter and loss for UDP). By default the backend starts the server on the pod that owns the destination address, in its toolbox, on a port of its own; server=none uses a server the lab already runs at the destination (port 5201 unless port says otherwise) and server=<pod> names the pod to run it on. The source node must be L3-capable. A live version streams the same intervals over WebSocket at /iperf/ws/{namespace}/{podName}.
+//	@Description  Runs iperf3 from a source pod toward an address and returns the whole run as one JSON document: one entry per second and the end totals (bytes, bits per second, retransmissions for TCP, jitter and loss for UDP). By default the backend starts the server on the pod that owns the destination address, in its toolbox, on a port of its own; `server=none` uses a server the lab already runs at the destination (port 5201 unless `port` says otherwise) and `server=<pod>` names the pod to run it on. The source node must be L3-capable. A live version streams the same intervals over WebSocket at /iperf/ws/{namespace}/{podName}.
 //	@Tags         iperf
 //	@Produce      json
 //	@Param        namespace  path      string   true   "Namespace"

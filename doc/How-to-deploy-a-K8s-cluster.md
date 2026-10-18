@@ -472,3 +472,17 @@ kubectl top pod -n <your-kubendt-namespace>
 ```
 
 The CPU and RAM values should now appear in the KubeNDT pod info panel (Summary tab) and update every 5 seconds automatically while the panel is open.
+
+## 11. Link MTU and jumbo frames
+
+KubeNDT sets the same MTU on every link of a namespace once it is wired, 1450 by default. The reason is the dataplane Meshnet builds: a link whose two pods share a worker is a veth pair (1500 by default), a link across workers is a VXLAN tunnel whose MTU is the worker NIC's minus 50 (1450 on a 1500 underlay), and the kernel refuses to raise a VXLAN above that. Mixed values hurt silently: a Linux bridge drops frames larger than its egress port without ICMP, so TCP stalls on full-size segments and OSPF neighbours with different MTUs stay in ExStart. One value for the whole namespace keeps a lab independent of where its pods landed, and 1450 is the largest value that works on every placement of a 1500 underlay.
+
+Set `KUBENDT_LINK_MTU` on the backend when your cluster carries more or less than that. A value a worker cannot carry fails the deploy, modify or restart with the link, the worker and the value named; if you leave the default and it does not fit (an underlay smaller than 1500, or an IPv6 underlay where VXLAN costs 70 bytes), the backend lowers it to what fits and says so in the response's warnings.
+
+Jumbo frames: any underlay of 1550 bytes or more lets VXLAN carry 1500, and a 9000 underlay lets it carry 8950. Every hop has to allow it: the physical NIC and the switch ports between the workers, the bridge or bond the workers hang from when they are VMs (and the virtual NIC of each VM), the worker's NIC inside the OS, and any overlay the cluster CNI runs on top (flannel's `flannel.1` follows the NIC's MTU after a restart of its pods). Check the chain end to end with a DF ping between two workers before changing anything in KubeNDT:
+
+```bash
+ping -c 3 -M do -s 8972 <other worker>   # 8972 = 9000 - 28
+```
+
+Then set `KUBENDT_LINK_MTU=8950` and redeploy. Most public clouds do not allow jumbo between nodes and some carry less than 1500 to begin with; the default and the warning handle those.

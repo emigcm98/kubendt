@@ -63,24 +63,35 @@ func GetInterfacesFromPod(podName, namespace string) ([]map[string]string, error
 	}
 
 	scanner := bufio.NewScanner(strings.NewReader(stdout))
-	var currentIntf, currentMac, currentIP, currentState string
+	var currentIntf, currentMac, currentIP, currentState, currentMTU string
 	var result []map[string]string
+	entry := func() map[string]string {
+		e := map[string]string{
+			"interface": currentIntf,
+			"mac":       currentMac,
+			"ipv4":      currentIP,
+			"state":     currentState,
+		}
+		if currentMTU != "" {
+			e["mtu"] = currentMTU
+		}
+		return e
+	}
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 
 		if matches := regexp.MustCompile(`^\d+: ([^:@]+)[:@].*<([^>]*)>`).FindStringSubmatch(line); len(matches) > 2 {
 			if currentIntf != "" && !strings.HasPrefix(currentIntf, "tap") && !types.IsPseudoInterface(currentIntf) && currentMac != "" {
-				result = append(result, map[string]string{
-					"interface": currentIntf,
-					"mac":       currentMac,
-					"ipv4":      currentIP,
-					"state":     currentState,
-				})
+				result = append(result, entry())
 			}
 			currentIntf = matches[1]
 			currentMac = ""
 			currentIP = ""
+			currentMTU = ""
+			if m := regexp.MustCompile(`\bmtu (\d+)`).FindStringSubmatch(line); len(m) > 1 {
+				currentMTU = m[1]
+			}
 			flags := matches[2]
 			if strings.Contains(flags, "UP") {
 				currentState = "up"
@@ -100,12 +111,7 @@ func GetInterfacesFromPod(podName, namespace string) ([]map[string]string, error
 	}
 
 	if currentIntf != "" && currentIntf != "eth0" && !strings.HasPrefix(currentIntf, "tap") && currentMac != "" {
-		result = append(result, map[string]string{
-			"interface": currentIntf,
-			"mac":       currentMac,
-			"ipv4":      currentIP,
-			"state":     currentState,
-		})
+		result = append(result, entry())
 	}
 
 	if err := scanner.Err(); err != nil {

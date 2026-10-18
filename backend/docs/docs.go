@@ -1300,7 +1300,7 @@ const docTemplate = `{
         },
         "/iperf/run/{namespace}/{podName}": {
             "get": {
-                "description": "Runs iperf3 from a source pod toward an address and returns the whole run as one JSON document: one entry per second and the end totals (bytes, bits per second, retransmissions for TCP, jitter and loss for UDP). By default the backend starts the server on the pod that owns the destination address, in its toolbox, on a port of its own; server=none uses a server the lab already runs at the destination (port 5201 unless port says otherwise) and server=\u003cpod\u003e names the pod to run it on. The source node must be L3-capable. A live version streams the same intervals over WebSocket at /iperf/ws/{namespace}/{podName}.",
+                "description": "Runs iperf3 from a source pod toward an address and returns the whole run as one JSON document: one entry per second and the end totals (bytes, bits per second, retransmissions for TCP, jitter and loss for UDP). By default the backend starts the server on the pod that owns the destination address, in its toolbox, on a port of its own; ` + "`" + `server=none` + "`" + ` uses a server the lab already runs at the destination (port 5201 unless ` + "`" + `port` + "`" + ` says otherwise) and ` + "`" + `server=\u003cpod\u003e` + "`" + ` names the pod to run it on. The source node must be L3-capable. A live version streams the same intervals over WebSocket at /iperf/ws/{namespace}/{podName}.",
                 "produces": [
                     "application/json"
                 ],
@@ -3027,6 +3027,11 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 380
                 },
+                "mtu": {
+                    "description": "The platform MTU set on every link once the pods are Ready, both pod\nends and the guest of a VM node.",
+                    "type": "integer",
+                    "example": 650
+                },
                 "peer_replay": {
                     "description": "Re-application, on the neighbours of the recreated pods, of the operations\nthat touch the interfaces Meshnet recreated with them. Recovery cost of the\nneighbours, kept apart from the pods' own replay.",
                     "type": "integer",
@@ -4021,6 +4026,11 @@ const docTemplate = `{
                     "type": "string",
                     "example": "router1-0"
                 },
+                "nodeMaxMtu": {
+                    "description": "The most a VXLAN end can carry on its worker (the NIC's MTU minus the\nencapsulation), known once a cross-worker link has been wired there.",
+                    "type": "integer",
+                    "example": 1450
+                },
                 "nodeWorker": {
                     "type": "string",
                     "example": "k8s-worker1"
@@ -4032,6 +4042,10 @@ const docTemplate = `{
                 "peerIp": {
                     "type": "string",
                     "example": "10.0.0.2/30"
+                },
+                "peerMaxMtu": {
+                    "type": "integer",
+                    "example": 1450
                 },
                 "peerNode": {
                     "type": "string",
@@ -4060,6 +4074,11 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/types.LinkStatus"
                     }
+                },
+                "mtu": {
+                    "description": "The MTU the platform set on every link of the namespace, 0 before the\nfirst pass.",
+                    "type": "integer",
+                    "example": 1450
                 }
             }
         },

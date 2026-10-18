@@ -560,6 +560,19 @@ func ModifyNetwork(c *gin.Context) {
 	}
 
 	healDur := time.Since(healAt)
+	mtuAt := time.Now()
+
+	// Every recreated pod came back with fresh interfaces at the kernel's
+	// defaults, and so did the ends its neighbours face, so the whole
+	// namespace is passed again; only what differs is written.
+	mtuPass, mtuErr := helpers.ApplyPlatformMTU(namespace)
+	if mtuErr != nil {
+		log.Printf("❌ MTU pass after modify in %s: %v", namespace, mtuErr)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": mtuErr.Error()})
+		return
+	}
+	warnings = append(warnings, mtuPass.Warnings...)
+	mtuDur := time.Since(mtuAt)
 
 	if _, err := helpers.SyncNamespaceTopologyState(namespace); err != nil {
 		log.Printf("⚠️ Could not refresh topology state after modify in namespace '%s': %v", namespace, err)
@@ -582,7 +595,9 @@ func ModifyNetwork(c *gin.Context) {
 			Replay:     replayDur,
 			PeerReplay: peerReplayDur,
 			Heal:       helpers.MsPtr(healDur),
+			MTU:        helpers.MsPtr(mtuDur),
 		}),
+		"link_mtu":         mtuPass,
 		"deleted_nodes":    deletedNodes,
 		"restarted_pods":   restartedPods,
 		"scaled_up_pods":   scaledUpPods,
@@ -757,7 +772,14 @@ func DeployNetwork(c *gin.Context) {
 		return
 	}
 
-	// 4e. Validate static node inputs (image present, env var names, mount
+	// 4e. The platform MTU is a cluster setting; an unusable one would only
+	// surface after the pods are Ready, so it is checked before anything exists.
+	if _, _, err := helpers.PlatformLinkMTU(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 4f. Validate static node inputs (image present, env var names, mount
 	// targets + file existence, device paths) and link L3 addresses before
 	// creating any Kubernetes object.
 	if err := helpers.ValidateNodeInputs(namespace, request.Nodes); err != nil {
@@ -935,9 +957,26 @@ func DeployNetwork(c *gin.Context) {
 	}
 
 	healDur := time.Since(healAt)
+	mtuAt := time.Now()
 
-	// 11. Link attributes declared in the topology: shaping and MTU on both
-	// ends, persisted like any operation so a restart replays them.
+	// 11. One MTU for every link, both pod ends and the guests. A value the
+	// operator set that the substrate cannot carry makes the deploy unusable,
+	// so it is rolled back like a pod that never got Ready.
+	mtuPass, mtuErr := helpers.ApplyPlatformMTU(namespace)
+	if mtuErr != nil {
+		log.Printf("❌ MTU pass failed, rolling back created resources: %v", mtuErr)
+		helpers.RollbackNamespaceTopology(namespace)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":      mtuErr.Error(),
+			"rolledBack": true,
+		})
+		return
+	}
+	warnings = append(warnings, mtuPass.Warnings...)
+	mtuDur := time.Since(mtuAt)
+
+	// 12. Link attributes declared in the topology: shaping on both ends,
+	// persisted like any operation so a restart replays them.
 	if err := helpers.SaveLinkAttributes(namespace, request.Links, request.Nodes); err != nil {
 		log.Printf("⚠️ Could not save link attributes in namespace '%s': %v", namespace, err)
 	}
@@ -964,7 +1003,9 @@ func DeployNetwork(c *gin.Context) {
 			ResourceCreation: helpers.MsPtr(resourceCreationDur),
 			WaitReady:        helpers.MsPtr(nodeRunningDur),
 			Heal:             helpers.MsPtr(healDur),
+			MTU:              helpers.MsPtr(mtuDur),
 		}),
+		"link_mtu": mtuPass,
 		"warnings": warnings,
 	})
 }

@@ -64,7 +64,10 @@ type BackendPhasesMs struct {
 	// neighbours, kept apart from the pods' own replay.
 	PeerReplay *int64 `json:"peer_replay,omitempty" example:"1800"`
 	// Interface validation and healing after the pods are Ready.
-	Heal  *int64 `json:"heal,omitempty" example:"380"`
+	Heal *int64 `json:"heal,omitempty" example:"380"`
+	// The platform MTU set on every link once the pods are Ready, both pod
+	// ends and the guest of a VM node.
+	MTU   *int64 `json:"mtu,omitempty" example:"650"`
 	Total int64  `json:"total" example:"6760"`
 }
 
@@ -125,10 +128,17 @@ type LinkStatus struct {
 	// veth when both pods share a worker, vxlan when they do not, external for
 	// host uplinks, pending while an endpoint has no worker yet.
 	Realization string `json:"realization" example:"vxlan"`
+	// The most a VXLAN end can carry on its worker (the NIC's MTU minus the
+	// encapsulation), known once a cross-worker link has been wired there.
+	NodeMaxMTU *int `json:"nodeMaxMtu,omitempty" example:"1450"`
+	PeerMaxMTU *int `json:"peerMaxMtu,omitempty" example:"1450"`
 }
 
 // LinksStatusResponse is returned by GET /network/links/:namespace.
 type LinksStatusResponse struct {
+	// The MTU the platform set on every link of the namespace, 0 before the
+	// first pass.
+	MTU   int          `json:"mtu" example:"1450"`
 	Links []LinkStatus `json:"links"`
 }
 
