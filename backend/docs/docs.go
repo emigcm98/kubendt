@@ -3913,6 +3913,11 @@ const docTemplate = `{
                     "type": "string",
                     "example": "eth1"
                 },
+                "mtu": {
+                    "description": "MTU sets the link's MTU on both ends, kept as a property of the link\nand re-applied after a restart; 0 goes back to the platform's value.",
+                    "type": "integer",
+                    "example": 1400
+                },
                 "node": {
                     "type": "string",
                     "example": "host-0"
@@ -3975,6 +3980,11 @@ const docTemplate = `{
                 "loss": {
                     "type": "string",
                     "example": "0.5%"
+                },
+                "mtu": {
+                    "description": "MTU of the link, on both ends, instead of the platform's value. Between\n68 and KUBENDT_LINK_MTU, at least 1280 with IPv6 addresses; set by the\nMTU pass after wiring, not an operation of the history.",
+                    "type": "integer",
+                    "example": 1400
                 },
                 "name": {
                     "type": "string",

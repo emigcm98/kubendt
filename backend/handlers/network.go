@@ -567,7 +567,7 @@ func ModifyNetwork(c *gin.Context) {
 	// Every recreated pod came back with fresh interfaces at the kernel's
 	// defaults, and so did the ends its neighbours face, so the whole
 	// namespace is passed again; only what differs is written.
-	mtuPass, mtuErr := helpers.ApplyPlatformMTU(namespace, healReads)
+	mtuPass, mtuErr := helpers.ApplyPlatformMTU(namespace, healReads, nil)
 	if mtuErr != nil {
 		log.Printf("❌ MTU pass after modify in %s: %v", namespace, mtuErr)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": mtuErr.Error()})
@@ -960,13 +960,20 @@ func DeployNetwork(c *gin.Context) {
 	}
 
 	healDur := time.Since(healAt)
+
+	// 11. The link attributes declared in the topology are recorded first:
+	// the MTU pass reads a link's own mtu from them, the shaping is applied
+	// after it as ordinary operations.
+	if err := helpers.SaveLinkAttributes(namespace, request.Links, request.Nodes); err != nil {
+		log.Printf("⚠️ Could not save link attributes in namespace '%s': %v", namespace, err)
+	}
 	mtuAt := time.Now()
 
-	// 11. One MTU for every link, both pod ends and the guests, from what the
+	// 12. One MTU for every link, both pod ends and the guests, from what the
 	// heal pass just read. A value the operator set that the substrate cannot
 	// carry makes the deploy unusable, so it is rolled back like a pod that
 	// never got Ready.
-	mtuPass, mtuErr := helpers.ApplyPlatformMTU(namespace, healReads)
+	mtuPass, mtuErr := helpers.ApplyPlatformMTU(namespace, healReads, nil)
 	if mtuErr != nil {
 		log.Printf("❌ MTU pass failed, rolling back created resources: %v", mtuErr)
 		helpers.RollbackNamespaceTopology(namespace)
@@ -979,11 +986,8 @@ func DeployNetwork(c *gin.Context) {
 	warnings = append(warnings, mtuPass.Warnings...)
 	mtuDur := time.Since(mtuAt)
 
-	// 12. Link attributes declared in the topology: shaping on both ends,
-	// persisted like any operation so a restart replays them.
-	if err := helpers.SaveLinkAttributes(namespace, request.Links, request.Nodes); err != nil {
-		log.Printf("⚠️ Could not save link attributes in namespace '%s': %v", namespace, err)
-	}
+	// 13. The shaping declared on the links, on both ends, persisted like any
+	// operation so a restart replays it.
 	warnings = append(warnings, helpers.ApplyLinkAttributes(namespace, request.Links, request.Nodes)...)
 
 	if err := helpers.SetNamespaceHasTopology(namespace, true); err != nil {

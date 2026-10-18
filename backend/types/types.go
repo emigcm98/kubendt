@@ -195,6 +195,10 @@ type LinkSpec struct {
 	Jitter    string `json:"jitter,omitempty" example:"2ms"`
 	Loss      string `json:"loss,omitempty" example:"0.5%"`
 	Bandwidth string `json:"bandwidth,omitempty" example:"50mbit"`
+	// MTU of the link, on both ends, instead of the platform's value. Between
+	// 68 and KUBENDT_LINK_MTU, at least 1280 with IPv6 addresses; set by the
+	// MTU pass after wiring, not an operation of the history.
+	MTU int `json:"mtu,omitempty" example:"1400"`
 }
 
 // Structure for mounting a backend file into a pod. Mounts are always

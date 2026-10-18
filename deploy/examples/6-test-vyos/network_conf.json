@@ -114,10 +114,6 @@
                     "iface": "eth1"
                 },
                 {
-                    "type": "ospf_mtu_ignore",
-                    "iface": "eth1"
-                },
-                {
                     "type": "enable_dnat",
                     "iface": "eth4",
                     "externalPort": 80,
@@ -161,10 +157,6 @@
                 },
                 {
                     "type": "ospf_no_passive",
-                    "iface": "eth1"
-                },
-                {
-                    "type": "ospf_mtu_ignore",
                     "iface": "eth1"
                 }
             ]

@@ -8,7 +8,7 @@
    <a href="https://doi.org/10.5281/zenodo.21276320"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.21276320.svg" alt="DOI" /></a>
 </p>
 
-> Last reviewed: 15 Oct 2026
+> Last reviewed: 18 Oct 2026
 
 **KubeNDT** is a platform for deploying and operating virtual network topologies on Kubernetes.
 
@@ -45,7 +45,7 @@ KubeNDT bundles a small set of third-party SVG icons in its frontend. See [ATTRI
 - **Virtual networking overlays** powered by Meshnet CNI for custom L2/L3 connectivity
 - **Meshnet health awareness** - the dashboard shows whether the Meshnet dataplane is running (per cluster and per node), and blocks a deploy when it is missing so topologies don't come up with unwired links
 - **Link realization** - the link panel shows whether Meshnet wired a link as a veth pair (both ends on one worker) or a VXLAN tunnel (across workers) and which worker each end runs on, also available through `GET /network/links/{namespace}` for scripts
-- **Link MTU** - every link gets the same MTU once it is wired, 1450 by default and `KUBENDT_LINK_MTU` to change it, on both pod ends and inside a VyOS guest, so throughput and routing adjacencies do not depend on which worker each pod landed on.
+- **Link MTU** - every link gets the same MTU once it is wired, 1450 by default and `KUBENDT_LINK_MTU` to change it. A link can declare its own `mtu` in the topology or through the `links` section of a configure request
 - **Modular driver architecture** supporting different node types (hosts, routers, switches) with extensible capabilities
 - **Interactive terminal shell** with WebSocket for real-time pod access
 - **Dynamic network modification** - add/delete nodes and links without redeploying the entire topology

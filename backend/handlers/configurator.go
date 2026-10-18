@@ -38,6 +38,13 @@ func ConfigureNetwork(c *gin.Context) {
 		return
 	}
 	req.Targets = append(req.Targets, linkTargets...)
+	// A link entry may also set the link's MTU: kept as a property of the
+	// link and written by the MTU pass on both ends once the actions ran.
+	mtuPods, err := helpers.RecordLinkMTUs(namespace, req.Links)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 	// One target per pod, in request order, so a pod named twice is one job.
 	req.Targets = helpers.MergeTargetsByPod(namespace, req.Targets)
 
@@ -250,6 +257,18 @@ func ConfigureNetwork(c *gin.Context) {
 	}
 	seqSecs := seqMs / 1000.0
 
+	response := gin.H{}
+	if len(mtuPods) > 0 {
+		mtuPass, mtuErr := helpers.ApplyPlatformMTU(namespace, nil, mtuPods)
+		if mtuErr != nil {
+			errorList = append(errorList, ErrorEntry{Error: mtuErr.Error()})
+			failures++
+		} else {
+			response["link_mtu"] = mtuPass
+			response["warnings"] = mtuPass.Warnings
+		}
+	}
+
 	status := "success"
 	if len(errorList) > 0 {
 		status = "completed_with_errors"
@@ -261,17 +280,16 @@ func ConfigureNetwork(c *gin.Context) {
 		speedup = seqSecs / took.Seconds()
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"status":         status,
-		"successes":      successes,
-		"failures":       failures,
-		"skipped":        skipped,
-		"errors":         errorList,
-		"action_results": actionResults,
-		"took_time": gin.H{
-			"total":                 fmt.Sprintf("%.2fs", took.Seconds()),
-			"sequential_equivalent": fmt.Sprintf("%.2fs", seqSecs),
-		},
-		"speedup": speedup,
-	})
+	response["status"] = status
+	response["successes"] = successes
+	response["failures"] = failures
+	response["skipped"] = skipped
+	response["errors"] = errorList
+	response["action_results"] = actionResults
+	response["took_time"] = gin.H{
+		"total":                 fmt.Sprintf("%.2fs", took.Seconds()),
+		"sequential_equivalent": fmt.Sprintf("%.2fs", seqSecs),
+	}
+	response["speedup"] = speedup
+	c.JSON(http.StatusOK, response)
 }

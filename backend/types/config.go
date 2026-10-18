@@ -40,6 +40,9 @@ type LinkShaping struct {
 	Reverse   *TCParamEntry `json:"reverse,omitempty"`
 	// Remove clears the shaping on both ends.
 	Remove bool `json:"remove,omitempty" example:"false"`
+	// MTU sets the link's MTU on both ends, kept as a property of the link
+	// and re-applied after a restart; 0 goes back to the platform's value.
+	MTU *int `json:"mtu,omitempty" example:"1400"`
 }
 
 type PodConfig struct {

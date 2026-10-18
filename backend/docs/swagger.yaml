@@ -782,6 +782,12 @@ definitions:
       localIntf:
         example: eth1
         type: string
+      mtu:
+        description: |-
+          MTU sets the link's MTU on both ends, kept as a property of the link
+          and re-applied after a restart; 0 goes back to the platform's value.
+        example: 1400
+        type: integer
       node:
         example: host-0
         type: string
@@ -835,6 +841,13 @@ definitions:
       loss:
         example: 0.5%
         type: string
+      mtu:
+        description: |-
+          MTU of the link, on both ends, instead of the platform's value. Between
+          68 and KUBENDT_LINK_MTU, at least 1280 with IPv6 addresses; set by the
+          MTU pass after wiring, not an operation of the history.
+        example: 1400
+        type: integer
       name:
         example: N3
         type: string

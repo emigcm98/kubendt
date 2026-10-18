@@ -165,8 +165,8 @@ func TestVyOSGuestMTUCommands(t *testing.T) {
 }
 
 func TestSetScriptAndFailures(t *testing.T) {
-	script := setScript([]string{"eth1", "tap1"}, 1450)
-	want := "ip link set dev eth1 mtu 1450 2>/dev/null || echo FAIL eth1; ip link set dev tap1 mtu 1450 2>/dev/null || echo FAIL tap1"
+	script := setScript([]setItem{{"eth1", 1450}, {"tap1", 1450}, {"eth2", 1400}})
+	want := "ip link set dev eth1 mtu 1450 2>/dev/null || echo FAIL eth1; ip link set dev tap1 mtu 1450 2>/dev/null || echo FAIL tap1; ip link set dev eth2 mtu 1400 2>/dev/null || echo FAIL eth2"
 	if script != want {
 		t.Fatalf("script:\n%s\nwant:\n%s", script, want)
 	}
@@ -233,5 +233,44 @@ func TestForgetReads(t *testing.T) {
 	mergeReads(reads, map[string]map[string]int{"a-0": {"eth1": 1500}})
 	if reads["a-0"]["eth1"] != 1500 {
 		t.Fatalf("merge adds the new read")
+	}
+}
+
+func TestSettleMTUWithLinkOverrides(t *testing.T) {
+	ceilingMu.Lock()
+	workerCeiling = map[string]int{"w1": 1450, "w2": 1450}
+	ceilingMu.Unlock()
+	defer func() {
+		ceilingMu.Lock()
+		workerCeiling = map[string]int{}
+		ceilingMu.Unlock()
+	}()
+	fits := []mtuEnd{
+		{Pod: "a-0", Iface: "eth1", Worker: "w1", Peer: "b-0", PeerIf: "eth1", Cross: true, Want: 1400},
+		{Pod: "b-0", Iface: "eth1", Worker: "w2", Peer: "a-0", PeerIf: "eth1", Cross: true, Want: 1400},
+	}
+	eff, warnings, err := settleMTU(1450, false, fits)
+	if err != nil || eff != 1450 || len(warnings) != 0 {
+		t.Fatalf("a fitting override leaves the namespace value alone: eff=%d warnings=%v err=%v", eff, warnings, err)
+	}
+	if targetOf(fits[0], eff) != 1400 || targetOf(mtuEnd{}, eff) != 1450 {
+		t.Fatalf("targets: override 1400, plain end 1450")
+	}
+	tooBig := []mtuEnd{{Pod: "a-0", Iface: "eth1", Worker: "w1", Peer: "b-0", PeerIf: "eth1", Cross: true, Want: 1500}}
+	_, _, err = settleMTU(1450, false, tooBig)
+	if err == nil || !strings.Contains(err.Error(), "asks for mtu 1500") || !strings.Contains(err.Error(), "w1") {
+		t.Fatalf("an override above the ceiling fails naming the link and the worker: %v", err)
+	}
+}
+
+func TestGuestNeedsMTUWithOverride(t *testing.T) {
+	ends := []mtuEnd{{Pod: "r-0", Iface: "eth1", Want: 1400}, {Pod: "r-0", Iface: "eth2"}}
+	entries := []map[string]string{{"interface": "eth1", "mtu": "1400"}, {"interface": "eth2", "mtu": "1450"}}
+	if guestNeedsMTU(entries, ends, 1450) {
+		t.Fatalf("each interface at its own target needs no commit")
+	}
+	entries[0]["mtu"] = "1450"
+	if !guestNeedsMTU(entries, ends, 1450) {
+		t.Fatalf("an overridden interface at the platform value needs the commit")
 	}
 }

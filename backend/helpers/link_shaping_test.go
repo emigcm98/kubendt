@@ -59,7 +59,7 @@ func TestExpandLinkShaping(t *testing.T) {
 		{"external peer, symmetric", []types.LinkShaping{{Node: "edge-0", LocalIntf: "eth1", Shaping: delay, Symmetric: true}}, nil, "external network"},
 		{"external peer, remove only touches the pod", []types.LinkShaping{{Node: "edge-0", LocalIntf: "eth1", Remove: true}},
 			[]types.PodConfig{{Pod: "edge-0", Actions: []types.ActionEntry{{Type: "del_qdisc", Iface: "eth1"}}}}, ""},
-		{"nothing to do", []types.LinkShaping{{Node: "host-0", LocalIntf: "eth1"}}, nil, "needs shaping, reverse or remove"},
+		{"nothing to do", []types.LinkShaping{{Node: "host-0", LocalIntf: "eth1"}}, nil, "needs shaping, reverse, remove or mtu"},
 		{"symmetric and reverse", []types.LinkShaping{{Node: "host-0", LocalIntf: "eth1", Shaping: delay, Symmetric: true, Reverse: rate}}, nil, "exclusive"},
 		{"remove with shaping", []types.LinkShaping{{Node: "host-0", LocalIntf: "eth1", Remove: true, Shaping: delay}}, nil, "remove takes no shaping"},
 		{"missing fields", []types.LinkShaping{{Node: "host-0"}}, nil, "node and localIntf are required"},

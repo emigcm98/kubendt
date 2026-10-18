@@ -24,7 +24,7 @@ const (
 	// applyMigrations. There is intentionally no migration below version 1:
 	// 1.0.0 ships the first released schema, so no older database can exist in
 	// the wild. Bump this and add a case to applyMigrations for each change.
-	schemaVersion = 1
+	schemaVersion = 2
 )
 
 func InitDB() {
@@ -67,10 +67,12 @@ func applyMigrations() {
 		log.Fatalf("❌ Database schema version %d is newer than this build supports (%d); upgrade KubeNDT", version, schemaVersion)
 	}
 
-	// Future migrations go here, e.g.:
-	//   if version < 2 { migrateTo2() }
-	// Each step brings the schema forward one version and is guarded by the
-	// version check so it runs exactly once.
+	// Each step brings the schema forward one version. A new database is
+	// created at the latest schema by createTables and arrives here at
+	// version 0, so a step only adds what is missing.
+	if version < 2 {
+		addColumnIfMissing("link_attributes", "mtu", "INTEGER NOT NULL DEFAULT 0")
+	}
 
 	// PRAGMA does not accept bound parameters, so the version is interpolated
 	// (it is a trusted integer constant, not user input).
@@ -137,6 +139,7 @@ func createTables() {
 			jitter TEXT NOT NULL DEFAULT '',
 			loss TEXT NOT NULL DEFAULT '',
 			bandwidth TEXT NOT NULL DEFAULT '',
+			mtu INTEGER NOT NULL DEFAULT 0,
 			PRIMARY KEY (cluster_id, namespace, node, intf)
 		);`,
 		`
@@ -212,6 +215,32 @@ func ensureDBDirectory(dbPath string) error {
 		return nil
 	}
 	return os.MkdirAll(dir, 0755)
+}
+
+// addColumnIfMissing adds a column to an existing table, a no-op when the
+// table already has it (a database created at the current schema).
+func addColumnIfMissing(table, column, decl string) {
+	rows, err := DB.Query(fmt.Sprintf(`PRAGMA table_info(%s)`, table))
+	if err != nil {
+		log.Fatalf("❌ Error reading the columns of %s: %v", table, err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var cid int
+		var name, ctype string
+		var notnull, pk int
+		var dflt any
+		if err := rows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk); err != nil {
+			log.Fatalf("❌ Error reading the columns of %s: %v", table, err)
+		}
+		if name == column {
+			return
+		}
+	}
+	if _, err := DB.Exec(fmt.Sprintf(`ALTER TABLE %s ADD COLUMN %s %s`, table, column, decl)); err != nil {
+		log.Fatalf("❌ Error adding %s.%s: %v", table, column, err)
+	}
+	log.Printf("📐 Added column %s.%s", table, column)
 }
 
 func migrateLegacyDB(oldPath, newPath string) error {

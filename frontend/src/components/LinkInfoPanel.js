@@ -155,6 +155,7 @@ const LinkInfoPanel = ({
         attrs.jitter && `jitter ${attrs.jitter}`,
         attrs.loss && `loss ${attrs.loss}`,
         attrs.bandwidth && `bandwidth ${attrs.bandwidth}`,
+        attrs.mtu && `mtu ${attrs.mtu}`,
       ]
         .filter(Boolean)
         .join(', ')
