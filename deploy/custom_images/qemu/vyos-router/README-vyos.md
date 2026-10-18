@@ -561,6 +561,7 @@ All runtime behaviour of `entrypoint.sh` can be tuned without rebuilding the ima
 | `NAMESERVERS` | `1.1.1.1,8.8.8.8` | Comma-separated list of DNS nameservers written into the boot config. |
 | `SSH_FORWARD_PORT` | `2222` | Host port (on `127.0.0.1`) forwarded to the VyOS guest SSH port 22 via QEMU user-mode networking. Must be unique per pod on the same node. |
 | `HTTPS_FORWARD_PORT` | `8443` | Host port (on `127.0.0.1`) forwarded to the VyOS guest HTTP API port 443. Used by the `vyos_api` wrapper. |
+| `KUBENDT_LINK_MTU` | unset | MTU set at boot on the pod's data interfaces, their taps and the guest's ethernet interfaces (not `eth0`, and not a host uplink, which keeps the host network's MTU). The backend sets it from its own `KUBENDT_LINK_MTU` (1450 by default) so its MTU pass finds nothing to commit; unset, the kernel's defaults stay and the pass sets them after boot. |
 | `MGMT_NET` | `192.168.255.0/24` | QEMU user-mode management network prefix. |
 | `MGMT_GATEWAY` | `192.168.255.2` | Gateway IP within the management network (assigned by QEMU slirp). |
 | `MGMT_VM_IP` | `192.168.255.15/24` | IP assigned to the VyOS guest on the management network. |

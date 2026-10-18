@@ -543,13 +543,15 @@ func ModifyNetwork(c *gin.Context) {
 	// Post-modify heal pass over the new links. The endpoints that had to be
 	// recreated were restarted above, so this normally just confirms that
 	// every new interface is there and only repairs if Meshnet missed one.
+	var healReads map[string]map[string]int
 	if hasAdd && len(request.Add.Links) > 0 {
 		currentNodes, nodesErr := helpers.GetExistingNodes(namespace)
 		if nodesErr != nil {
 			log.Printf("⚠️ Modify heal: could not get current nodes: %v", nodesErr)
 		} else {
 			log.Printf("🔁 Modify: verifying %d new link(s)...", len(request.Add.Links))
-			if healErr := helpers.HealMissingInterfaces(namespace, currentNodes, request.Add.Links, 2); healErr != nil {
+			var healErr error
+			if healReads, healErr = helpers.HealMissingInterfaces(namespace, currentNodes, request.Add.Links, 2); healErr != nil {
 				log.Printf("⚠️ Modify heal: %v", healErr)
 			}
 			if err := helpers.SaveLinkAttributes(namespace, request.Add.Links, currentNodes); err != nil {
@@ -565,7 +567,7 @@ func ModifyNetwork(c *gin.Context) {
 	// Every recreated pod came back with fresh interfaces at the kernel's
 	// defaults, and so did the ends its neighbours face, so the whole
 	// namespace is passed again; only what differs is written.
-	mtuPass, mtuErr := helpers.ApplyPlatformMTU(namespace)
+	mtuPass, mtuErr := helpers.ApplyPlatformMTU(namespace, healReads)
 	if mtuErr != nil {
 		log.Printf("❌ MTU pass after modify in %s: %v", namespace, mtuErr)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": mtuErr.Error()})
@@ -951,7 +953,8 @@ func DeployNetwork(c *gin.Context) {
 	// 10. Validate that every link's interfaces exist and heal what is
 	// missing. The validation itself re-checks before restarting anything, so
 	// no settle delay is needed here.
-	if err := helpers.HealMissingInterfaces(namespace, request.Nodes, request.Links, 2); err != nil {
+	healReads, err := helpers.HealMissingInterfaces(namespace, request.Nodes, request.Links, 2)
+	if err != nil {
 		log.Printf("⚠️ Heal pass ended with remaining issues: %v", err)
 		// Decide: return 500 or just warn. I would warn, not fail deploy.
 	}
@@ -959,10 +962,11 @@ func DeployNetwork(c *gin.Context) {
 	healDur := time.Since(healAt)
 	mtuAt := time.Now()
 
-	// 11. One MTU for every link, both pod ends and the guests. A value the
-	// operator set that the substrate cannot carry makes the deploy unusable,
-	// so it is rolled back like a pod that never got Ready.
-	mtuPass, mtuErr := helpers.ApplyPlatformMTU(namespace)
+	// 11. One MTU for every link, both pod ends and the guests, from what the
+	// heal pass just read. A value the operator set that the substrate cannot
+	// carry makes the deploy unusable, so it is rolled back like a pod that
+	// never got Ready.
+	mtuPass, mtuErr := helpers.ApplyPlatformMTU(namespace, healReads)
 	if mtuErr != nil {
 		log.Printf("❌ MTU pass failed, rolling back created resources: %v", mtuErr)
 		helpers.RollbackNamespaceTopology(namespace)

@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -123,6 +124,20 @@ func GetInterfacesFromPod(podName, namespace string) ([]map[string]string, error
 	})
 
 	return result, nil
+}
+
+// guestLinkMTUEnv hands a VM node's entrypoint the platform MTU, so the guest
+// boots with it on its data interfaces and the MTU pass finds nothing to
+// commit. Container nodes get nothing: the pass sets their interfaces itself.
+func guestLinkMTUEnv(node types.NodeSpec) []v1.EnvVar {
+	if !node.Qemu {
+		return nil
+	}
+	mtu, _, err := PlatformLinkMTU()
+	if err != nil {
+		return nil
+	}
+	return []v1.EnvVar{{Name: LinkMTUEnv, Value: strconv.Itoa(mtu)}}
 }
 
 func CreateEnvConfigMapFromNode(namespace string, node types.NodeSpec) error {
@@ -253,6 +268,7 @@ func CreateNetworkStatefulSet(namespace string, node types.NodeSpec, validMounts
 			},
 		},
 		ReadinessProbe: buildReadinessProbe(resolveDriverForProbe(node.Driver)),
+		Env:            guestLinkMTUEnv(node),
 	}
 
 	if useSerialShell {

@@ -39,17 +39,21 @@ type linkIssue struct {
 // replays its operation history, for at most maxRounds rounds. It is not a
 // controller loop: nothing watches the cluster in between operations, the
 // pass is triggered by the backend, does a fixed amount of work and returns.
-func HealMissingInterfaces(namespace string, nodes []types.NodeSpec, links []types.LinkSpec, maxRounds int) error {
+// It also returns what it read, per pod the interfaces with their MTU, so
+// the MTU pass that follows does not exec into the same pods again; a pod
+// restarted here, and its neighbours, are dropped until read again.
+func HealMissingInterfaces(namespace string, nodes []types.NodeSpec, links []types.LinkSpec, maxRounds int) (map[string]map[string]int, error) {
 	if maxRounds <= 0 {
 		maxRounds = 2
 	}
 
 	podType := buildPodTypeMap(nodes)
 	desired := buildDesiredResolvedLinks(nodes, links)
+	reads := map[string]map[string]int{}
 
 	if len(desired) == 0 {
 		log.Printf("ℹ️ Heal: no links to validate.")
-		return nil
+		return reads, nil
 	}
 
 	for round := 1; round <= maxRounds; round++ {
@@ -57,19 +61,20 @@ func HealMissingInterfaces(namespace string, nodes []types.NodeSpec, links []typ
 
 		// 1) Collect missing per pod (count) + per link (pretty logs)
 		missingCountByPod := make(map[string]int)
-		issues := collectLinkIssues(namespace, desired, missingCountByPod)
+		issues, roundReads := collectLinkIssues(namespace, desired, missingCountByPod)
+		mergeReads(reads, roundReads)
 
 		// A Ready pod normally has every interface already (CNI ADD finishes
 		// before its container starts), so a miss right after Ready is more
 		// likely a race than a broken link. Re-check the affected links a few
 		// times before restarting anything, restarts are the expensive path.
 		if round == 1 && len(issues) > 0 {
-			issues = recheckLinkIssues(namespace, desired, issues, missingCountByPod)
+			issues = recheckLinkIssues(namespace, desired, issues, missingCountByPod, reads)
 		}
 
 		if len(issues) == 0 {
 			log.Printf("✅ Heal: all expected interfaces are present.")
-			return nil
+			return reads, nil
 		}
 
 		// 2) Pretty logs grouped by pair
@@ -188,22 +193,24 @@ func HealMissingInterfaces(namespace string, nodes []types.NodeSpec, links []typ
 			log.Printf("❌ Heal: failed replaying persisted driver operations after restarts: %v", err)
 		}
 		ReapplyPeerInterfaceState(namespace, toRestart)
+		forgetReads(reads, toRestart, desired)
 
 		if round == maxRounds {
 			log.Printf("🔎 Heal: final validation after restarts (round %d/%d)...", round, maxRounds)
 
 			// Re-check issues with a fresh counter map
 			finalMissingCount := make(map[string]int)
-			finalIssues := collectLinkIssues(namespace, desired, finalMissingCount)
+			finalIssues, finalReads := collectLinkIssues(namespace, desired, finalMissingCount)
+			mergeReads(reads, finalReads)
 
 			if len(finalIssues) == 0 {
 				log.Printf("✅ Heal: OK after restarts. No missing interfaces.")
-				return nil
+				return reads, nil
 			}
 
 			log.Printf("⚠️ Heal: issues still remain after restarts.")
 			logLinkIssuesPretty(finalIssues)
-			return fmt.Errorf("heal: interfaces are still missing after %d rounds", maxRounds)
+			return reads, fmt.Errorf("heal: interfaces are still missing after %d rounds", maxRounds)
 		}
 
 		sleep := time.Duration(2*round) * time.Second
@@ -211,7 +218,29 @@ func HealMissingInterfaces(namespace string, nodes []types.NodeSpec, links []typ
 		time.Sleep(sleep)
 	}
 
-	return fmt.Errorf("heal: interfaces are still missing after %d rounds", maxRounds)
+	return reads, fmt.Errorf("heal: interfaces are still missing after %d rounds", maxRounds)
+}
+
+func mergeReads(dst, src map[string]map[string]int) {
+	for pod, mtus := range src {
+		dst[pod] = mtus
+	}
+}
+
+// forgetReads drops the pods just restarted and every pod sharing a link
+// with them: Meshnet rebuilt the facing ends too, so those reads are stale
+// until the next collection.
+func forgetReads(reads map[string]map[string]int, restarted []string, desired []desiredLink) {
+	gone := map[string]bool{}
+	for _, p := range restarted {
+		gone[p] = true
+	}
+	for _, dl := range desired {
+		if gone[dl.PodA] || gone[dl.PodB] {
+			delete(reads, dl.PodA)
+			delete(reads, dl.PodB)
+		}
+	}
 }
 
 /* --------------------------- issue collection --------------------------- */
@@ -220,7 +249,7 @@ func HealMissingInterfaces(namespace string, nodes []types.NodeSpec, links []typ
 // linkRecheckAttempts times one second apart, and returns whatever is still
 // missing. missingCountByPod is rebuilt from the last pass so the restart
 // choice below sees current numbers.
-func recheckLinkIssues(namespace string, desired []desiredLink, issues []linkIssue, missingCountByPod map[string]int) []linkIssue {
+func recheckLinkIssues(namespace string, desired []desiredLink, issues []linkIssue, missingCountByPod map[string]int, reads map[string]map[string]int) []linkIssue {
 	const linkRecheckAttempts = 3
 
 	pairKey := func(a, b string) string {
@@ -245,7 +274,9 @@ func recheckLinkIssues(namespace string, desired []desiredLink, issues []linkIss
 		for k := range missingCountByPod {
 			delete(missingCountByPod, k)
 		}
-		issues = collectLinkIssues(namespace, subset, missingCountByPod)
+		var roundReads map[string]map[string]int
+		issues, roundReads = collectLinkIssues(namespace, subset, missingCountByPod)
+		mergeReads(reads, roundReads)
 		if len(issues) == 0 {
 			log.Printf("✅ Heal: interfaces showed up on re-check %d/%d, nothing to restart.", attempt, linkRecheckAttempts)
 			return nil
@@ -255,7 +286,10 @@ func recheckLinkIssues(namespace string, desired []desiredLink, issues []linkIss
 	return issues
 }
 
-func collectLinkIssues(namespace string, desired []desiredLink, missingCountByPod map[string]int) []linkIssue {
+// collectLinkIssues reads every pod of the desired links once ("ip -o link
+// show") and reports the endpoints whose interface is not there, grouped per
+// link. The reads come back too, per pod the interface names with their MTU.
+func collectLinkIssues(namespace string, desired []desiredLink, missingCountByPod map[string]int) ([]linkIssue, map[string]map[string]int) {
 	// Deterministic processing order (stable display keys and bucket indices)
 	sort.Slice(desired, func(i, j int) bool {
 		a := desired[i].PodA + "/" + desired[i].IfA + "<->" + desired[i].PodB + "/" + desired[i].IfB
@@ -287,33 +321,51 @@ func collectLinkIssues(namespace string, desired []desiredLink, missingCountByPo
 		}
 	}
 
-	var checks []epCheck
+	byPod := map[string][]epCheck{}
 	for i, dl := range desired {
 		if dl.PodA != "external" && dl.IfA != "" {
-			checks = append(checks, epCheck{i, 0, dl.PodA, dl.IfA})
+			byPod[dl.PodA] = append(byPod[dl.PodA], epCheck{i, 0, dl.PodA, dl.IfA})
 		}
 		if dl.PodB != "external" && dl.IfB != "" {
-			checks = append(checks, epCheck{i, 1, dl.PodB, dl.IfB})
+			byPod[dl.PodB] = append(byPod[dl.PodB], epCheck{i, 1, dl.PodB, dl.IfB})
 		}
 	}
 
 	const maxWorkers = 20
-	resultsCh := make(chan epResult, len(checks))
+	var (
+		mu      sync.Mutex
+		results []epResult
+		reads   = map[string]map[string]int{}
+	)
 	sem := make(chan struct{}, maxWorkers)
 	var wg sync.WaitGroup
 
-	for _, chk := range checks {
+	for pod, checks := range byPod {
 		wg.Add(1)
 		sem <- struct{}{}
-		go func(c epCheck) {
+		go func(pod string, checks []epCheck) {
 			defer wg.Done()
 			defer func() { <-sem }()
-			ok, reason := podHasInterfaceWithCachedPod(namespace, c.pod, podCache[c.pod], c.iface, 3)
-			resultsCh <- epResult{c.linkIdx, c.side, c.pod, c.iface, ok, reason}
-		}(chk)
+			mtus, reason := readPodLinks(namespace, pod, podCache[pod], 3)
+			mu.Lock()
+			defer mu.Unlock()
+			if mtus != nil {
+				reads[pod] = mtus
+			}
+			for _, c := range checks {
+				r := epResult{c.linkIdx, c.side, c.pod, c.iface, false, reason}
+				if mtus != nil {
+					if _, ok := mtus[c.iface]; ok {
+						r.ok, r.reason = true, "present"
+					} else {
+						r.reason = "iface-missing"
+					}
+				}
+				results = append(results, r)
+			}
+		}(pod, checks)
 	}
 	wg.Wait()
-	close(resultsCh)
 
 	type linkBucket struct {
 		missA []string
@@ -323,7 +375,7 @@ func collectLinkIssues(namespace string, desired []desiredLink, missingCountByPo
 	}
 	buckets := make([]linkBucket, len(desired))
 
-	for r := range resultsCh {
+	for _, r := range results {
 		if r.ok {
 			continue
 		}
@@ -371,7 +423,7 @@ func collectLinkIssues(namespace string, desired []desiredLink, missingCountByPo
 		return issues[i].DisplayKey < issues[j].DisplayKey
 	})
 
-	return issues
+	return issues, reads
 }
 
 func logLinkIssuesPretty(issues []linkIssue) {
@@ -552,45 +604,34 @@ func shouldCountAsMissing(reason string) bool {
 	}
 }
 
-// podHasInterfaceWithCachedPod runs "ip link show <iface>" against a
-// pre-fetched pod (avoids per-pod API Gets that throttle under concurrency).
-// Falls back to a Get if pod is nil. Returns one of: present, iface-missing,
-// exec-error, pod-not-ready, pod-terminating, pod-not-found.
-func podHasInterfaceWithCachedPod(namespace, podName string, pod *v1.Pod, iface string, tries int) (bool, string) {
+// readPodLinks lists a pod's interfaces with their MTU in one exec, retrying
+// a failed exec a few times. Returns nil and the reason when the pod cannot
+// be read: pod-not-found, pod-terminating, pod-not-ready, exec-error.
+func readPodLinks(namespace, podName string, pod *v1.Pod, tries int) (map[string]int, string) {
 	if pod == nil {
 		fetched, err := kubeclient.Clientset.CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
 		if err != nil {
-			return false, "pod-not-found"
+			return nil, "pod-not-found"
 		}
 		pod = fetched
 	}
 	if pod.DeletionTimestamp != nil {
-		return false, "pod-terminating"
+		return nil, "pod-terminating"
 	}
 	if !isPodReadyFast(pod) {
-		return false, "pod-not-ready"
+		return nil, "pod-not-ready"
 	}
 
 	for i := 0; i < tries; i++ {
-		stdout, stderr, err := ExecInPod(namespace, podName, []string{"ip", "link", "show", iface})
-		if err == nil && strings.TrimSpace(stdout) != "" {
-			return true, "present"
+		stdout, _, err := ExecInPod(namespace, podName, []string{"ip", "-o", "link", "show"})
+		if err == nil {
+			if mtus := parseLinkMTUs(stdout); len(mtus) > 0 {
+				return mtus, "present"
+			}
 		}
-
-		combined := strings.ToLower(stdout + "\n" + stderr)
-		if strings.Contains(combined, "does not exist") || strings.Contains(combined, "cannot find device") {
-			return false, "iface-missing"
-		}
-
-		if err != nil {
-			time.Sleep(time.Duration(150*(i+1)) * time.Millisecond)
-			continue
-		}
-
-		return false, "iface-missing"
+		time.Sleep(time.Duration(150*(i+1)) * time.Millisecond)
 	}
-
-	return false, "exec-error"
+	return nil, "exec-error"
 }
 
 func isPodReadyFast(pod *v1.Pod) bool {
