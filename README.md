@@ -177,7 +177,7 @@ The full technical details were moved out of this top-level README to keep first
 
 ## Use Cases & Examples
 
-KubeNDT includes **6 reference deployments** in `deploy/examples/`. Start with the scenario that matches your use case:
+KubeNDT includes **7 reference deployments** in `deploy/examples/`. Start with the scenario that matches your use case:
 
 | Example | Guide | Description | Complexity |
 | --- | --- | --- | --- |
@@ -187,6 +187,7 @@ KubeNDT includes **6 reference deployments** in `deploy/examples/`. Start with t
 | [4-test-medium-allfeatures](deploy/examples/4-test-medium-allfeatures/) | [4-README](deploy/examples/4-test-medium-allfeatures/README.md) | All features combined (NAT, TC, bridges, routing) | ⭐⭐⭐ |
 | [5-test-full-open5gs](deploy/examples/5-test-full-open5gs/) | [5-README](deploy/examples/5-test-full-open5gs/README.md) | 5G core network with Open5GS | ⭐⭐⭐ |
 | [6-test-vyos](deploy/examples/6-test-vyos/) | [6-README](deploy/examples/6-test-vyos/README.md) | VyOS-based routers with advanced networking | ⭐⭐⭐⭐ |
+| [7-test-dual-stack](deploy/examples/7-test-dual-stack/) | [7-README](deploy/examples/7-test-dual-stack/README.md) | Dual stack IPv4 and IPv6: FRR with OSPF for IPv4, static IPv6 routes, an IPv6-only host and the tools over IPv6 | ⭐⭐ |
 
 **Each example includes:**
 
@@ -207,7 +208,7 @@ KubeNDT includes **6 reference deployments** in `deploy/examples/`. Start with t
 
 Example images are pinned to version tags (FRR from `quay.io/frrouting/frr`, where the project publishes it). `globocom/openvswitch`, `networkstatic/iperf3` and `docker_open5gs` have no version tags and keep their moving tag. The VyOS image is the one you build with `build-vyos-qcow2.sh`.
 
-The measurement scripts behind the published evaluation, and the regression that runs the six examples end to end, live in [experiments/](experiments/). They need a cluster and are not run in CI.
+The measurement scripts behind the published evaluation, and the regression that runs the seven examples end to end, live in [experiments/](experiments/). They need a cluster and are not run in CI.
 
 ## Known Limitations
 

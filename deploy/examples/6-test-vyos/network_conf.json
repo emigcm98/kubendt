@@ -8,6 +8,10 @@
                     "gateway": "10.0.0.1"
                 },
                 {
+                    "type": "set_default_route",
+                    "gateway": "fd00:a::1"
+                },
+                {
                     "type": "add_dns_nameserver",
                     "dns_server": "8.8.8.8"
                 }
@@ -158,6 +162,11 @@
                 {
                     "type": "ospf_no_passive",
                     "iface": "eth1"
+                },
+                {
+                    "type": "add_static_route",
+                    "dst_cidr": "fd00:a::/64",
+                    "gateway": "fd00:10::1"
                 }
             ]
         }

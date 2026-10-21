@@ -87,8 +87,8 @@ func TestBuildTraceCommand(t *testing.T) {
 		t.Errorf("tcp command should use tcptraceroute, got %v", tcp)
 	}
 	v6 := BuildTraceCommand("fd00:12::2", "icmp")
-	if v6[0] != "traceroute" || v6[1] != "-6" || !contains(v6, "-I") || v6[len(v6)-1] != "fd00:12::2" {
-		t.Errorf("v6 icmp command = %v", v6)
+	if v6[0] != "traceroute" || v6[1] != "-6" || contains(v6, "-I") || v6[len(v6)-1] != "fd00:12::2" {
+		t.Errorf("v6 icmp command should send UDP probes with -6: %v", v6)
 	}
 	if contains(BuildTraceCommand("10.0.0.1", "udp"), "-6") {
 		t.Errorf("a v4 trace should carry no -6")

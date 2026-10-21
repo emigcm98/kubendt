@@ -46,8 +46,8 @@
       "node": "host-0",
       "peerNode": "router-0",
       "peerIntf": "eth2",
-      "localIp": "10.0.0.10/24",
-      "peerIp": "10.0.0.1/24"
+      "localIp": ["10.0.0.10/24", "fd00:a::10/64"],
+      "peerIp": ["10.0.0.1/24", "fd00:a::1/64"]
     },
     {
       "localIntf": "eth1",
@@ -62,8 +62,8 @@
       "node": "router-0",
       "peerNode": "router-1",
       "peerIntf": "eth1",
-      "localIp": "10.0.10.1/30",
-      "peerIp": "10.0.10.2/30"
+      "localIp": ["10.0.10.1/30", "fd00:10::1/64"],
+      "peerIp": ["10.0.10.2/30", "fd00:10::2/64"]
     },
     {
       "localIntf": "eth1",

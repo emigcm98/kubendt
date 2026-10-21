@@ -477,9 +477,20 @@ func ModifyNetwork(c *gin.Context) {
 	}
 
 	// Replay persisted driver operations only on the peers we actually
-	// restarted, new pods have no history yet.
+	// restarted, new pods have no history yet. Their links come back with one
+	// address per end, so the pass puts the declared extras (and the MTU)
+	// on them first: a replayed route through one of those addresses would
+	// fail and be dropped from the history otherwise.
 	var replayDur, peerReplayDur *int64
 	if len(restartedPods) > 0 {
+		only := make(map[string]bool, len(restartedPods))
+		for _, pod := range restartedPods {
+			only[pod] = true
+		}
+		if _, err := helpers.ApplyPlatformMTU(namespace, nil, only); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
 		replayAt := time.Now()
 		if err := helpers.ReplayDriverOperationsForPods(namespace, restartedPods); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed replaying persisted operations after restart: %v", err)})

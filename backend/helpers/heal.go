@@ -189,6 +189,16 @@ func HealMissingInterfaces(namespace string, nodes []types.NodeSpec, links []typ
 			log.Printf("❌ Heal: error waiting for Ready after restarts: %v", err)
 		}
 
+		// Declared extra addresses and the MTU back before the replay, as a
+		// restart does, so a replayed route through them does not fail.
+		only := make(map[string]bool, len(toRestart))
+		for _, pod := range toRestart {
+			only[pod] = true
+		}
+		if _, err := ApplyPlatformMTU(namespace, nil, only); err != nil {
+			log.Printf("⚠️ Heal: MTU pass before the replay of restarted pods: %v", err)
+		}
+
 		if err := ReplayDriverOperationsForPods(namespace, toRestart); err != nil {
 			log.Printf("❌ Heal: failed replaying persisted driver operations after restarts: %v", err)
 		}
