@@ -146,7 +146,7 @@ func buildAddQdiscCommand(iface, qdisc string, params []string) [][]string {
 func init() {
 	actions.Register[any](
 		actions.Capability{ID: "tc", Label: "Traffic control", Description: "Shaping of any interface, in the pod's network namespace."},
-		actions.Action[any]{Type: "add_qdisc", Label: "Shape interface", Params: actions.P(actions.Iface, actions.TCParams), Executor: executor.TCUniversalExecutorName,
+		actions.Action[any]{Type: "add_qdisc", Label: "Shape interface", Params: actions.P(actions.Iface, actions.TCParams), Executor: executor.TCUniversalExecutorName, State: "qdisc", Key: func(a types.ActionEntry) string { return a.Iface },
 			Run: func(_ any, a types.ActionEntry) ([][]string, error) {
 				commands, err := buildShapingCommands(a.Iface, a.TCParams)
 				if err != nil {
@@ -154,7 +154,7 @@ func init() {
 				}
 				return commands, nil
 			}},
-		actions.Action[any]{Type: "del_qdisc", Label: "Clear shaping", Params: actions.P(actions.Iface), Executor: executor.TCUniversalExecutorName,
+		actions.Action[any]{Type: "del_qdisc", Label: "Clear shaping", Params: actions.P(actions.Iface), Executor: executor.TCUniversalExecutorName, State: "qdisc", Key: func(a types.ActionEntry) string { return a.Iface }, Clears: true,
 			Run: func(_ any, a types.ActionEntry) ([][]string, error) { return buildDelQdiscCommand(a.Iface), nil }},
 	)
 }

@@ -24,7 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
-- A `set_ip` after a `remove_ip` of the same address, or the other way round, was skipped as a duplicate because a replay re-stamps the history; the pair now runs and the history keeps only the later one.
+- A set, its undo and the same set again (`set_ip` and `remove_ip`, `set_default_route` and `remove_default_route`, `link_up` and `link_down`, static routes, DNS, bridge, NAT and OSPF) skipped the third as a duplicate because a replay re-stamps the history. Every action now declares the state it sets or clears, the history keeps the last word on each piece of it.
 - A restart or a modify puts the declared extra addresses back before replaying the history, so a route through one of them is applied instead of failing and dropping out of the history.
 - A traceroute over IPv6 in ICMP mode showed every router as a timeout: BusyBox traceroute only matches UDP probes inside an ICMPv6 Time Exceeded, so the ICMP method sends UDP probes over IPv6.
 

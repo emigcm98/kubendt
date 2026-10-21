@@ -15,7 +15,7 @@ Every script takes `--runs`, `--out`, `--keep` and `--help`. Namespaces are name
 
 | Script | What it measures | Main knobs |
 | --- | --- | --- |
-| `regression.py` | The six `deploy/examples/` end to end, as their READMEs describe, with a restart per example to exercise replay. Release gate. | example numbers, `KEEP`, `SKIP_RAW` |
+| `regression.py` | The seven `deploy/examples/` end to end, as their READMEs describe, with a restart per example to exercise replay. Release gate. | example numbers, `KEEP`, `SKIP_RAW` |
 | `deploy_scaling.py` | Deploy time by topology size, with the per-pod timeline: creation and readiness spread, critical path, platform overhead over the Kubernetes path, affine fit. Also times a fixed topology (`--topology`, `--configure`). | `--sizes`, `--shape`, `--image` |
 | `configure_throughput.py` | One action to every pod at once: wall time, sequential-equivalent time, speedup, per-pod exec time. | `--sizes` |
 | `modify_vs_redeploy.py` | Each in-place operation (add/delete node, add/delete link, scale up/down, restart) against clear + deploy: time, pods recreated, unavailability per pod, loss on a link nobody touched. | `--nodes`, `--grace` |
