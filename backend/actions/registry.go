@@ -39,7 +39,23 @@ type Action[C any] struct {
 	// AllowProtectedIface lets the action name eth0, the pod's cluster
 	// interface. Only the SNAT toggles do.
 	AllowProtectedIface bool
-	Run                 func(c C, a types.ActionEntry) ([][]string, error)
+	// State names what the action sets or clears on the node (an address,
+	// the default route, the link state of an interface), so the history
+	// keeps the last word on each piece of state instead of stacking a set,
+	// its undo and a set again. Key tells two pieces of the same state
+	// apart; nil when a node has one. An action without a State is
+	// independent of the others.
+	State string
+	Key   func(a types.ActionEntry) string
+	// Clears marks the side of a pair that undoes the state.
+	Clears bool
+	// UndoPersists keeps a clearing action in the history, for state the
+	// platform or the cluster would put back on their own: an address the
+	// link declares, the cluster's default route, an interface that comes
+	// up by itself. Otherwise an undo and the action it undoes cancel each
+	// other and neither is kept, since nothing would put the state back.
+	UndoPersists bool
+	Run          func(c C, a types.ActionEntry) ([][]string, error)
 }
 
 // Descriptor is a registered action, usable without knowing C.
@@ -52,11 +68,24 @@ type Descriptor struct {
 	ExecutorFromRequest bool
 	Repeatable          bool
 	AllowProtectedIface bool
+	State               string
+	Key                 func(a types.ActionEntry) string
+	Clears              bool
+	UndoPersists        bool
 	// Universal actions are declared against any driver: they match every
 	// driver and a pod without one.
 	Universal bool
 	supports  func(driver any) bool
 	run       func(driver any, a types.ActionEntry) ([][]string, error)
+}
+
+// StateKey is the key of the state a sets or clears, "" when the state is
+// one per node or the action has none.
+func (d *Descriptor) StateKey(a types.ActionEntry) string {
+	if d.Key == nil {
+		return ""
+	}
+	return d.Key(a)
 }
 
 // CapabilityActions is a capability with the actions it declares.
@@ -100,6 +129,12 @@ func Register[C any](capability Capability, acts ...Action[C]) {
 				panic(fmt.Sprintf("actions: %s declares param %q, which is not a field of ActionEntry", act.Type, p.Name))
 			}
 		}
+		if (act.Clears || act.UndoPersists) && act.State == "" {
+			panic(fmt.Sprintf("actions: %s clears a state it does not name", act.Type))
+		}
+		if act.UndoPersists && !act.Clears {
+			panic(fmt.Sprintf("actions: %s is not an undo, UndoPersists means nothing on it", act.Type))
+		}
 		run := act.Run
 		d := &Descriptor{
 			Type:                act.Type,
@@ -110,6 +145,10 @@ func Register[C any](capability Capability, acts ...Action[C]) {
 			ExecutorFromRequest: act.ExecutorFromRequest,
 			Repeatable:          act.Repeatable,
 			AllowProtectedIface: act.AllowProtectedIface,
+			State:               act.State,
+			Key:                 act.Key,
+			Clears:              act.Clears,
+			UndoPersists:        act.UndoPersists,
 			Universal:           universal,
 			supports:            supports,
 			run: func(driver any, a types.ActionEntry) ([][]string, error) {

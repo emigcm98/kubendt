@@ -25,45 +25,103 @@ func TestParseExecutedAt(t *testing.T) {
 	}
 }
 
-func TestAddressInverse(t *testing.T) {
-	cases := map[string][]string{
-		"remove_ip":  {"set_ip", "replace_ip"},
-		"set_ip":     {"remove_ip"},
-		"replace_ip": {"remove_ip"},
-		"link_down":  nil,
+// Every pair meets on the same state and key, and the undo keeps or cancels
+// as declared: kept where the platform or the cluster would put the state
+// back by itself, cancelled where only the history ever set it.
+func TestStatePairs(t *testing.T) {
+	type pair struct {
+		set, clear   types.ActionEntry
+		state        string
+		undoPersists bool
 	}
-	for typ, want := range cases {
-		got := addressInverse(types.ActionEntry{Type: typ})
-		if len(got) != len(want) {
-			t.Errorf("%s: got %v, want %v", typ, got, want)
-			continue
+	pairs := []pair{
+		{types.ActionEntry{Type: "link_up", Iface: "eth1"}, types.ActionEntry{Type: "link_down", Iface: "eth1"}, "link", true},
+		{types.ActionEntry{Type: "set_ip", Iface: "eth1", CIDR: "10.0.0.9/24"}, types.ActionEntry{Type: "remove_ip", Iface: "eth1", CIDR: "10.0.0.9/24"}, "address", true},
+		{types.ActionEntry{Type: "replace_ip", Iface: "eth1", CIDR: "10.0.0.9/24"}, types.ActionEntry{Type: "remove_ip", Iface: "eth1", CIDR: "10.0.0.9/24"}, "address", true},
+		{types.ActionEntry{Type: "set_default_route", Gateway: "10.0.0.1"}, types.ActionEntry{Type: "remove_default_route"}, "default_route", true},
+		{types.ActionEntry{Type: "set_default_route", Gateway: "fd00::1"}, types.ActionEntry{Type: "remove_default_route", Family: "6"}, "default_route", true},
+		{types.ActionEntry{Type: "add_static_route", DstCIDR: "10.1.0.0/16", Gateway: "10.0.0.254"}, types.ActionEntry{Type: "remove_static_route", DstCIDR: "10.1.0.0/16", Gateway: "10.0.0.254"}, "static_route", false},
+		{types.ActionEntry{Type: "add_dns_nameserver", DNSServer: "8.8.8.8"}, types.ActionEntry{Type: "remove_dns_nameserver", DNSServer: "8.8.8.8"}, "dns_nameserver", false},
+		{types.ActionEntry{Type: "add_dns_search", DNSDomain: "lab"}, types.ActionEntry{Type: "remove_dns_search", DNSDomain: "lab"}, "dns_search", false},
+		{types.ActionEntry{Type: "setup_bridge", Bridge: "br0"}, types.ActionEntry{Type: "teardown_bridge", Bridge: "br0"}, "bridge", false},
+		{types.ActionEntry{Type: "add_interface_to_bridge", Iface: "eth1", Bridge: "br0"}, types.ActionEntry{Type: "remove_interface_from_bridge", Iface: "eth1", Bridge: "br0"}, "bridge_member", false},
+		{types.ActionEntry{Type: "enable_snat", Iface: "eth0"}, types.ActionEntry{Type: "disable_snat", Iface: "eth0"}, "snat", false},
+		{types.ActionEntry{Type: "enable_dnat", Iface: "eth4", Protocol: "tcp", ExternalPort: 80, InternalIP: "10.0.4.10", InternalPort: 80}, types.ActionEntry{Type: "disable_dnat", Iface: "eth4", Protocol: "tcp", ExternalPort: 80, InternalIP: "10.0.4.10", InternalPort: 80}, "dnat", false},
+		{types.ActionEntry{Type: "ospf_add_network", CIDR: "10.0.0.0/30", OSPFArea: "0"}, types.ActionEntry{Type: "ospf_remove_network", CIDR: "10.0.0.0/30", OSPFArea: "0"}, "ospf_network", false},
+		{types.ActionEntry{Type: "ospf_set_router_id", RouterID: "1.1.1.1"}, types.ActionEntry{Type: "ospf_remove_router_id"}, "ospf_router_id", false},
+		{types.ActionEntry{Type: "ospf_passive_default"}, types.ActionEntry{Type: "ospf_remove_passive_default"}, "ospf_passive_default", false},
+		{types.ActionEntry{Type: "ospf_no_passive", Iface: "eth1"}, types.ActionEntry{Type: "ospf_remove_no_passive", Iface: "eth1"}, "ospf_no_passive", false},
+		{types.ActionEntry{Type: "ospf_originate_default"}, types.ActionEntry{Type: "ospf_remove_originate_default"}, "ospf_originate_default", false},
+		{types.ActionEntry{Type: "ospf_mtu_ignore", Iface: "eth1"}, types.ActionEntry{Type: "ospf_remove_mtu_ignore", Iface: "eth1"}, "ospf_mtu_ignore", false},
+		{types.ActionEntry{Type: "add_qdisc", Iface: "eth1"}, types.ActionEntry{Type: "del_qdisc", Iface: "eth1"}, "qdisc", false},
+	}
+	for _, p := range pairs {
+		s1, k1, c1, u1 := stateOf(p.set)
+		s2, k2, c2, u2 := stateOf(p.clear)
+		if s1 != p.state || s2 != p.state || k1 != k2 {
+			t.Errorf("%s / %s: states %q %q keys %q %q", p.set.Type, p.clear.Type, s1, s2, k1, k2)
 		}
-		for i := range want {
-			if got[i] != want[i] {
-				t.Errorf("%s: got %v, want %v", typ, got, want)
-			}
+		if c1 || !c2 || u1 || u2 != p.undoPersists {
+			t.Errorf("%s / %s: flags set(%v,%v) clear(%v,%v), want undoPersists=%v", p.set.Type, p.clear.Type, c1, u1, c2, u2, p.undoPersists)
 		}
+	}
+	for _, free := range []string{"custom", "nope"} {
+		if s, _, _, _ := stateOf(types.ActionEntry{Type: free}); s != "" {
+			t.Errorf("%s should carry no state, got %q", free, s)
+		}
+	}
+	if _, k, _, _ := stateOf(types.ActionEntry{Type: "remove_default_route"}); k != "4" {
+		t.Errorf("a default route removal without family is IPv4, got key %q", k)
+	}
+	if _, k1, _, _ := stateOf(types.ActionEntry{Type: "set_ip", Iface: "eth1", CIDR: "a"}); k1 == stateKeyOf("set_ip", "eth2", "a") {
+		t.Error("the same address on another interface is another state")
 	}
 }
 
-func TestUndoneAfter(t *testing.T) {
-	op := func(typ, iface, cidr, at string) PersistedDriverOperation {
-		return PersistedDriverOperation{ActionType: typ, Action: types.ActionEntry{Type: typ, Iface: iface, CIDR: cidr}, ExecutedAt: at}
+func stateKeyOf(typ, iface, cidr string) string {
+	_, k, _, _ := stateOf(types.ActionEntry{Type: typ, Iface: iface, CIDR: cidr})
+	return k
+}
+
+func TestRowsOnStateAndSuperseded(t *testing.T) {
+	op := func(id int64, typ, iface, cidr, at string) PersistedDriverOperation {
+		return PersistedDriverOperation{ID: id, ActionType: typ, Action: types.ActionEntry{Type: typ, Iface: iface, CIDR: cidr}, ExecutedAt: at}
 	}
 	ops := []PersistedDriverOperation{
-		op("set_ip", "eth2", "10.0.1.9/24", "2026-10-21T11:36:55.100Z"),
-		op("remove_ip", "eth2", "10.0.1.9/24", "2026-10-21T11:36:55.200Z"),
-		op("remove_ip", "eth2", "10.0.1.77/24", "2026-10-21T11:36:55.300Z"),
+		op(1, "set_ip", "eth2", "10.0.1.9/24", "2026-10-21T11:36:55.100Z"),
+		op(2, "remove_ip", "eth2", "10.0.1.9/24", "2026-10-21T11:36:55.200Z"),
+		op(3, "remove_ip", "eth2", "10.0.1.77/24", "2026-10-21T11:36:55.300Z"),
+		op(4, "link_down", "eth2", "", "2026-10-21T11:36:55.400Z"),
+		{ID: 5, ActionType: "set_ip", Action: types.ActionEntry{Iface: "eth3", CIDR: "10.0.1.9/24"}, ExecutedAt: "2026-10-21T11:36:55.500Z"}, // an old row without a type
 	}
+	ids := func(rows []PersistedDriverOperation) []int64 {
+		var out []int64
+		for _, r := range rows {
+			out = append(out, r.ID)
+		}
+		return out
+	}
+	if got := ids(rowsOnState(ops, "address", "eth2 10.0.1.9/24")); len(got) != 2 || got[0] != 1 || got[1] != 2 {
+		t.Errorf("rows on the address: %v", got)
+	}
+	if got := ids(rowsOnState(ops, "address", "eth3 10.0.1.9/24")); len(got) != 1 || got[0] != 5 {
+		t.Errorf("a row without a type still has its state: %v", got)
+	}
+	if got := rowsOnState(ops, "link", "eth1"); len(got) != 0 {
+		t.Errorf("another interface's link state: %v", ids(got))
+	}
+
+	setJSON := `{"type":"set_ip","iface":"eth2","cidr":"10.0.1.9/24"}`
 	setAt, _ := parseExecutedAt("2026-10-21T11:36:55.100Z")
-	if !undoneAfter(ops, addressInverse(types.ActionEntry{Type: "set_ip"}), "eth2", "10.0.1.9/24", setAt) {
-		t.Error("the remove after the set undoes it")
+	if !supersededAfter(ops, "address", "eth2 10.0.1.9/24", setJSON, setAt) {
+		t.Error("the remove after the set supersedes it")
 	}
+	removeJSON := `{"type":"remove_ip","iface":"eth2","cidr":"10.0.1.9/24"}`
 	removeAt, _ := parseExecutedAt("2026-10-21T11:36:55.200Z")
-	if undoneAfter(ops, addressInverse(types.ActionEntry{Type: "remove_ip"}), "eth2", "10.0.1.9/24", removeAt) {
-		t.Error("nothing sets the address after its remove")
+	if supersededAfter(ops, "address", "eth2 10.0.1.9/24", removeJSON, removeAt) {
+		t.Error("nothing touches the address after its remove")
 	}
-	if undoneAfter(ops, addressInverse(types.ActionEntry{Type: "set_ip"}), "eth2", "10.0.1.50/24", setAt) {
-		t.Error("another address's remove does not count")
+	if supersededAfter(ops, "address", "eth2 10.0.1.50/24", setJSON, setAt) {
+		t.Error("another address does not count")
 	}
 }

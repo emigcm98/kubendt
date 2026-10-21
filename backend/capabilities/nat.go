@@ -20,15 +20,15 @@ func init() {
 	dnat := actions.P(actions.Iface, actions.ExternalPort, actions.InternalIP, actions.InternalPort, actions.Protocol)
 	actions.Register[NATCapable](
 		actions.Capability{ID: "NATCapable", Label: "Network Address Translation (NAT)", Description: "Management of NAT rules."},
-		actions.Action[NATCapable]{Type: "enable_snat", Label: "Enable SNAT", Params: actions.P(actions.Iface), AllowProtectedIface: true,
+		actions.Action[NATCapable]{Type: "enable_snat", Label: "Enable SNAT", Params: actions.P(actions.Iface), AllowProtectedIface: true, State: "snat", Key: keyIface,
 			Run: func(c NATCapable, a types.ActionEntry) ([][]string, error) { return c.EnableSNAT(a.Iface), nil }},
-		actions.Action[NATCapable]{Type: "disable_snat", Label: "Disable SNAT", Params: actions.P(actions.Iface), AllowProtectedIface: true,
+		actions.Action[NATCapable]{Type: "disable_snat", Label: "Disable SNAT", Params: actions.P(actions.Iface), AllowProtectedIface: true, State: "snat", Key: keyIface, Clears: true,
 			Run: func(c NATCapable, a types.ActionEntry) ([][]string, error) { return c.DisableSNAT(a.Iface), nil }},
-		actions.Action[NATCapable]{Type: "enable_dnat", Label: "Add port forward", Params: dnat,
+		actions.Action[NATCapable]{Type: "enable_dnat", Label: "Add port forward", Params: dnat, State: "dnat", Key: keyPortForward,
 			Run: func(c NATCapable, a types.ActionEntry) ([][]string, error) {
 				return c.EnableDNAT(a.Iface, a.ExternalPort, a.InternalIP, a.InternalPort, a.Protocol), nil
 			}},
-		actions.Action[NATCapable]{Type: "disable_dnat", Label: "Remove port forward", Params: dnat,
+		actions.Action[NATCapable]{Type: "disable_dnat", Label: "Remove port forward", Params: dnat, State: "dnat", Key: keyPortForward, Clears: true,
 			Run: func(c NATCapable, a types.ActionEntry) ([][]string, error) {
 				return c.DisableDNAT(a.Iface, a.ExternalPort, a.InternalIP, a.InternalPort, a.Protocol), nil
 			}},

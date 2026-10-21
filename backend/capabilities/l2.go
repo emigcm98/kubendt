@@ -13,9 +13,9 @@ type L2Capable interface {
 func init() {
 	actions.Register[L2Capable](
 		actions.Capability{ID: "L2Capable", Label: "Level 2: links", Description: "Up & down network interfaces"},
-		actions.Action[L2Capable]{Type: "link_up", Label: "Bring interface up", Params: actions.P(actions.Iface),
+		actions.Action[L2Capable]{Type: "link_up", Label: "Bring interface up", Params: actions.P(actions.Iface), State: "link", Key: keyIface,
 			Run: func(c L2Capable, a types.ActionEntry) ([][]string, error) { return c.LinkUp(a.Iface), nil }},
-		actions.Action[L2Capable]{Type: "link_down", Label: "Bring interface down", Params: actions.P(actions.Iface),
+		actions.Action[L2Capable]{Type: "link_down", Label: "Bring interface down", Params: actions.P(actions.Iface), State: "link", Key: keyIface, Clears: true, UndoPersists: true,
 			Run: func(c L2Capable, a types.ActionEntry) ([][]string, error) { return c.LinkDown(a.Iface), nil }},
 	)
 }

@@ -6,11 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"kubendt/actions"
 	"kubendt/kubeclient"
 	"kubendt/types"
 	"log"
 	"runtime"
-	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -34,22 +34,56 @@ type DriverReplayStats struct {
 	Pruned   int `json:"pruned"`
 }
 
-// deleteQdiscHistoryForIface removes any persisted add_qdisc/del_qdisc entries
-// for the given pod and interface, so a new qdisc operation supersedes the
-// previous one instead of stacking on top of it.
-func deleteQdiscHistoryForIface(namespace, podName, iface string) error {
-	ops, err := ListDriverOperationsForPod(namespace, podName)
-	if err != nil {
-		return err
+// The history keeps the last word on each piece of state an action declares
+// (actions.Action.State): saving an action drops the earlier rows on the same
+// state and key, so a set, its undo and a set again never stack, and an undo
+// nothing would reverse is not kept at all.
+
+// stateOf is the state an operation writes or clears and its key, "" for an
+// action independent of the others or unknown to this build.
+func stateOf(action types.ActionEntry) (state, key string, clears, undoPersists bool) {
+	d, ok := actions.Lookup(action.Type)
+	if !ok || d.State == "" {
+		return "", "", false, false
 	}
+	return d.State, d.StateKey(action), d.Clears, d.UndoPersists
+}
+
+// opAction is the action a row holds, with its type filled in for rows from
+// the earliest releases, which only carried action_type.
+func opAction(op PersistedDriverOperation) types.ActionEntry {
+	a := op.Action
+	if a.Type == "" {
+		a.Type = op.ActionType
+	}
+	return a
+}
+
+// rowsOnState picks the rows that write or clear the same state and key.
+func rowsOnState(ops []PersistedDriverOperation, state, key string) []PersistedDriverOperation {
+	var out []PersistedDriverOperation
 	for _, op := range ops {
-		if (op.ActionType == "add_qdisc" || op.ActionType == "del_qdisc") && op.Action.Iface == iface {
-			if delErr := DeleteDriverOperationHistoryByID(op.ID); delErr != nil && delErr != sql.ErrNoRows {
-				return delErr
-			}
+		if s, k, _, _ := stateOf(opAction(op)); s == state && k == key {
+			out = append(out, op)
 		}
 	}
-	return nil
+	return out
+}
+
+// supersededAfter says whether another operation on the same state ran after
+// appliedAt with a different payload, so the applied one no longer stands.
+// Histories written before the state rule could hold such pairs.
+func supersededAfter(ops []PersistedDriverOperation, state, key, payload string, appliedAt time.Time) bool {
+	for _, op := range rowsOnState(ops, state, key) {
+		raw, err := json.Marshal(opAction(op))
+		if err != nil || string(raw) == payload {
+			continue
+		}
+		if at, ok := parseExecutedAt(op.ExecutedAt); ok && at.After(appliedAt) {
+			return true
+		}
+	}
+	return false
 }
 
 func SaveDriverOperation(namespace, podName, driverType string, action types.ActionEntry) error {
@@ -57,25 +91,18 @@ func SaveDriverOperation(namespace, podName, driverType string, action types.Act
 		return fmt.Errorf("database not initialized")
 	}
 
-	// Reconcile qdisc operations so the history reflects the current desired
-	// state of each interface rather than an append-only log. A new qdisc op
-	// supersedes the previous one for the same interface; del_qdisc removes the
-	// prior add_qdisc and persists nothing (no add_qdisc == no shaping on replay).
-	if action.Type == "add_qdisc" || action.Type == "del_qdisc" {
-		if err := deleteQdiscHistoryForIface(namespace, podName, action.Iface); err != nil {
-			return fmt.Errorf("error reconciling qdisc history for %s/%s iface %q: %w", namespace, podName, action.Iface, err)
+	if state, key, clears, undoPersists := stateOf(action); state != "" {
+		ops, err := ListDriverOperationsForPod(namespace, podName)
+		if err != nil {
+			return fmt.Errorf("error reconciling the history of %s/%s: %w", namespace, podName, err)
 		}
-		if action.Type == "del_qdisc" {
+		for _, op := range rowsOnState(ops, state, key) {
+			if err := DeleteDriverOperationHistoryByID(op.ID); err != nil && err != sql.ErrNoRows {
+				return fmt.Errorf("error reconciling the history of %s/%s: %w", namespace, podName, err)
+			}
+		}
+		if clears && !undoPersists {
 			return nil
-		}
-	}
-
-	// An address action supersedes its inverse on the same address, so the
-	// history keeps the last word on it and a later identical action is not
-	// taken for a duplicate (set, remove, set again used to skip the third).
-	if inverse := addressInverse(action); len(inverse) > 0 {
-		if err := deleteAddressOps(namespace, podName, inverse, action.Iface, action.CIDR); err != nil {
-			return fmt.Errorf("error reconciling address history for %s/%s: %w", namespace, podName, err)
 		}
 	}
 
@@ -112,39 +139,6 @@ func SaveDriverOperation(namespace, podName, driverType string, action types.Act
 		return fmt.Errorf("error saving driver operation history: %w", err)
 	}
 
-	return nil
-}
-
-// addressInverse names the actions a new address action undoes: a remove
-// drops the earlier set or replace of the same address and the other way
-// round.
-func addressInverse(action types.ActionEntry) []string {
-	switch action.Type {
-	case "remove_ip":
-		return []string{"set_ip", "replace_ip"}
-	case "set_ip", "replace_ip":
-		return []string{"remove_ip"}
-	}
-	return nil
-}
-
-func deleteAddressOps(namespace, podName string, actionTypes []string, iface, cidr string) error {
-	ops, err := ListDriverOperationsForPod(namespace, podName)
-	if err != nil {
-		return err
-	}
-	for _, op := range ops {
-		t := op.Action.Type
-		if t == "" {
-			t = op.ActionType
-		}
-		if !slices.Contains(actionTypes, t) || op.Action.Iface != iface || op.Action.CIDR != cidr {
-			continue
-		}
-		if err := DeleteDriverOperationHistoryByID(op.ID); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
@@ -202,11 +196,11 @@ func DriverOperationAppliedSince(namespace, podName, driverType string, action t
 	if err := rows.Err(); err != nil || len(applied) == 0 {
 		return false, err
 	}
-	// A replay re-stamps every row, so set, remove and set again would find
-	// the first set "applied" forever: an address action undone later by its
-	// inverse does not count.
-	inverse := addressInverse(action)
-	if len(inverse) == 0 {
+	// A replay re-stamps every row, so an action undone later by its pair
+	// would look applied forever: it counts only while no other operation on
+	// the same state came after it.
+	state, key, _, _ := stateOf(action)
+	if state == "" {
 		return true, nil
 	}
 	ops, err := ListDriverOperationsForPod(namespace, podName)
@@ -214,29 +208,11 @@ func DriverOperationAppliedSince(namespace, podName, driverType string, action t
 		return false, err
 	}
 	for _, t := range applied {
-		if !undoneAfter(ops, inverse, action.Iface, action.CIDR, t) {
+		if !supersededAfter(ops, state, key, string(actionJSON), t) {
 			return true, nil
 		}
 	}
 	return false, nil
-}
-
-// undoneAfter says whether an inverse action on the same address ran after
-// appliedAt.
-func undoneAfter(ops []PersistedDriverOperation, inverse []string, iface, cidr string, appliedAt time.Time) bool {
-	for _, op := range ops {
-		t := op.Action.Type
-		if t == "" {
-			t = op.ActionType
-		}
-		if !slices.Contains(inverse, t) || op.Action.Iface != iface || op.Action.CIDR != cidr {
-			continue
-		}
-		if at, ok := parseExecutedAt(op.ExecutedAt); ok && at.After(appliedAt) {
-			return true
-		}
-	}
-	return false
 }
 
 // PurgeStaleDriverOperations drops every operation of the namespace recorded
