@@ -36,13 +36,14 @@ func TestVyOSInterfaceEntryAddresses(t *testing.T) {
 	want := map[string]string{
 		"interface": "eth1", "guestInterface": "eth1", "state": "up",
 		"mac": "aa:bb:cc:dd:ee:ff", "ipv4": "10.0.10.1/30", "ipv6": "fd00:10::1/64", "mtu": "1450",
+		"addresses": "10.0.10.1/30,fd00:10::1/64,10.0.10.5/30",
 	}
 	if !reflect.DeepEqual(dual, want) {
 		t.Errorf("dual stack entry:\n got  %v\n want %v", dual, want)
 	}
 
 	only6 := vyosInterfaceEntry("eth2", map[string]interface{}{"address": "fd00:2::1/64"})
-	if _, has := only6["ipv4"]; has || only6["ipv6"] != "fd00:2::1/64" {
+	if _, has := only6["ipv4"]; has || only6["ipv6"] != "fd00:2::1/64" || only6["addresses"] != "fd00:2::1/64" {
 		t.Errorf("v6-only entry: %v", only6)
 	}
 

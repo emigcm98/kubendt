@@ -130,8 +130,7 @@ func RecordLinkMTUs(namespace string, links []types.LinkShaping) (map[string]boo
 		if peerPod == externalNodeName {
 			return nil, fmt.Errorf("%s: %s:%s goes to the external network, whose MTU is the host's", where, pod, l.LocalIntf)
 		}
-		localIP, peerIP := linkIPs(topo, pod, l.LocalIntf)
-		if err := ValidateLinkMTU(*l.MTU, localIP, peerIP); err != nil {
+		if err := ValidateLinkMTU(*l.MTU, linkIPs(topo, pod, l.LocalIntf)); err != nil {
 			return nil, fmt.Errorf("%s: %w", where, err)
 		}
 		if err := SetLinkMTU(namespace, pod, l.LocalIntf, peerPod, peerIntf, *l.MTU); err != nil {
@@ -142,17 +141,14 @@ func RecordLinkMTUs(namespace string, links []types.LinkShaping) (map[string]boo
 	return pods, nil
 }
 
-// linkIPs returns the addresses of both ends of the link pod:iface terminates.
-func linkIPs(topo []types.LinkSpec, pod, iface string) (string, string) {
+// linkIPs returns every address of both ends of the link pod:iface terminates.
+func linkIPs(topo []types.LinkSpec, pod, iface string) []string {
 	for _, t := range topo {
-		if t.Node == pod && t.LocalIntf == iface {
-			return t.LocalIP, t.PeerIP
-		}
-		if t.PeerNode == pod && t.PeerIntf == iface {
-			return t.PeerIP, t.LocalIP
+		if (t.Node == pod && t.LocalIntf == iface) || (t.PeerNode == pod && t.PeerIntf == iface) {
+			return append(append([]string{}, t.LocalIP...), t.PeerIP...)
 		}
 	}
-	return "", ""
+	return nil
 }
 
 // linkPeer finds the other end of pod:iface in the topology, whichever side

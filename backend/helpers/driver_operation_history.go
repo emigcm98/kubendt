@@ -10,6 +10,7 @@ import (
 	"kubendt/types"
 	"log"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -69,6 +70,15 @@ func SaveDriverOperation(namespace, podName, driverType string, action types.Act
 		}
 	}
 
+	// An address action supersedes its inverse on the same address, so the
+	// history keeps the last word on it and a later identical action is not
+	// taken for a duplicate (set, remove, set again used to skip the third).
+	if inverse := addressInverse(action); len(inverse) > 0 {
+		if err := deleteAddressOps(namespace, podName, inverse, action.Iface, action.CIDR); err != nil {
+			return fmt.Errorf("error reconciling address history for %s/%s: %w", namespace, podName, err)
+		}
+	}
+
 	clusterID, err := kubeclient.CurrentClusterID()
 	if err != nil {
 		return err
@@ -102,6 +112,39 @@ func SaveDriverOperation(namespace, podName, driverType string, action types.Act
 		return fmt.Errorf("error saving driver operation history: %w", err)
 	}
 
+	return nil
+}
+
+// addressInverse names the actions a new address action undoes: a remove
+// drops the earlier set or replace of the same address and the other way
+// round.
+func addressInverse(action types.ActionEntry) []string {
+	switch action.Type {
+	case "remove_ip":
+		return []string{"set_ip", "replace_ip"}
+	case "set_ip", "replace_ip":
+		return []string{"remove_ip"}
+	}
+	return nil
+}
+
+func deleteAddressOps(namespace, podName string, actionTypes []string, iface, cidr string) error {
+	ops, err := ListDriverOperationsForPod(namespace, podName)
+	if err != nil {
+		return err
+	}
+	for _, op := range ops {
+		t := op.Action.Type
+		if t == "" {
+			t = op.ActionType
+		}
+		if !slices.Contains(actionTypes, t) || op.Action.Iface != iface || op.Action.CIDR != cidr {
+			continue
+		}
+		if err := DeleteDriverOperationHistoryByID(op.ID); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -142,17 +185,58 @@ func DriverOperationAppliedSince(namespace, podName, driverType string, action t
 		return false, fmt.Errorf("error checking driver operation history for pod %s/%s: %w", namespace, podName, err)
 	}
 	defer rows.Close()
+	var applied []time.Time
 	for rows.Next() {
 		var executedAt string
 		if err := rows.Scan(&executedAt); err != nil {
 			return false, err
 		}
 		t, ok := parseExecutedAt(executedAt)
+		if !ok {
+			t = time.Time{}
+		}
 		if !ok || !t.Before(since) {
+			applied = append(applied, t)
+		}
+	}
+	if err := rows.Err(); err != nil || len(applied) == 0 {
+		return false, err
+	}
+	// A replay re-stamps every row, so set, remove and set again would find
+	// the first set "applied" forever: an address action undone later by its
+	// inverse does not count.
+	inverse := addressInverse(action)
+	if len(inverse) == 0 {
+		return true, nil
+	}
+	ops, err := ListDriverOperationsForPod(namespace, podName)
+	if err != nil {
+		return false, err
+	}
+	for _, t := range applied {
+		if !undoneAfter(ops, inverse, action.Iface, action.CIDR, t) {
 			return true, nil
 		}
 	}
-	return false, rows.Err()
+	return false, nil
+}
+
+// undoneAfter says whether an inverse action on the same address ran after
+// appliedAt.
+func undoneAfter(ops []PersistedDriverOperation, inverse []string, iface, cidr string, appliedAt time.Time) bool {
+	for _, op := range ops {
+		t := op.Action.Type
+		if t == "" {
+			t = op.ActionType
+		}
+		if !slices.Contains(inverse, t) || op.Action.Iface != iface || op.Action.CIDR != cidr {
+			continue
+		}
+		if at, ok := parseExecutedAt(op.ExecutedAt); ok && at.After(appliedAt) {
+			return true
+		}
+	}
+	return false
 }
 
 // PurgeStaleDriverOperations drops every operation of the namespace recorded

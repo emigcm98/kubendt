@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -513,7 +514,8 @@ func vyosInterfaceEntry(iface string, node map[string]interface{}) map[string]st
 	if mac, ok := cfgLeaf(node, "hw-id"); ok {
 		entry["mac"] = mac
 	}
-	for _, addr := range cfgLeaves(node, "address") {
+	addrs := cfgLeaves(node, "address")
+	for _, addr := range addrs {
 		key := "ipv4"
 		if capabilities.IsIPv6(addr) {
 			key = "ipv6"
@@ -521,6 +523,9 @@ func vyosInterfaceEntry(iface string, node map[string]interface{}) map[string]st
 		if _, seen := entry[key]; !seen {
 			entry[key] = addr
 		}
+	}
+	if len(addrs) > 0 {
+		entry["addresses"] = strings.Join(addrs, ",")
 	}
 	if mtu, ok := cfgLeaf(node, "mtu"); ok {
 		entry["mtu"] = mtu

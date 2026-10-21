@@ -451,11 +451,15 @@ func BuildTraceIPIndex(namespace string) (map[string]TraceIPNode, error) {
 	// Declared link IPs first, as a fallback.
 	if links, err := BuildLinksFromTopologyCRDs(namespace); err == nil {
 		for _, l := range links {
-			if l.LocalIP != "" && l.Node != "" && l.Node != "external" {
-				idx[stripMask(l.LocalIP)] = TraceIPNode{Pod: l.Node, Iface: l.LocalIntf}
+			if l.Node != "" && l.Node != "external" {
+				for _, a := range l.LocalIP {
+					idx[stripMask(a)] = TraceIPNode{Pod: l.Node, Iface: l.LocalIntf}
+				}
 			}
-			if l.PeerIP != "" && l.PeerNode != "" && l.PeerNode != "external" {
-				idx[stripMask(l.PeerIP)] = TraceIPNode{Pod: l.PeerNode, Iface: l.PeerIntf}
+			if l.PeerNode != "" && l.PeerNode != "external" {
+				for _, a := range l.PeerIP {
+					idx[stripMask(a)] = TraceIPNode{Pod: l.PeerNode, Iface: l.PeerIntf}
+				}
 			}
 		}
 	}

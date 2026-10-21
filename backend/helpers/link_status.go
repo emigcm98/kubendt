@@ -51,10 +51,10 @@ func BuildLinkStatus(namespace string) ([]types.LinkStatus, error) {
 			UID:        l.UID,
 			Node:       l.Node,
 			LocalIntf:  l.LocalIntf,
-			LocalIP:    l.LocalIP,
+			LocalIP:    l.LocalIP.First(),
 			PeerNode:   l.PeerNode,
 			PeerIntf:   l.PeerIntf,
-			PeerIP:     l.PeerIP,
+			PeerIP:     l.PeerIP.First(),
 			NodeWorker: workerOf[l.Node],
 			PeerWorker: workerOf[l.PeerNode],
 		}

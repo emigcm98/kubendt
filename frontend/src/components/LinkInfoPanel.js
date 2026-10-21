@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { interfaceAddresses, sharedSubnet } from './addresses';
 import './PodInfoPanel.css';
 import './LinkInfoPanel.css';
 import usePanelClose from './usePanelClose';
@@ -24,18 +25,6 @@ const ICONS = {
 const formatPodLabel = (nodeData) => {
   if (!nodeData) return '—';
   return nodeData.label || nodeData.name || '—';
-};
-
-const sameSubnet = (cidrA, cidrB) => {
-  if (!cidrA || !cidrB) return null;
-  const stripA = String(cidrA).split('/')[0];
-  const stripB = String(cidrB).split('/')[0];
-  if (!stripA || !stripB) return null;
-  const partsA = stripA.split('.');
-  const partsB = stripB.split('.');
-  if (partsA.length !== 4 || partsB.length !== 4) return null;
-  // Use /24 heuristic for display purposes only
-  return partsA.slice(0, 3).join('.') === partsB.slice(0, 3).join('.');
 };
 
 const LinkInfoPanel = ({
@@ -129,7 +118,7 @@ const LinkInfoPanel = ({
     return `${ordered[0]} ↔ ${ordered[1]}`;
   })();
 
-  const subnetMatch = sameSubnet(localInfo?.ipv4, peerInfo?.ipv4);
+  const subnetMatch = sharedSubnet(interfaceAddresses(localInfo), interfaceAddresses(peerInfo));
 
   // "pod:iface ↔ pod:iface" shown as a body attribute (too long for the title).
   const endpointLabel = (nodeData, iface) => {
@@ -208,12 +197,14 @@ const LinkInfoPanel = ({
                 <span className="link-detail-val link-detail-italic">{info.guestInterface}</span>
               </div>
             )}
-            <div className="link-endpoint-detail">
-              <span className="link-detail-key">IPv4</span>
-              <span className="link-detail-val" title={info?.ipv4 || ''}>
-                {info?.ipv4 || '—'}
-              </span>
-            </div>
+            {(interfaceAddresses(info).length ? interfaceAddresses(info) : ['—']).map((addr, i) => (
+              <div className="link-endpoint-detail" key={`${addr}-${i}`}>
+                <span className="link-detail-key">{i === 0 ? 'IP' : ''}</span>
+                <span className="link-detail-val" title={addr}>
+                  {addr}
+                </span>
+              </div>
+            ))}
             <div className="link-endpoint-detail">
               <span className="link-detail-key">MAC</span>
               <span className="link-detail-val link-detail-mono" title={info?.mac || ''}>
@@ -328,7 +319,7 @@ const LinkInfoPanel = ({
               <span
                 className={`pod-value link-subnet ${subnetMatch ? 'subnet-ok' : 'subnet-diff'}`}
               >
-                {subnetMatch ? 'same /24 ✓' : 'different /24 ✗'}
+                {subnetMatch ? 'shared ✓' : 'none shared ✗'}
               </span>
             </div>
           )}

@@ -80,7 +80,7 @@ func TestPlanActions(t *testing.T) {
 	if plans[0].Err != nil || plans[0].Executor != "kubectl" || plans[0].Exec == nil || plans[0].Desc == nil {
 		t.Errorf("valid action: %+v", plans[0])
 	}
-	if got := strings.Join(plans[0].CommandStrings(), ";"); got != "ip addr add 10.0.0.1/24 dev eth1" {
+	if got := strings.Join(plans[0].CommandStrings(), ";"); got != "ip addr replace 10.0.0.1/24 dev eth1" {
 		t.Errorf("command strings: %q", got)
 	}
 	if plans[1].Err == nil || !strings.Contains(plans[1].Err.Error(), `"cidr"`) {

@@ -182,8 +182,12 @@ type LinkSpec struct {
 	PeerNode  string `json:"peerNode" example:"router2"` // use "external" as reserved name for host uplinks
 	PeerIntf  string `json:"peerIntf" example:"eth1"`
 	UID       *int   `json:"uid" example:"1"`
-	LocalIP   string `json:"localIp" example:"10.0.0.1/24"`
-	PeerIP    string `json:"peerIp" example:"10.0.0.2/24"`
+	// The addresses of each end: one string, or an array when the interface
+	// carries several (dual stack, a second IPv4). The first is wired with
+	// the link by Meshnet, the rest are set by the platform after wiring and
+	// on every recreation; the two ends share at least one family.
+	LocalIP   Addrs  `json:"localIp" swaggertype:"string" example:"10.0.0.1/24"`
+	PeerIP    Addrs  `json:"peerIp" swaggertype:"string" example:"10.0.0.2/24"`
 	PeerLabel string `json:"peerLabel,omitempty" example:"router2-eth1"`
 	Name      string `json:"name,omitempty" example:"N3"`
 	// Shaping the platform applies on both ends once the link is wired: a

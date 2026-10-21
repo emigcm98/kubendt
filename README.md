@@ -45,6 +45,7 @@ KubeNDT bundles a small set of third-party SVG icons in its frontend. See [ATTRI
 - **Virtual networking overlays** powered by Meshnet CNI for custom L2/L3 connectivity
 - **Meshnet health awareness** - the dashboard shows whether the Meshnet dataplane is running (per cluster and per node), and blocks a deploy when it is missing so topologies don't come up with unwired links
 - **Link realization** - the link panel shows whether Meshnet wired a link as a veth pair (both ends on one worker) or a VXLAN tunnel (across workers) and which worker each end runs on, also available through `GET /network/links/{namespace}` for scripts
+- **Several addresses per link end** - `localIp` and `peerIp` take one address or an array (dual stack, a second IPv4): the first is wired with the link, the rest are set by the platform after wiring and on every recreation, and the panels list every address of an interface
 - **Link MTU** - every link gets the same MTU once it is wired, 1450 by default and `KUBENDT_LINK_MTU` to change it. A link can declare its own `mtu` in the topology or through the `links` section of a configure request
 - **Modular driver architecture** supporting different node types (hosts, routers, switches) with extensible capabilities
 - **Interactive terminal shell** with WebSocket for real-time pod access

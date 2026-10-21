@@ -135,54 +135,81 @@ func ValidateLinkIPCapabilities(links []types.LinkSpec, nodes []types.NodeSpec) 
 	}
 
 	for i, link := range links {
-		if strings.TrimSpace(link.LocalIP) != "" {
+		if !link.LocalIP.Empty() {
 			if ok, known := supportsL3(link.Node); known && !ok {
-				return reject(i, link.Node, link.LocalIP)
+				return reject(i, link.Node, link.LocalIP.String())
 			}
 		}
-		if strings.TrimSpace(link.PeerIP) != "" {
+		if !link.PeerIP.Empty() {
 			if ok, known := supportsL3(link.PeerNode); known && !ok {
-				return reject(i, link.PeerNode, link.PeerIP)
+				return reject(i, link.PeerNode, link.PeerIP.String())
 			}
 		}
 	}
 	return nil
 }
 
-// ValidateLinkIPs rejects malformed L3 addresses before deploy. An empty IP is
-// allowed (an L2-only link carries no addressing); a non-empty value must parse
-// as a bare IP or a CIDR (e.g. 10.0.0.1/24), and both ends of a link share a
-// family.
+// ValidateLinkIPs rejects malformed addresses before deploy. An end may have
+// none (an L2-only link), one or several: each parses as a CIDR (the first
+// may be a bare IP, as before), none repeats on the end or sits on both ends,
+// and two addressed ends share at least one family, or nothing could cross.
 func ValidateLinkIPs(links []types.LinkSpec) error {
-	check := func(idx int, side, value string) error {
-		value = strings.TrimSpace(value)
-		if value == "" {
-			return nil
-		}
-		if strings.Contains(value, "/") {
-			if _, _, err := net.ParseCIDR(value); err != nil {
-				return fmt.Errorf("link[%d]: %s IP %q is not a valid CIDR (e.g. 10.0.0.1/24)", idx, side, value)
-			}
-			return nil
-		}
-		if net.ParseIP(value) == nil {
-			return fmt.Errorf("link[%d]: %s IP %q is not a valid IP address", idx, side, value)
-		}
-		return nil
-	}
 	for i, link := range links {
-		if err := check(i, "local", link.LocalIP); err != nil {
+		if err := checkEndAddrs(i, "local", link.LocalIP); err != nil {
 			return err
 		}
-		if err := check(i, "peer", link.PeerIP); err != nil {
+		if err := checkEndAddrs(i, "peer", link.PeerIP); err != nil {
 			return err
 		}
-		local, peer := ipFamily(link.LocalIP), ipFamily(link.PeerIP)
-		if local != 0 && peer != 0 && local != peer {
-			return fmt.Errorf("link[%d]: local IP %q and peer IP %q are not the same family", i, link.LocalIP, link.PeerIP)
+		for _, a := range link.LocalIP {
+			for _, b := range link.PeerIP {
+				if a == b {
+					return fmt.Errorf("link[%d]: %q is on both ends", i, a)
+				}
+			}
+		}
+		if !link.LocalIP.Empty() && !link.PeerIP.Empty() && !shareFamily(link.LocalIP, link.PeerIP) {
+			return fmt.Errorf("link[%d]: local %q and peer %q share no address family", i, link.LocalIP.String(), link.PeerIP.String())
 		}
 	}
 	return nil
+}
+
+func checkEndAddrs(idx int, side string, addrs types.Addrs) error {
+	seen := map[string]bool{}
+	for n, value := range addrs {
+		value = strings.TrimSpace(value)
+		switch {
+		case value == "":
+			return fmt.Errorf("link[%d]: %s address %d is empty", idx, side, n+1)
+		case strings.Contains(value, "/"):
+			if _, _, err := net.ParseCIDR(value); err != nil {
+				return fmt.Errorf("link[%d]: %s IP %q is not a valid CIDR (e.g. 10.0.0.1/24)", idx, side, value)
+			}
+		case n > 0:
+			return fmt.Errorf("link[%d]: %s IP %q needs a prefix length (e.g. %s/24)", idx, side, value, value)
+		case net.ParseIP(value) == nil:
+			return fmt.Errorf("link[%d]: %s IP %q is not a valid IP address", idx, side, value)
+		}
+		if seen[value] {
+			return fmt.Errorf("link[%d]: %s IP %q repeats", idx, side, value)
+		}
+		seen[value] = true
+	}
+	return nil
+}
+
+func shareFamily(a, b types.Addrs) bool {
+	fam := map[int]bool{}
+	for _, x := range a {
+		fam[ipFamily(x)] = true
+	}
+	for _, y := range b {
+		if fam[ipFamily(y)] {
+			return true
+		}
+	}
+	return false
 }
 
 // ipFamily is 4 or 6 for an address with or without a prefix length, 0 when

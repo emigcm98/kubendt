@@ -3972,6 +3972,7 @@
                     "example": "eth1"
                 },
                 "localIp": {
+                    "description": "The addresses of each end: one string, or an array when the interface\ncarries several (dual stack, a second IPv4). The first is wired with\nthe link by Meshnet, the rest are set by the platform after wiring and\non every recreation; the two ends share at least one family.",
                     "type": "string",
                     "example": "10.0.0.1/24"
                 },
@@ -5218,6 +5219,11 @@
         "types.PodInterfaceEntry": {
             "type": "object",
             "properties": {
+                "addresses": {
+                    "description": "Every global address of the interface, both families, comma separated.",
+                    "type": "string",
+                    "example": "10.0.0.1/24,fd00::1/64"
+                },
                 "interface": {
                     "type": "string",
                     "example": "eth1"

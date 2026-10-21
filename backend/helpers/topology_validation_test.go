@@ -25,22 +25,29 @@ func TestValidateContainerPath(t *testing.T) {
 
 func TestValidateLinkIPs(t *testing.T) {
 	good := []types.LinkSpec{
-		{LocalIP: "10.0.0.1/24", PeerIP: "10.0.0.2/24"},
-		{LocalIP: "", PeerIP: ""}, // L2-only link
-		{LocalIP: "192.168.1.5"},  // bare IP allowed
-		{LocalIP: "fd00:1::1/64", PeerIP: "fd00:1::2/64"},
-		{LocalIP: "fd00:1::1", PeerIP: ""},
+		{LocalIP: types.Addrs{"10.0.0.1/24"}, PeerIP: types.Addrs{"10.0.0.2/24"}},
+		{LocalIP: nil, PeerIP: nil},           // L2-only link
+		{LocalIP: types.Addrs{"192.168.1.5"}}, // bare IP allowed
+		{LocalIP: types.Addrs{"fd00:1::1/64"}, PeerIP: types.Addrs{"fd00:1::2/64"}},
+		{LocalIP: types.Addrs{"fd00:1::1"}, PeerIP: nil},
+		{LocalIP: types.Addrs{"10.0.0.1/30", "fd00:1::1/64"}, PeerIP: types.Addrs{"10.0.0.2/30", "fd00:1::2/64"}}, // dual stack
+		{LocalIP: types.Addrs{"10.0.0.1/24", "10.0.0.9/24"}, PeerIP: types.Addrs{"10.0.0.2/24"}},                  // two v4 on one end
+		{LocalIP: types.Addrs{"10.0.0.1/30", "fd00:1::1/64"}, PeerIP: types.Addrs{"fd00:1::2/64"}},                // one shared family is enough
 	}
 	if err := ValidateLinkIPs(good); err != nil {
 		t.Errorf("expected valid links to pass, got: %v", err)
 	}
 
 	bad := [][]types.LinkSpec{
-		{{LocalIP: "10.0.0.999/24"}},
-		{{PeerIP: "not-an-ip"}},
-		{{LocalIP: "10.0.0.1/33"}},
-		{{LocalIP: "fd00:1::1/129"}},
-		{{LocalIP: "10.0.0.1/24", PeerIP: "fd00:1::2/64"}}, // one family per link
+		{{LocalIP: types.Addrs{"10.0.0.999/24"}}},
+		{{PeerIP: types.Addrs{"not-an-ip"}}},
+		{{LocalIP: types.Addrs{"10.0.0.1/33"}}},
+		{{LocalIP: types.Addrs{"fd00:1::1/129"}}},
+		{{LocalIP: types.Addrs{"10.0.0.1/24"}, PeerIP: types.Addrs{"fd00:1::2/64"}}},               // no shared family
+		{{LocalIP: types.Addrs{"10.0.0.1/24", "10.0.0.5"}}},                                        // an extra needs a mask
+		{{LocalIP: types.Addrs{"10.0.0.1/24", "10.0.0.1/24"}}},                                     // repeats on the end
+		{{LocalIP: types.Addrs{"10.0.0.1/24"}, PeerIP: types.Addrs{"10.0.0.2/24", "10.0.0.1/24"}}}, // on both ends
+		{{LocalIP: types.Addrs{"10.0.0.1/24", "bad"}}},
 	}
 	for _, links := range bad {
 		if err := ValidateLinkIPs(links); err == nil {
@@ -80,7 +87,7 @@ func TestValidateLinkIPCapabilities(t *testing.T) {
 	}
 
 	// IP on a switch endpoint must be rejected.
-	swLink := []types.LinkSpec{{Node: "sw1", PeerNode: "r1", LocalIP: "10.0.0.1/24"}}
+	swLink := []types.LinkSpec{{Node: "sw1", PeerNode: "r1", LocalIP: types.Addrs{"10.0.0.1/24"}}}
 	if err := ValidateLinkIPCapabilities(swLink, nodes); err == nil {
 		t.Error("expected IP on a switch to be rejected")
 	} else if !strings.Contains(err.Error(), "no L3 support") {
@@ -88,13 +95,13 @@ func TestValidateLinkIPCapabilities(t *testing.T) {
 	}
 
 	// IP on the peer side that is a switch must also be rejected.
-	peerLink := []types.LinkSpec{{Node: "r1", PeerNode: "sw1", PeerIP: "10.0.0.2/24"}}
+	peerLink := []types.LinkSpec{{Node: "r1", PeerNode: "sw1", PeerIP: types.Addrs{"10.0.0.2/24"}}}
 	if err := ValidateLinkIPCapabilities(peerLink, nodes); err == nil {
 		t.Error("expected IP on peer switch to be rejected")
 	}
 
 	// IP between two routers is fine.
-	okLink := []types.LinkSpec{{Node: "r1", PeerNode: "r1", LocalIP: "10.0.0.1/24", PeerIP: "10.0.0.2/24"}}
+	okLink := []types.LinkSpec{{Node: "r1", PeerNode: "r1", LocalIP: types.Addrs{"10.0.0.1/24"}, PeerIP: types.Addrs{"10.0.0.2/24"}}}
 	if err := ValidateLinkIPCapabilities(okLink, nodes); err != nil {
 		t.Errorf("expected router-router IP link to pass, got: %v", err)
 	}

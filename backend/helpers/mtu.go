@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"kubendt/capabilities"
 	drivers_meta "kubendt/drivers/meta"
 	"kubendt/executor"
 	"kubendt/kubeclient"
@@ -30,6 +31,8 @@ const (
 	MinLinkMTU     = 68
 	MaxLinkMTU     = 65535
 	LinkMTUEnv     = "KUBENDT_LINK_MTU"
+	// The extra addresses a VM guest boots with, "eth1=a,b;eth2=c".
+	LinkAddressesEnv = "KUBENDT_LINK_ADDRESSES"
 )
 
 // PlatformLinkMTU returns the MTU every link gets and whether the operator
@@ -91,12 +94,15 @@ func NamespaceLinkMTU(namespace string) int {
 	return namespaceMTU[namespace]
 }
 
-// MTUPass is what one pass did, for the operation's response and its log.
+// MTUPass is what one pass did, for the operation's response and its log:
+// the MTU it settled on, the links it covered, the interfaces whose MTU it
+// changed and the declared extra addresses it wrote.
 type MTUPass struct {
-	MTU      int             `json:"mtu"`
-	Links    int             `json:"links"`
-	Changed  int             `json:"changed"`
-	Warnings []types.Warning `json:"-"`
+	MTU       int             `json:"mtu"`
+	Links     int             `json:"links"`
+	Changed   int             `json:"changed"`
+	Addresses int             `json:"addresses"`
+	Warnings  []types.Warning `json:"-"`
 }
 
 // mtuEnd is one pod interface that terminates a link.
@@ -104,9 +110,10 @@ type mtuEnd struct {
 	Pod, Iface   string
 	Worker       string
 	Peer, PeerIf string
-	Cross        bool // the peer runs on another worker, so this is a VXLAN end
-	Fresh        bool // created after this backend started, so its MTU is the kernel's own
-	Want         int  // the MTU the topology declares for this link, 0 for the platform's
+	Cross        bool     // the peer runs on another worker, so this is a VXLAN end
+	Fresh        bool     // created after this backend started, so its MTU is the kernel's own
+	Want         int      // the MTU the topology declares for this link, 0 for the platform's
+	Addrs        []string // the addresses the topology declares on this end beyond Meshnet's
 }
 
 // targetOf is the MTU an end gets: the link's own when declared, else the
@@ -134,6 +141,9 @@ type refusedEnd struct {
 // that an end cannot carry, the operator's or a link's, is an error; the
 // default that does not fit is lowered with a warning. With only set, just
 // the links touching those pods are passed (a configure that changed one).
+// The same write puts the extra addresses a link declares on each end,
+// which Meshnet does not set: idempotent, so they are written every pass,
+// except those the pod's history removed.
 func ApplyPlatformMTU(namespace string, known map[string]map[string]int, only map[string]bool) (MTUPass, error) {
 	target, explicit, err := PlatformLinkMTU()
 	if err != nil {
@@ -180,10 +190,11 @@ func ApplyPlatformMTU(namespace string, known map[string]map[string]int, only ma
 	// A second round only happens when the kernel refused the value on a
 	// VXLAN end memory knew nothing about: the value is lowered to what that
 	// end carries and every link is written again so they all agree.
-	changed := 0
+	changed, addressed := 0, 0
 	for round := 1; round <= 2; round++ {
-		n, refused, setWarnings := setLinkMTUs(namespace, eff, ends, current, pods)
+		n, nAddr, refused, setWarnings := setLinkMTUs(namespace, eff, ends, current, pods)
 		changed += n
+		addressed += nAddr
 		warnings = append(warnings, setWarnings...)
 		if len(refused) == 0 {
 			break
@@ -220,16 +231,16 @@ func ApplyPlatformMTU(namespace string, known map[string]map[string]int, only ma
 	namespaceMTU[namespace] = eff
 	ceilingMu.Unlock()
 
-	log.Printf("📏 MTU pass in %s: %d links at %d, %d interface(s) changed, %d warning(s)", namespace, nLinks, eff, changed, len(warnings))
-	return MTUPass{MTU: eff, Links: nLinks, Changed: changed, Warnings: warnings}, nil
+	log.Printf("📏 MTU pass in %s: %d links at %d, %d interface(s) changed, %d address(es) written, %d warning(s)", namespace, nLinks, eff, changed, addressed, len(warnings))
+	return MTUPass{MTU: eff, Links: nLinks, Changed: changed, Addresses: addressed, Warnings: warnings}, nil
 }
 
 // linkEnds turns the namespace's links into pod interfaces, dropping host
 // uplinks (the pod end is a macvlan on the host NIC, not Meshnet's), links
 // whose pods are not running and, with only set, links touching none of
 // those pods. Both ends of a link are fresh when either pod is: Meshnet
-// rebuilds the facing end along with the new pod. A link's declared MTU
-// comes from the attributes, keyed by either end.
+// rebuilds the facing end along with the new pod. A link's declared MTU and
+// extra addresses come from the attributes, keyed by either end.
 func linkEnds(links []types.LinkSpec, pods map[string]*v1.Pod, attrs map[string]LinkAttrs, only map[string]bool) ([]mtuEnd, int) {
 	var ends []mtuEnd
 	n := 0
@@ -246,14 +257,14 @@ func linkEnds(links []types.LinkSpec, pods map[string]*v1.Pod, attrs map[string]
 		}
 		cross := a.Spec.NodeName != b.Spec.NodeName
 		fresh := a.CreationTimestamp.After(processStart) || b.CreationTimestamp.After(processStart)
-		want := attrs[l.Node+"/"+l.LocalIntf].MTU
-		if want == 0 {
-			want = attrs[l.PeerNode+"/"+l.PeerIntf].MTU
+		la, ok := attrs[l.Node+"/"+l.LocalIntf]
+		if !ok {
+			la = attrs[l.PeerNode+"/"+l.PeerIntf].swapped()
 		}
 		n++
 		ends = append(ends,
-			mtuEnd{Pod: l.Node, Iface: l.LocalIntf, Worker: a.Spec.NodeName, Peer: l.PeerNode, PeerIf: l.PeerIntf, Cross: cross, Fresh: fresh, Want: want},
-			mtuEnd{Pod: l.PeerNode, Iface: l.PeerIntf, Worker: b.Spec.NodeName, Peer: l.Node, PeerIf: l.LocalIntf, Cross: cross, Fresh: fresh, Want: want},
+			mtuEnd{Pod: l.Node, Iface: l.LocalIntf, Worker: a.Spec.NodeName, Peer: l.PeerNode, PeerIf: l.PeerIntf, Cross: cross, Fresh: fresh, Want: la.MTU, Addrs: la.LocalAddrs},
+			mtuEnd{Pod: l.PeerNode, Iface: l.PeerIntf, Worker: b.Spec.NodeName, Peer: l.Node, PeerIf: l.LocalIntf, Cross: cross, Fresh: fresh, Want: la.MTU, Addrs: la.PeerAddrs},
 		)
 	}
 	return ends, n
@@ -401,40 +412,89 @@ func tapFor(iface string) string {
 	return "tap" + strings.TrimPrefix(iface, "eth")
 }
 
-// setItem is one interface and the MTU it gets.
+// setItem is one write of the per-pod script: the MTU of an interface, or
+// an address to put on it.
 type setItem struct {
 	Name string
 	MTU  int
+	Addr string
 }
 
-// setScript writes the MTU on each interface on its own, so one refusal does
-// not stop the rest and names itself on stdout.
+// key names the item in the script's FAIL lines.
+func (it setItem) key() string {
+	if it.Addr != "" {
+		return it.Name + " " + it.Addr
+	}
+	return it.Name
+}
+
+// setScript writes each item on its own, so one refusal does not stop the
+// rest and names itself on stdout.
 func setScript(items []setItem) string {
 	parts := make([]string, len(items))
 	for i, it := range items {
-		parts[i] = "ip link set dev " + it.Name + " mtu " + strconv.Itoa(it.MTU) + " 2>/dev/null || echo FAIL " + it.Name
+		if it.Addr != "" {
+			parts[i] = "ip addr replace " + it.Addr + " dev " + it.Name + " 2>/dev/null || echo FAIL " + it.key()
+		} else {
+			parts[i] = "ip link set dev " + it.Name + " mtu " + strconv.Itoa(it.MTU) + " 2>/dev/null || echo FAIL " + it.Name
+		}
 	}
 	return strings.Join(parts, "; ")
 }
 
-// parseSetFailures returns the interfaces a setScript could not set.
+// parseSetFailures returns the keys of the items a setScript could not write.
 func parseSetFailures(out string) map[string]bool {
 	failed := map[string]bool{}
 	for _, line := range strings.Split(out, "\n") {
 		f := strings.Fields(line)
-		if len(f) == 2 && f[0] == "FAIL" {
-			failed[f[1]] = true
+		if len(f) >= 2 && f[0] == "FAIL" {
+			failed[strings.Join(f[1:], " ")] = true
 		}
 	}
 	return failed
 }
 
-// setLinkMTUs writes eff on every end that does not have it: one exec per
-// pod for its interfaces (and taps on a VM pod), then one commit in the guest
-// when its driver reaches it. Returns how many interfaces changed and the
-// VXLAN ends the kernel refused, which sit at the most their worker carries.
-func setLinkMTUs(namespace string, eff int, ends []mtuEnd, current map[string]map[string]int, pods map[string]*v1.Pod) (int, []refusedEnd, []types.Warning) {
-	changed := 0
+// removedAddresses lists the "iface cidr" pairs the pod's history removes:
+// a declared address the user took off with remove_ip stays off whichever
+// runs first, the pass or the replay. A later set_ip of it puts it back.
+func removedAddresses(namespace, pod string) map[string]bool {
+	if DB == nil {
+		return map[string]bool{}
+	}
+	ops, err := ListDriverOperationsForPod(namespace, pod)
+	if err != nil {
+		log.Printf("⚠️ MTU pass: could not read the history of %s/%s: %v", namespace, pod, err)
+		return map[string]bool{}
+	}
+	return addressesRemovedBy(ops)
+}
+
+func addressesRemovedBy(ops []PersistedDriverOperation) map[string]bool {
+	removed := map[string]bool{}
+	for _, op := range ops {
+		t := op.Action.Type
+		if t == "" {
+			t = op.ActionType
+		}
+		key := op.Action.Iface + " " + op.Action.CIDR
+		switch t {
+		case "remove_ip":
+			removed[key] = true
+		case "set_ip", "replace_ip":
+			delete(removed, key)
+		}
+	}
+	return removed
+}
+
+// setLinkMTUs writes eff on every end that does not have it and the extra
+// addresses on every end that declares them: one exec per pod for its
+// interfaces (and taps on a VM pod), then one commit in the guest when its
+// driver reaches it. Returns how many interfaces changed, how many addresses
+// were written and the VXLAN ends the kernel refused, which sit at the most
+// their worker carries.
+func setLinkMTUs(namespace string, eff int, ends []mtuEnd, current map[string]map[string]int, pods map[string]*v1.Pod) (int, int, []refusedEnd, []types.Warning) {
+	changed, addressed := 0, 0
 	var refused []refusedEnd
 	var warnings []types.Warning
 	var mu sync.Mutex
@@ -442,62 +502,86 @@ func setLinkMTUs(namespace string, eff int, ends []mtuEnd, current map[string]ma
 		pod := pods[podName]
 		guest := IsGuestVM(pod.Labels)
 		have := current[podName]
+		removed := removedAddresses(namespace, podName)
 		var todo []setItem
 		byName := map[string]mtuEnd{}
 		for _, e := range podEnds {
 			byName[e.Iface] = e
 			want := targetOf(e, eff)
 			if have[e.Iface] != want {
-				todo = append(todo, setItem{e.Iface, want})
+				todo = append(todo, setItem{Name: e.Iface, MTU: want})
 			}
 			if guest {
+				// The guest owns the addresses of a VM pod, set below.
 				if tap := tapFor(e.Iface); tap != "" {
 					if mtu, ok := have[tap]; ok && mtu != want {
-						todo = append(todo, setItem{tap, want})
+						todo = append(todo, setItem{Name: tap, MTU: want})
 					}
+				}
+				continue
+			}
+			for _, addr := range e.Addrs {
+				if !removed[e.Iface+" "+addr] {
+					todo = append(todo, setItem{Name: e.Iface, Addr: addr})
 				}
 			}
 		}
 		var podWarnings []types.Warning
 		var podRefused []refusedEnd
-		n := 0
+		n, nAddr := 0, 0
 		if len(todo) > 0 {
-			sort.Slice(todo, func(i, j int) bool { return todo[i].Name < todo[j].Name })
-			names := make([]string, len(todo))
+			sort.Slice(todo, func(i, j int) bool { return todo[i].key() < todo[j].key() })
+			keys := make([]string, len(todo))
 			for i, it := range todo {
-				names[i] = it.Name
+				keys[i] = it.key()
 			}
 			stdout, stderr, err := ExecInPod(namespace, podName, []string{"sh", "-c", setScript(todo)})
 			if err != nil {
 				podWarnings = append(podWarnings, types.Warning{
 					Node:   podName,
 					Kind:   "link_mtu_not_set",
-					Detail: fmt.Sprintf("could not set the MTU on %s: %v %s", strings.Join(names, ", "), err, strings.TrimSpace(stderr)),
+					Detail: fmt.Sprintf("could not write %s: %v %s", strings.Join(keys, ", "), err, strings.TrimSpace(stderr)),
 				})
 			} else {
 				failed := parseSetFailures(stdout)
-				n = len(todo) - len(failed)
-				for name := range failed {
-					e, isEnd := byName[name]
-					if isEnd && e.Cross && have[name] > 0 {
-						podRefused = append(podRefused, refusedEnd{mtuEnd: e, Current: have[name]})
+				for _, it := range todo {
+					if !failed[it.key()] {
+						if it.Addr != "" {
+							nAddr++
+						} else {
+							n++
+						}
+						continue
+					}
+					if it.Addr != "" {
+						podWarnings = append(podWarnings, types.Warning{
+							Node:   podName,
+							Kind:   "link_address_not_set",
+							Detail: fmt.Sprintf("could not set %s on %s", it.Addr, it.Name),
+						})
+						continue
+					}
+					e, isEnd := byName[it.Name]
+					if isEnd && e.Cross && have[it.Name] > 0 {
+						podRefused = append(podRefused, refusedEnd{mtuEnd: e, Current: have[it.Name]})
 						continue
 					}
 					podWarnings = append(podWarnings, types.Warning{
 						Node:   podName,
 						Kind:   "link_mtu_not_set",
-						Detail: fmt.Sprintf("could not set the MTU on %s", name),
+						Detail: fmt.Sprintf("could not set the MTU on %s", it.Name),
 					})
 				}
 			}
 		}
 		if guest && len(podRefused) == 0 {
-			if w := setGuestMTU(namespace, pod, podEnds, eff); w != nil {
-				podWarnings = append(podWarnings, *w)
-			}
+			g, w := setGuestLinks(namespace, pod, podEnds, eff, removed)
+			nAddr += g
+			podWarnings = append(podWarnings, w...)
 		}
 		mu.Lock()
 		changed += n
+		addressed += nAddr
 		refused = append(refused, podRefused...)
 		warnings = append(warnings, podWarnings...)
 		mu.Unlock()
@@ -508,44 +592,93 @@ func setLinkMTUs(namespace string, eff int, ends []mtuEnd, current map[string]ma
 		}
 		return refused[i].Iface < refused[j].Iface
 	})
-	return changed, refused, warnings
+	return changed, addressed, refused, warnings
 }
 
-// setGuestMTU commits the MTU of the pod's link interfaces inside its guest,
-// unless the guest already reports it: a read is a fraction of a commit, and
-// a guest booted with the value (the VyOS image takes it from its env) or set
-// by an earlier pass costs nothing.
-func setGuestMTU(namespace string, pod *v1.Pod, ends []mtuEnd, eff int) *types.Warning {
+// setGuestLinks commits inside a VM guest what its link interfaces lack, in
+// one commit: the MTU, unless the guest already reports it (a read is a
+// fraction of a commit, and a guest booted with the value, the VyOS image
+// takes it from its env, costs nothing), and the declared extra addresses it
+// does not show. Returns how many addresses it committed.
+func setGuestLinks(namespace string, pod *v1.Pod, ends []mtuEnd, eff int, removed map[string]bool) (int, []types.Warning) {
+	warn := func(kind, detail string) types.Warning {
+		return types.Warning{Node: pod.Name, Kind: kind, Detail: detail}
+	}
 	drv, err := GetDriverForListedPod(pod)
 	if err != nil {
-		return &types.Warning{Node: pod.Name, Kind: "link_mtu_not_set", Detail: "guest MTU: " + err.Error()}
+		return 0, []types.Warning{warn("link_mtu_not_set", "guest: "+err.Error())}
 	}
-	setter, ok := drv.(drivers_meta.GuestMTUSetter)
-	if !ok {
-		return &types.Warning{Node: pod.Name, Kind: "link_mtu_not_set", Detail: fmt.Sprintf("guest MTU: driver %s cannot set the MTU inside its guest", pod.Labels["kubendt/driver"])}
-	}
+	var entries []map[string]string
+	inspected := false
 	if inspector, ok := drv.(drivers_meta.EffectiveInterfaceInspector); ok {
-		if entries, err := inspector.GetEffectiveInterfaces(namespace, pod.Name); err == nil && !guestNeedsMTU(entries, ends, eff) {
-			return nil
+		if entries, err = inspector.GetEffectiveInterfaces(namespace, pod.Name); err == nil {
+			inspected = true
 		}
 	}
-	exec, _, err := executor.ResolveForDriver(drv)
-	if err != nil {
-		return &types.Warning{Node: pod.Name, Kind: "link_mtu_not_set", Detail: "guest MTU: " + err.Error()}
-	}
 	var lines []string
-	for _, e := range ends {
-		for _, cmd := range setter.GuestMTUCommands(e.Iface, targetOf(e, eff)) {
-			lines = append(lines, strings.Join(cmd, " "))
+	var warnings []types.Warning
+	if !inspected || guestNeedsMTU(entries, ends, eff) {
+		if setter, ok := drv.(drivers_meta.GuestMTUSetter); ok {
+			for _, e := range ends {
+				for _, cmd := range setter.GuestMTUCommands(e.Iface, targetOf(e, eff)) {
+					lines = append(lines, strings.Join(cmd, " "))
+				}
+			}
+		} else {
+			warnings = append(warnings, warn("link_mtu_not_set", fmt.Sprintf("guest MTU: driver %s cannot set the MTU inside its guest", pod.Labels["kubendt/driver"])))
+		}
+	}
+	missing := guestMissingAddrs(entries, inspected, ends, removed)
+	nAddr := 0
+	if len(missing) > 0 {
+		if l3, ok := drv.(capabilities.L3Capable); ok {
+			for _, m := range missing {
+				for _, cmd := range l3.SetIP(m.Name, m.Addr) {
+					lines = append(lines, strings.Join(cmd, " "))
+				}
+				nAddr++
+			}
+		} else {
+			warnings = append(warnings, warn("link_address_not_set", fmt.Sprintf("guest addresses: driver %s has no L3 support", pod.Labels["kubendt/driver"])))
 		}
 	}
 	if len(lines) == 0 {
-		return nil
+		return 0, warnings
+	}
+	exec, _, err := executor.ResolveForDriver(drv)
+	if err != nil {
+		return 0, append(warnings, warn("link_mtu_not_set", "guest: "+err.Error()))
 	}
 	if err := exec.ExecCommand(pod.Name, namespace, executor.NewArgsCommand(lines)); err != nil {
-		return &types.Warning{Node: pod.Name, Kind: "link_mtu_not_set", Detail: fmt.Sprintf("guest MTU %d: %v", eff, err)}
+		return 0, append(warnings, warn("link_mtu_not_set", fmt.Sprintf("guest commit: %v", err)))
 	}
-	return nil
+	return nAddr, warnings
+}
+
+// guestMissingAddrs is every declared extra address the guest does not show
+// on its interface, all of them when the guest could not be read, minus the
+// ones the history removed.
+func guestMissingAddrs(entries []map[string]string, inspected bool, ends []mtuEnd, removed map[string]bool) []setItem {
+	have := map[string]map[string]bool{}
+	for _, e := range entries {
+		set := map[string]bool{}
+		for _, a := range strings.Split(e["addresses"], ",") {
+			if a != "" {
+				set[a] = true
+			}
+		}
+		have[e["interface"]] = set
+	}
+	var missing []setItem
+	for _, e := range ends {
+		for _, addr := range e.Addrs {
+			if removed[e.Iface+" "+addr] || (inspected && have[e.Iface][addr]) {
+				continue
+			}
+			missing = append(missing, setItem{Name: e.Iface, Addr: addr})
+		}
+	}
+	return missing
 }
 
 // guestNeedsMTU says whether any link interface of the guest reports an MTU

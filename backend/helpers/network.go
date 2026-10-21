@@ -172,9 +172,9 @@ func createTopologyForPod(namespace, podName string, links []types.LinkSpec, res
 		}
 
 		localIntf := link.LocalIntf
-		localIP := link.LocalIP
+		localIP := link.LocalIP.First()
 		peerIntf := link.PeerIntf
-		peerIP := link.PeerIP
+		peerIP := link.PeerIP.First()
 		peerPod := resolvedPeer
 
 		// Swap so "local_*" always refers to podName, no matter which side it sits on.

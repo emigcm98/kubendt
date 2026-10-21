@@ -12,10 +12,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - A link can declare its own `mtu` in the topology JSON, between 68 and `KUBENDT_LINK_MTU`, and the `links` section of a configure request changes it on a running lab; the platform applies it on both ends like the namespace value, and the link panel lists it with the other declared properties. Examples 3, 4 and 6 drop `ospf_mtu_ignore`, since both ends of a link now share the MTU.
 - Links between container nodes take IPv6 addresses, with one family per link: routers and switches forward IPv6, the L3 actions build the `ip -6` form for a v6 gateway, `remove_default_route` takes a `family`, and the interface listing reports `ipv6` next to `ipv4`.
 - VyOS nodes take IPv6 too: the guest boots with every address of its links in both families, a static or default route with a v6 next hop goes to `protocols static route6`, and the node panel reports the guest's `ipv6`.
+- A link end takes several addresses: `localIp` and `peerIp` accept an array (dual stack, a second IPv4), the first is wired with the link and the rest are set by the platform after every wiring, on a VyOS guest at boot. `GET /network/get-network` echoes the array, the interface listing returns every address as `addresses`, and the link, node and interface panels list them.
 
 ### Changed
 
+- `set_ip` uses `ip addr replace`, so repeating it no longer fails with "File exists", and `remove_ip` of an address that is not there is nothing to do rather than an error, so a replay never drops it from the history.
 - The heal pass lists each pod's interfaces once instead of running one exec per link endpoint, and the MTU pass reuses what it read. A VyOS pod receives `KUBENDT_LINK_MTU` in its environment and sets it at boot, and the pass asks a guest before committing, so a deploy or a restart no longer commits in the guest.
+
+### Fixed
+
+- A `set_ip` after a `remove_ip` of the same address, or the other way round, was skipped as a duplicate because a replay re-stamps the history; the pair now runs and the history keeps only the later one.
 
 ## [1.5.0] - 2026-10-16
 

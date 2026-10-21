@@ -916,7 +916,7 @@ func DeployNetwork(c *gin.Context) {
 	// 8. Create StatefulSet for each node
 	for _, node := range request.Nodes {
 		mounts := validMountsMap[node.Name]
-		err := helpers.CreateNetworkStatefulSet(namespace, node, mounts)
+		err := helpers.CreateNetworkStatefulSet(namespace, node, mounts, request.Links)
 		if err != nil {
 			log.Printf("❌ Error creating StatefulSet %s: %v", node.Name, err)
 			c.JSON(http.StatusInternalServerError, gin.H{
@@ -1361,10 +1361,10 @@ func GetNetwork(c *gin.Context) {
 				UID:       &uidValue,
 			}
 			if localIP, ok := linkMap["local_ip"].(string); ok {
-				link.LocalIP = localIP
+				link.LocalIP = types.OneAddr(localIP)
 			}
 			if peerIP, ok := linkMap["peer_ip"].(string); ok {
-				link.PeerIP = peerIP
+				link.PeerIP = types.OneAddr(peerIP)
 			}
 
 			if peerLabel != "" && link.PeerNode == "external" {

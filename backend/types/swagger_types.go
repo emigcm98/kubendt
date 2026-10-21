@@ -123,6 +123,8 @@ type PodInterfaceEntry struct {
 	MAC       string `json:"mac" example:"aa:bb:cc:dd:ee:ff"`
 	IPv4      string `json:"ipv4" example:"10.0.0.1/24"`
 	IPv6      string `json:"ipv6" example:"fd00::1/64"`
+	// Every global address of the interface, both families, comma separated.
+	Addresses string `json:"addresses" example:"10.0.0.1/24,fd00::1/64"`
 }
 
 // PodInterfacesResponse is returned by GET /pods/ips/:ns/:pod.
