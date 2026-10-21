@@ -62,6 +62,8 @@ What each one feeds:
 - **The inspectors** replace the pod-side reads where the dataplane lives elsewhere: the interface list and states of the node panel, the NAT interface of the summary.
 - **GuestInterface** renames interface parameters before an action runs, for a dataplane that calls `eth1` something else.
 
+Two more sit next to a capability rather than in `drivers/meta`: `GuestMTUSetter` (`GuestMTUCommands(iface, mtu)`), which the MTU pass uses to set a VM guest's interface, and `DefaultRoute6Remover` (`RemoveDefaultRoute6()`), which `remove_default_route` with `family: 6` needs; `L3Base` has the latter, so a driver embedding it gets it for free.
+
 ## Where a tool runs
 
 Capture, interface counters and traffic control watch the wire: they run in the pod on `ethN`, or on `tapN` for a VM, whatever the driver. The trace and the throughput test send traffic from the node's addresses, so they need its IP stack: a container node runs them in its toolbox, the ephemeral container the backend injects, and a VM node runs them inside the guest through `GuestToolProvider`. A VM driver that declares nothing offers neither, and the menus say so instead of failing. `helpers.ToolRunner` is the one place that decides.

@@ -151,7 +151,8 @@ func ValidateLinkIPCapabilities(links []types.LinkSpec, nodes []types.NodeSpec) 
 
 // ValidateLinkIPs rejects malformed L3 addresses before deploy. An empty IP is
 // allowed (an L2-only link carries no addressing); a non-empty value must parse
-// as a bare IP or a CIDR (e.g. 10.0.0.1/24).
+// as a bare IP or a CIDR (e.g. 10.0.0.1/24), and both ends of a link share a
+// family.
 func ValidateLinkIPs(links []types.LinkSpec) error {
 	check := func(idx int, side, value string) error {
 		value = strings.TrimSpace(value)
@@ -176,6 +177,25 @@ func ValidateLinkIPs(links []types.LinkSpec) error {
 		if err := check(i, "peer", link.PeerIP); err != nil {
 			return err
 		}
+		local, peer := ipFamily(link.LocalIP), ipFamily(link.PeerIP)
+		if local != 0 && peer != 0 && local != peer {
+			return fmt.Errorf("link[%d]: local IP %q and peer IP %q are not the same family", i, link.LocalIP, link.PeerIP)
+		}
 	}
 	return nil
+}
+
+// ipFamily is 4 or 6 for an address with or without a prefix length, 0 when
+// empty or unparsable.
+func ipFamily(value string) int {
+	host, _, _ := strings.Cut(strings.TrimSpace(value), "/")
+	ip := net.ParseIP(host)
+	switch {
+	case ip == nil:
+		return 0
+	case ip.To4() != nil:
+		return 4
+	default:
+		return 6
+	}
 }

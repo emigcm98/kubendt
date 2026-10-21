@@ -25,6 +25,7 @@ const (
 	KindObject    Kind = "object"   // a nested spec the action validates itself
 	KindCommand   Kind = "command"  // a string or an argv array
 	KindExecutor  Kind = "executor" // the name of a registered executor
+	KindFamily    Kind = "family"   // "4" or "6"
 )
 
 // Param is one field of ActionEntry an action reads, by its JSON name.
@@ -63,6 +64,7 @@ var (
 	RouterID     = Param{Name: "router_id", Kind: KindIP, Required: true}
 	Command      = Param{Name: "command", Kind: KindCommand, Required: true}
 	Executor     = Param{Name: "executor", Kind: KindExecutor, Required: false}
+	Family       = Param{Name: "family", Kind: KindFamily, Required: false}
 )
 
 // ProtectedInterface is the pod's cluster interface. An action on it would
@@ -161,6 +163,10 @@ func checkKind(k Kind, v reflect.Value) error {
 	case KindExecutor:
 		if _, err := executor.Get(v.String()); err != nil {
 			return fmt.Errorf("must name a registered executor, got %q", v.String())
+		}
+	case KindFamily:
+		if s := v.String(); s != "4" && s != "6" {
+			return fmt.Errorf("must be 4 or 6, got %q", s)
 		}
 	}
 	return nil
