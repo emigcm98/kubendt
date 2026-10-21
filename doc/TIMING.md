@@ -9,7 +9,7 @@ Deploy, modify and restart responses carry a `timeline` block next to the usual 
 ```json
 "timeline": {
   "request_started_at": "2026-09-20T12:47:47.120Z",
-  "backend_ms": { "prepare": 1180, "wait_ready": 5300, "replay": 40, "peer_replay": 1800, "total": 6760 },
+  "backend_ms": { "prepare": 1180, "wait_ready": 5300, "replay": 40, "peer_replay": 1800, "mtu": 640, "total": 6760 },
   "pods": [
     {
       "pod": "r1-0",
@@ -73,6 +73,7 @@ The `delete_*` and `old_pod_gone` fields only appear for pods that were recreate
 | `replay` |  | if pods restarted | yes | Operation history of the recreated pods replayed on them |
 | `peer_replay` |  | if pods restarted | yes | On the neighbours of the recreated pods, the persisted operations that touch the interfaces Meshnet recreated (bridge membership, routes, qdiscs) re-applied, and the TC redirect of guest-VM neighbours rewired. It is the neighbours' recovery cost and it grows with their history, not with the recreated pod's, which is why it is kept apart from `replay` |
 | `heal` | yes | yes |  | Interface validation and healing after Ready |
+| `mtu` | yes | yes | yes | The link pass after wiring: one MTU on every link end and the extra addresses a link declares, inside a VyOS guest too |
 | `total` | yes | yes | yes | Until the response is built |
 
 ## Phases overlap

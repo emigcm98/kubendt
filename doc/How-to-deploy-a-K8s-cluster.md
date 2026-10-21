@@ -66,7 +66,7 @@ kubectl get nodes -o wide
 
 Verify current context is minikube before proceeding.
 
-> **Why `--extra-config=kubelet.allowed-unsafe-sysctls`?** KubeNDT router and switch pods set `net.ipv4.ip_forward` via pod security context `sysctls`, and the list also allows `net.ipv6.conf.all.forwarding` so the cluster is ready for IPv6 topologies. Without this flag the kubelet will reject those pods with `SysctlForbidden`.
+> **Why `--extra-config=kubelet.allowed-unsafe-sysctls`?** KubeNDT router and switch pods set `net.ipv4.ip_forward` and `net.ipv6.conf.all.forwarding` via pod security context `sysctls`, so they forward both families. Without this flag the kubelet will reject those pods with `SysctlForbidden`.
 
 ### 4.2 Install Meshnet (required)
 
@@ -135,7 +135,7 @@ nodes:
             allowed-unsafe-sysctls: "net.ipv4.ip_forward,net.ipv6.conf.all.forwarding"
 ```
 
-> The `kubeletExtraArgs` entries are required for KubeNDT router and switch nodes, which set `net.ipv4.ip_forward` as a pod-level sysctl; `net.ipv6.conf.all.forwarding` is allowed too so the cluster is ready for IPv6 topologies. Without them the kubelet rejects those pods with `SysctlForbidden`.
+> The `kubeletExtraArgs` entries are required for KubeNDT router and switch nodes, which set `net.ipv4.ip_forward` and `net.ipv6.conf.all.forwarding` as pod-level sysctls. Without them the kubelet rejects those pods with `SysctlForbidden`.
 
 > Replace `apiServerAddress` with your host's LAN IP (find it with `hostname -I` or `ip -4 addr`). Using `127.0.0.1` here makes the generated kubeconfig unreachable from the KubeNDT backend container and produces a certificate that is only valid for localhost.
 
@@ -225,7 +225,7 @@ sudo apt-mark hold kubelet kubeadm kubectl
 
 ### 6.1b Allow unsafe sysctls, cluster wide
 
-KubeNDT router and switch pods set `net.ipv4.ip_forward` through the pod security context, and the list below also allows `net.ipv6.conf.all.forwarding` so the cluster is ready for IPv6 topologies. The kubelet must allow them or those pods stay in `SysctlForbidden`.
+KubeNDT router and switch pods set `net.ipv4.ip_forward` and `net.ipv6.conf.all.forwarding` through the pod security context. The kubelet must allow both or those pods stay in `SysctlForbidden`.
 
 Put the allowlist in the kubelet configuration that kubeadm manages, not in `/var/lib/kubelet/config.yaml` by hand. kubeadm regenerates that file from the `kubelet-config` ConfigMap on every `kubeadm upgrade node`, so a hand edit is lost with the next minor upgrade.
 
@@ -336,7 +336,7 @@ ovs-0   0/1     SysctlForbidden   0          0s
 sw-0    0/1     SysctlForbidden   0          0s
 ```
 
-Cause: KubeNDT router and switch pods set `net.ipv4.ip_forward` as a pod-level sysctl and the kubelet is not configured to allow it. The list below also allows `net.ipv6.conf.all.forwarding`, so the cluster is ready for IPv6 topologies.
+Cause: KubeNDT router and switch pods set `net.ipv4.ip_forward` and `net.ipv6.conf.all.forwarding` as pod-level sysctls and the kubelet is not configured to allow them. An allowlist with only the first one ran every version before 1.6.0 and refuses these pods since, so an older cluster needs the second entry.
 
 Fix for an existing kubeadm cluster: add the allowlist to the cluster's kubelet configuration and let kubeadm write it to every node, so it also survives upgrades.
 

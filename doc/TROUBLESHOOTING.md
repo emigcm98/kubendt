@@ -36,6 +36,14 @@ kubectl describe pod -n <namespace> <pod-name>
 
 The deploy ends with `timeout waiting for pods to be Ready: <pod> (running-not-ready, readiness probe failed: ...)`. The probe's output says what is missing. The default probe needs the `ip` command of iproute2 in the main container, and prints `ip not found in PATH, the image needs iproute2` when it is not there: add it to the image, or install it at startup through the node's `commands` as the examples do. FRR, Open vSwitch and VyOS nodes have their own probe (the vty sockets, `ovs-vsctl`, SSH into the guest), so for them the message points at the daemon that is not up yet. `kubectl describe pod -n <namespace> <pod>` shows the same events.
 
+## Router and switch pods stay in SysctlForbidden
+
+`kubectl get pods` shows every router and switch of the namespace at `0/1 SysctlForbidden` and the deploy times out. Those pods set `net.ipv4.ip_forward` and `net.ipv6.conf.all.forwarding` through the pod security context, and the kubelet only applies sysctls it has been told to allow. Add both to `allowedUnsafeSysctls` on every node, as the [cluster guide](How-to-deploy-a-K8s-cluster.md) does for minikube, kind and kubeadm; its troubleshooting section shows how to add them to a cluster that is already running. An allowlist with only `net.ipv4.ip_forward` ran every version before 1.6.0, which added the IPv6 sysctl, so an older cluster needs the second entry.
+
+## The deploy fails naming a link's MTU
+
+The response says `KUBENDT_LINK_MTU=N does not fit link a:eth1 ↔ b:eth1: worker X carries at most M over VXLAN`, or the same for a link that declares its own `mtu`, and a deploy rolls back. The two pods landed on different workers, so the link is a VXLAN tunnel, and the value asked for is more than the worker's NIC carries minus the 50 bytes of the encapsulation. Lower the variable or the link's `mtu` to what the message names, or raise the underlay: section 11 of the [cluster guide](How-to-deploy-a-K8s-cluster.md) explains the default of 1450 and the jumbo path. When the default itself does not fit, the backend lowers it with a warning in the response instead of failing, so this only happens with a value you set.
+
 ## An action fails with "'X' is not in the pod's image"
 
 The command behind the action needs a program the image does not ship, `iptables` for NAT on a plain Linux router for instance. Add it to the image or install it at startup through the node's `commands` (`apk add iptables` on the FRR image in the examples). Traffic control needs nothing in the image, it falls back to a toolbox container.
@@ -96,7 +104,7 @@ ls -la /dev/kvm /dev/net/tun
 
 Symptom: backend logs show `⏱️ Exec TIMEOUT executor='...' pod='...' after 30s ...` and one or more actions (`replace_ip`, `enable_snat`, `ospf_*`, etc.) are reported as failed in the result dialog. Frequently the changes are visible inside the pod afterwards, the command just took longer than the deadline.
 
-This is the global in-pod exec deadline. It bounds every single `kubectl exec` and every `ssh_qemu` into a QEMU guest. For QEMU-based pods, a single batched VyOS commit can legitimately take 10-20s the first time after the guest boots, when configd caches are cold.
+This is the global in-pod exec deadline. It bounds every single `kubectl exec` and every `ssh_qemu` into a QEMU guest. Since the consecutive Linux actions of a pod in a configure or a replay run as one exec, the deadline covers that whole script, not each action on its own. For QEMU-based pods, a single batched VyOS commit can legitimately take 10-20s the first time after the guest boots, when configd caches are cold.
 
 - Default is **30 seconds**, dimensioned for first-boot VyOS commits with many subsystems touched (interfaces, NAT, OSPF, DNS, firewall).
 - If your cluster is slow, the K8s API server is under pressure, or your guest images take longer to apply config, raise it via the `KUBECTL_EXEC_TIMEOUT_SECONDS` env var on the backend. Values of 45-60s are reasonable on shared lab clusters.

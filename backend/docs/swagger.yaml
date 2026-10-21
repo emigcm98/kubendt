@@ -277,6 +277,52 @@ definitions:
         example: 1
         type: integer
     type: object
+  types.ConfigureActionResultDoc:
+    properties:
+      action:
+        example: set_ip
+        type: string
+      commands:
+        example:
+        - ip addr replace 10.0.0.1/24 dev eth1
+        items:
+          type: string
+        type: array
+      driver:
+        example: FRRRouterDriver
+        type: string
+      error:
+        type: string
+      output:
+        type: string
+      pod:
+        example: router1
+        type: string
+      pod_took_ms:
+        description: Wall time of the pod's whole batch, set on its first action only.
+        example: 312.4
+        type: number
+      resolved_pod:
+        example: router1-0
+        type: string
+      status:
+        description: success, failed or skipped (already applied since the pod was
+          created).
+        example: success
+        type: string
+    type: object
+  types.ConfigureErrorDoc:
+    properties:
+      driver:
+        example: FRRRouterDriver
+        type: string
+      error:
+        example: 'exec error: exit status 2 | output: Cannot find device "eth9"'
+        type: string
+      pod:
+        example: router1-0
+        type: string
+    type: object
   types.ConfigureNetworkRequest:
     properties:
       links:
@@ -293,9 +339,21 @@ definitions:
     type: object
   types.ConfigureNetworkResponse:
     properties:
+      action_results:
+        items:
+          $ref: '#/definitions/types.ConfigureActionResultDoc'
+        type: array
+      errors:
+        items:
+          $ref: '#/definitions/types.ConfigureErrorDoc'
+        type: array
       failures:
         example: 0
         type: integer
+      link_mtu:
+        allOf:
+        - $ref: '#/definitions/types.LinkMTUDoc'
+        description: Present when the request's links section changed an MTU.
       skipped:
         example: 0
         type: integer
@@ -303,6 +361,7 @@ definitions:
         example: 6.35
         type: number
       status:
+        description: success, or completed_with_errors when any action failed.
         example: success
         type: string
       successes:
@@ -310,6 +369,10 @@ definitions:
         type: integer
       took_time:
         $ref: '#/definitions/types.ConfigureTimingResponse'
+      warnings:
+        items:
+          $ref: '#/definitions/types.WarningDoc'
+        type: array
     type: object
   types.ConfigureTimingResponse:
     properties:
@@ -383,6 +446,8 @@ definitions:
     type: object
   types.DeployNetworkResponse:
     properties:
+      link_mtu:
+        $ref: '#/definitions/types.LinkMTUDoc'
       message:
         example: Network infrastructure deployed successfully
         type: string
@@ -783,6 +848,21 @@ definitions:
         example: /home/user/.kube/config
         type: string
     type: object
+  types.LinkMTUDoc:
+    properties:
+      addresses:
+        example: 2
+        type: integer
+      changed:
+        example: 8
+        type: integer
+      links:
+        example: 4
+        type: integer
+      mtu:
+        example: 1450
+        type: integer
+    type: object
   types.LinkShaping:
     properties:
       localIntf:
@@ -1018,6 +1098,8 @@ definitions:
         items:
           type: string
         type: array
+      link_mtu:
+        $ref: '#/definitions/types.LinkMTUDoc'
       message:
         example: network-modify applied successfully
         type: string
@@ -2060,6 +2142,8 @@ definitions:
     type: object
   types.RestartPodResponseDoc:
     properties:
+      link_mtu:
+        $ref: '#/definitions/types.LinkMTUDoc'
       message:
         example: Pod router1-0 restarted successfully
         type: string
@@ -2074,6 +2158,10 @@ definitions:
         $ref: '#/definitions/types.OperationTimeline'
       took_time:
         $ref: '#/definitions/types.RestartTimingResponse'
+      warnings:
+        items:
+          $ref: '#/definitions/types.WarningDoc'
+        type: array
     type: object
   types.RestartTimingResponse:
     properties:

@@ -47,7 +47,7 @@ DRIVER RESOLUTION (on pod action):
    ├─ universal action (tc, custom)    → its own executor
    ├─ driver names guest interfaces?   → GuestInterfaceMapper rewrites the iface params
    └─ desc.Run(driver, action)         → capability method, e.g. L3.SetIP(eth1, 10.0.0.1/24)
-      → [][]string{"ip", "addr", "add", "10.0.0.1/24", "dev", "eth1"}
+      → [][]string{"ip", "addr", "replace", "10.0.0.1/24", "dev", "eth1"}
    └─ executor: the action's own (tc, custom), the one the request names (custom), or the driver's
 ```
 
@@ -83,7 +83,7 @@ Input: action = {Type: "set_ip", Iface: "eth1", CIDR: "10.0.0.1/24"}
 ├─ Supports: *FRRRouterDriver implements L3Capable ✓
 └─ Run: L3Capable.SetIP("eth1", "10.0.0.1/24")
 
-Output: [["ip", "addr", "add", "10.0.0.1/24", "dev", "eth1"]], executor kubectl
+Output: [["ip", "addr", "replace", "10.0.0.1/24", "dev", "eth1"]], executor kubectl
 
 A driver without the capability (a switch and set_ip) fails at Supports with
 "does not support L3 operations". A request without cidr fails at Validate
@@ -157,7 +157,7 @@ HealMissingInterfaces(namespace, nodes, links, maxRounds=2)
 │  │     │  ├─ GetDriverForPod(pod) → resolve driver
 │  │     │  ├─ FOR each operation:
 │  │     │  │  ├─ ResolveDriverCommands(driver, action)
-│  │     │  │  ├─ kubectl exec pod "cmd1" "cmd2" ...
+│  │     │  │  ├─ kubectl exec pod "cmd1" "cmd2" ... (consecutive Linux actions of a pod go in one sh -c)
 │  │     │  │  ├─ IF success → operations[replayed]++
 │  │     │  │  ├─ ELSE → delete from history, operations[pruned]++
 │  │     │  │
@@ -298,9 +298,9 @@ USER ACTION (e.g., SetIP):
       ↓
   GetDriverForPod → FRRRouterDriver
       ↓
-  ResolveDriverCommands → L3.SetIP() → ["ip", "addr", "add", "10.0.0.1/24", "dev", "eth1"]
+  ResolveDriverCommands → L3.SetIP() → ["ip", "addr", "replace", "10.0.0.1/24", "dev", "eth1"]
       ↓
-  kubectl exec router1-0 "ip addr add 10.0.0.1/24 dev eth1"
+  kubectl exec router1-0 "ip addr replace 10.0.0.1/24 dev eth1"
       ↓
   SaveDriverOperation:
     {namespace: "test", pod_name: "router1-0", driver_type: "FRRRouterDriver",
@@ -327,7 +327,7 @@ POD RESTART (failure/manual restart):
     Query: SELECT * FROM driver_operation_history WHERE pod_name="router1-0" ORDER BY id
     For each row:
       - GetDriverForPod → FRRRouterDriver
-      - ResolveDriverCommands → ["ip", "addr", "add", "10.0.0.1/24", "dev", "eth1"]
+      - ResolveDriverCommands → ["ip", "addr", "replace", "10.0.0.1/24", "dev", "eth1"]
       - kubectl exec → SUCCESS
       - (if unsupported or failed, delete row)
       ↓
@@ -414,9 +414,9 @@ Step 3: For Each Operation
   ├─ ResolveDriverCommands(driver, action)
   │  └─ Type assert driver.(L3Capable)
   │     → L3.SetIP("eth1", "10.0.0.1/24")
-  │     → [["ip", "addr", "add", "10.0.0.1/24", "dev", "eth1"]]
+  │     → [["ip", "addr", "replace", "10.0.0.1/24", "dev", "eth1"]]
   │
-  ├─ kubectl exec router1-0 "ip" "addr" "add" "10.0.0.1/24" "dev" "eth1"
+  ├─ kubectl exec router1-0 "ip" "addr" "replace" "10.0.0.1/24" "dev" "eth1"
   │  └─ IF success: replayed++
   │  OR IF unsupported: DELETE FROM history WHERE id=1; pruned++
   │  OR IF failed: DELETE FROM history WHERE id=1; pruned++
@@ -647,12 +647,12 @@ ReplayDriverOperations called for router1-0
     │   │
     │   ├─ ResolveDriverCommands() returns commands ✓
     │   │   │
-    │   │   ├─ kubectl exec pod "ip" "addr" "add" ... → FAILED
+    │   │   ├─ kubectl exec pod "ip" "addr" "replace" ... → FAILED
     │   │   │   ├─ Log error
     │   │   │   ├─ DELETE FROM history WHERE id=42 (prune failed entry)
     │   │   │   └─ Continue (don't retry)
     │   │   │
-    │   │   └─ kubectl exec pod "ip" "addr" "add" ... → SUCCESS ✓
+    │   │   └─ kubectl exec pod "ip" "addr" "replace" ... → SUCCESS ✓
     │   │       ├─ Increment replayed++
     │   │       └─ Continue
     │   │
