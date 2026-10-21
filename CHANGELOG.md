@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Every link gets the same MTU once it is wired, 1450 by default and `KUBENDT_LINK_MTU` to change it, on both ends and inside a VyOS guest, so throughput and OSPF adjacencies no longer depend on where each pod landed. The interface listing and the link panel show it, and the pass is the `mtu` phase of the operation timeline.
 - A link can declare its own `mtu` in the topology JSON, between 68 and `KUBENDT_LINK_MTU`, and the `links` section of a configure request changes it on a running lab; the platform applies it on both ends like the namespace value, and the link panel lists it with the other declared properties. Examples 3, 4 and 6 drop `ospf_mtu_ignore`, since both ends of a link now share the MTU.
 - Links between container nodes take IPv6 addresses, with one family per link: routers and switches forward IPv6, the L3 actions build the `ip -6` form for a v6 gateway, `remove_default_route` takes a `family`, and the interface listing reports `ipv6` next to `ipv4`.
+- VyOS nodes take IPv6 too: the guest boots with every address of its links in both families, a static or default route with a v6 next hop goes to `protocols static route6`, and the node panel reports the guest's `ipv6`.
 
 ### Changed
 

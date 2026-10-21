@@ -18,6 +18,7 @@ HTTPS_FORWARD_PORT="${HTTPS_FORWARD_PORT:-8443}"
 # interfaces, their taps and the guest's config at boot, so the backend's MTU
 # pass finds nothing to commit. Empty leaves everything at the kernel's own.
 LINK_MTU="${KUBENDT_LINK_MTU:-}"
+LINK_ADDRS="${KUBENDT_LINK_ADDRESSES:-}"
 API_KEY_FILE="${API_KEY_FILE:-/run/kubendt/api-key}"
 
 # Management network for QEMU user-mode networking
@@ -112,13 +113,33 @@ get_iface_ipv4() {
   ip -4 -o addr show dev "$iface" | awk '{print $4}' | head -n1
 }
 
-remove_iface_ipv4() {
+# Every global address of both families, one per line. Link-local ones stay
+# with the pod, the guest makes its own.
+get_iface_addrs() {
+  local iface="$1"
+  ip -o addr show dev "$iface" scope global 2>/dev/null | awk '{print $4}'
+}
+
+# Extra addresses the backend asks for on an interface, from
+# KUBENDT_LINK_ADDRESSES ("eth1=a,b;eth2=c"), one per line.
+extra_iface_addrs() {
+  local iface="$1" entry
+  local -a entries
+  [[ -z "${LINK_ADDRS}" ]] && return 0
+  IFS=';' read -ra entries <<< "${LINK_ADDRS}"
+  for entry in "${entries[@]}"; do
+    [[ "${entry%%=*}" == "${iface}" ]] || continue
+    tr ',' '\n' <<< "${entry#*=}"
+  done
+}
+
+remove_iface_addr() {
   local iface="$1"
   local addr="$2"
 
   [[ -z "${addr}" ]] && return 0
 
-  echo "[INFO] Removing IPv4 ${addr} from pod ${iface}"
+  echo "[INFO] Removing ${addr} from pod ${iface}"
   ip addr del "${addr}" dev "${iface}" 2>/dev/null || true
 }
 
@@ -220,12 +241,22 @@ generate_interfaces_block() {
   local output_file="$1"
   : > "${output_file}"
 
-  local eth_if guest_mac guest_ipv4 iface_mtu
+  local eth_if guest_mac iface_mtu addr
+  local -a pod_addrs guest_addrs
 
   while IFS= read -r eth_if; do
     [[ -z "${eth_if}" ]] && continue
     guest_mac="$(get_iface_mac "${eth_if}")"
-    guest_ipv4="$(get_iface_ipv4 "${eth_if}")"
+    # The guest gets what the pod's interface carries (Meshnet's address, any
+    # family) plus what the backend adds through the environment.
+    mapfile -t pod_addrs < <(get_iface_addrs "${eth_if}")
+    guest_addrs=("${pod_addrs[@]}")
+    while IFS= read -r addr; do
+      [[ -z "${addr}" ]] && continue
+      if [[ " ${guest_addrs[*]} " != *" ${addr} "* ]]; then
+        guest_addrs+=("${addr}")
+      fi
+    done < <(extra_iface_addrs "${eth_if}")
     iface_mtu="${LINK_MTU}"
     if is_uplink_iface "${eth_if}"; then
       iface_mtu=""
@@ -233,9 +264,9 @@ generate_interfaces_block() {
 
     {
       echo "    ethernet ${eth_if} {"
-      if [[ -n "${guest_ipv4}" ]]; then
-        echo "        address \"${guest_ipv4}\""
-      fi
+      for addr in "${guest_addrs[@]}"; do
+        echo "        address \"${addr}\""
+      done
       echo "        description \"KubeNDT ${eth_if}\""
       echo "        hw-id \"${guest_mac}\""
       if [[ -n "${iface_mtu}" ]]; then
@@ -250,9 +281,9 @@ generate_interfaces_block() {
       echo "    }"
     } >> "${output_file}"
 
-    if [[ -n "${guest_ipv4}" ]]; then
-      remove_iface_ipv4 "${eth_if}" "${guest_ipv4}"
-    fi
+    for addr in "${pod_addrs[@]}"; do
+      remove_iface_addr "${eth_if}" "${addr}"
+    done
   done < <(get_data_ifaces)
 }
 
@@ -468,7 +499,7 @@ rm -f "${INTERFACES_TMP}" "${NAMESERVERS_TMP}" "${ETH0_TMP}"
 # which is all that kubectl exec and the ssh_qemu hostfwd need.
 if [[ -n "${ETH0_MAC}" ]]; then
   ip route del default dev eth0 2>/dev/null || true
-  remove_iface_ipv4 eth0 "${ETH0_IPV4}"
+  remove_iface_addr eth0 "${ETH0_IPV4}"
 fi
 
 echo "[INFO] Generated interface bindings:"

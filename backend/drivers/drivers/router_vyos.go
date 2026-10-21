@@ -245,6 +245,9 @@ func (VyOSRouterDriver) RemoveIP(iface, cidr string) [][]string {
 }
 
 func (VyOSRouterDriver) SetDefaultRoute(gateway string) [][]string {
+	if capabilities.IsIPv6(gateway) {
+		return [][]string{{"set protocols static route6 ::/0 next-hop " + gateway}}
+	}
 	return [][]string{{"set protocols static route 0.0.0.0/0 next-hop " + gateway}}
 }
 
@@ -252,12 +255,24 @@ func (VyOSRouterDriver) RemoveDefaultRoute() [][]string {
 	return [][]string{{"delete protocols static route 0.0.0.0/0"}}
 }
 
+func (VyOSRouterDriver) RemoveDefaultRoute6() [][]string {
+	return [][]string{{"delete protocols static route6 ::/0"}}
+}
+
+// vyosStaticRoute is the static route node of a prefix's family.
+func vyosStaticRoute(dstCIDR string) string {
+	if capabilities.IsIPv6(dstCIDR) {
+		return "protocols static route6 "
+	}
+	return "protocols static route "
+}
+
 func (VyOSRouterDriver) AddStaticRoute(dstCIDR, via, dev string) [][]string {
-	return [][]string{{"set protocols static route " + dstCIDR + " next-hop " + via}}
+	return [][]string{{"set " + vyosStaticRoute(dstCIDR) + dstCIDR + " next-hop " + via}}
 }
 
 func (VyOSRouterDriver) RemoveStaticRoute(dstCIDR, via, dev string) [][]string {
-	return [][]string{{"delete protocols static route " + dstCIDR + " next-hop " + via}}
+	return [][]string{{"delete " + vyosStaticRoute(dstCIDR) + dstCIDR + " next-hop " + via}}
 }
 
 func (VyOSRouterDriver) AddDNSNameserver(server string) [][]string {
@@ -448,28 +463,38 @@ func cfgChild(cfg map[string]interface{}, path ...string) (map[string]interface{
 // (JSON arrays) yield their first element, matching the single-value
 // semantics of the old text parsers.
 func cfgLeaf(cfg map[string]interface{}, path ...string) (string, bool) {
+	if values := cfgLeaves(cfg, path...); len(values) > 0 {
+		return values[0], true
+	}
+	return "", false
+}
+
+// cfgLeaves returns every value of a leaf: VyOS gives a string for one value
+// and a list for several (an interface with two addresses).
+func cfgLeaves(cfg map[string]interface{}, path ...string) []string {
 	cur := interface{}(cfg)
 	for _, key := range path {
 		m, ok := cur.(map[string]interface{})
 		if !ok {
-			return "", false
+			return nil
 		}
-		cur, ok = m[key]
-		if !ok {
-			return "", false
+		if cur, ok = m[key]; !ok {
+			return nil
 		}
 	}
 	switch v := cur.(type) {
 	case string:
-		return v, true
+		return []string{v}
 	case []interface{}:
-		if len(v) > 0 {
-			if s, ok := v[0].(string); ok {
-				return s, true
+		out := make([]string, 0, len(v))
+		for _, item := range v {
+			if s, ok := item.(string); ok {
+				out = append(out, s)
 			}
 		}
+		return out
 	}
-	return "", false
+	return nil
 }
 
 // vyosInterfaceEntry builds the UI interface map from one ethernet config
@@ -488,8 +513,14 @@ func vyosInterfaceEntry(iface string, node map[string]interface{}) map[string]st
 	if mac, ok := cfgLeaf(node, "hw-id"); ok {
 		entry["mac"] = mac
 	}
-	if ip, ok := cfgLeaf(node, "address"); ok {
-		entry["ipv4"] = ip
+	for _, addr := range cfgLeaves(node, "address") {
+		key := "ipv4"
+		if capabilities.IsIPv6(addr) {
+			key = "ipv6"
+		}
+		if _, seen := entry[key]; !seen {
+			entry[key] = addr
+		}
 	}
 	if mtu, ok := cfgLeaf(node, "mtu"); ok {
 		entry["mtu"] = mtu
