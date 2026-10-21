@@ -62,15 +62,30 @@ func GetInterfacesFromPod(podName, namespace string) ([]map[string]string, error
 	if err != nil {
 		return nil, fmt.Errorf("error executing command in pod: %w\nstderr: %s", err, stderr)
 	}
+	return parseInterfaceListing(stdout)
+}
 
+var (
+	ifaceHeaderRe = regexp.MustCompile(`^\d+: ([^:@]+)[:@].*<([^>]*)>`)
+	ifaceMTURe    = regexp.MustCompile(`\bmtu (\d+)`)
+	ifaceMACRe    = regexp.MustCompile(`link/ether ([0-9a-f:]{17})`)
+	ifaceIPv4Re   = regexp.MustCompile(`inet (\d+\.\d+\.\d+\.\d+/\d+)`)
+	ifaceIPv6Re   = regexp.MustCompile(`inet6 ([0-9a-f:]+/\d+) scope global`)
+)
+
+// parseInterfaceListing turns `ip a` output into one entry per interface:
+// name, mac, state, mtu, the IPv4 and the first global IPv6 (link-local
+// ones are noise here). Taps and pseudo interfaces are left out.
+func parseInterfaceListing(stdout string) ([]map[string]string, error) {
 	scanner := bufio.NewScanner(strings.NewReader(stdout))
-	var currentIntf, currentMac, currentIP, currentState, currentMTU string
+	var currentIntf, currentMac, currentIP, currentIP6, currentState, currentMTU string
 	var result []map[string]string
 	entry := func() map[string]string {
 		e := map[string]string{
 			"interface": currentIntf,
 			"mac":       currentMac,
 			"ipv4":      currentIP,
+			"ipv6":      currentIP6,
 			"state":     currentState,
 		}
 		if currentMTU != "" {
@@ -82,15 +97,16 @@ func GetInterfacesFromPod(podName, namespace string) ([]map[string]string, error
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 
-		if matches := regexp.MustCompile(`^\d+: ([^:@]+)[:@].*<([^>]*)>`).FindStringSubmatch(line); len(matches) > 2 {
+		if matches := ifaceHeaderRe.FindStringSubmatch(line); len(matches) > 2 {
 			if currentIntf != "" && !strings.HasPrefix(currentIntf, "tap") && !types.IsPseudoInterface(currentIntf) && currentMac != "" {
 				result = append(result, entry())
 			}
 			currentIntf = matches[1]
 			currentMac = ""
 			currentIP = ""
+			currentIP6 = ""
 			currentMTU = ""
-			if m := regexp.MustCompile(`\bmtu (\d+)`).FindStringSubmatch(line); len(m) > 1 {
+			if m := ifaceMTURe.FindStringSubmatch(line); len(m) > 1 {
 				currentMTU = m[1]
 			}
 			flags := matches[2]
@@ -102,12 +118,16 @@ func GetInterfacesFromPod(podName, namespace string) ([]map[string]string, error
 			continue
 		}
 
-		if matches := regexp.MustCompile(`link/ether ([0-9a-f:]{17})`).FindStringSubmatch(line); len(matches) > 1 {
+		if matches := ifaceMACRe.FindStringSubmatch(line); len(matches) > 1 {
 			currentMac = matches[1]
 		}
 
-		if matches := regexp.MustCompile(`inet (\d+\.\d+\.\d+\.\d+/\d+)`).FindStringSubmatch(line); len(matches) > 1 {
+		if matches := ifaceIPv4Re.FindStringSubmatch(line); len(matches) > 1 {
 			currentIP = matches[1]
+		}
+
+		if matches := ifaceIPv6Re.FindStringSubmatch(line); len(matches) > 1 && currentIP6 == "" {
+			currentIP6 = matches[1]
 		}
 	}
 
@@ -393,11 +413,14 @@ func CreateNetworkStatefulSet(namespace string, node types.NodeSpec, validMounts
 		podSpec.Containers[0].SecurityContext.Privileged = ptr.To(true)
 	}
 
-	// If it's a router or switch, activate ip_forward
+	// Routers and switches forward both families. A new netns copies the
+	// worker's v4 sysctls but resets the v6 ones, so the pod has to ask; both
+	// need the kubelet's allowlist, which the cluster guide sets.
 	if node.Type == "router" || node.Type == "switch" {
 		podSpec.SecurityContext = &v1.PodSecurityContext{
 			Sysctls: []v1.Sysctl{
 				{Name: "net.ipv4.ip_forward", Value: "1"},
+				{Name: "net.ipv6.conf.all.forwarding", Value: "1"},
 			},
 		}
 	}

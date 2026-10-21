@@ -63,6 +63,12 @@ definitions:
         description: NAT
         example: 8080
         type: integer
+      family:
+        description: |-
+          Family picks IPv4 or IPv6 for an action that carries no address to
+          tell them apart (remove_default_route); 4 when empty.
+        example: "6"
+        type: string
       gateway:
         example: 192.168.1.254
         type: string
@@ -1752,6 +1758,9 @@ definitions:
         type: string
       ipv4:
         example: 10.0.0.1/24
+        type: string
+      ipv6:
+        example: fd00::1/64
         type: string
       mac:
         example: aa:bb:cc:dd:ee:ff

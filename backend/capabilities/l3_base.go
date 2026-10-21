@@ -20,11 +20,19 @@ func (L3Base) RemoveIP(iface, cidr string) [][]string {
 }
 
 func (L3Base) SetDefaultRoute(gateway string) [][]string {
+	if IsIPv6(gateway) {
+		return [][]string{{"ip", "-6", "route", "replace", "default", "via", gateway}}
+	}
 	return [][]string{{"ip", "route", "replace", "default", "via", gateway}}
 }
 
 func (L3Base) RemoveDefaultRoute() [][]string {
 	return [][]string{{"ip", "route", "del", "default"}}
+}
+
+// `ip route del default` only reaches the IPv4 table.
+func (L3Base) RemoveDefaultRoute6() [][]string {
+	return [][]string{{"ip", "-6", "route", "del", "default"}}
 }
 
 // replace rather than add: a replayed or repeated action must not fail with

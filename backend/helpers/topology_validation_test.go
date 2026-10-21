@@ -28,6 +28,8 @@ func TestValidateLinkIPs(t *testing.T) {
 		{LocalIP: "10.0.0.1/24", PeerIP: "10.0.0.2/24"},
 		{LocalIP: "", PeerIP: ""}, // L2-only link
 		{LocalIP: "192.168.1.5"},  // bare IP allowed
+		{LocalIP: "fd00:1::1/64", PeerIP: "fd00:1::2/64"},
+		{LocalIP: "fd00:1::1", PeerIP: ""},
 	}
 	if err := ValidateLinkIPs(good); err != nil {
 		t.Errorf("expected valid links to pass, got: %v", err)
@@ -37,6 +39,8 @@ func TestValidateLinkIPs(t *testing.T) {
 		{{LocalIP: "10.0.0.999/24"}},
 		{{PeerIP: "not-an-ip"}},
 		{{LocalIP: "10.0.0.1/33"}},
+		{{LocalIP: "fd00:1::1/129"}},
+		{{LocalIP: "10.0.0.1/24", PeerIP: "fd00:1::2/64"}}, // one family per link
 	}
 	for _, links := range bad {
 		if err := ValidateLinkIPs(links); err == nil {

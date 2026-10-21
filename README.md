@@ -8,7 +8,7 @@
    <a href="https://doi.org/10.5281/zenodo.21276320"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.21276320.svg" alt="DOI" /></a>
 </p>
 
-> Last reviewed: 18 Oct 2026
+> Last reviewed: 21 Oct 2026
 
 **KubeNDT** is a platform for deploying and operating virtual network topologies on Kubernetes.
 
@@ -55,7 +55,7 @@ KubeNDT bundles a small set of third-party SVG icons in its frontend. See [ATTRI
 ### Advanced Networking Features
 
 - **Layer 2 operations**: Interface management, bridge creation, VLAN configuration
-- **Layer 3 operations**: IP address assignment, static routing, default gateway configuration
+- **Layer 3 operations**: IP address assignment, static routing, default gateway configuration, IPv4 and IPv6 alike (a link carries one family on both ends; NAT is IPv4 only)
 - **Routing protocols**: FRRouting (OSPF, BGP, ISIS, etc.) integration for dynamic routing
 - **Traffic control (QoS)**: Rate limiting, traffic shaping, netem (network emulation)
 - **NAT/Port forwarding**: Source NAT (SNAT) and Destination NAT (DNAT) configurations

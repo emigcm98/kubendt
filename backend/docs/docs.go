@@ -2926,6 +2926,11 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 8080
                 },
+                "family": {
+                    "description": "Family picks IPv4 or IPv6 for an action that carries no address to\ntell them apart (remove_default_route); 4 when empty.",
+                    "type": "string",
+                    "example": "6"
+                },
                 "gateway": {
                     "type": "string",
                     "example": "192.168.1.254"
@@ -5227,6 +5232,10 @@ const docTemplate = `{
                 "ipv4": {
                     "type": "string",
                     "example": "10.0.0.1/24"
+                },
+                "ipv6": {
+                    "type": "string",
+                    "example": "fd00::1/64"
                 },
                 "mac": {
                     "type": "string",

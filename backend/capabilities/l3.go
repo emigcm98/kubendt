@@ -1,9 +1,18 @@
 package capabilities
 
 import (
+	"fmt"
+
 	"kubendt/actions"
 	"kubendt/types"
 )
+
+// DefaultRoute6Remover is the IPv6 side of remove_default_route. Optional,
+// so a driver written for IPv4 keeps its L3Capable as it is; without it the
+// action fails instead of deleting the v4 route.
+type DefaultRoute6Remover interface {
+	RemoveDefaultRoute6() [][]string
+}
 
 type L3Capable interface {
 	SetIP(iface, cidr string) [][]string
@@ -30,8 +39,17 @@ func init() {
 			Run: func(c L3Capable, a types.ActionEntry) ([][]string, error) { return c.RemoveIP(a.Iface, a.CIDR), nil }},
 		actions.Action[L3Capable]{Type: "set_default_route", Label: "Set default route", Params: actions.P(actions.Gateway),
 			Run: func(c L3Capable, a types.ActionEntry) ([][]string, error) { return c.SetDefaultRoute(a.Gateway), nil }},
-		actions.Action[L3Capable]{Type: "remove_default_route", Label: "Remove default route",
-			Run: func(c L3Capable, a types.ActionEntry) ([][]string, error) { return c.RemoveDefaultRoute(), nil }},
+		actions.Action[L3Capable]{Type: "remove_default_route", Label: "Remove default route", Params: actions.P(actions.Family),
+			Run: func(c L3Capable, a types.ActionEntry) ([][]string, error) {
+				if a.Family != "6" {
+					return c.RemoveDefaultRoute(), nil
+				}
+				r, ok := c.(DefaultRoute6Remover)
+				if !ok {
+					return nil, fmt.Errorf("the driver cannot remove an IPv6 default route")
+				}
+				return r.RemoveDefaultRoute6(), nil
+			}},
 		actions.Action[L3Capable]{Type: "add_static_route", Label: "Add static route", Params: actions.P(actions.DstCIDR, actions.Gateway, actions.Device.Optional()),
 			Run: func(c L3Capable, a types.ActionEntry) ([][]string, error) {
 				return c.AddStaticRoute(a.DstCIDR, a.Gateway, a.Device), nil

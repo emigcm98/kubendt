@@ -42,6 +42,21 @@ func TestL3BaseCommands(t *testing.T) {
 			[][]string{{"ip", "route", "del", "default"}},
 		},
 		{
+			"SetDefaultRoute IPv6",
+			l3.SetDefaultRoute("fd00:1::2"),
+			[][]string{{"ip", "-6", "route", "replace", "default", "via", "fd00:1::2"}},
+		},
+		{
+			"RemoveDefaultRoute6",
+			l3.RemoveDefaultRoute6(),
+			[][]string{{"ip", "-6", "route", "del", "default"}},
+		},
+		{
+			"AddStaticRoute IPv6",
+			l3.AddStaticRoute("fd00:99::/64", "fd00:1::2", ""),
+			[][]string{{"ip", "route", "replace", "fd00:99::/64", "via", "fd00:1::2"}},
+		},
+		{
 			"AddStaticRoute with dev",
 			l3.AddStaticRoute("192.168.1.0/24", "10.0.0.254", "eth1"),
 			[][]string{{"ip", "route", "replace", "192.168.1.0/24", "via", "10.0.0.254", "dev", "eth1"}},

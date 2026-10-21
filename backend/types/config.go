@@ -52,12 +52,15 @@ type PodConfig struct {
 
 // ActionEntry describes a single configuration action applied to a pod interface.
 type ActionEntry struct {
-	Type    string         `json:"type" example:"ip"`
-	Iface   string         `json:"iface,omitempty" example:"eth1"`
-	CIDR    string         `json:"cidr,omitempty" example:"192.168.1.1/24"`
-	Gateway string         `json:"gateway,omitempty" example:"192.168.1.254"`
-	DstCIDR string         `json:"dst_cidr,omitempty" example:"10.0.0.0/8"`
-	Device  string         `json:"device,omitempty" example:"/dev/net/tun"`
+	Type    string `json:"type" example:"ip"`
+	Iface   string `json:"iface,omitempty" example:"eth1"`
+	CIDR    string `json:"cidr,omitempty" example:"192.168.1.1/24"`
+	Gateway string `json:"gateway,omitempty" example:"192.168.1.254"`
+	DstCIDR string `json:"dst_cidr,omitempty" example:"10.0.0.0/8"`
+	Device  string `json:"device,omitempty" example:"/dev/net/tun"`
+	// Family picks IPv4 or IPv6 for an action that carries no address to
+	// tell them apart (remove_default_route); 4 when empty.
+	Family  string         `json:"family,omitempty" example:"6"`
 	Bridge  string         `json:"bridge,omitempty" example:"br0"`
 	Ifaces  []string       `json:"ifaces,omitempty"`
 	Options *ActionOptions `json:"options,omitempty"`
