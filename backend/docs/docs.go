@@ -3202,6 +3202,69 @@ const docTemplate = `{
                 }
             }
         },
+        "types.ConfigureActionResultDoc": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "example": "set_ip"
+                },
+                "commands": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "ip addr replace 10.0.0.1/24 dev eth1"
+                    ]
+                },
+                "driver": {
+                    "type": "string",
+                    "example": "FRRRouterDriver"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "output": {
+                    "type": "string"
+                },
+                "pod": {
+                    "type": "string",
+                    "example": "router1"
+                },
+                "pod_took_ms": {
+                    "description": "Wall time of the pod's whole batch, set on its first action only.",
+                    "type": "number",
+                    "example": 312.4
+                },
+                "resolved_pod": {
+                    "type": "string",
+                    "example": "router1-0"
+                },
+                "status": {
+                    "description": "success, failed or skipped (already applied since the pod was created).",
+                    "type": "string",
+                    "example": "success"
+                }
+            }
+        },
+        "types.ConfigureErrorDoc": {
+            "type": "object",
+            "properties": {
+                "driver": {
+                    "type": "string",
+                    "example": "FRRRouterDriver"
+                },
+                "error": {
+                    "type": "string",
+                    "example": "exec error: exit status 2 | output: Cannot find device \"eth9\""
+                },
+                "pod": {
+                    "type": "string",
+                    "example": "router1-0"
+                }
+            }
+        },
         "types.ConfigureNetworkRequest": {
             "type": "object",
             "properties": {
@@ -3223,9 +3286,29 @@ const docTemplate = `{
         "types.ConfigureNetworkResponse": {
             "type": "object",
             "properties": {
+                "action_results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.ConfigureActionResultDoc"
+                    }
+                },
+                "errors": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.ConfigureErrorDoc"
+                    }
+                },
                 "failures": {
                     "type": "integer",
                     "example": 0
+                },
+                "link_mtu": {
+                    "description": "Present when the request's links section changed an MTU.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.LinkMTUDoc"
+                        }
+                    ]
                 },
                 "skipped": {
                     "type": "integer",
@@ -3236,6 +3319,7 @@ const docTemplate = `{
                     "example": 6.35
                 },
                 "status": {
+                    "description": "success, or completed_with_errors when any action failed.",
                     "type": "string",
                     "example": "success"
                 },
@@ -3245,6 +3329,12 @@ const docTemplate = `{
                 },
                 "took_time": {
                     "$ref": "#/definitions/types.ConfigureTimingResponse"
+                },
+                "warnings": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.WarningDoc"
+                    }
                 }
             }
         },
@@ -3352,6 +3442,9 @@ const docTemplate = `{
         "types.DeployNetworkResponse": {
             "type": "object",
             "properties": {
+                "link_mtu": {
+                    "$ref": "#/definitions/types.LinkMTUDoc"
+                },
                 "message": {
                     "type": "string",
                     "example": "Network infrastructure deployed successfully"
@@ -3911,6 +4004,27 @@ const docTemplate = `{
                 }
             }
         },
+        "types.LinkMTUDoc": {
+            "type": "object",
+            "properties": {
+                "addresses": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "changed": {
+                    "type": "integer",
+                    "example": 8
+                },
+                "links": {
+                    "type": "integer",
+                    "example": 4
+                },
+                "mtu": {
+                    "type": "integer",
+                    "example": 1450
+                }
+            }
+        },
         "types.LinkShaping": {
             "type": "object",
             "properties": {
@@ -4203,6 +4317,9 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                },
+                "link_mtu": {
+                    "$ref": "#/definitions/types.LinkMTUDoc"
                 },
                 "message": {
                     "type": "string",
@@ -5626,6 +5743,9 @@ const docTemplate = `{
         "types.RestartPodResponseDoc": {
             "type": "object",
             "properties": {
+                "link_mtu": {
+                    "$ref": "#/definitions/types.LinkMTUDoc"
+                },
                 "message": {
                     "type": "string",
                     "example": "Pod router1-0 restarted successfully"
@@ -5645,6 +5765,12 @@ const docTemplate = `{
                 },
                 "took_time": {
                     "$ref": "#/definitions/types.RestartTimingResponse"
+                },
+                "warnings": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.WarningDoc"
+                    }
                 }
             }
         },

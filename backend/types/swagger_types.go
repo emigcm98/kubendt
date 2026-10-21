@@ -160,12 +160,24 @@ type PeerReplayStatsDoc struct {
 	QemuRewired int `json:"qemu_rewired" example:"0"`
 }
 
+// LinkMTUDoc is what the link pass did after the wiring: the MTU it settled
+// on for the namespace, the links it covered, the interfaces it changed and
+// the extra addresses it wrote.
+type LinkMTUDoc struct {
+	MTU       int `json:"mtu" example:"1450"`
+	Links     int `json:"links" example:"4"`
+	Changed   int `json:"changed" example:"8"`
+	Addresses int `json:"addresses" example:"2"`
+}
+
 // RestartPodResponseDoc is returned by PATCH /pods/restart/:namespace/:podName.
 type RestartPodResponseDoc struct {
 	Message            string                `json:"message" example:"Pod router1-0 restarted successfully"`
 	ReplayedOperations int                   `json:"replayed_operations" example:"2"`
 	Replay             DriverReplayStatsDoc  `json:"replay"`
 	PeerReplay         PeerReplayStatsDoc    `json:"peer_replay"`
+	LinkMTU            LinkMTUDoc            `json:"link_mtu"`
+	Warnings           []WarningDoc          `json:"warnings"`
 	TookTime           RestartTimingResponse `json:"took_time"`
 	Timeline           OperationTimeline     `json:"timeline"`
 }
@@ -272,6 +284,7 @@ type DeployNetworkResponse struct {
 	Message  string               `json:"message" example:"Network infrastructure deployed successfully"`
 	TookTime DeployTimingResponse `json:"took_time"`
 	Timeline OperationTimeline    `json:"timeline"`
+	LinkMTU  LinkMTUDoc           `json:"link_mtu"`
 	Warnings []WarningDoc         `json:"warnings"`
 }
 
@@ -318,6 +331,7 @@ type ModifyNetworkResponse struct {
 	Message        string               `json:"message" example:"network-modify applied successfully"`
 	TookTime       ModifyTimingResponse `json:"took_time"`
 	Timeline       OperationTimeline    `json:"timeline"`
+	LinkMTU        LinkMTUDoc           `json:"link_mtu"`
 	DeletedNodes   []string             `json:"deleted_nodes"`
 	RestartedPods  []string             `json:"restarted_pods"`
 	ScaledUpPods   []string             `json:"scaled_up_pods"`
@@ -336,14 +350,42 @@ type ConfigureTimingResponse struct {
 	SequentialEquivalent string `json:"sequential_equivalent" example:"7.81s"`
 }
 
+// ConfigureErrorDoc is one action that failed in a configure request.
+type ConfigureErrorDoc struct {
+	Pod    string `json:"pod" example:"router1-0"`
+	Driver string `json:"driver" example:"FRRRouterDriver"`
+	Error  string `json:"error" example:"exec error: exit status 2 | output: Cannot find device \"eth9\""`
+}
+
+// ConfigureActionResultDoc is the outcome of one action on one pod.
+type ConfigureActionResultDoc struct {
+	Pod         string `json:"pod" example:"router1"`
+	ResolvedPod string `json:"resolved_pod,omitempty" example:"router1-0"`
+	Driver      string `json:"driver" example:"FRRRouterDriver"`
+	Action      string `json:"action" example:"set_ip"`
+	// success, failed or skipped (already applied since the pod was created).
+	Status   string   `json:"status" example:"success"`
+	Commands []string `json:"commands,omitempty" example:"ip addr replace 10.0.0.1/24 dev eth1"`
+	Output   string   `json:"output,omitempty"`
+	Error    string   `json:"error,omitempty"`
+	// Wall time of the pod's whole batch, set on its first action only.
+	PodTookMs float64 `json:"pod_took_ms,omitempty" example:"312.4"`
+}
+
 // ConfigureNetworkResponse is returned by POST /network/configure/:ns.
 type ConfigureNetworkResponse struct {
-	Status    string                  `json:"status" example:"success"`
-	Successes int                     `json:"successes" example:"8"`
-	Failures  int                     `json:"failures" example:"0"`
-	Skipped   int                     `json:"skipped" example:"0"`
-	TookTime  ConfigureTimingResponse `json:"took_time"`
-	Speedup   float64                 `json:"speedup" example:"6.35"`
+	// success, or completed_with_errors when any action failed.
+	Status        string                     `json:"status" example:"success"`
+	Successes     int                        `json:"successes" example:"8"`
+	Failures      int                        `json:"failures" example:"0"`
+	Skipped       int                        `json:"skipped" example:"0"`
+	Errors        []ConfigureErrorDoc        `json:"errors"`
+	ActionResults []ConfigureActionResultDoc `json:"action_results"`
+	// Present when the request's links section changed an MTU.
+	LinkMTU  *LinkMTUDoc             `json:"link_mtu,omitempty"`
+	Warnings []WarningDoc            `json:"warnings,omitempty"`
+	TookTime ConfigureTimingResponse `json:"took_time"`
+	Speedup  float64                 `json:"speedup" example:"6.35"`
 }
 
 // NodePosition holds the x/y canvas coordinates for a node.

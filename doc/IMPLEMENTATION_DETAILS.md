@@ -248,7 +248,7 @@ Right after the heal pass of a deploy, and on a restart or a modify before the h
     - nodeSelector / nodeName from the node, when set
     - QEMU pods: Stdin=true, TTY=true, /dev/kvm added, Privileged=true
     - Non-QEMU pods: NET_ADMIN capability
-    - Routers/switches: ip_forward sysctl = 1
+    - Routers/switches: net.ipv4.ip_forward and net.ipv6.conf.all.forwarding sysctls = 1
 
 12. Wait for pods ready (watch on pod events, 180s timeout)
 
@@ -527,7 +527,7 @@ Volume:
   - HostPath mounts for all devices
 
 PodSecurityContext:
-  - Sysctls: net.ipv4.ip_forward=1 (for routing if needed)
+  - Sysctls: net.ipv4.ip_forward=1 and net.ipv6.conf.all.forwarding=1 (routers and switches)
 ```
 
 **Non-QEMU pods**:

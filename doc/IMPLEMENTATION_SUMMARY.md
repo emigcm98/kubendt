@@ -165,7 +165,7 @@ KubeNDT implements network topology management for Kubernetes through five inter
 | Privileged | false (unless router) | **true** |
 | /dev/kvm mount | No | **auto-added** |
 | Driver | Yes (default/explicit) | **No (empty) by default; explicit driver allowed (e.g. VyOSRouterDriver)** |
-| Sysctls (ip_forward) | If router/switch | If router/switch |
+| Sysctls (v4 and v6 forwarding) | If router/switch | If router/switch |
 | Boot time | ~2-5s | ~10-30s |
 
 **Shell Execution Difference**:
