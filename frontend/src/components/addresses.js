@@ -71,3 +71,17 @@ export const sharedSubnet = (a, b) => {
   }
   return false;
 };
+
+// nodeAddresses lists every address of a /pods/ips listing as a target the
+// tools can take: the interface, the bare IP and the family.
+export const nodeAddresses = (data) => {
+  const out = [];
+  for (const intf of data?.interfaces || []) {
+    for (const cidr of interfaceAddresses(intf)) {
+      const ip = String(cidr).split('/')[0];
+      if (!ip) continue;
+      out.push({ iface: intf.interface, ip, family: ip.includes(':') ? 6 : 4 });
+    }
+  }
+  return out;
+};

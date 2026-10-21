@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { nodeAddresses } from './addresses';
 import './IperfPanel.css';
 import { API_BASE_URL, WS_BASE_URL } from '../config';
 import useDraggableWindow from './useDraggableWindow';
@@ -242,6 +243,7 @@ const IperfPanel = ({
   const onHeaderMouseDown = useDraggableWindow({ containerRef, onBringToFront });
 
   const [dest, setDest] = useState('');
+  const [destAddrs, setDestAddrs] = useState([]); // the picked node's addresses to choose from
   const [destNode, setDestNode] = useState(initialDest?.pod || ''); // the node picked, '' when typed
   const [serverMode, setServerMode] = useState('auto'); // auto: started by the backend; none: already running
   const [port, setPort] = useState('');
@@ -288,21 +290,23 @@ const IperfPanel = ({
     return m;
   }, [nodes]);
 
-  // The first data-plane address of a node, or of one interface of it.
-  const addressOf = async (pod, iface) => {
+  // Every data-plane address of a node, or of one interface of it, any
+  // family: the first fills the field and the rest are a click away.
+  const addressesOf = async (pod, iface) => {
     const q = iface ? `?intf=${encodeURIComponent(iface)}` : '';
     const res = await fetch(`${API_BASE_URL}/pods/ips/${namespace}/${encodeURIComponent(pod)}${q}`);
-    if (!res.ok) return '';
-    const data = await res.json();
-    const withIp = (data.interfaces || []).find((i) => i.ipv4);
-    return withIp && withIp.ipv4 ? withIp.ipv4.split('/')[0] : '';
+    if (!res.ok) return [];
+    return nodeAddresses(await res.json());
+  };
+  const takeAddresses = (list) => {
+    setDestAddrs(list);
+    if (list.length) setDest(list[0].ip);
   };
 
   const pickDestNode = async (pod) => {
     if (!pod) return;
     try {
-      const ip = await addressOf(pod);
-      if (ip) setDest(ip);
+      takeAddresses(await addressesOf(pod));
     } catch (e) {
       /* leave the field for manual entry */
     }
@@ -312,9 +316,9 @@ const IperfPanel = ({
   useEffect(() => {
     if (!initialDest?.pod) return undefined;
     let cancelled = false;
-    addressOf(initialDest.pod, initialDest.iface)
-      .then((ip) => {
-        if (!cancelled && ip) setDest(ip);
+    addressesOf(initialDest.pod, initialDest.iface)
+      .then((list) => {
+        if (!cancelled) takeAddresses(list);
       })
       .catch(() => {});
     return () => {
@@ -548,6 +552,7 @@ const IperfPanel = ({
             onChange={(e) => {
               setDest(e.target.value);
               setDestNode('');
+              setDestAddrs([]);
             }}
             onKeyDown={(e) => {
               if (e.key === 'Enter') run();
@@ -563,6 +568,24 @@ const IperfPanel = ({
             }}
           />
         </div>
+        {destAddrs.length > 1 && (
+          <div className="iperf-row">
+            <span className="iperf-label">Address</span>
+            <select
+              className="iperf-select"
+              value={dest}
+              disabled={running}
+              onChange={(e) => setDest(e.target.value)}
+              title="Which address of the node to test toward"
+            >
+              {destAddrs.map((a) => (
+                <option key={`${a.iface}-${a.ip}`} value={a.ip}>
+                  {a.iface}: {a.ip}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <div className="iperf-row">
           <span className="iperf-label">Server</span>
           <div className="iperf-seg" role="tablist">
