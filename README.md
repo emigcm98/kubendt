@@ -177,17 +177,19 @@ The full technical details were moved out of this top-level README to keep first
 
 ## Use Cases & Examples
 
-KubeNDT includes **7 reference deployments** in `deploy/examples/`. Start with the scenario that matches your use case:
+KubeNDT ships **7 reference deployments** in `deploy/examples/`, numbered in the order worth trying them. Each one has a README with the steps and the checks, and the regression in [experiments/](experiments/) runs all seven end to end, with a restart in each to exercise the replay.
 
-| Example | Guide | Description | Complexity |
-| --- | --- | --- | --- |
-| [1-test-small](deploy/examples/1-test-small/) | [1-README](deploy/examples/1-test-small/README.md) | Basic topology with hosts, switches, and routing | ⭐ |
-| [2-test-frr-ospf](deploy/examples/2-test-frr-ospf/) | [2-README](deploy/examples/2-test-frr-ospf/README.md) | FRRouting with OSPF dynamic routing | ⭐⭐ |
-| [3-test-modify-ospf](deploy/examples/3-test-modify-ospf/) | [3-README](deploy/examples/3-test-modify-ospf/README.md) | Full dynamic-modification lifecycle on a routed OSPF topology with FRR and VyOS (scale, add, delete, replay) | ⭐⭐⭐⭐ |
-| [4-test-medium-allfeatures](deploy/examples/4-test-medium-allfeatures/) | [4-README](deploy/examples/4-test-medium-allfeatures/README.md) | All features combined (NAT, TC, bridges, routing) | ⭐⭐⭐ |
-| [5-test-full-open5gs](deploy/examples/5-test-full-open5gs/) | [5-README](deploy/examples/5-test-full-open5gs/README.md) | 5G core network with Open5GS | ⭐⭐⭐ |
-| [6-test-vyos](deploy/examples/6-test-vyos/) | [6-README](deploy/examples/6-test-vyos/README.md) | VyOS-based routers with advanced networking | ⭐⭐⭐⭐ |
-| [7-test-dual-stack](deploy/examples/7-test-dual-stack/) | [7-README](deploy/examples/7-test-dual-stack/README.md) | Dual stack IPv4 and IPv6: FRR with OSPF for IPv4, static IPv6 routes, an IPv6-only host and the tools over IPv6 | ⭐⭐ |
+| Example | Guide | What it exercises | Needs beyond the cluster | Complexity |
+| --- | --- | --- | --- | --- |
+| [1-test-small](deploy/examples/1-test-small/) | [1-README](deploy/examples/1-test-small/README.md) | The basic workflow on five nodes: import and deploy, driver configuration of hosts, an OVS switch and an FRR router, the shell, mounted files and environment variables | Nothing | ⭐ |
+| [2-test-frr-ospf](deploy/examples/2-test-frr-ospf/) | [2-README](deploy/examples/2-test-frr-ospf/README.md) | FRR routers running OSPF: daemons configured from the UI, adjacencies and connectivity across routed subnets | Nothing | ⭐⭐ |
+| [3-test-modify-ospf](deploy/examples/3-test-modify-ospf/) | [3-README](deploy/examples/3-test-modify-ospf/README.md) | The whole lifecycle on a routed lab with an FRR router and a VyOS VM in OSPF: scale, add and delete nodes and links, restart with replay. The modification case of the paper | The VyOS image on the workers, KVM | ⭐⭐⭐⭐ |
+| [4-test-medium-allfeatures](deploy/examples/4-test-medium-allfeatures/) | [4-README](deploy/examples/4-test-medium-allfeatures/README.md) | The common features together on 13 nodes: OSPF on three FRR routers, NAT, bridges, BIND9 DNS, mounted files, iperf3 and traffic shaping | An external uplink for the internet steps | ⭐⭐⭐ |
+| [5-test-full-open5gs](deploy/examples/5-test-full-open5gs/) | [5-README](deploy/examples/5-test-full-open5gs/README.md) | A full Open5GS 5G core with a UERANSIM gNB and UE: the UE registers, gets a PDU session and reaches the internet through the routed core | `/dev/net/tun` on the worker, an external uplink for the gNB | ⭐⭐⭐ |
+| [6-test-vyos](deploy/examples/6-test-vyos/) | [6-README](deploy/examples/6-test-vyos/README.md) | VyOS VM routers in OSPF with an external uplink, SNAT and a DNAT port forward, a mounted web page and IPv6 on two links | The VyOS image, KVM, an external uplink | ⭐⭐⭐⭐ |
+| [7-test-dual-stack](deploy/examples/7-test-dual-stack/) | [7-README](deploy/examples/7-test-dual-stack/README.md) | Dual stack: FRR with OSPF for IPv4, static IPv6 routes, an IPv6-only host next to dual stack ones, and the trace and throughput tools over IPv6 | Nothing | ⭐⭐ |
+
+The VyOS image is built once with `build-vyos-qcow2.sh` and imported on the workers, see [deploy/custom_images/qemu/vyos-router/](deploy/custom_images/qemu/vyos-router/). The external uplink is a second interface of a pod on the host network the workers hang from. The examples label it "External Network" and their READMEs say which steps need it.
 
 **Each example includes:**
 
@@ -206,7 +208,7 @@ KubeNDT includes **7 reference deployments** in `deploy/examples/`. Start with t
 
 ---
 
-Example images are pinned to version tags (FRR from `quay.io/frrouting/frr`, where the project publishes it). `globocom/openvswitch`, `networkstatic/iperf3` and `docker_open5gs` have no version tags and keep their moving tag. The VyOS image is the one you build with `build-vyos-qcow2.sh`.
+Example images are pinned to version tags (FRR from `quay.io/frrouting/frr`, where the project publishes it). `globocom/openvswitch`, `networkstatic/iperf3` and `docker_open5gs` have no version tags and keep their moving tag.
 
 The measurement scripts behind the published evaluation, and the regression that runs the seven examples end to end, live in [experiments/](experiments/). They need a cluster and are not run in CI.
 

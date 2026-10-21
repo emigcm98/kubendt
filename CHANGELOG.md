@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-10-21
+
 ### Added
 
 - Every link gets the same MTU once it is wired, 1450 by default and `KUBENDT_LINK_MTU` to change it, on both ends and inside a VyOS guest, so throughput and OSPF adjacencies no longer depend on where each pod landed. The interface listing and the link panel show it, the pass is the `mtu` phase of the operation timeline and the response of a deploy, modify, restart or configure reports what it did as `link_mtu`.
@@ -220,7 +222,8 @@ Initial public release. KubeNDT deploys and operates virtual network topologies 
 - Health, readiness and version endpoints, and Swagger docs at `/swagger`.
 - Container images published to GHCR and a Docker Compose deployment.
 
-[Unreleased]: https://github.com/emigcm98/kubendt/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/emigcm98/kubendt/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/emigcm98/kubendt/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/emigcm98/kubendt/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/emigcm98/kubendt/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/emigcm98/kubendt/compare/v1.2.0...v1.3.0
