@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { nodeAddresses } from './addresses';
 import './TracePanel.css';
 import { WS_BASE_URL, API_BASE_URL } from '../config';
 import { ReactComponent as TraceIcon } from '../assets/images/icons/trace-icon.svg';
@@ -82,6 +83,7 @@ const TracePanel = ({
   });
 
   const [dest, setDest] = useState('');
+  const [destAddrs, setDestAddrs] = useState([]); // the picked node's addresses to choose from
   const [method, setMethod] = useState('icmp');
   const [mode, setMode] = useState('trace'); // 'trace' | 'metrics'
   const [cycles, setCycles] = useState(5); // metrics probe rounds
@@ -528,8 +530,11 @@ const TracePanel = ({
       const res = await fetch(`${API_BASE_URL}/pods/ips/${namespace}/${encodeURIComponent(podId)}`);
       if (!res.ok) return;
       const data = await res.json();
-      const withIp = (data.interfaces || []).find((i) => i.ipv4);
-      if (withIp && withIp.ipv4) setDest(withIp.ipv4.split('/')[0]);
+      // Every address of the node, any family; the first fills the field and
+      // the rest are a click away.
+      const list = nodeAddresses(data);
+      setDestAddrs(list);
+      if (list.length) setDest(list[0].ip);
     } catch (e) {
       /* best-effort: leave the field for manual entry */
     }
@@ -627,12 +632,32 @@ const TracePanel = ({
             type="text"
             placeholder="IP or hostname (e.g. 8.8.8.8)"
             value={dest}
-            onChange={(e) => setDest(e.target.value)}
+            onChange={(e) => {
+              setDest(e.target.value);
+              setDestAddrs([]);
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && destReady && !running) run();
             }}
           />
         </div>
+        {destAddrs.length > 1 && (
+          <div className="trace-row">
+            <span className="trace-label">Address</span>
+            <select
+              className="trace-select"
+              value={dest}
+              onChange={(e) => setDest(e.target.value)}
+              title="Which address of the node to trace toward"
+            >
+              {destAddrs.map((a) => (
+                <option key={`${a.iface}-${a.ip}`} value={a.ip}>
+                  {a.iface}: {a.ip}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <div className="trace-row">
           <span className="trace-label">Node</span>
           <select

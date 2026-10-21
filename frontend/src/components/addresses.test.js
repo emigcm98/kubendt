@@ -1,4 +1,4 @@
-import { interfaceAddresses, parseCidr, sharedSubnet } from './addresses';
+import { interfaceAddresses, nodeAddresses, parseCidr, sharedSubnet } from './addresses';
 
 test('interfaceAddresses prefers the full list and falls back to ipv4/ipv6', () => {
   expect(interfaceAddresses({ addresses: '10.0.0.1/24,fd00::1/64', ipv4: '10.0.0.1/24' })).toEqual([
@@ -30,4 +30,20 @@ test('sharedSubnet compares across lists and families', () => {
   expect(sharedSubnet(['10.0.0.1/24'], ['10.0.0.2/25'])).toBe(false);
   expect(sharedSubnet([], ['10.0.0.2/30'])).toBeNull();
   expect(sharedSubnet(null, null)).toBeNull();
+});
+
+test('nodeAddresses flattens a listing into targets', () => {
+  const data = {
+    interfaces: [
+      { interface: 'eth1', addresses: '10.0.12.1/30,fd00:12::1/64' },
+      { interface: 'eth2', ipv4: '10.0.1.1/24', ipv6: '' },
+      { interface: 'eth3', addresses: '' },
+    ],
+  };
+  expect(nodeAddresses(data)).toEqual([
+    { iface: 'eth1', ip: '10.0.12.1', family: 4 },
+    { iface: 'eth1', ip: 'fd00:12::1', family: 6 },
+    { iface: 'eth2', ip: '10.0.1.1', family: 4 },
+  ]);
+  expect(nodeAddresses(null)).toEqual([]);
 });

@@ -56,7 +56,7 @@ type IperfServer struct {
 
 func (o IperfOptions) Validate() error {
 	if !ValidTraceDest(o.Dest) {
-		return errors.New("dest must be an IPv4 address or a hostname")
+		return errors.New("dest must be an IP address or a hostname")
 	}
 	if o.Proto != "tcp" && o.Proto != "udp" {
 		return errors.New("proto must be tcp or udp")

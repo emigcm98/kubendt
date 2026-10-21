@@ -5,8 +5,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"kubendt/capabilities"
 	"log"
 	"net"
 	"regexp"
@@ -26,14 +28,18 @@ import (
 // pod's toolbox inside the source pod's netns, and each L3 hop is
 // mapped back to a topology node so the frontend can animate the packet.
 
+// An IPv4 or IPv6 literal, the latter by its colons.
+const traceIPPat = `\d+\.\d+\.\d+\.\d+|[0-9a-fA-F:]*:[0-9a-fA-F:.]*`
+
 var (
-	// An IPv4 literal or a DNS hostname. The destination is always passed as a
-	// single argv element, never through a shell, so this is just defence in depth.
+	// A DNS hostname; an IP literal of either family is checked with net.ParseIP.
+	// The destination is always passed as a single argv element, never through
+	// a shell, so this is just defence in depth.
 	traceDestRe = regexp.MustCompile(`^[A-Za-z0-9]([A-Za-z0-9.-]{0,253}[A-Za-z0-9])?$`)
 	// TTL and responding IP of a hop line in "-n" mode. It stops at the IP so it
 	// also matches tcptraceroute lines that put "[open]" before the RTT. The RTT
 	// is pulled out separately by traceRTTRe.
-	traceHopRe = regexp.MustCompile(`^\s*(\d+)\s+(\d+\.\d+\.\d+\.\d+)`)
+	traceHopRe = regexp.MustCompile(`^\s*(\d+)\s+(` + traceIPPat + `)`)
 	// First "<n> ms" reading on the line.
 	traceRTTRe = regexp.MustCompile(`([0-9.]+)\s*ms`)
 	// Just the leading TTL, so timeout lines get a hop too.
@@ -44,23 +50,29 @@ var (
 	// Target IP from a banner line. traceroute writes "traceroute to host
 	// (1.2.3.4), ...", tcptraceroute writes "Tracing the path to 8.8.8.8 on TCP
 	// port 80 ...". Prefer an IP in parentheses, otherwise take the first bare IP.
-	traceParenIPRe = regexp.MustCompile(`\((\d+\.\d+\.\d+\.\d+)\)`)
-	traceAnyIPRe   = regexp.MustCompile(`(\d+\.\d+\.\d+\.\d+)`)
-	// One "ip -o -4 addr show" line into (iface, ipv4).
-	traceAddrRe = regexp.MustCompile(`^\d+:\s+(\S+)\s+inet\s+(\d+\.\d+\.\d+\.\d+)`)
+	traceParenIPRe = regexp.MustCompile(`\((` + traceIPPat + `)\)`)
+	traceAnyIPRe   = regexp.MustCompile(`(` + traceIPPat + `)`)
+	// One "ip -o addr show" line into (iface, address), either family.
+	traceAddrRe = regexp.MustCompile(`^\d+:\s+(\S+)\s+inet6?\s+([0-9a-fA-F:.]+)/`)
 )
 
-// podIPv4Addresses returns ip to iface for every IPv4 on the pod. It keeps the
-// MAC-less TUN devices (ogstun, uesimtun0) that the standard interface listing
-// drops, which is what lets a tunnel endpoint like 192.168.10.1 resolve to the
-// UPF even though it is a runtime interface not in the declared topology. One
-// cheap exec per pod.
-func podIPv4Addresses(namespace, podName string) map[string]string {
-	out := map[string]string{}
-	stdout, _, err := ExecInPod(namespace, podName, []string{"ip", "-o", "-4", "addr", "show"})
+// podAddresses returns ip to iface for every address of the pod, both
+// families. It keeps the MAC-less TUN devices (ogstun, uesimtun0) that the
+// standard interface listing drops, which is what lets a tunnel endpoint like
+// 192.168.10.1 resolve to the UPF even though it is a runtime interface not in
+// the declared topology. One cheap exec per pod.
+func podAddresses(namespace, podName string) map[string]string {
+	stdout, _, err := ExecInPod(namespace, podName, []string{"ip", "-o", "addr", "show"})
 	if err != nil {
-		return out
+		return map[string]string{}
 	}
+	return parsePodAddresses(stdout)
+}
+
+// parsePodAddresses reads "ip -o addr show" lines, leaving out the loopback
+// and the link-local addresses, which no trace ever reports.
+func parsePodAddresses(stdout string) map[string]string {
+	out := map[string]string{}
 	sc := bufio.NewScanner(strings.NewReader(stdout))
 	for sc.Scan() {
 		m := traceAddrRe.FindStringSubmatch(sc.Text())
@@ -71,8 +83,8 @@ func podIPv4Addresses(namespace, podName string) map[string]string {
 		if i := strings.IndexByte(iface, '@'); i >= 0 {
 			iface = iface[:i]
 		}
-		ip := m[2]
-		if iface == "lo" || strings.HasPrefix(ip, "127.") {
+		ip := strings.ToLower(m[2])
+		if iface == "lo" || strings.HasPrefix(ip, "127.") || ip == "::1" || strings.HasPrefix(ip, "fe80:") {
 			continue
 		}
 		out[ip] = iface
@@ -108,21 +120,37 @@ func ParseTraceTarget(line string) string {
 	return ""
 }
 
-// ValidTraceDest reports whether dest is a safe IPv4/hostname to trace toward.
+// ValidTraceDest reports whether dest is a safe IP address or hostname to
+// trace toward.
 func ValidTraceDest(dest string) bool {
 	dest = strings.TrimSpace(dest)
-	return dest != "" && len(dest) <= 255 && traceDestRe.MatchString(dest)
+	return dest != "" && len(dest) <= 255 && (net.ParseIP(dest) != nil || traceDestRe.MatchString(dest))
+}
+
+// TraceMethodError says why the probe method cannot reach dest: tcptraceroute
+// is IPv4 only, so a TCP trace (not an mtr, which probes TCP itself) toward
+// a v6 address has no tool.
+func TraceMethodError(dest, method string, metrics bool) error {
+	if method == "tcp" && !metrics && capabilities.IsIPv6(dest) {
+		return errors.New("TCP traceroute is IPv4 only (tcptraceroute has no IPv6); use ICMP or UDP, or the metrics mode")
+	}
+	return nil
 }
 
 // BuildTraceCommand returns the argv for the requested probe method. ICMP ("-I")
 // is the default. TCP needs a different binary, because the container's
 // traceroute is BusyBox and BusyBox has no TCP mode, so TCP goes through
-// tcptraceroute (SYN probes to port 80). ICMP and UDP stay on BusyBox traceroute.
+// tcptraceroute (SYN probes to port 80). ICMP and UDP stay on BusyBox
+// traceroute, with -6 toward an IPv6 address.
 func BuildTraceCommand(dest, method string) []string {
 	if method == "tcp" {
 		return []string{"tcptraceroute", "-n", "-q", "1", "-w", "2", "-m", "30", dest, "80"}
 	}
-	cmd := []string{"traceroute", "-n", "-q", "1", "-m", "30", "-w", "2"}
+	cmd := []string{"traceroute"}
+	if capabilities.IsIPv6(dest) {
+		cmd = append(cmd, "-6")
+	}
+	cmd = append(cmd, "-n", "-q", "1", "-m", "30", "-w", "2")
 	if method == "icmp" {
 		cmd = append(cmd, "-I")
 	}
@@ -202,6 +230,9 @@ func BuildMtrCommand(dest, method string, cycles int) []string {
 		cycles = 60
 	}
 	cmd := []string{"mtr", "-n", "--json", "-c", strconv.Itoa(cycles)}
+	if capabilities.IsIPv6(dest) {
+		cmd = append(cmd, "-6")
+	}
 	switch method {
 	case "udp":
 		cmd = append(cmd, "-u")
@@ -464,7 +495,7 @@ func BuildTraceIPIndex(namespace string) (map[string]TraceIPNode, error) {
 		}
 	}
 
-	// Then the live IPv4 addresses of every pod, in parallel. This keeps the
+	// Then the live addresses of every pod, in parallel. This keeps the
 	// MAC-less TUN devices (ogstun, uesimtun0) so tunnel endpoints resolve.
 	pods, err := kubeclient.Clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
@@ -479,7 +510,7 @@ func BuildTraceIPIndex(namespace string) (map[string]TraceIPNode, error) {
 		wg.Add(1)
 		go func(podName string) {
 			defer wg.Done()
-			addrs := podIPv4Addresses(namespace, podName)
+			addrs := podAddresses(namespace, podName)
 			if len(addrs) == 0 {
 				return
 			}

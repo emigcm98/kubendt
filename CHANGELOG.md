@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Links between container nodes take IPv6 addresses, with one family per link: routers and switches forward IPv6, the L3 actions build the `ip -6` form for a v6 gateway, `remove_default_route` takes a `family`, and the interface listing reports `ipv6` next to `ipv4`.
 - VyOS nodes take IPv6 too: the guest boots with every address of its links in both families, a static or default route with a v6 next hop goes to `protocols static route6`, and the node panel reports the guest's `ipv6`.
 - A link end takes several addresses: `localIp` and `peerIp` accept an array (dual stack, a second IPv4), the first is wired with the link and the rest are set by the platform after every wiring, on a VyOS guest at boot. `GET /network/get-network` echoes the array, the interface listing returns every address as `addresses`, and the link, node and interface panels list them.
+- The trace and throughput tools take IPv6 targets: `traceroute -6` and `mtr -6` by the address family, the hop index covers every address of every pod, and iperf3 needs nothing. TCP traceroute stays IPv4, tcptraceroute has no IPv6. When a node is picked as the target, the panel lists every address of the node to choose from.
 
 ### Changed
 

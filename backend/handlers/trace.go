@@ -54,7 +54,11 @@ func TraceWebSocket(c *gin.Context) {
 		return
 	}
 	if !helpers.ValidTraceDest(dest) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid destination (expected an IPv4 address or hostname)"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid destination (expected an IP address or hostname)"})
+		return
+	}
+	if err := helpers.TraceMethodError(dest, method, metrics); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -160,7 +164,11 @@ func TraceReport(c *gin.Context) {
 		return
 	}
 	if !helpers.ValidTraceDest(dest) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid destination (expected an IPv4 address or hostname)"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid destination (expected an IP address or hostname)"})
+		return
+	}
+	if err := helpers.TraceMethodError(dest, method, metrics); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	pod, err := helpers.ResolvePodReference(namespace, podRef)

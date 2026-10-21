@@ -17,6 +17,8 @@ func TestParseTraceHop(t *testing.T) {
 		{" 1  10.5.0.1  0.123 ms", 1, "10.5.0.1", 0.123, false, true},
 		{" 3  10.5.254.2  1.234 ms", 3, "10.5.254.2", 1.234, false, true},
 		{" 3  8.8.8.8 [open]  2.005 ms", 3, "8.8.8.8", 2.005, false, true}, // tcptraceroute
+		{" 2  fd00:12::2  0.544 ms", 2, "fd00:12::2", 0.544, false, true},
+		{" 1  ::1  0.021 ms", 1, "::1", 0.021, false, true},
 		{" 5  * * *", 5, "", 0, true, true},
 		{" 7  *", 7, "", 0, true, true},
 		{"traceroute to 8.8.8.8 (8.8.8.8), 30 hops max, 60 byte packets", 0, "", 0, false, false},
@@ -32,8 +34,8 @@ func TestParseTraceHop(t *testing.T) {
 }
 
 func TestValidTraceDest(t *testing.T) {
-	good := []string{"8.8.8.8", "google.com", "10.5.0.1", "web-server", "a.b.c.d.example.com"}
-	bad := []string{"", "8.8.8.8; rm -rf /", "$(whoami)", "a b", "-flag", "he re.com"}
+	good := []string{"8.8.8.8", "google.com", "10.5.0.1", "web-server", "a.b.c.d.example.com", "fd00:12::2", "2001:db8::1", "::1"}
+	bad := []string{"", "8.8.8.8; rm -rf /", "$(whoami)", "a b", "-flag", "he re.com", "fd00::1; id", "fd00:::1"}
 	for _, d := range good {
 		if !ValidTraceDest(d) {
 			t.Errorf("ValidTraceDest(%q) = false, want true", d)
@@ -84,6 +86,45 @@ func TestBuildTraceCommand(t *testing.T) {
 	if tcp[0] != "tcptraceroute" {
 		t.Errorf("tcp command should use tcptraceroute, got %v", tcp)
 	}
+	v6 := BuildTraceCommand("fd00:12::2", "icmp")
+	if v6[0] != "traceroute" || v6[1] != "-6" || !contains(v6, "-I") || v6[len(v6)-1] != "fd00:12::2" {
+		t.Errorf("v6 icmp command = %v", v6)
+	}
+	if contains(BuildTraceCommand("10.0.0.1", "udp"), "-6") {
+		t.Errorf("a v4 trace should carry no -6")
+	}
+	if TraceMethodError("fd00:12::2", "tcp", false) == nil {
+		t.Errorf("a TCP trace toward v6 has no tool")
+	}
+	for _, ok := range []struct {
+		dest, method string
+		metrics      bool
+	}{{"fd00:12::2", "icmp", false}, {"fd00:12::2", "tcp", true}, {"10.0.0.1", "tcp", false}} {
+		if err := TraceMethodError(ok.dest, ok.method, ok.metrics); err != nil {
+			t.Errorf("%+v: %v", ok, err)
+		}
+	}
+}
+
+func TestParsePodAddresses(t *testing.T) {
+	out := `1: lo    inet 127.0.0.1/8 scope host lo\       valid_lft forever preferred_lft forever
+1: lo    inet6 ::1/128 scope host proto kernel_lo \       valid_lft forever preferred_lft forever
+2: eth0    inet 10.244.1.201/24 brd 10.244.1.255 scope global eth0\       valid_lft forever preferred_lft forever
+2: eth0    inet6 fe80::80f9:14ff:fe55:e9b6/64 scope link proto kernel_ll \       valid_lft forever preferred_lft forever
+17: eth1@if18    inet 10.0.12.1/30 scope global eth1\       valid_lft forever preferred_lft forever
+17: eth1@if18    inet6 fd00:12::1/64 scope global \       valid_lft forever preferred_lft forever
+19: uesimtun0    inet 10.45.0.2/32 scope global uesimtun0\       valid_lft forever preferred_lft forever
+`
+	got := parsePodAddresses(out)
+	want := map[string]string{"10.244.1.201": "eth0", "10.0.12.1": "eth1", "fd00:12::1": "eth1", "10.45.0.2": "uesimtun0"}
+	if len(got) != len(want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+	for ip, iface := range want {
+		if got[ip] != iface {
+			t.Errorf("%s: got %q, want %q", ip, got[ip], iface)
+		}
+	}
 }
 
 func TestParseTraceUnreachable(t *testing.T) {
@@ -104,10 +145,11 @@ func TestParseTraceUnreachable(t *testing.T) {
 
 func TestParseTraceTarget(t *testing.T) {
 	cases := map[string]string{
-		"traceroute to 8.8.8.8 (8.8.8.8), 30 hops max, 60 byte packets":  "8.8.8.8",
-		"traceroute to google.com (142.250.1.2), 30 hops max":            "142.250.1.2",
-		"Tracing the path to 8.8.8.8 on TCP port 80 (http), 30 hops max": "8.8.8.8",
-		"Tracing the path to google.com (142.250.1.2) on TCP port 80":    "142.250.1.2",
+		"traceroute to 8.8.8.8 (8.8.8.8), 30 hops max, 60 byte packets":       "8.8.8.8",
+		"traceroute to google.com (142.250.1.2), 30 hops max":                 "142.250.1.2",
+		"Tracing the path to 8.8.8.8 on TCP port 80 (http), 30 hops max":      "8.8.8.8",
+		"Tracing the path to google.com (142.250.1.2) on TCP port 80":         "142.250.1.2",
+		"traceroute to fd00:12::2 (fd00:12::2), 30 hops max, 72 byte packets": "fd00:12::2",
 		" 1  10.5.0.1  0.5 ms": "", // not a banner
 		"Selected device eth0, address 10.6.0.2, port 33 for out": "", // not a banner
 	}
@@ -202,6 +244,12 @@ func TestBuildMtrCommand(t *testing.T) {
 	tcp := BuildMtrCommand("x", "tcp", 5)
 	if !contains(tcp, "-T") || !contains(tcp, "-P") || !contains(tcp, "80") {
 		t.Errorf("tcp mtr should contain -T -P 80: %v", tcp)
+	}
+	if v6 := BuildMtrCommand("fd00:12::2", "icmp", 5); !contains(v6, "-6") || v6[len(v6)-1] != "fd00:12::2" {
+		t.Errorf("v6 mtr should contain -6: %v", v6)
+	}
+	if contains(icmp, "-6") {
+		t.Errorf("a v4 mtr should carry no -6: %v", icmp)
 	}
 	// Cycles clamped to [1, 60].
 	if cyclesArg(BuildMtrCommand("x", "icmp", 0)) != "5" {
