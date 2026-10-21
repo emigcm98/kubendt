@@ -1,4 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { interfaceAddresses } from './addresses';
 import './InterfaceContextMenu.css';
 import { ReactComponent as PowerIcon } from '../assets/images/icons/power.svg';
 import { ReactComponent as WarningIcon } from '../assets/images/icons/warning.svg';
@@ -15,7 +16,7 @@ const InterfaceContextMenu = ({
   onToggle,
 }) => {
   const menuRef = useRef(null);
-  const [ifaceInfo, setIfaceInfo] = useState(null); // { ipv4, mac, guestInterface }
+  const [ifaceInfo, setIfaceInfo] = useState(null); // { addresses, ipv4, ipv6, mac, guestInterface }
   const [loadingInfo, setLoadingInfo] = useState(true);
 
   useEffect(() => {
@@ -108,10 +109,14 @@ const InterfaceContextMenu = ({
                 <span className="intf-info-val intf-info-italic">{ifaceInfo.guestInterface}</span>
               </div>
             )}
-            <div className="intf-info-row">
-              <span className="intf-info-key">IPv4</span>
-              <span className="intf-info-val">{ifaceInfo.ipv4 || '—'}</span>
-            </div>
+            {(interfaceAddresses(ifaceInfo).length ? interfaceAddresses(ifaceInfo) : ['—']).map(
+              (addr, i) => (
+                <div className="intf-info-row" key={`${addr}-${i}`}>
+                  <span className="intf-info-key">{i === 0 ? 'IP' : ''}</span>
+                  <span className="intf-info-val">{addr}</span>
+                </div>
+              )
+            )}
             <div className="intf-info-row">
               <span className="intf-info-key">MAC</span>
               <span className="intf-info-val intf-info-mac">{ifaceInfo.mac || '—'}</span>

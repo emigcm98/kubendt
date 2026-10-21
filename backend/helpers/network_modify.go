@@ -175,7 +175,7 @@ func ApplyAddToExistingTopology(namespace string, request types.DeployRequest, e
 
 	for _, node := range request.Nodes {
 		mounts := validMountsMap[node.Name]
-		err := CreateNetworkStatefulSet(namespace, node, mounts)
+		err := CreateNetworkStatefulSet(namespace, node, mounts, request.Links)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("error creating StatefulSet %s: %w", node.Name, err)
 		}
@@ -729,10 +729,10 @@ func BuildLinksFromTopologyCRDs(namespace string) ([]types.LinkSpec, error) {
 			}
 
 			if localIP, ok := linkMap["local_ip"].(string); ok {
-				link.LocalIP = localIP
+				link.LocalIP = types.OneAddr(localIP)
 			}
 			if peerIP, ok := linkMap["peer_ip"].(string); ok {
-				link.PeerIP = peerIP
+				link.PeerIP = types.OneAddr(peerIP)
 			}
 
 			switch uidVal := linkMap["uid"].(type) {
@@ -872,10 +872,10 @@ func upsertAppendLinksInTopologies(namespace string, links []types.LinkSpec, all
 		if resolvedNode != "external" {
 			podLinks[resolvedNode] = append(podLinks[resolvedNode], map[string]interface{}{
 				"local_intf": link.LocalIntf,
-				"local_ip":   link.LocalIP,
+				"local_ip":   link.LocalIP.First(),
 				"peer_pod":   toCRDPeerPod(resolvedPeer), // controller expects "localhost" for external
 				"peer_intf":  link.PeerIntf,
-				"peer_ip":    link.PeerIP,
+				"peer_ip":    link.PeerIP.First(),
 				"uid":        int64(uid),
 			})
 
@@ -888,10 +888,10 @@ func upsertAppendLinksInTopologies(namespace string, links []types.LinkSpec, all
 		if resolvedPeer != "external" {
 			podLinks[resolvedPeer] = append(podLinks[resolvedPeer], map[string]interface{}{
 				"local_intf": link.PeerIntf,
-				"local_ip":   link.PeerIP,
+				"local_ip":   link.PeerIP.First(),
 				"peer_pod":   toCRDPeerPod(resolvedNode), // controller expects "localhost" for external
 				"peer_intf":  link.LocalIntf,
-				"peer_ip":    link.LocalIP,
+				"peer_ip":    link.LocalIP.First(),
 				"uid":        int64(uid),
 			})
 			// peerLabel when node is the external side (peer is the real pod)
@@ -1014,20 +1014,20 @@ func buildPerPodLinkEntries(links []types.LinkSpec, allNodes []types.NodeSpec) m
 		if resolvedNode != "external" {
 			perPod[resolvedNode] = append(perPod[resolvedNode], map[string]interface{}{
 				"local_intf": link.LocalIntf,
-				"local_ip":   link.LocalIP,
+				"local_ip":   link.LocalIP.First(),
 				"peer_pod":   toCRDPeerPod(resolvedPeer),
 				"peer_intf":  link.PeerIntf,
-				"peer_ip":    link.PeerIP,
+				"peer_ip":    link.PeerIP.First(),
 			})
 		}
 
 		if resolvedPeer != "external" {
 			perPod[resolvedPeer] = append(perPod[resolvedPeer], map[string]interface{}{
 				"local_intf": link.PeerIntf,
-				"local_ip":   link.PeerIP,
+				"local_ip":   link.PeerIP.First(),
 				"peer_pod":   toCRDPeerPod(resolvedNode),
 				"peer_intf":  link.LocalIntf,
-				"peer_ip":    link.LocalIP,
+				"peer_ip":    link.LocalIP.First(),
 			})
 		}
 	}

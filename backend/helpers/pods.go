@@ -74,11 +74,13 @@ var (
 )
 
 // parseInterfaceListing turns `ip a` output into one entry per interface:
-// name, mac, state, mtu, the IPv4 and the first global IPv6 (link-local
-// ones are noise here). Taps and pseudo interfaces are left out.
+// name, mac, state, mtu, the first IPv4 and the first global IPv6 (link-local
+// ones are noise here), and every address of both families as "addresses".
+// Taps and pseudo interfaces are left out.
 func parseInterfaceListing(stdout string) ([]map[string]string, error) {
 	scanner := bufio.NewScanner(strings.NewReader(stdout))
 	var currentIntf, currentMac, currentIP, currentIP6, currentState, currentMTU string
+	var currentAddrs []string
 	var result []map[string]string
 	entry := func() map[string]string {
 		e := map[string]string{
@@ -86,6 +88,7 @@ func parseInterfaceListing(stdout string) ([]map[string]string, error) {
 			"mac":       currentMac,
 			"ipv4":      currentIP,
 			"ipv6":      currentIP6,
+			"addresses": strings.Join(currentAddrs, ","),
 			"state":     currentState,
 		}
 		if currentMTU != "" {
@@ -105,6 +108,7 @@ func parseInterfaceListing(stdout string) ([]map[string]string, error) {
 			currentMac = ""
 			currentIP = ""
 			currentIP6 = ""
+			currentAddrs = nil
 			currentMTU = ""
 			if m := ifaceMTURe.FindStringSubmatch(line); len(m) > 1 {
 				currentMTU = m[1]
@@ -123,11 +127,17 @@ func parseInterfaceListing(stdout string) ([]map[string]string, error) {
 		}
 
 		if matches := ifaceIPv4Re.FindStringSubmatch(line); len(matches) > 1 {
-			currentIP = matches[1]
+			if currentIP == "" {
+				currentIP = matches[1]
+			}
+			currentAddrs = append(currentAddrs, matches[1])
 		}
 
-		if matches := ifaceIPv6Re.FindStringSubmatch(line); len(matches) > 1 && currentIP6 == "" {
-			currentIP6 = matches[1]
+		if matches := ifaceIPv6Re.FindStringSubmatch(line); len(matches) > 1 {
+			if currentIP6 == "" {
+				currentIP6 = matches[1]
+			}
+			currentAddrs = append(currentAddrs, matches[1])
 		}
 	}
 
@@ -146,9 +156,51 @@ func parseInterfaceListing(stdout string) ([]map[string]string, error) {
 	return result, nil
 }
 
-// guestLinkMTUEnv hands a VM node's entrypoint the platform MTU, so the guest
-// boots with it on its data interfaces and the MTU pass finds nothing to
-// commit. Container nodes get nothing: the pass sets their interfaces itself.
+// guestLinkEnv hands a VM node's entrypoint what the guest should boot with,
+// so the MTU pass finds nothing to commit: the platform MTU on its data
+// interfaces and the extra addresses its links declare, by interface. A node
+// with several replicas gets no addresses this way, the env is one for the
+// StatefulSet, and the pass commits them in each guest instead.
+func guestLinkEnv(node types.NodeSpec, links []types.LinkSpec) []v1.EnvVar {
+	env := guestLinkMTUEnv(node)
+	if len(env) == 0 || node.Replicas > 1 {
+		return env
+	}
+	if value := guestLinkAddresses(node.Name, links); value != "" {
+		env = append(env, v1.EnvVar{Name: LinkAddressesEnv, Value: value})
+	}
+	return env
+}
+
+// guestLinkAddresses renders "eth1=a,b;eth2=c" from the extra addresses of
+// the node's link ends, whichever side of the link named it.
+func guestLinkAddresses(nodeName string, links []types.LinkSpec) string {
+	byIface := map[string][]string{}
+	mine := func(name string) bool { return name == nodeName || name == nodeName+"-0" }
+	for _, l := range links {
+		if mine(l.Node) {
+			byIface[l.LocalIntf] = append(byIface[l.LocalIntf], l.LocalIP.Extra()...)
+		}
+		if mine(l.PeerNode) {
+			byIface[l.PeerIntf] = append(byIface[l.PeerIntf], l.PeerIP.Extra()...)
+		}
+	}
+	var ifaces []string
+	for iface, addrs := range byIface {
+		if len(addrs) > 0 {
+			ifaces = append(ifaces, iface)
+		}
+	}
+	sort.Strings(ifaces)
+	parts := make([]string, len(ifaces))
+	for i, iface := range ifaces {
+		parts[i] = iface + "=" + strings.Join(byIface[iface], ",")
+	}
+	return strings.Join(parts, ";")
+}
+
+// guestLinkMTUEnv is the MTU half of guestLinkEnv. Container nodes get
+// nothing: the pass sets their interfaces itself.
 func guestLinkMTUEnv(node types.NodeSpec) []v1.EnvVar {
 	if !node.Qemu {
 		return nil
@@ -247,7 +299,7 @@ func buildReadinessProbe(driver any) *v1.Probe {
 	}
 }
 
-func CreateNetworkStatefulSet(namespace string, node types.NodeSpec, validMounts []types.MountSpec) error {
+func CreateNetworkStatefulSet(namespace string, node types.NodeSpec, validMounts []types.MountSpec, links []types.LinkSpec) error {
 	var commands []string
 	useCustomCommand := false
 	shellMode := strings.ToLower(strings.TrimSpace(node.ShellMode))
@@ -288,7 +340,7 @@ func CreateNetworkStatefulSet(namespace string, node types.NodeSpec, validMounts
 			},
 		},
 		ReadinessProbe: buildReadinessProbe(resolveDriverForProbe(node.Driver)),
-		Env:            guestLinkMTUEnv(node),
+		Env:            guestLinkEnv(node, links),
 	}
 
 	if useSerialShell {

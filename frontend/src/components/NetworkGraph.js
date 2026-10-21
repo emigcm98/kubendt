@@ -204,18 +204,17 @@ const validateLinkSpecFields = (link, label) => {
   if (link.uid !== undefined && link.uid !== null && !Number.isInteger(link.uid)) {
     throw new Error(`${label}: 'uid' must be an integer.`);
   }
-  for (const f of [
-    'localIp',
-    'peerIp',
-    'peerLabel',
-    'name',
-    'delay',
-    'jitter',
-    'loss',
-    'bandwidth',
-  ]) {
+  for (const f of ['peerLabel', 'name', 'delay', 'jitter', 'loss', 'bandwidth']) {
     if (link[f] !== undefined && link[f] !== null && typeof link[f] !== 'string') {
       throw new Error(`${label}: '${f}' must be a string.`);
+    }
+  }
+  // An end's addresses: one string, or an array of them.
+  for (const f of ['localIp', 'peerIp']) {
+    const v = link[f];
+    if (v === undefined || v === null || typeof v === 'string') continue;
+    if (!Array.isArray(v) || !v.every((a) => typeof a === 'string')) {
+      throw new Error(`${label}: '${f}' must be a string or an array of strings.`);
     }
   }
 };

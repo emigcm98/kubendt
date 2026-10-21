@@ -168,7 +168,7 @@
   "remove_ip": {
     "executor": "kubectl",
     "commands": [
-      ["ip","addr","del","10.0.0.1/24","dev","eth1"]
+      ["sh","-c","! ip -o addr show dev eth1 | grep -qF ' 10.0.0.1/24 ' || ip addr del 10.0.0.1/24 dev eth1"]
     ]
   },
   "remove_static_route": {
@@ -193,7 +193,7 @@
   "set_ip": {
     "executor": "kubectl",
     "commands": [
-      ["ip","addr","add","10.0.0.1/24","dev","eth1"]
+      ["ip","addr","replace","10.0.0.1/24","dev","eth1"]
     ]
   },
   "setup_bridge": { "unsupported": true },

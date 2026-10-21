@@ -4,8 +4,10 @@ import "fmt"
 
 type L3Base struct{}
 
+// replace rather than add, so a repeated set_ip (a replay, a declared
+// address set again) does not fail with "File exists".
 func (L3Base) SetIP(iface, cidr string) [][]string {
-	return [][]string{{"ip", "addr", "add", cidr, "dev", iface}}
+	return [][]string{{"ip", "addr", "replace", cidr, "dev", iface}}
 }
 
 func (L3Base) ReplaceIP(iface, cidr string) [][]string {
@@ -15,8 +17,12 @@ func (L3Base) ReplaceIP(iface, cidr string) [][]string {
 	}
 }
 
+// Removing an address that is not there is nothing to do, not an error: a
+// replay may run before the MTU pass has put a declared address back, and a
+// failed replay would drop the operation from the history.
 func (L3Base) RemoveIP(iface, cidr string) [][]string {
-	return [][]string{{"ip", "addr", "del", cidr, "dev", iface}}
+	return [][]string{{"sh", "-c",
+		"! ip -o addr show dev " + iface + " | grep -qF ' " + cidr + " ' || ip addr del " + cidr + " dev " + iface}}
 }
 
 func (L3Base) SetDefaultRoute(gateway string) [][]string {

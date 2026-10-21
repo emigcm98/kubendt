@@ -24,7 +24,7 @@ const (
 	// applyMigrations. There is intentionally no migration below version 1:
 	// 1.0.0 ships the first released schema, so no older database can exist in
 	// the wild. Bump this and add a case to applyMigrations for each change.
-	schemaVersion = 2
+	schemaVersion = 3
 )
 
 func InitDB() {
@@ -72,6 +72,10 @@ func applyMigrations() {
 	// version 0, so a step only adds what is missing.
 	if version < 2 {
 		addColumnIfMissing("link_attributes", "mtu", "INTEGER NOT NULL DEFAULT 0")
+	}
+	if version < 3 {
+		addColumnIfMissing("link_attributes", "local_addresses", "TEXT NOT NULL DEFAULT ''")
+		addColumnIfMissing("link_attributes", "peer_addresses", "TEXT NOT NULL DEFAULT ''")
 	}
 
 	// PRAGMA does not accept bound parameters, so the version is interpolated
@@ -140,6 +144,8 @@ func createTables() {
 			loss TEXT NOT NULL DEFAULT '',
 			bandwidth TEXT NOT NULL DEFAULT '',
 			mtu INTEGER NOT NULL DEFAULT 0,
+			local_addresses TEXT NOT NULL DEFAULT '',
+			peer_addresses TEXT NOT NULL DEFAULT '',
 			PRIMARY KEY (cluster_id, namespace, node, intf)
 		);`,
 		`

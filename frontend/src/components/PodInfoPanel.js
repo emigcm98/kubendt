@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { interfaceAddresses } from './addresses';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import './PodInfoPanel.css';
@@ -1069,7 +1070,13 @@ const PodInfoPanel = ({
                               )
                             )}
                           </div>
-                          <div className="interface-detail">IPv4: {intf.ipv4}</div>
+                          {(interfaceAddresses(intf).length ? interfaceAddresses(intf) : ['—']).map(
+                            (addr) => (
+                              <div className="interface-detail" key={addr}>
+                                IP: {addr}
+                              </div>
+                            )
+                          )}
                           <div className="interface-detail">MAC: {intf.mac}</div>
                           {intf.mtu && <div className="interface-detail">MTU: {intf.mtu}</div>}
                         </div>

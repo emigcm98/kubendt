@@ -1,12 +1,16 @@
 package helpers
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 
 	"kubendt/drivers/drivers"
 	drivers_meta "kubendt/drivers/meta"
 	"kubendt/types"
+
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestParsePlatformLinkMTU(t *testing.T) {
@@ -165,17 +169,80 @@ func TestVyOSGuestMTUCommands(t *testing.T) {
 }
 
 func TestSetScriptAndFailures(t *testing.T) {
-	script := setScript([]setItem{{"eth1", 1450}, {"tap1", 1450}, {"eth2", 1400}})
-	want := "ip link set dev eth1 mtu 1450 2>/dev/null || echo FAIL eth1; ip link set dev tap1 mtu 1450 2>/dev/null || echo FAIL tap1; ip link set dev eth2 mtu 1400 2>/dev/null || echo FAIL eth2"
+	script := setScript([]setItem{{Name: "eth1", MTU: 1450}, {Name: "tap1", MTU: 1450}, {Name: "eth2", MTU: 1400}, {Name: "eth2", Addr: "fd00:2::1/64"}})
+	want := "ip link set dev eth1 mtu 1450 2>/dev/null || echo FAIL eth1; ip link set dev tap1 mtu 1450 2>/dev/null || echo FAIL tap1; ip link set dev eth2 mtu 1400 2>/dev/null || echo FAIL eth2; ip addr replace fd00:2::1/64 dev eth2 2>/dev/null || echo FAIL eth2 fd00:2::1/64"
 	if script != want {
 		t.Fatalf("script:\n%s\nwant:\n%s", script, want)
 	}
-	failed := parseSetFailures("FAIL eth1\nsomething else\nFAIL tap1\n")
-	if len(failed) != 2 || !failed["eth1"] || !failed["tap1"] {
+	failed := parseSetFailures("FAIL eth1\nsomething else\nFAIL tap1\nFAIL eth2 fd00:2::1/64\n")
+	if len(failed) != 3 || !failed["eth1"] || !failed["tap1"] || !failed["eth2 fd00:2::1/64"] {
 		t.Fatalf("got %v", failed)
 	}
 	if len(parseSetFailures("")) != 0 {
 		t.Fatalf("no output means no failure")
+	}
+}
+
+func TestAddressesRemovedBy(t *testing.T) {
+	op := func(typ, iface, cidr string) PersistedDriverOperation {
+		return PersistedDriverOperation{ActionType: typ, Action: types.ActionEntry{Type: typ, Iface: iface, CIDR: cidr}}
+	}
+	removed := addressesRemovedBy([]PersistedDriverOperation{
+		op("set_ip", "eth1", "10.0.0.9/24"),
+		op("remove_ip", "eth1", "fd00:1::1/64"),
+		op("remove_ip", "eth2", "10.0.2.5/24"),
+		op("set_ip", "eth2", "10.0.2.5/24"),
+		op("link_down", "eth3", ""),
+	})
+	if len(removed) != 1 || !removed["eth1 fd00:1::1/64"] {
+		t.Fatalf("got %v", removed)
+	}
+	if len(addressesRemovedBy(nil)) != 0 {
+		t.Fatal("no history removes nothing")
+	}
+}
+
+func TestGuestMissingAddrs(t *testing.T) {
+	ends := []mtuEnd{
+		{Pod: "r-0", Iface: "eth1", Addrs: []string{"fd00:1::1/64", "10.0.1.9/24"}},
+		{Pod: "r-0", Iface: "eth2", Addrs: []string{"fd00:2::1/64"}},
+		{Pod: "r-0", Iface: "eth3"},
+	}
+	entries := []map[string]string{
+		{"interface": "eth1", "addresses": "10.0.1.1/24,fd00:1::1/64"},
+		{"interface": "eth2", "addresses": "10.0.2.1/24"},
+	}
+	got := guestMissingAddrs(entries, true, ends, map[string]bool{})
+	want := []setItem{{Name: "eth1", Addr: "10.0.1.9/24"}, {Name: "eth2", Addr: "fd00:2::1/64"}}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+	got = guestMissingAddrs(entries, true, ends, map[string]bool{"eth2 fd00:2::1/64": true})
+	if !reflect.DeepEqual(got, want[:1]) {
+		t.Fatalf("a removed address is not missing: %v", got)
+	}
+	if n := len(guestMissingAddrs(nil, false, ends, map[string]bool{})); n != 3 {
+		t.Fatalf("an unread guest misses everything, got %d", n)
+	}
+}
+
+func TestLinkEndsCarryAttrs(t *testing.T) {
+	pod := func(name, worker string) *v1.Pod {
+		return &v1.Pod{ObjectMeta: metav1.ObjectMeta{Name: name}, Spec: v1.PodSpec{NodeName: worker}, Status: v1.PodStatus{Phase: v1.PodRunning}}
+	}
+	pods := map[string]*v1.Pod{"a-0": pod("a-0", "w1"), "b-0": pod("b-0", "w2")}
+	links := []types.LinkSpec{{Node: "a-0", LocalIntf: "eth1", PeerNode: "b-0", PeerIntf: "eth1"}}
+	// Keyed by the peer end only, as a row named from b's side would be.
+	attrs := map[string]LinkAttrs{"b-0/eth1": {MTU: 1400, LocalAddrs: []string{"fd00::2/64"}, PeerAddrs: []string{"fd00::1/64"}}}
+	ends, n := linkEnds(links, pods, attrs, nil)
+	if n != 1 || len(ends) != 2 {
+		t.Fatalf("got %d links, %d ends", n, len(ends))
+	}
+	if ends[0].Pod != "a-0" || ends[0].Want != 1400 || !reflect.DeepEqual(ends[0].Addrs, []string{"fd00::1/64"}) {
+		t.Errorf("a's end: %+v", ends[0])
+	}
+	if ends[1].Pod != "b-0" || ends[1].Want != 1400 || !reflect.DeepEqual(ends[1].Addrs, []string{"fd00::2/64"}) || !ends[1].Cross {
+		t.Errorf("b's end: %+v", ends[1])
 	}
 }
 

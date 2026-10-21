@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { interfaceAddresses } from './addresses';
 import {
   ReactFlow,
   Panel,
@@ -382,7 +383,7 @@ const InnerGraph = ({
 
         setHoveredInfo({
           label: intfName,
-          ipv4: match.ipv4,
+          addresses: interfaceAddresses(match),
           mac: match.mac,
           guestInterface: match.guestInterface,
         });
@@ -1158,7 +1159,9 @@ const InnerGraph = ({
                   {hoveredInfo.guestInterface}
                 </div>
               )}
-              {hoveredInfo.ipv4 && <div>{hoveredInfo.ipv4}</div>}
+              {hoveredInfo.addresses?.map((addr) => (
+                <div key={addr}>{addr}</div>
+              ))}
               <div>{hoveredInfo.mac || 'MAC unknown'}</div>
             </>
           )}

@@ -77,6 +77,33 @@ func TestFillLinkAttributes(t *testing.T) {
 	}
 }
 
+func TestLinkAttrsAddresses(t *testing.T) {
+	l := types.LinkSpec{Node: "a", LocalIntf: "eth1", PeerNode: "b", PeerIntf: "eth1",
+		LocalIP: types.Addrs{"10.0.0.1/30", "fd00::1/64"}, PeerIP: types.Addrs{"10.0.0.2/30", "fd00::2/64", "10.0.0.9/30"}}
+	a := attrsOf(l)
+	if a.empty() || !reflect.DeepEqual(a.LocalAddrs, []string{"fd00::1/64"}) || !reflect.DeepEqual(a.PeerAddrs, []string{"fd00::2/64", "10.0.0.9/30"}) {
+		t.Fatalf("attrs: %+v", a)
+	}
+	if attrsOf(types.LinkSpec{LocalIP: types.Addrs{"10.0.0.1/30"}}).empty() != true {
+		t.Fatal("one address per end is nothing to keep")
+	}
+	if encodeAddrs(nil) != "" || !reflect.DeepEqual(decodeAddrs(encodeAddrs(a.PeerAddrs)), a.PeerAddrs) || decodeAddrs("nonsense") != nil {
+		t.Fatal("address columns do not round trip")
+	}
+
+	// A link read back from the cluster has one address per end; the fill
+	// restores the rest from either end's key, from that end's view.
+	fromA := map[string]LinkAttrs{"a/eth1": a}
+	fromB := map[string]LinkAttrs{"b/eth1": a.swapped()}
+	for name, attrs := range map[string]map[string]LinkAttrs{"by a": fromA, "by b": fromB} {
+		link := types.LinkSpec{Node: "a", LocalIntf: "eth1", PeerNode: "b", PeerIntf: "eth1", LocalIP: types.Addrs{"10.0.0.1/30"}, PeerIP: types.Addrs{"10.0.0.2/30"}}
+		FillLinkAttributes(&link, "a", "b", attrs)
+		if !reflect.DeepEqual(link.LocalIP, l.LocalIP) || !reflect.DeepEqual(link.PeerIP, l.PeerIP) {
+			t.Errorf("%s: filled %v / %v", name, link.LocalIP, link.PeerIP)
+		}
+	}
+}
+
 func TestValidateLinkMTU(t *testing.T) {
 	t.Setenv(LinkMTUEnv, "")
 	cases := []struct {
@@ -96,7 +123,7 @@ func TestValidateLinkMTU(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := ValidateLinkMTU(tc.mtu, tc.local, tc.peer)
+			err := ValidateLinkMTU(tc.mtu, []string{tc.local, tc.peer})
 			if tc.wantErr == "" && err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -106,7 +133,7 @@ func TestValidateLinkMTU(t *testing.T) {
 		})
 	}
 	t.Setenv(LinkMTUEnv, "8950")
-	if err := ValidateLinkMTU(9000, "", ""); err == nil || !strings.Contains(err.Error(), "(8950)") {
+	if err := ValidateLinkMTU(9000, nil); err == nil || !strings.Contains(err.Error(), "(8950)") {
 		t.Fatalf("the ceiling follows the variable: %v", err)
 	}
 	t.Setenv(LinkMTUEnv, "")

@@ -1,9 +1,9 @@
 package helpers
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
-	"net"
 	"strings"
 
 	"kubendt/kubeclient"
@@ -11,27 +11,60 @@ import (
 )
 
 // Link attributes are the properties a topology declares on a link and the
-// platform imposes after wiring it, symmetric on both ends: a netem with the
-// delay, jitter, loss and bandwidth, and the MTU. They are kept in their own
-// table so GET /network/get-network can echo them. The shaping is applied as
-// ordinary operations of each end, so a restart replays it; the MTU is
-// applied by the MTU pass, which runs after every wiring anyway.
+// platform imposes after wiring it: a netem with the delay, jitter, loss and
+// bandwidth, the MTU, and the addresses beyond the first on each end. They
+// are kept in their own table so GET /network/get-network can echo them. The
+// shaping is applied as ordinary operations of each end, so a restart
+// replays it; the MTU and the extra addresses are applied by the MTU pass,
+// which runs after every wiring anyway (Meshnet wires one address per end).
 
-// LinkAttrs are the declared properties of one link.
+// LinkAttrs are the declared properties of one link. LocalAddrs are the
+// extra addresses of the end the lookup key names, PeerAddrs the other
+// end's.
 type LinkAttrs struct {
-	Delay     string
-	Jitter    string
-	Loss      string
-	Bandwidth string
-	MTU       int
+	Delay      string
+	Jitter     string
+	Loss       string
+	Bandwidth  string
+	MTU        int
+	LocalAddrs []string
+	PeerAddrs  []string
 }
 
 func attrsOf(l types.LinkSpec) LinkAttrs {
-	return LinkAttrs{Delay: l.Delay, Jitter: l.Jitter, Loss: l.Loss, Bandwidth: l.Bandwidth, MTU: l.MTU}
+	return LinkAttrs{Delay: l.Delay, Jitter: l.Jitter, Loss: l.Loss, Bandwidth: l.Bandwidth, MTU: l.MTU,
+		LocalAddrs: l.LocalIP.Extra(), PeerAddrs: l.PeerIP.Extra()}
 }
 
 func (a LinkAttrs) empty() bool {
-	return !a.hasShaping() && a.MTU == 0
+	return !a.hasShaping() && a.MTU == 0 && len(a.LocalAddrs) == 0 && len(a.PeerAddrs) == 0
+}
+
+// swapped is the same link seen from its other end.
+func (a LinkAttrs) swapped() LinkAttrs {
+	a.LocalAddrs, a.PeerAddrs = a.PeerAddrs, a.LocalAddrs
+	return a
+}
+
+// Extra addresses travel as a JSON array in a text column, "" for none.
+func encodeAddrs(addrs []string) string {
+	if len(addrs) == 0 {
+		return ""
+	}
+	raw, _ := json.Marshal(addrs)
+	return string(raw)
+}
+
+func decodeAddrs(raw string) []string {
+	if raw == "" {
+		return nil
+	}
+	var out []string
+	if err := json.Unmarshal([]byte(raw), &out); err != nil {
+		log.Printf("⚠️ Link attributes: unreadable address list %q", raw)
+		return nil
+	}
+	return out
 }
 
 func (a LinkAttrs) hasShaping() bool {
@@ -55,7 +88,7 @@ func ValidateLinkAttributes(links []types.LinkSpec) error {
 				return fmt.Errorf("link[%d]: %s", i, msg)
 			}
 		}
-		if err := ValidateLinkMTU(a.MTU, l.LocalIP, l.PeerIP); err != nil {
+		if err := ValidateLinkMTU(a.MTU, append(append([]string{}, l.LocalIP...), l.PeerIP...)); err != nil {
 			return fmt.Errorf("link[%d]: %w", i, err)
 		}
 	}
@@ -63,18 +96,18 @@ func ValidateLinkAttributes(links []types.LinkSpec) error {
 }
 
 // ValidateLinkMTU checks an MTU asked for one link: 0 means the platform's
-// value; otherwise within the kernel's range, at least 1280 when either end
-// has an IPv6 address, and never above what the operator said the cluster
+// value; otherwise within the kernel's range, at least 1280 when any address
+// of either end is IPv6, and never above what the operator said the cluster
 // carries, since the link would just not work.
-func ValidateLinkMTU(mtu int, localIP, peerIP string) error {
+func ValidateLinkMTU(mtu int, addrs []string) error {
 	if mtu == 0 {
 		return nil
 	}
 	if mtu < MinLinkMTU || mtu > MaxLinkMTU {
 		return fmt.Errorf("mtu %d is not between %d and %d", mtu, MinLinkMTU, MaxLinkMTU)
 	}
-	for _, cidr := range []string{localIP, peerIP} {
-		if ip, _, err := net.ParseCIDR(cidr); err == nil && ip.To4() == nil && mtu < 1280 {
+	for _, a := range addrs {
+		if ipFamily(a) == 6 && mtu < 1280 {
 			return fmt.Errorf("mtu %d is below 1280, the least IPv6 needs", mtu)
 		}
 	}
@@ -185,9 +218,9 @@ func SaveLinkAttributes(namespace string, links []types.LinkSpec, nodes []types.
 			}
 			continue
 		}
-		if _, err := DB.Exec(`INSERT OR REPLACE INTO link_attributes (cluster_id, namespace, node, intf, peer_node, peer_intf, delay, jitter, loss, bandwidth, mtu)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			clusterID, namespace, node, l.LocalIntf, peer, l.PeerIntf, a.Delay, a.Jitter, a.Loss, a.Bandwidth, a.MTU); err != nil {
+		if _, err := DB.Exec(`INSERT OR REPLACE INTO link_attributes (cluster_id, namespace, node, intf, peer_node, peer_intf, delay, jitter, loss, bandwidth, mtu, local_addresses, peer_addresses)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			clusterID, namespace, node, l.LocalIntf, peer, l.PeerIntf, a.Delay, a.Jitter, a.Loss, a.Bandwidth, a.MTU, encodeAddrs(a.LocalAddrs), encodeAddrs(a.PeerAddrs)); err != nil {
 			return fmt.Errorf("error saving link attributes for %s:%s: %w", node, l.LocalIntf, err)
 		}
 	}
@@ -195,7 +228,8 @@ func SaveLinkAttributes(namespace string, links []types.LinkSpec, nodes []types.
 }
 
 // LoadLinkAttributes returns the declared attributes keyed by "pod/intf" for
-// both ends of every link, so a lookup works whichever end a reader has.
+// both ends of every link, each seen from that end, so a lookup works
+// whichever end a reader has.
 func LoadLinkAttributes(namespace string) (map[string]LinkAttrs, error) {
 	out := map[string]LinkAttrs{}
 	if DB == nil {
@@ -205,20 +239,21 @@ func LoadLinkAttributes(namespace string) (map[string]LinkAttrs, error) {
 	if err != nil {
 		return nil, err
 	}
-	rows, err := DB.Query(`SELECT node, intf, peer_node, peer_intf, delay, jitter, loss, bandwidth, mtu FROM link_attributes WHERE cluster_id = ? AND namespace = ?`, clusterID, namespace)
+	rows, err := DB.Query(`SELECT node, intf, peer_node, peer_intf, delay, jitter, loss, bandwidth, mtu, local_addresses, peer_addresses FROM link_attributes WHERE cluster_id = ? AND namespace = ?`, clusterID, namespace)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var node, intf, peer, peerIntf string
+		var node, intf, peer, peerIntf, localAddrs, peerAddrs string
 		var a LinkAttrs
-		if err := rows.Scan(&node, &intf, &peer, &peerIntf, &a.Delay, &a.Jitter, &a.Loss, &a.Bandwidth, &a.MTU); err != nil {
+		if err := rows.Scan(&node, &intf, &peer, &peerIntf, &a.Delay, &a.Jitter, &a.Loss, &a.Bandwidth, &a.MTU, &localAddrs, &peerAddrs); err != nil {
 			return nil, err
 		}
+		a.LocalAddrs, a.PeerAddrs = decodeAddrs(localAddrs), decodeAddrs(peerAddrs)
 		out[node+"/"+intf] = a
 		if peer != externalNodeName {
-			out[peer+"/"+peerIntf] = a
+			out[peer+"/"+peerIntf] = a.swapped()
 		}
 	}
 	return out, rows.Err()
@@ -277,16 +312,21 @@ func DeleteNamespaceLinkAttributes(namespace string) error {
 }
 
 // FillLinkAttributes copies the declared attributes onto a link read back
-// from the cluster, looked up by either of its ends.
+// from the cluster (one address per end, Meshnet's), looked up by either of
+// its ends.
 func FillLinkAttributes(link *types.LinkSpec, podName, peerPod string, attrs map[string]LinkAttrs) {
 	a, ok := attrs[podName+"/"+link.LocalIntf]
 	if !ok && peerPod != externalNodeName {
-		a, ok = attrs[peerPod+"/"+link.PeerIntf]
+		if a, ok = attrs[peerPod+"/"+link.PeerIntf]; ok {
+			a = a.swapped()
+		}
 	}
 	if !ok {
 		return
 	}
 	link.Delay, link.Jitter, link.Loss, link.Bandwidth, link.MTU = a.Delay, a.Jitter, a.Loss, a.Bandwidth, a.MTU
+	link.LocalIP = append(append(types.Addrs{}, link.LocalIP...), a.LocalAddrs...)
+	link.PeerIP = append(append(types.Addrs{}, link.PeerIP...), a.PeerAddrs...)
 }
 
 // SetLinkMTU records the MTU asked for a running link through the links

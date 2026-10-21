@@ -842,6 +842,11 @@ definitions:
         example: eth1
         type: string
       localIp:
+        description: |-
+          The addresses of each end: one string, or an array when the interface
+          carries several (dual stack, a second IPv4). The first is wired with
+          the link by Meshnet, the rest are set by the platform after wiring and
+          on every recreation; the two ends share at least one family.
         example: 10.0.0.1/24
         type: string
       loss:
@@ -1753,6 +1758,10 @@ definitions:
     type: object
   types.PodInterfaceEntry:
     properties:
+      addresses:
+        description: Every global address of the interface, both families, comma separated.
+        example: 10.0.0.1/24,fd00::1/64
+        type: string
       interface:
         example: eth1
         type: string

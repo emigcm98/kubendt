@@ -16,7 +16,7 @@ func TestL3BaseCommands(t *testing.T) {
 		{
 			"SetIP",
 			l3.SetIP("eth0", "10.0.0.1/24"),
-			[][]string{{"ip", "addr", "add", "10.0.0.1/24", "dev", "eth0"}},
+			[][]string{{"ip", "addr", "replace", "10.0.0.1/24", "dev", "eth0"}},
 		},
 		{
 			"ReplaceIP",
@@ -29,7 +29,7 @@ func TestL3BaseCommands(t *testing.T) {
 		{
 			"RemoveIP",
 			l3.RemoveIP("eth0", "10.0.0.1/24"),
-			[][]string{{"ip", "addr", "del", "10.0.0.1/24", "dev", "eth0"}},
+			[][]string{{"sh", "-c", "! ip -o addr show dev eth0 | grep -qF ' 10.0.0.1/24 ' || ip addr del 10.0.0.1/24 dev eth0"}},
 		},
 		{
 			"SetDefaultRoute",
