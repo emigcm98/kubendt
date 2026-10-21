@@ -106,6 +106,7 @@
   /* Radii */
   --radius-sm: 6px;
   --radius-md: 8px;
+  --font-mono: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
   --radius-lg: 12px;
   --radius-pill: 999px;
 
@@ -125,7 +126,7 @@ body {
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-family: var(--font-mono);
 }
 
 /* Shared inline icon: SVG that scales with the surrounding text and inherits

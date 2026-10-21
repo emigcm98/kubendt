@@ -34,20 +34,20 @@ Network segments:
 
 | Segment | Subnet | Purpose |
 | --- | --- | --- |
-| LAN 0 | `10.0.0.0/24` | `host-0` (`.10`); `router-0 eth2` (`.1`) is the gateway |
+| LAN 0 | `10.0.0.0/24` and `fd00:a::/64` | `host-0` (`.10`, `::10`); `router-0 eth2` (`.1`, `::1`) is the gateway for both families |
 | LAN 1 | `10.0.1.0/24` | `host-1` (`.10`); `router-0 eth3` (`.1`) is the gateway |
-| Transit | `10.0.10.0/30` | Point-to-point link between `router-0 eth1` (`.1`) and `router-1 eth1` (`.2`) |
+| Transit | `10.0.10.0/30` and `fd00:10::/64` | Point-to-point link between `router-0 eth1` (`.1`, `::1`) and `router-1 eth1` (`.2`, `::2`) |
 | LAN 2 | `10.0.2.0/24` | `host-2` (`.10`); `router-1 eth2` (`.1`) is the gateway |
 | LAN 3 | `10.0.3.0/24` | `host-3` (`.10`); `router-1 eth3` (`.1`) is the gateway |
 | Web LAN | `10.0.4.0/24` | `web-server` (`.10`); `router-1 eth4` (`.1`) is the gateway |
 | External uplink | lab-specific | `router-0 eth4` on the **host's external network** (labeled "External Network" in the topology, see Notable Characteristics) |
 
-`router-0` acts as the edge router: it holds the SNAT rule on `eth0`, the pod's Kubernetes interface, installs a static route toward `10.0.4.0/24` via `router-1`, and forwards TCP port 80 of its external uplink to `web-server`. Both routers run OSPF on area 0.
+`router-0` acts as the edge router: it holds the SNAT rule on `eth0`, the pod's Kubernetes interface, installs a static route toward `10.0.4.0/24` via `router-1`, and forwards TCP port 80 of its external uplink to `web-server`. Both routers run OSPF on area 0. LAN 0 and the transit link are dual stack: `host-0` has an IPv6 default route through `router-0`, and `router-1` reaches `fd00:a::/64` through a static IPv6 route (`protocols static route6`) back over the transit link, so `ping fd00:10::2` from `host-0` crosses both routers over IPv6.
 
 ## Files In This Folder
 
 - `topology-network-test-vyos.json`: network inventory and links
-- `network_conf.json`: post-deploy actions (default routes and DNS on the hosts, external IP and DNAT on `router-0 eth4`, SNAT on `router-0 eth0`, static route, OSPF configuration)
+- `network_conf.json`: post-deploy actions (default routes of both families and DNS on the hosts, external IP and DNAT on `router-0 eth4`, SNAT on `router-0 eth0`, static routes including the IPv6 one on `router-1`, OSPF configuration)
 - `files/`: ready-to-use content for the file that must exist in the Namespace File Manager before importing the topology
 
 The `files/` directory has this structure:
@@ -165,6 +165,14 @@ Go to the Namespace File Manager for that namespace.
   ```
 
   Expected: the HTML content of the mounted `index.html`.
+
+- From `host-0` to `router-1` over IPv6, across both routers (the transit link is dual stack and `router-1` holds a static `route6` back to LAN 0):
+
+  ```bash
+  ping -c 3 fd00:10::2
+  ```
+
+  On `router-1`, `show ipv6 route` lists `fd00:a::/64` as a static route via `fd00:10::1`.
 
 ### 9. Validate internet access (requires internet access from the cluster network)
 

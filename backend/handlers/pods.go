@@ -156,6 +156,19 @@ func RestartPod(c *gin.Context) {
 	}
 	waitDur := time.Since(waitAt)
 	podRestartDur := time.Since(startedAt)
+	mtuAt := time.Now()
+
+	// The pod and the ends its neighbours face came back at the kernel's
+	// defaults and with one address per end: the pass writes the platform
+	// MTU and the declared extra addresses before the replay, so a replayed
+	// route or address action finds them in place.
+	mtuPass, mtuErr := helpers.ApplyPlatformMTU(namespace, nil, nil)
+	if mtuErr != nil {
+		log.Printf("❌ MTU pass after restarting %s/%s: %v", namespace, podName, mtuErr)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": mtuErr.Error()})
+		return
+	}
+	mtuDur := time.Since(mtuAt)
 	replayAt := time.Now()
 
 	replayStats, replayErr := helpers.ReplayDriverOperationsForPodWithStats(namespace, podName)
@@ -174,17 +187,6 @@ func RestartPod(c *gin.Context) {
 	peerReplayAt := time.Now()
 	peerStats := helpers.ReapplyPeerInterfaceState(namespace, []string{podName})
 	peerReplayDur := time.Since(peerReplayAt)
-	mtuAt := time.Now()
-
-	// The pod and the ends its neighbours face came back at the kernel's
-	// defaults; the pass writes the platform MTU on what differs.
-	mtuPass, mtuErr := helpers.ApplyPlatformMTU(namespace, nil, nil)
-	if mtuErr != nil {
-		log.Printf("❌ MTU pass after restarting %s/%s: %v", namespace, podName, mtuErr)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": mtuErr.Error()})
-		return
-	}
-	mtuDur := time.Since(mtuAt)
 
 	nudgePodAndTopology("soft", podName)
 

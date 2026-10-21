@@ -141,17 +141,21 @@ func TraceMethodError(dest, method string, metrics bool) error {
 // is the default. TCP needs a different binary, because the container's
 // traceroute is BusyBox and BusyBox has no TCP mode, so TCP goes through
 // tcptraceroute (SYN probes to port 80). ICMP and UDP stay on BusyBox
-// traceroute, with -6 toward an IPv6 address.
+// traceroute, with -6 toward an IPv6 address. Over IPv6 the ICMP method
+// sends UDP probes: BusyBox only matches a UDP probe inside an ICMPv6 Time
+// Exceeded, so with echo probes every router on the way reads as a timeout
+// and only the destination answers.
 func BuildTraceCommand(dest, method string) []string {
 	if method == "tcp" {
 		return []string{"tcptraceroute", "-n", "-q", "1", "-w", "2", "-m", "30", dest, "80"}
 	}
+	v6 := capabilities.IsIPv6(dest)
 	cmd := []string{"traceroute"}
-	if capabilities.IsIPv6(dest) {
+	if v6 {
 		cmd = append(cmd, "-6")
 	}
 	cmd = append(cmd, "-n", "-q", "1", "-m", "30", "-w", "2")
-	if method == "icmp" {
+	if method == "icmp" && !v6 {
 		cmd = append(cmd, "-I")
 	}
 	// udp is the BusyBox traceroute default, no extra flag

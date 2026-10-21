@@ -1,0 +1,157 @@
+{
+  "nodes": [
+    {
+      "name": "laptop",
+      "image": "alpine:3.24.2",
+      "type": "host",
+      "replicas": 2,
+      "commands": [
+        "sh",
+        "-c",
+        "apk update && apk add iproute2 && sleep infinity"
+      ]
+    },
+    {
+      "name": "sensor",
+      "image": "alpine:3.24.2",
+      "type": "host",
+      "commands": [
+        "sh",
+        "-c",
+        "apk update && apk add iproute2 && sleep infinity"
+      ]
+    },
+    {
+      "name": "web",
+      "image": "nginx:1.31.6-alpine",
+      "type": "host",
+      "mounts": [
+        {
+          "file": "web/index.html",
+          "mountTo": "/usr/share/nginx/html/index.html"
+        }
+      ]
+    },
+    {
+      "name": "office-router",
+      "image": "quay.io/frrouting/frr:10.7.1",
+      "type": "router",
+      "driver": "FRRRouterDriver",
+      "commands": [
+        "sh",
+        "-c",
+        "sed -i 's/^ospfd=no/ospfd=yes/' /etc/frr/daemons && touch /etc/frr/frr.conf /etc/frr/vtysh.conf && chown frr:frr /etc/frr/frr.conf /etc/frr/vtysh.conf && exec /sbin/tini -- /usr/lib/frr/docker-start"
+      ]
+    },
+    {
+      "name": "lab-router",
+      "image": "quay.io/frrouting/frr:10.7.1",
+      "type": "router",
+      "driver": "FRRRouterDriver",
+      "commands": [
+        "sh",
+        "-c",
+        "sed -i 's/^ospfd=no/ospfd=yes/' /etc/frr/daemons && touch /etc/frr/frr.conf /etc/frr/vtysh.conf && chown frr:frr /etc/frr/frr.conf /etc/frr/vtysh.conf && exec /sbin/tini -- /usr/lib/frr/docker-start"
+      ]
+    },
+    {
+      "name": "office-sw",
+      "image": "alpine:3.24.2",
+      "type": "switch",
+      "commands": [
+        "sh",
+        "-c",
+        "apk update && apk add iproute2 && sleep infinity"
+      ]
+    },
+    {
+      "name": "lab-sw",
+      "image": "alpine:3.24.2",
+      "type": "switch",
+      "commands": [
+        "sh",
+        "-c",
+        "apk update && apk add iproute2 && sleep infinity"
+      ]
+    }
+  ],
+  "links": [
+    {
+      "node": "laptop-0",
+      "localIntf": "eth1",
+      "peerNode": "office-sw",
+      "peerIntf": "eth1",
+      "localIp": [
+        "192.168.10.11/24",
+        "fd00:10::11/64"
+      ],
+      "peerIp": ""
+    },
+    {
+      "node": "laptop-1",
+      "localIntf": "eth1",
+      "peerNode": "office-sw",
+      "peerIntf": "eth2",
+      "localIp": [
+        "192.168.10.12/24",
+        "fd00:10::12/64"
+      ],
+      "peerIp": ""
+    },
+    {
+      "node": "office-router",
+      "localIntf": "eth1",
+      "peerNode": "office-sw",
+      "peerIntf": "eth3",
+      "localIp": [
+        "192.168.10.1/24",
+        "fd00:10::1/64"
+      ],
+      "peerIp": ""
+    },
+    {
+      "node": "office-router",
+      "localIntf": "eth2",
+      "peerNode": "lab-router",
+      "peerIntf": "eth2",
+      "localIp": [
+        "10.0.0.1/30",
+        "fd00:1::1/64"
+      ],
+      "peerIp": [
+        "10.0.0.2/30",
+        "fd00:1::2/64"
+      ]
+    },
+    {
+      "node": "lab-router",
+      "localIntf": "eth1",
+      "peerNode": "lab-sw",
+      "peerIntf": "eth3",
+      "localIp": [
+        "192.168.20.1/24",
+        "fd00:20::1/64"
+      ],
+      "peerIp": ""
+    },
+    {
+      "node": "web",
+      "localIntf": "eth1",
+      "peerNode": "lab-sw",
+      "peerIntf": "eth1",
+      "localIp": [
+        "192.168.20.10/24",
+        "fd00:20::10/64"
+      ],
+      "peerIp": ""
+    },
+    {
+      "node": "sensor",
+      "localIntf": "eth1",
+      "peerNode": "lab-sw",
+      "peerIntf": "eth2",
+      "localIp": "fd00:20::50/64",
+      "peerIp": ""
+    }
+  ]
+}

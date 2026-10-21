@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""End-to-end regression over the six shipped examples, following their READMEs.
+"""End-to-end regression over the seven shipped examples, following their READMEs.
 
 Each example is deployed into the namespace its README uses, configured, checked
 (pings, OSPF adjacencies, DNS, HTTP, 5G registration, mounts), restarted through the
@@ -7,7 +7,7 @@ API to exercise replay, and torn down. Results go to results/regression/<stamp>/
 with one row per check. It is the gate before tagging a release and it needs a
 cluster, so it is not part of CI.
 
-  python3 regression.py            # all six
+  python3 regression.py            # all seven
   python3 regression.py 2 3        # a subset
   KEEP=5 ...                       # leave example 5 deployed
   SKIP_RAW=1 ...                   # skip the raw kubectl delete check in example 3
@@ -315,6 +315,7 @@ def ex6():
         ok, det, w = retry(vyos_op(ex.ns, "router-0", "show ip ospf neighbor", "Full"), 240); ex.check("router-0 OSPF Full with router-1", ok, det, w)
         for ip in ("10.0.1.10", "10.0.2.10", "10.0.4.10"):
             ok, det, w = retry(ping(ex.ns, "host-0", ip), 90); ex.check(f"host-0 ping {ip}", ok, det, w)
+        ok, det, w = retry(ping(ex.ns, "host-0", "fd00:10::2"), 90); ex.check("host-0 ping fd00:10::2 over IPv6 (router-1 route6 back through router-0)", ok, det, w)
         ok, det, w = retry(contains(ex.ns, "host-0", "wget -qO- http://10.0.4.10 2>&1", "<"), 60); ex.check("host-0 wget web-server (mounted index.html)", ok, det, w)
         if restart(ex, "router-1"):
             ok, det, w = retry(ping(ex.ns, "host-0", "10.0.2.10"), 300); ex.check("host-0 ping 10.0.2.10 after router-1 restart (VyOS replay)", ok, det, w)
@@ -322,7 +323,31 @@ def ex6():
     teardown(ex); return ex
 
 
-ALL = {"1": ex1, "2": ex2, "3": ex3, "4": ex4, "5": ex5, "6": ex6}
+def ex7():
+    d = f"{EX}/7-test-dual-stack"; ex = Example("7-test-dual-stack", "dual-stack"); setup(ex)
+    upload_dir(ex, f"{d}/files")
+    if deploy(ex, f"{d}/topology-network-test-dual-stack.json"):
+        configure(ex, f"{d}/network_conf.json")
+        for pod, addr in (("laptop-0", "192.168.10.11/24"), ("laptop-0", "fd00:10::11/64"), ("web-0", "fd00:20::10/64"), ("sensor-0", "fd00:20::50/64")):
+            ok, det, w = retry(contains(ex.ns, pod, "ip -o addr show dev eth1", addr), 30); ex.check(f"{pod} eth1 carries {addr}", ok, det, w)
+        rc, out = kexec(ex.ns, "sensor-0", "ip -4 -o addr show dev eth1"); ex.check("sensor-0 is IPv6 only", rc == 0 and out.strip() == "", out)
+        ok, det, w = retry(contains(ex.ns, "office-router-0", 'vtysh -c "show ip ospf neighbor"', "Full"), 120); ex.check("office-router OSPF Full with lab-router", ok, det, w)
+        ok, det, w = retry(ping(ex.ns, "laptop-0", "192.168.20.10"), 60); ex.check("laptop-0 ping web over IPv4 (OSPF)", ok, det, w)
+        for ip in ("fd00:20::10", "fd00:20::50"):
+            ok, det, w = retry(ping(ex.ns, "laptop-0", ip), 60); ex.check(f"laptop-0 ping {ip} over IPv6 (static routes)", ok, det, w)
+        ok, det, w = retry(contains(ex.ns, "sensor-0", "wget -qO- http://[fd00:20::10] 2>&1", "dual stack"), 60); ex.check("sensor-0 wget web over IPv6 (mounted index.html)", ok, det, w)
+        st, r = api("GET", f"/trace/run/{ex.ns}/laptop-0?dest=fd00:20::50&method=icmp", timeout=120)
+        hops = [(h.get("ip"), h.get("kind"), h.get("node")) for h in (r.get("hops") or [])] if isinstance(r, dict) else []
+        ok = st == 200 and r.get("outcome") == "delivered" and [h[2] for h in hops] == ["office-router-0", "lab-router-0", "sensor-0"]
+        ex.check("laptop-0 traceroute to sensor over IPv6 resolves every hop", ok, hops if st == 200 else r)
+        iperf_check(ex, "laptop-0 iperf3 to web over IPv6", f"/iperf/run/{ex.ns}/laptop-0?dest=fd00:20::10&duration=3", server_pod="web-0")
+        if restart(ex, "lab-router-0"):
+            ok, det, w = retry(ping(ex.ns, "laptop-0", "fd00:20::50"), 120); ex.check("laptop-0 ping sensor over IPv6 after lab-router restart (replay)", ok, det, w)
+            ok, det, w = retry(contains(ex.ns, "office-router-0", 'vtysh -c "show ip ospf neighbor"', "Full"), 150); ex.check("office-router OSPF Full again after lab-router restart", ok, det, w)
+    teardown(ex); return ex
+
+
+ALL = {"1": ex1, "2": ex2, "3": ex3, "4": ex4, "5": ex5, "6": ex6, "7": ex7}
 
 
 def main():

@@ -1150,19 +1150,22 @@ const InnerGraph = ({
             fontSize: `${NODE_SIZE / 5}px`,
           }}
         >
+          <div className="tooltip-title">
+            {hoveredInfo.label}
+            {hoveredInfo.guestInterface && hoveredInfo.guestInterface !== hoveredInfo.label && (
+              <span className="tooltip-guest">{hoveredInfo.guestInterface}</span>
+            )}
+          </div>
           {tooltipLoading ? (
-            <div>Loading...</div>
+            <div className="tooltip-muted">…</div>
           ) : (
             <>
-              {hoveredInfo.guestInterface && (
-                <div style={{ opacity: 0.75, fontStyle: 'italic' }}>
-                  {hoveredInfo.guestInterface}
-                </div>
-              )}
               {hoveredInfo.addresses?.map((addr) => (
-                <div key={addr}>{addr}</div>
+                <div className="tooltip-addr" key={addr}>
+                  {addr}
+                </div>
               ))}
-              <div>{hoveredInfo.mac || 'MAC unknown'}</div>
+              <div className="tooltip-muted">{hoveredInfo.mac || 'MAC unknown'}</div>
             </>
           )}
         </div>

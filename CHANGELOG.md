@@ -14,15 +14,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - VyOS nodes take IPv6 too: the guest boots with every address of its links in both families, a static or default route with a v6 next hop goes to `protocols static route6`, and the node panel reports the guest's `ipv6`.
 - A link end takes several addresses: `localIp` and `peerIp` accept an array (dual stack, a second IPv4), the first is wired with the link and the rest are set by the platform after every wiring, on a VyOS guest at boot. `GET /network/get-network` echoes the array, the interface listing returns every address as `addresses`, and the link, node and interface panels list them.
 - The trace and throughput tools take IPv6 targets: `traceroute -6` and `mtr -6` by the address family, the hop index covers every address of every pod, and iperf3 needs nothing. TCP traceroute stays IPv4, tcptraceroute has no IPv6. When a node is picked as the target, the panel lists every address of the node to choose from.
+- Example 7, dual stack: two FRR routers with OSPF for IPv4 and static routes for IPv6, dual stack laptops and web server, an IPv6-only sensor, and the tools over IPv6; example 6 gets IPv6 on two of its links and a VyOS `route6`. Both are in the regression.
 
 ### Changed
 
+- The interface hover on the graph wears the panels' style, with the interface name as its title, the addresses in monospace and the MAC dimmed.
 - `set_ip` uses `ip addr replace`, so repeating it no longer fails with "File exists", and `remove_ip` of an address that is not there is nothing to do rather than an error, so a replay never drops it from the history.
 - The heal pass lists each pod's interfaces once instead of running one exec per link endpoint, and the MTU pass reuses what it read. A VyOS pod receives `KUBENDT_LINK_MTU` in its environment and sets it at boot, and the pass asks a guest before committing, so a deploy or a restart no longer commits in the guest.
 
 ### Fixed
 
 - A `set_ip` after a `remove_ip` of the same address, or the other way round, was skipped as a duplicate because a replay re-stamps the history; the pair now runs and the history keeps only the later one.
+- A restart or a modify puts the declared extra addresses back before replaying the history, so a route through one of them is applied instead of failing and dropping out of the history.
+- A traceroute over IPv6 in ICMP mode showed every router as a timeout: BusyBox traceroute only matches UDP probes inside an ICMPv6 Time Exceeded, so the ICMP method sends UDP probes over IPv6.
 
 ## [1.5.0] - 2026-10-16
 
