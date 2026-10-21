@@ -78,6 +78,7 @@ File storage and the SQLite database are persisted in named Docker volumes (`kub
 - `KUBENDT_COMMIT`: optional build commit metadata.
 - `KUBENDT_BUILD_DATE`: optional build date metadata.
 - `KUBENDT_TOOLBOX_IMAGE`: image of the toolbox, the ephemeral container injected into a pod for capture, traceroute, traffic control and throughput tests (default `nicolaka/netshoot:v0.16`; a slim build is in `deploy/custom_images/toolbox/`). `KUBENDT_CAPTURE_IMAGE` is still read.
+- `KUBENDT_EXEC_TRANSPORT`: the transport of every pod exec, `websocket` by default (what kubectl uses, on by default in the API server since Kubernetes 1.30; a server or a proxy that refuses the upgrade moves the backend to SPDY for good after the first exec, with a line in the log), `spdy` to skip the attempt on a cluster you know is older.
 - `KUBENDT_LINK_MTU`: the MTU the platform sets on every link after wiring, both pod ends and the guest of a VM node (default `1450`, the most a VXLAN link carries on a 1500 underlay). Set it to what your cluster carries, `8950` on a jumbo underlay for instance; a value a worker cannot carry fails the operation naming the link and the worker, while the default is lowered with a warning when it does not fit. VM nodes receive it in their pod environment so the guest boots with it. See the cluster guide.
 
 #### Authentication

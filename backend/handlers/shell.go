@@ -100,7 +100,7 @@ func InteractiveShellWebSocket(c *gin.Context) {
 				TTY:     false,
 			}, scheme.ParameterCodec)
 
-		checkExec, err := remotecommand.NewSPDYExecutor(kubeclient.Config, "POST", checkReq.URL())
+		checkExec, err := kubeclient.NewExecutor("POST", checkReq.URL())
 		if err == nil {
 			checkOut := &strings.Builder{}
 			checkErr := checkExec.StreamWithContext(context.TODO(), remotecommand.StreamOptions{
@@ -140,7 +140,7 @@ func InteractiveShellWebSocket(c *gin.Context) {
 				TTY:     true,
 			}, scheme.ParameterCodec)
 
-		exec, err := remotecommand.NewSPDYExecutor(kubeclient.Config, "POST", req.URL())
+		exec, err := kubeclient.NewExecutor("POST", req.URL())
 		if err != nil {
 			return err
 		}
@@ -169,7 +169,7 @@ func InteractiveShellWebSocket(c *gin.Context) {
 				TTY:       true,
 			}, scheme.ParameterCodec)
 
-		exec, err := remotecommand.NewSPDYExecutor(kubeclient.Config, "POST", req.URL())
+		exec, err := kubeclient.NewExecutor("POST", req.URL())
 		if err != nil {
 			return err
 		}

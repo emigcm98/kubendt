@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - The interface hover on the graph wears the panels' style, with the interface name as its title, the addresses in monospace and the MAC dimmed.
 - `set_ip` uses `ip addr replace`, so repeating it no longer fails with "File exists", and `remove_ip` of an address that is not there is nothing to do rather than an error, so a replay never drops it from the history.
+- Every pod exec goes over WebSocket, as kubectl does, with SPDY as the fallback and `KUBENDT_EXEC_TRANSPORT=spdy` to force it; the Linux actions of a pod in a configure, a replay or a peer replay run as one shell script, one exec per pod instead of one per command, still reported one by one; and the peer replay runs over the neighbours in parallel.
 - The heal pass lists each pod's interfaces once instead of running one exec per link endpoint, and the MTU pass reuses what it read. A VyOS pod receives `KUBENDT_LINK_MTU` in its environment and sets it at boot, and the pass asks a guest before committing, so a deploy or a restart no longer commits in the guest.
 
 ### Fixed

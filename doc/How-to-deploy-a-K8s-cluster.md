@@ -23,7 +23,7 @@ KubeNDT backend reads the kubeconfig mounted from the host, so the active kubect
 ## 2. Common Requirements
 
 - Linux host (or Linux VMs for kubeadm)
-- Kubernetes 1.20+
+- Kubernetes 1.25+ (ephemeral containers, which the toolbox needs); 1.30 or newer recommended, since pod execs go over WebSocket there and an older API server falls back to SPDY, about a third slower per exec
 - kubectl configured and working
 - Docker and Docker Compose (for running KubeNDT services)
 - Git (to clone meshnet-cni)
