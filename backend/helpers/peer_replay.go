@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"sort"
+	"sync"
 
 	"kubendt/executor"
 	"kubendt/kubeclient"
@@ -100,19 +101,33 @@ func ReapplyPeerInterfaceState(namespace string, recreated []string) PeerReplayS
 	}
 	sort.Strings(peers)
 
+	// Each peer is its own exec, so they go in parallel, a bounded number
+	// in flight, as the heal and MTU passes do.
 	qemuPeers := 0
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, 16)
 	for _, peer := range peers {
 		if qemuPods[peer] {
 			qemuPeers++
 			continue
 		}
-		reapplied, failed := reapplyOpsOnIfaces(namespace, peer, ifacesByPeer[peer])
-		if reapplied+failed > 0 {
-			stats.Peers++
-		}
-		stats.Reapplied += reapplied
-		stats.Failed += failed
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(peer string) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			reapplied, failed := reapplyOpsOnIfaces(namespace, peer, ifacesByPeer[peer])
+			mu.Lock()
+			if reapplied+failed > 0 {
+				stats.Peers++
+			}
+			stats.Reapplied += reapplied
+			stats.Failed += failed
+			mu.Unlock()
+		}(peer)
 	}
+	wg.Wait()
 
 	// A guest VM keeps its configuration inside the guest, but the TC
 	// redirect between the recreated pod interface and the guest's tap still

@@ -313,7 +313,7 @@ func GetInterfacesInNamespace(namespace string) (map[string]map[string]interface
 						TTY:     false,
 					}, scheme.ParameterCodec)
 
-				intfExec, err := remotecommand.NewSPDYExecutor(kubeclient.Config, "POST", intfReq.URL())
+				intfExec, err := kubeclient.NewExecutor("POST", intfReq.URL())
 				if err != nil {
 					log.Printf("❌ Executor failed for pod %s: %v", podName, err)
 					<-natCh // drenar canal antes de salir

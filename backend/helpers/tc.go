@@ -98,7 +98,7 @@ func execTC(namespace, podName, container string, args []string, stdin string) (
 			Stderr:    true,
 			TTY:       false,
 		}, scheme.ParameterCodec)
-	exec, err := remotecommand.NewSPDYExecutor(kubeclient.Config, "POST", req.URL())
+	exec, err := kubeclient.NewExecutor("POST", req.URL())
 	if err != nil {
 		return "", "", fmt.Errorf("exec init error: %w", err)
 	}

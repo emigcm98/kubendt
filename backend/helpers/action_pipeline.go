@@ -1,8 +1,10 @@
 package helpers
 
 import (
+	"errors"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 
 	"kubendt/actions"
@@ -85,7 +87,9 @@ type RunOptions struct {
 // RunPlannedActions executes planned actions in order and returns one
 // outcome per action. Consecutive actions that share a batchable executor
 // (a guest commit) and capture no output go as one command, so a run of
-// VyOS actions is one commit. An action stops at its first failing command.
+// VyOS actions is one commit; consecutive kubectl actions go as one shell
+// script, so a configure or a replay is one exec per pod. An action stops
+// at its first failing command.
 func RunPlannedActions(namespace, podName string, plans []PlannedAction, opts RunOptions) ([]ActionOutcome, error) {
 	exec := opts.Exec
 	if exec == nil {
@@ -140,6 +144,45 @@ func RunPlannedActions(namespace, podName string, plans []PlannedAction, opts Ru
 			continue
 		}
 
+		if p.Executor == executor.DefaultExecutorName && !p.Flags.Get {
+			j := i
+			for j < len(plans) {
+				gp := plans[j]
+				if gp.Skip != "" || gp.Err != nil || gp.Executor != p.Executor || gp.Flags.Get {
+					break
+				}
+				j++
+			}
+			var output string
+			execErr := exec(func() error {
+				var err error
+				output, err = p.Exec.ExecCommandAndGet(podName, namespace, executor.NewArgsCommand([]string{"sh", "-c", shellScript(plans[i:j])}))
+				return err
+			})
+			if execErr != nil {
+				if opts.Abort != nil && opts.Abort(execErr) {
+					outcomes[i].Err = execErr
+					return outcomes, execErr
+				}
+				for k := i; k < j; k++ {
+					outcomes[k] = ActionOutcome{Ran: true, Err: execErr}
+					log.Printf("❌ %s on %s/%s: %v", plans[k].Action.Type, namespace, podName, execErr)
+				}
+				i = j
+				continue
+			}
+			results := parseShellScript(output, j-i)
+			for k := i; k < j; k++ {
+				r := results[k-i]
+				outcomes[k] = ActionOutcome{Ran: true, Output: r.Output, Err: r.err()}
+				if r.err() != nil {
+					log.Printf("❌ %s on %s/%s: %v", plans[k].Action.Type, namespace, podName, r.err())
+				}
+			}
+			i = j
+			continue
+		}
+
 		var outputs []string
 		var actionErr error
 		for _, cmd := range executor.CommandsFromLegacyForExecutor(p.Commands, p.Executor) {
@@ -170,4 +213,81 @@ func RunPlannedActions(namespace, podName string, plans []PlannedAction, opts Ru
 		i++
 	}
 	return outcomes, nil
+}
+
+// Consecutive kubectl actions of a pod run as one shell script, one exec
+// instead of one per command (each exec is a round trip to the API server
+// and the kubelet). The commands of an action run in order and stop at the
+// first failure, as they do one by one, and a marker after each action
+// carries its index and exit status so the outcomes come apart again. The
+// pod's sh is part of the baseline every node image has.
+
+const batchMarker = "__kubendt_rc__"
+
+// shellJoin quotes an argv for sh, with the tool runner's shellQuote.
+func shellJoin(argv []string) string {
+	words := make([]string, len(argv))
+	for i, a := range argv {
+		words[i] = shellQuote(a)
+	}
+	return strings.Join(words, " ")
+}
+
+func shellScript(plans []PlannedAction) string {
+	var b strings.Builder
+	for k, p := range plans {
+		cmds := make([]string, 0, len(p.Commands))
+		for _, row := range p.Commands {
+			if len(row) > 0 {
+				cmds = append(cmds, shellJoin(row))
+			}
+		}
+		if len(cmds) == 0 {
+			cmds = []string{"true"}
+		}
+		fmt.Fprintf(&b, "{ %s; } 2>&1; echo \"%s %d $?\"\n", strings.Join(cmds, " && "), batchMarker, k)
+	}
+	return b.String()
+}
+
+// batchResult is what one action of the script produced.
+type batchResult struct {
+	Output string
+	RC     int
+	Seen   bool
+}
+
+func (r batchResult) err() error {
+	switch {
+	case !r.Seen:
+		return errors.New("exec error: the action left no result in the batch")
+	case r.RC == 0:
+		return nil
+	case r.RC == 127:
+		if prog := executor.MissingProgram(r.Output); prog != "" {
+			return fmt.Errorf("'%s' is not in the pod's image: add it to the image or install it from the node's commands (%s)", prog, r.Output)
+		}
+	}
+	return fmt.Errorf("exec error: exit status %d | output: %s", r.RC, r.Output)
+}
+
+// parseShellScript splits the script's output back into one result per
+// action, by the marker lines.
+func parseShellScript(out string, n int) []batchResult {
+	res := make([]batchResult, n)
+	var cur []string
+	for _, line := range strings.Split(out, "\n") {
+		f := strings.Fields(line)
+		if len(f) == 3 && f[0] == batchMarker {
+			k, errK := strconv.Atoi(f[1])
+			rc, errRC := strconv.Atoi(f[2])
+			if errK == nil && errRC == nil && k >= 0 && k < n {
+				res[k] = batchResult{Output: strings.TrimSpace(strings.Join(cur, "\n")), RC: rc, Seen: true}
+				cur = nil
+				continue
+			}
+		}
+		cur = append(cur, line)
+	}
+	return res
 }

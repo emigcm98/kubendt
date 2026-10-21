@@ -146,7 +146,7 @@ func execViaKubectl(podName, namespace string, prefix []string, command []string
 			TTY:     false,
 		}, scheme.ParameterCodec)
 
-	executor, err := remotecommand.NewSPDYExecutor(kubeclient.Config, "POST", req.URL())
+	executor, err := kubeclient.NewExecutor("POST", req.URL())
 	if err != nil {
 		return "", fmt.Errorf("exec init error for executor %q: %w", executorName, err)
 	}
@@ -210,6 +210,15 @@ func missingProgram(command []string, err error, output string) string {
 	return ""
 }
 
+// MissingProgram names the program a shell reported as not found in output
+// ("sh: ip: not found"), "" when the output says nothing of the kind.
+func MissingProgram(output string) string {
+	if m := notFoundRe.FindStringSubmatch(output); m != nil {
+		return m[1]
+	}
+	return ""
+}
+
 func firstLine(s string) string {
 	s = strings.TrimSpace(s)
 	if i := strings.IndexByte(s, '\n'); i >= 0 {
@@ -241,7 +250,7 @@ func ExecAndGet(namespace, pod string, command []string) ([]byte, error) {
 			TTY:     false,
 		}, scheme.ParameterCodec)
 
-	exec, err := remotecommand.NewSPDYExecutor(kubeclient.Config, "POST", req.URL())
+	exec, err := kubeclient.NewExecutor("POST", req.URL())
 	if err != nil {
 		return nil, fmt.Errorf("exec init error: %w", err)
 	}
@@ -278,7 +287,7 @@ func CopyToPod(pod, namespace, localPath, remotePath string) error {
 			TTY:     false,
 		}, scheme.ParameterCodec)
 
-	exec, err := remotecommand.NewSPDYExecutor(kubeclient.Config, "POST", req.URL())
+	exec, err := kubeclient.NewExecutor("POST", req.URL())
 	if err != nil {
 		return fmt.Errorf("exec init error for cp: %w", err)
 	}

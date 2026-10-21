@@ -44,7 +44,7 @@ func ExecInPod(namespace, podName string, command []string) (stdout, stderr stri
 			TTY:     false,
 		}, scheme.ParameterCodec)
 
-	exec, err := remotecommand.NewSPDYExecutor(kubeclient.Config, "POST", req.URL())
+	exec, err := kubeclient.NewExecutor("POST", req.URL())
 	if err != nil {
 		return "", "", fmt.Errorf("exec init error: %w", err)
 	}

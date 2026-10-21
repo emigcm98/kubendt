@@ -153,6 +153,7 @@ func main() {
 	if _, _, err := helpers.PlatformLinkMTU(); err != nil {
 		log.Printf("⚠️ %v, every deploy will fail until it is fixed", err)
 	}
+	log.Printf("Pod exec transport: %s", kubeclient.ExecTransport())
 	log.Printf("KubeNDT backend listening on :%s", port)
 
 	stop := make(chan os.Signal, 1)

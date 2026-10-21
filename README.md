@@ -80,7 +80,7 @@ KubeNDT bundles a small set of third-party SVG icons in its frontend. See [ATTRI
 
 ### Requirements
 
-- **Kubernetes 1.20+** with **Meshnet CNI** plugin installed. You can follow the [Kubernetes Installation Guide](doc/How-to-deploy-a-K8s-cluster.md) for more information.
+- **Kubernetes 1.25+** with **Meshnet CNI** plugin installed (the toolbox is an ephemeral container, GA since 1.25). **1.30 or newer is recommended**: pod execs go over WebSocket there, as kubectl does, and an older API server falls back to SPDY, about a third slower per exec. You can follow the [Kubernetes Installation Guide](doc/How-to-deploy-a-K8s-cluster.md) for more information.
 - A valid kubeconfig with cluster context
 - Docker & Docker Compose (for production deployment)
 - Optional: QEMU support for VM-based node types (requires `/dev/kvm`)

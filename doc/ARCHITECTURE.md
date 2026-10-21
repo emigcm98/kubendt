@@ -17,6 +17,8 @@ KubeNDT maps a topology model into Kubernetes resources:
 3. Driver layer (`backend/drivers` + `backend/capabilities`): translates actions into executor commands.
 4. Kubernetes layer (`backend/kubeclient`): client-go access to resources.
 
+Every command a node runs goes through a pod exec, a round trip to the API server and the kubelet. The transport is WebSocket, what kubectl uses since Kubernetes 1.29 (on by default in the API server from 1.30, GA in 1.31), with SPDY as the fallback when a server or a proxy cannot upgrade, remembered after the first refusal so later execs do not pay the attempt (`KUBENDT_EXEC_TRANSPORT=spdy` skips it); measured on dev, an exec costs about 240 ms over WebSocket against 360 to 480 over SPDY.
+
 ## Authentication
 
 Two middlewares run before any handler:
@@ -40,7 +42,7 @@ Drivers encode node behavior and can combine capability bases:
 
 Every action is declared once, next to its capability interface, in the `actions` registry: type, label, parameters (JSON name, kind, required), the method that builds its commands, and the state it sets or clears on the node with the key that tells two pieces of it apart (an address, a default route per family, a static route by prefix and next hop, the link state of an interface). Dispatch looks the action up, validates the request against the declared parameters, checks that the driver implements the capability and runs it. `GET /drivers` lists the same declarations.
 
-The configure request, the replay after a restart, the peer replay and the link attributes of the topology run actions through one pipeline (`PlanActions`, `RunPlannedActions`): plan every action, then execute in order, merging consecutive actions that share a guest commit into one batch.
+The configure request, the replay after a restart, the peer replay and the link attributes of the topology run actions through one pipeline (`PlanActions`, `RunPlannedActions`): plan every action, then execute in order, merging consecutive actions that share a guest commit into one batch, and consecutive Linux actions of a pod into one shell script with a marker per action, so a configure or a replay is one exec per pod and still reports each action on its own.
 
 Traffic control is not a driver capability. It runs on any pod through the pod's own `tc`, with an ephemeral toolbox container as fallback, so every node can be shaped. It and `custom` are universal actions, registered against any driver with their own executor.
 
