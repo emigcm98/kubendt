@@ -28,6 +28,7 @@ var _ capabilities.NATCapable = (*FRRRouterDriver)(nil)
 var _ capabilities.OSPFCapable = (*FRRRouterDriver)(nil)
 var _ drivers_meta.ReadinessProbeProvider = (*FRRRouterDriver)(nil)
 var _ drivers_meta.ShellProvider = (*FRRRouterDriver)(nil)
+var _ drivers_meta.CapabilityPrecondition = (*FRRRouterDriver)(nil)
 
 // ReadinessProbeCommands makes the pod Ready only when zebra, and every
 // daemon enabled in /etc/frr/daemons, answer on their vty socket. The
@@ -45,6 +46,23 @@ func (FRRRouterDriver) ReadinessProbeCommands() drivers_meta.ReadinessProbeSpec 
 		TimeoutSeconds:      3,
 		FailureThreshold:    30,
 	}
+}
+
+// FRR starts a daemon only when its line in /etc/frr/daemons says yes, and
+// never on the fly, so a capability that needs one is checked on the vty
+// socket before its actions run, with a message that says what to enable.
+var frrCapabilityDaemons = map[string]string{
+	"OSPFCapable": "ospfd",
+}
+
+func (FRRRouterDriver) CapabilityPrecondition(capability string) ([]string, string, bool) {
+	daemon, ok := frrCapabilityDaemons[capability]
+	if !ok {
+		return nil, "", false
+	}
+	return []string{"test", "-S", "/var/run/frr/" + daemon + ".vty"},
+		daemon + " is not running: enable it in /etc/frr/daemons before FRR starts (" + daemon + "=yes), as the examples do from the node commands, and restart the node",
+		true
 }
 
 // ─── L3Capable, routes ───────────────────────────────────────────────────────

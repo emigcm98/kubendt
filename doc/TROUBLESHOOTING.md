@@ -48,6 +48,10 @@ The response says `KUBENDT_LINK_MTU=N does not fit link a:eth1 ↔ b:eth1: worke
 
 The command behind the action needs a program the image does not ship, `iptables` for NAT on a plain Linux router for instance. Add it to the image or install it at startup through the node's `commands` (`apk add iptables` on the FRR image in the examples). Traffic control needs nothing in the image, it falls back to a toolbox container.
 
+## An action fails with "ospfd is not running"
+
+The capability behind the action needs a daemon the FRR image starts only when its line in `/etc/frr/daemons` says `yes`, and the node was started without it (`ospfd=no` is the file's default). FRR does not start daemons on the fly, so the backend checks the daemon's vty socket before the actions of that capability and fails them with this message instead of a vtysh error. Enable it in the node's startup `commands` before FRR starts, as the examples do (`sed -i 's/^ospfd=no/ospfd=yes/' /etc/frr/daemons`), and restart or redeploy the node.
+
 ## Backend changes not reflected during development
 
 - Make sure you are running `go run .` directly and not a stale binary.

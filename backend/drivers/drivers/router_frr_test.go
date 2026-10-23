@@ -33,3 +33,14 @@ func TestFRRRoutesGoThroughStaticd(t *testing.T) {
 		}
 	}
 }
+
+func TestFRRCapabilityPrecondition(t *testing.T) {
+	var d FRRRouterDriver
+	cmd, failure, ok := d.CapabilityPrecondition("OSPFCapable")
+	if !ok || !reflect.DeepEqual(cmd, []string{"test", "-S", "/var/run/frr/ospfd.vty"}) || failure == "" {
+		t.Errorf("OSPF precondition: %v %q %v", cmd, failure, ok)
+	}
+	if _, _, ok := d.CapabilityPrecondition("L3Capable"); ok {
+		t.Errorf("L3 needs no daemon")
+	}
+}

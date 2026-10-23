@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Before the actions of a capability run on an FRR router, the backend checks that the daemon they need is up (`ospfd` for OSPF) and fails them with a message that says what to enable in `/etc/frr/daemons`, instead of a vtysh error; the check rides in the pod's batch, so it costs no exec. A driver declares it with `CapabilityPrecondition`.
+
 ### Changed
 
 - Static and default routes on FRR routers go through staticd (`ip route` and `ipv6 route` in vtysh) instead of the kernel, so they are in the running-config and `redistribute static` picks them up. Setting or removing a default route also drops the pod's own default route through `eth0`, as `ip route replace` did before.
