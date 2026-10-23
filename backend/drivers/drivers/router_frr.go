@@ -2,6 +2,7 @@ package drivers
 
 import (
 	"fmt"
+	"strings"
 
 	"kubendt/capabilities"
 	drivers_meta "kubendt/drivers/meta"
@@ -22,6 +23,7 @@ func NewFRRRouterDriver() *FRRRouterDriver {
 
 var _ capabilities.L2Capable = (*FRRRouterDriver)(nil)
 var _ capabilities.L3Capable = (*FRRRouterDriver)(nil)
+var _ capabilities.DefaultRoute6Remover = (*FRRRouterDriver)(nil)
 var _ capabilities.NATCapable = (*FRRRouterDriver)(nil)
 var _ capabilities.OSPFCapable = (*FRRRouterDriver)(nil)
 var _ drivers_meta.ReadinessProbeProvider = (*FRRRouterDriver)(nil)
@@ -43,6 +45,77 @@ func (FRRRouterDriver) ReadinessProbeCommands() drivers_meta.ReadinessProbeSpec 
 		TimeoutSeconds:      3,
 		FailureThreshold:    30,
 	}
+}
+
+// ─── L3Capable, routes ───────────────────────────────────────────────────────
+// Routes go through staticd rather than `ip route`, so they sit in the
+// running-config and `redistribute static` sees them. Addresses stay on `ip`,
+// zebra takes them as connected. The pod's own default route through eth0
+// (metric 0) would beat a staticd one (metric 20), so it is dropped when a
+// default route is set or removed, as `ip route replace` did implicitly.
+
+func frrRouteLine(prefix, via, dev string) string {
+	words := "ip route"
+	if capabilities.IsIPv6(prefix) {
+		words = "ipv6 route"
+	}
+	line := words + " " + prefix + " " + via
+	if dev != "" {
+		line += " " + dev
+	}
+	return line
+}
+
+// Every static route of the prefix removed, whatever its next hop: `no ip
+// route` needs the next hop, so it is read back from the running-config.
+func frrClearPrefix(prefix string) string {
+	words := "ip route"
+	if capabilities.IsIPv6(prefix) {
+		words = "ipv6 route"
+	}
+	pattern := "^" + strings.ReplaceAll(words+" "+prefix, ".", "\\.") + " "
+	return "vtysh -c 'show running-config' | grep '" + pattern + "' | while read -r l; do vtysh -c 'configure terminal' -c \"no $l\"; done"
+}
+
+// The route set unless it is already there as is, replacing any other next
+// hop for the prefix, so a replay does not blip and a new gateway wins.
+func frrEnsureRoute(prefix, via, dev string) string {
+	line := frrRouteLine(prefix, via, dev)
+	return "{ vtysh -c 'show running-config' | grep -qxF '" + line + "' || { " + frrClearPrefix(prefix) + " && vtysh -c 'configure terminal' -c '" + line + "'; }; }"
+}
+
+func frrDropPodDefault(v6 bool) string {
+	ip := "ip"
+	if v6 {
+		ip = "ip -6"
+	}
+	return "{ ! " + ip + " -o route show default dev eth0 | grep -q . || " + ip + " route del default dev eth0; }"
+}
+
+func (FRRRouterDriver) SetDefaultRoute(gateway string) [][]string {
+	v6 := capabilities.IsIPv6(gateway)
+	prefix := "0.0.0.0/0"
+	if v6 {
+		prefix = "::/0"
+	}
+	return [][]string{{"sh", "-c", frrDropPodDefault(v6) + " && " + frrEnsureRoute(prefix, gateway, "")}}
+}
+
+func (FRRRouterDriver) RemoveDefaultRoute() [][]string {
+	return [][]string{{"sh", "-c", frrDropPodDefault(false) + " && " + frrClearPrefix("0.0.0.0/0")}}
+}
+
+func (FRRRouterDriver) RemoveDefaultRoute6() [][]string {
+	return [][]string{{"sh", "-c", frrDropPodDefault(true) + " && " + frrClearPrefix("::/0")}}
+}
+
+func (FRRRouterDriver) AddStaticRoute(dstCIDR, via, dev string) [][]string {
+	return [][]string{{"sh", "-c", frrEnsureRoute(dstCIDR, via, dev)}}
+}
+
+// Removing a route that is not there is a notice from staticd, not an error.
+func (FRRRouterDriver) RemoveStaticRoute(dstCIDR, via, dev string) [][]string {
+	return [][]string{{"vtysh", "-c", "configure terminal", "-c", "no " + frrRouteLine(dstCIDR, via, dev)}}
 }
 
 // ─── OSPFCapable ─────────────────────────────────────────────────────────────
