@@ -75,3 +75,24 @@ func TestVyOSRIPFamilies(t *testing.T) {
 		}
 	}
 }
+
+func TestVyOSOSPF6(t *testing.T) {
+	var d VyOSRouterDriver
+	cases := []struct {
+		name string
+		got  [][]string
+		want [][]string
+	}{
+		{"router id", d.OSPF6SetRouterID("10.0.0.1"), [][]string{{"set protocols ospfv3 parameters router-id 10.0.0.1"}}},
+		{"interface area", d.OSPF6AddInterface("eth2", "0"), [][]string{{"set protocols ospfv3 interface eth2 area 0"}}},
+		{"remove interface", d.OSPF6RemoveInterface("eth2", "0"), [][]string{{"delete protocols ospfv3 interface eth2 area"}}},
+		{"passive", d.OSPF6PassiveInterface("eth1"), [][]string{{"set protocols ospfv3 interface eth1 passive"}}},
+		{"redistribute", d.OSPF6Redistribute("ripng"), [][]string{{"set protocols ospfv3 redistribute ripng"}}},
+		{"originate", d.OSPF6OriginateDefault(), [][]string{{"set protocols ospfv3 default-information originate always"}}},
+	}
+	for _, c := range cases {
+		if !reflect.DeepEqual(c.got, c.want) {
+			t.Errorf("%s:\n got  %v\n want %v", c.name, c.got, c.want)
+		}
+	}
+}

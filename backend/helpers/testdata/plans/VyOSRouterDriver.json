@@ -80,6 +80,66 @@
       ["delete interfaces ethernet eth1 disable"]
     ]
   },
+  "ospf6_add_interface": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["set protocols ospfv3 interface eth1 area 0"]
+    ]
+  },
+  "ospf6_originate_default": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["set protocols ospfv3 default-information originate always"]
+    ]
+  },
+  "ospf6_passive_interface": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["set protocols ospfv3 interface eth1 passive"]
+    ]
+  },
+  "ospf6_redistribute": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["set protocols ospfv3 redistribute ripng"]
+    ]
+  },
+  "ospf6_remove_interface": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["delete protocols ospfv3 interface eth1 area"]
+    ]
+  },
+  "ospf6_remove_originate_default": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["delete protocols ospfv3 default-information originate"]
+    ]
+  },
+  "ospf6_remove_passive_interface": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["delete protocols ospfv3 interface eth1 passive"]
+    ]
+  },
+  "ospf6_remove_redistribute": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["delete protocols ospfv3 redistribute connected"]
+    ]
+  },
+  "ospf6_remove_router_id": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["delete protocols ospfv3 parameters router-id"]
+    ]
+  },
+  "ospf6_set_router_id": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["set protocols ospfv3 parameters router-id 10.255.0.1"]
+    ]
+  },
   "ospf_add_network": {
     "executor": "vyos_api_apply",
     "commands": [

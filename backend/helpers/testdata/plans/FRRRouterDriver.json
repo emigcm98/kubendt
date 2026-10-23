@@ -74,6 +74,66 @@
       ["ip","link","set","eth1","up"]
     ]
   },
+  "ospf6_add_interface": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","interface eth1","-c","ipv6 ospf6 area 0"]
+    ]
+  },
+  "ospf6_originate_default": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router ospf6","-c","default-information originate always"]
+    ]
+  },
+  "ospf6_passive_interface": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","interface eth1","-c","ipv6 ospf6 passive"]
+    ]
+  },
+  "ospf6_redistribute": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router ospf6","-c","redistribute ripng"]
+    ]
+  },
+  "ospf6_remove_interface": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","interface eth1","-c","no ipv6 ospf6 area 0"]
+    ]
+  },
+  "ospf6_remove_originate_default": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router ospf6","-c","no default-information originate"]
+    ]
+  },
+  "ospf6_remove_passive_interface": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","interface eth1","-c","no ipv6 ospf6 passive"]
+    ]
+  },
+  "ospf6_remove_redistribute": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router ospf6","-c","no redistribute connected"]
+    ]
+  },
+  "ospf6_remove_router_id": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router ospf6","-c","no ospf6 router-id"]
+    ]
+  },
+  "ospf6_set_router_id": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router ospf6","-c","ospf6 router-id 10.255.0.1"]
+    ]
+  },
   "ospf_add_network": {
     "executor": "kubectl",
     "commands": [

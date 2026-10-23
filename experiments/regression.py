@@ -339,10 +339,12 @@ def ex7():
         for pod, addr in (("laptop-0", "192.168.10.11/24"), ("laptop-0", "fd00:10::11/64"), ("web-0", "fd00:20::10/64"), ("sensor-0", "fd00:20::50/64")):
             ok, det, w = retry(contains(ex.ns, pod, "ip -o addr show dev eth1", addr), 30); ex.check(f"{pod} eth1 carries {addr}", ok, det, w)
         rc, out = kexec(ex.ns, "sensor-0", "ip -4 -o addr show dev eth1"); ex.check("sensor-0 is IPv6 only", rc == 0 and out.strip() == "", out)
-        ok, det, w = retry(contains(ex.ns, "office-router-0", 'vtysh -c "show ip ospf neighbor"', "Full"), 120); ex.check("office-router OSPF Full with lab-router", ok, det, w)
-        ok, det, w = retry(ping(ex.ns, "laptop-0", "192.168.20.10"), 60); ex.check("laptop-0 ping web over IPv4 (OSPF)", ok, det, w)
+        ok, det, w = retry(contains(ex.ns, "office-router-0", 'vtysh -c "show ip ospf neighbor"', "Full"), 120); ex.check("office-router OSPFv2 Full with lab-router", ok, det, w)
+        ok, det, w = retry(contains(ex.ns, "office-router-0", 'vtysh -c "show ipv6 ospf6 neighbor"', "Full"), 120); ex.check("office-router OSPFv3 Full with lab-router", ok, det, w)
+        ok, det, w = retry(contains(ex.ns, "office-router-0", 'vtysh -c "show ipv6 route fd00:20::/64"', "ospf6"), 60); ex.check("office-router learns the lab prefix by OSPFv3", ok, det, w)
+        ok, det, w = retry(ping(ex.ns, "laptop-0", "192.168.20.10"), 60); ex.check("laptop-0 ping web over IPv4 (OSPFv2)", ok, det, w)
         for ip in ("fd00:20::10", "fd00:20::50"):
-            ok, det, w = retry(ping(ex.ns, "laptop-0", ip), 60); ex.check(f"laptop-0 ping {ip} over IPv6 (static routes)", ok, det, w)
+            ok, det, w = retry(ping(ex.ns, "laptop-0", ip), 60); ex.check(f"laptop-0 ping {ip} over IPv6 (OSPFv3)", ok, det, w)
         ok, det, w = retry(contains(ex.ns, "sensor-0", "wget -qO- http://[fd00:20::10] 2>&1", "dual stack"), 60); ex.check("sensor-0 wget web over IPv6 (mounted index.html)", ok, det, w)
         st, r = api("GET", f"/trace/run/{ex.ns}/laptop-0?dest=fd00:20::50&method=icmp", timeout=120)
         hops = [(h.get("ip"), h.get("kind"), h.get("node")) for h in (r.get("hops") or [])] if isinstance(r, dict) else []
@@ -351,7 +353,8 @@ def ex7():
         iperf_check(ex, "laptop-0 iperf3 to web over IPv6", f"/iperf/run/{ex.ns}/laptop-0?dest=fd00:20::10&duration=3", server_pod="web-0")
         if restart(ex, "lab-router-0"):
             ok, det, w = retry(ping(ex.ns, "laptop-0", "fd00:20::50"), 120); ex.check("laptop-0 ping sensor over IPv6 after lab-router restart (replay)", ok, det, w)
-            ok, det, w = retry(contains(ex.ns, "office-router-0", 'vtysh -c "show ip ospf neighbor"', "Full"), 150); ex.check("office-router OSPF Full again after lab-router restart", ok, det, w)
+            ok, det, w = retry(contains(ex.ns, "office-router-0", 'vtysh -c "show ip ospf neighbor"', "Full"), 150); ex.check("office-router OSPFv2 Full again after lab-router restart", ok, det, w)
+            ok, det, w = retry(contains(ex.ns, "office-router-0", 'vtysh -c "show ipv6 ospf6 neighbor"', "Full"), 150); ex.check("office-router OSPFv3 Full again after lab-router restart", ok, det, w)
     teardown(ex); return ex
 
 

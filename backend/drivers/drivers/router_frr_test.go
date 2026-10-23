@@ -81,3 +81,27 @@ func TestFRRRIPFamilies(t *testing.T) {
 		}
 	}
 }
+
+func TestFRROSPF6(t *testing.T) {
+	var d FRRRouterDriver
+	cases := []struct {
+		name string
+		got  [][]string
+		want [][]string
+	}{
+		{"router id", d.OSPF6SetRouterID("10.0.0.1"), [][]string{{"vtysh", "-c", "configure terminal", "-c", "router ospf6", "-c", "ospf6 router-id 10.0.0.1"}}},
+		{"interface area", d.OSPF6AddInterface("eth2", "0"), [][]string{{"vtysh", "-c", "configure terminal", "-c", "interface eth2", "-c", "ipv6 ospf6 area 0"}}},
+		{"passive", d.OSPF6PassiveInterface("eth1"), [][]string{{"vtysh", "-c", "configure terminal", "-c", "interface eth1", "-c", "ipv6 ospf6 passive"}}},
+		{"redistribute", d.OSPF6Redistribute("ripng"), [][]string{{"vtysh", "-c", "configure terminal", "-c", "router ospf6", "-c", "redistribute ripng"}}},
+		{"no originate", d.OSPF6RemoveOriginateDefault(), [][]string{{"vtysh", "-c", "configure terminal", "-c", "router ospf6", "-c", "no default-information originate"}}},
+	}
+	for _, c := range cases {
+		if !reflect.DeepEqual(c.got, c.want) {
+			t.Errorf("%s:\n got  %v\n want %v", c.name, c.got, c.want)
+		}
+	}
+	cmd, _, ok := d.CapabilityPrecondition("OSPF6Capable", types.ActionEntry{})
+	if !ok || cmd[2] != "/var/run/frr/ospf6d.vty" {
+		t.Errorf("OSPFv3 precondition: %v %v", cmd, ok)
+	}
+}
