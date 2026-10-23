@@ -1,0 +1,106 @@
+{
+    "targets": [
+        {
+            "pod": "host-2",
+            "actions": [
+                {
+                    "type": "replace_ip",
+                    "iface": "eth1",
+                    "cidr": "192.168.2.51/24"
+                },
+                {
+                    "type": "set_default_route",
+                    "gateway": "192.168.2.1"
+                }
+            ]
+        },
+        {
+            "pod": "host-3",
+            "actions": [
+                {
+                    "type": "replace_ip",
+                    "iface": "eth1",
+                    "cidr": "192.168.2.52/24"
+                },
+                {
+                    "type": "set_default_route",
+                    "gateway": "192.168.2.1"
+                }
+            ]
+        },
+        {
+            "pod": "web",
+            "actions": [
+                {
+                    "type": "set_default_route",
+                    "gateway": "192.168.3.1"
+                }
+            ]
+        },
+        {
+            "pod": "switch-1",
+            "actions": [
+                {
+                    "type": "setup_bridge",
+                    "bridge": "br0",
+                    "ifaces": [
+                        "eth1",
+                        "eth2",
+                        "eth3"
+                    ]
+                }
+            ]
+        },
+        {
+            "pod": "switch-2",
+            "actions": [
+                {
+                    "type": "setup_bridge",
+                    "bridge": "br0",
+                    "ifaces": [
+                        "eth1",
+                        "eth2"
+                    ]
+                }
+            ]
+        },
+        {
+            "pod": "router-2",
+            "actions": [
+                {
+                    "type": "set_default_route",
+                    "gateway": "10.0.1.1"
+                },
+                {
+                    "type": "rip_add_network",
+                    "cidr": "10.0.1.0/30"
+                },
+                {
+                    "type": "rip_add_network",
+                    "cidr": "192.168.2.0/24"
+                },
+                {
+                    "type": "rip_add_network",
+                    "cidr": "192.168.3.0/24"
+                },
+                {
+                    "type": "rip_passive_interface",
+                    "iface": "eth1"
+                },
+                {
+                    "type": "rip_passive_interface",
+                    "iface": "eth3"
+                }
+            ]
+        },
+        {
+            "pod": "router-1",
+            "actions": [
+                {
+                    "type": "rip_add_network",
+                    "cidr": "10.0.1.0/30"
+                }
+            ]
+        }
+    ]
+}

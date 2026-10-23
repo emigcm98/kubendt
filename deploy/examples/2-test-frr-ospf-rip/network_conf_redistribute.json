@@ -1,0 +1,17 @@
+{
+    "targets": [
+        {
+            "pod": "router-1",
+            "actions": [
+                {
+                    "type": "ospf_redistribute",
+                    "redistribute": "rip"
+                },
+                {
+                    "type": "rip_redistribute",
+                    "redistribute": "ospf"
+                }
+            ]
+        }
+    ]
+}

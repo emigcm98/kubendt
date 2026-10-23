@@ -104,6 +104,12 @@
       ["vtysh","-c","configure terminal","-c","router ospf","-c","passive-interface default"]
     ]
   },
+  "ospf_redistribute": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router ospf","-c","redistribute rip"]
+    ]
+  },
   "ospf_remove_mtu_ignore": {
     "executor": "kubectl",
     "commands": [
@@ -132,6 +138,12 @@
     "executor": "kubectl",
     "commands": [
       ["vtysh","-c","configure terminal","-c","router ospf","-c","no passive-interface default"]
+    ]
+  },
+  "ospf_remove_redistribute": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router ospf","-c","no redistribute connected"]
     ]
   },
   "ospf_remove_router_id": {
@@ -182,6 +194,54 @@
     "commands": [
       ["ip","addr","flush","dev","eth1"],
       ["ip","addr","add","10.0.0.1/24","dev","eth1"]
+    ]
+  },
+  "rip_add_network": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router rip","-c","network 10.0.0.0/24"]
+    ]
+  },
+  "rip_passive_interface": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router rip","-c","passive-interface eth1"]
+    ]
+  },
+  "rip_redistribute": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router ripng","-c","redistribute connected"]
+    ]
+  },
+  "rip_remove_network": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router ripng","-c","no network fd00::/64"]
+    ]
+  },
+  "rip_remove_passive_interface": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router ripng","-c","no passive-interface eth1"]
+    ]
+  },
+  "rip_remove_redistribute": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router ripng","-c","no redistribute ospf6"]
+    ]
+  },
+  "rip_remove_timers": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router rip","-c","no timers basic"]
+    ]
+  },
+  "rip_set_timers": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router rip","-c","timers basic 10 60 40"]
     ]
   },
   "set_default_route": {

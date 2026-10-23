@@ -6,6 +6,7 @@ import (
 
 	"kubendt/capabilities"
 	drivers_meta "kubendt/drivers/meta"
+	"kubendt/types"
 )
 
 type FRRRouterDriver struct {
@@ -26,6 +27,7 @@ var _ capabilities.L3Capable = (*FRRRouterDriver)(nil)
 var _ capabilities.DefaultRoute6Remover = (*FRRRouterDriver)(nil)
 var _ capabilities.NATCapable = (*FRRRouterDriver)(nil)
 var _ capabilities.OSPFCapable = (*FRRRouterDriver)(nil)
+var _ capabilities.RIPCapable = (*FRRRouterDriver)(nil)
 var _ drivers_meta.ReadinessProbeProvider = (*FRRRouterDriver)(nil)
 var _ drivers_meta.ShellProvider = (*FRRRouterDriver)(nil)
 var _ drivers_meta.CapabilityPrecondition = (*FRRRouterDriver)(nil)
@@ -51,13 +53,22 @@ func (FRRRouterDriver) ReadinessProbeCommands() drivers_meta.ReadinessProbeSpec 
 // FRR starts a daemon only when its line in /etc/frr/daemons says yes, and
 // never on the fly, so a capability that needs one is checked on the vty
 // socket before its actions run, with a message that says what to enable.
-var frrCapabilityDaemons = map[string]string{
-	"OSPFCapable": "ospfd",
+func frrDaemonFor(capability string, a types.ActionEntry) string {
+	switch capability {
+	case "OSPFCapable":
+		return "ospfd"
+	case "RIPCapable":
+		if a.Family == "6" || capabilities.IsIPv6(a.CIDR) {
+			return "ripngd"
+		}
+		return "ripd"
+	}
+	return ""
 }
 
-func (FRRRouterDriver) CapabilityPrecondition(capability string) ([]string, string, bool) {
-	daemon, ok := frrCapabilityDaemons[capability]
-	if !ok {
+func (FRRRouterDriver) CapabilityPrecondition(capability string, a types.ActionEntry) ([]string, string, bool) {
+	daemon := frrDaemonFor(capability, a)
+	if daemon == "" {
 		return nil, "", false
 	}
 	return []string{"test", "-S", "/var/run/frr/" + daemon + ".vty"},
@@ -185,6 +196,65 @@ func (FRRRouterDriver) OSPFMTUIgnore(iface string) [][]string {
 
 func (FRRRouterDriver) OSPFRemoveMTUIgnore(iface string) [][]string {
 	return [][]string{{"vtysh", "-c", "configure terminal", "-c", fmt.Sprintf("interface %s", iface), "-c", "no ip ospf mtu-ignore"}}
+}
+
+func (FRRRouterDriver) OSPFRedistribute(source string) [][]string {
+	return [][]string{{"vtysh", "-c", "configure terminal", "-c", "router ospf", "-c", "redistribute " + source}}
+}
+
+func (FRRRouterDriver) OSPFRemoveRedistribute(source string) [][]string {
+	return [][]string{{"vtysh", "-c", "configure terminal", "-c", "router ospf", "-c", "no redistribute " + source}}
+}
+
+// ─── RIPCapable ──────────────────────────────────────────────────────────────
+// The same statements under `router rip` or `router ripng`, by family.
+
+func frrRIP(v6 bool, line string) [][]string {
+	router := "router rip"
+	if v6 {
+		router = "router ripng"
+	}
+	return [][]string{{"vtysh", "-c", "configure terminal", "-c", router, "-c", line}}
+}
+
+// FRR names the v6 OSPF ospf6 on the redistribute line.
+func frrRIPSource(source string, v6 bool) string {
+	if source == "ospf" && v6 {
+		return "ospf6"
+	}
+	return source
+}
+
+func (FRRRouterDriver) RIPAddNetwork(network string, v6 bool) [][]string {
+	return frrRIP(v6, "network "+network)
+}
+
+func (FRRRouterDriver) RIPRemoveNetwork(network string, v6 bool) [][]string {
+	return frrRIP(v6, "no network "+network)
+}
+
+func (FRRRouterDriver) RIPPassiveInterface(iface string, v6 bool) [][]string {
+	return frrRIP(v6, "passive-interface "+iface)
+}
+
+func (FRRRouterDriver) RIPRemovePassiveInterface(iface string, v6 bool) [][]string {
+	return frrRIP(v6, "no passive-interface "+iface)
+}
+
+func (FRRRouterDriver) RIPRedistribute(source string, v6 bool) [][]string {
+	return frrRIP(v6, "redistribute "+frrRIPSource(source, v6))
+}
+
+func (FRRRouterDriver) RIPRemoveRedistribute(source string, v6 bool) [][]string {
+	return frrRIP(v6, "no redistribute "+frrRIPSource(source, v6))
+}
+
+func (FRRRouterDriver) RIPSetTimers(update, timeout, garbage int, v6 bool) [][]string {
+	return frrRIP(v6, fmt.Sprintf("timers basic %d %d %d", update, timeout, garbage))
+}
+
+func (FRRRouterDriver) RIPRemoveTimers(v6 bool) [][]string {
+	return frrRIP(v6, "no timers basic")
 }
 
 // Shells: vtysh, the FRR console.

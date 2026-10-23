@@ -52,3 +52,26 @@ func TestVyOSInterfaceEntryAddresses(t *testing.T) {
 		t.Errorf("unaddressed entry: %v", none)
 	}
 }
+
+func TestVyOSRIPFamilies(t *testing.T) {
+	var d VyOSRouterDriver
+	cases := []struct {
+		name string
+		got  [][]string
+		want [][]string
+	}{
+		{"network v4", d.RIPAddNetwork("10.0.0.0/24", false), [][]string{{"set protocols rip network 10.0.0.0/24"}}},
+		{"network v6", d.RIPAddNetwork("fd00::/64", true), [][]string{{"set protocols ripng network fd00::/64"}}},
+		{"passive v6", d.RIPPassiveInterface("eth1", true), [][]string{{"set protocols ripng passive-interface eth1"}}},
+		{"redistribute ospf v6", d.RIPRedistribute("ospf", true), [][]string{{"set protocols ripng redistribute ospfv3"}}},
+		{"remove redistribute v4", d.RIPRemoveRedistribute("connected", false), [][]string{{"delete protocols rip redistribute connected"}}},
+		{"timers", d.RIPSetTimers(10, 60, 40, false), [][]string{{"set protocols rip timers update 10"}, {"set protocols rip timers timeout 60"}, {"set protocols rip timers garbage-collection 40"}}},
+		{"no timers v6", d.RIPRemoveTimers(true), [][]string{{"delete protocols ripng timers"}}},
+		{"ospf redistribute rip", d.OSPFRedistribute("rip"), [][]string{{"set protocols ospf redistribute rip"}}},
+	}
+	for _, c := range cases {
+		if !reflect.DeepEqual(c.got, c.want) {
+			t.Errorf("%s:\n got  %v\n want %v", c.name, c.got, c.want)
+		}
+	}
+}

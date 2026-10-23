@@ -8,7 +8,7 @@
    <a href="https://doi.org/10.5281/zenodo.21276320"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.21276320.svg" alt="DOI" /></a>
 </p>
 
-> Last reviewed: 21 Oct 2026
+> Last reviewed: 23 Oct 2026
 
 **KubeNDT** is a platform for deploying and operating virtual network topologies on Kubernetes.
 
@@ -57,7 +57,7 @@ KubeNDT bundles a small set of third-party SVG icons in its frontend. See [ATTRI
 
 - **Layer 2 operations**: Interface management, bridge creation, VLAN configuration
 - **Layer 3 operations**: IP address assignment, static routing, default gateway configuration, IPv4 and IPv6 alike (a link carries one family on both ends; NAT is IPv4 only)
-- **Routing protocols**: FRRouting (OSPF, BGP, ISIS, etc.) integration for dynamic routing
+- **Routing protocols**: OSPFv2 and RIPv2 (RIPng too) as driver actions on FRR and VyOS routers, the rest of FRRouting reachable through its console
 - **Traffic control (QoS)**: Rate limiting, traffic shaping, netem (network emulation)
 - **NAT/Port forwarding**: Source NAT (SNAT) and Destination NAT (DNAT) configurations
 - **Network diagnostics**: Real-time interface status, IP address tracking, traffic analysis
@@ -182,7 +182,7 @@ KubeNDT ships **7 reference deployments** in `deploy/examples/`, numbered in the
 | Example | Guide | What it exercises | Needs beyond the cluster | Complexity |
 | --- | --- | --- | --- | --- |
 | [1-test-small](deploy/examples/1-test-small/) | [1-README](deploy/examples/1-test-small/README.md) | The basic workflow on five nodes: import and deploy, driver configuration of hosts, an OVS switch and an FRR router, the shell, mounted files and environment variables | Nothing | ⭐ |
-| [2-test-frr-ospf](deploy/examples/2-test-frr-ospf/) | [2-README](deploy/examples/2-test-frr-ospf/README.md) | FRR routers running OSPF: daemons configured from the UI, adjacencies and connectivity across routed subnets | Nothing | ⭐⭐ |
+| [2-test-frr-ospf-rip](deploy/examples/2-test-frr-ospf-rip/) | [2-README](deploy/examples/2-test-frr-ospf-rip/README.md) | Three replicas of one FRR router node, each with a role from its configuration: OSPF on one side, RIP on the other, the border router redistributing both ways, in three configuration files that show each step | Nothing | ⭐⭐ |
 | [3-test-modify-ospf](deploy/examples/3-test-modify-ospf/) | [3-README](deploy/examples/3-test-modify-ospf/README.md) | The whole lifecycle on a routed lab with an FRR router and a VyOS VM in OSPF: scale, add and delete nodes and links, restart with replay. The modification case of the paper | The VyOS image on the workers, KVM | ⭐⭐⭐⭐ |
 | [4-test-medium-allfeatures](deploy/examples/4-test-medium-allfeatures/) | [4-README](deploy/examples/4-test-medium-allfeatures/README.md) | The common features together on 13 nodes: OSPF on three FRR routers, NAT, bridges, BIND9 DNS, mounted files, iperf3 and traffic shaping | An external uplink for the internet steps | ⭐⭐⭐ |
 | [5-test-full-open5gs](deploy/examples/5-test-full-open5gs/) | [5-README](deploy/examples/5-test-full-open5gs/README.md) | A full Open5GS 5G core with a UERANSIM gNB and UE: the UE registers, gets a PDU session and reaches the internet through the routed core | `/dev/net/tun` on the worker, an external uplink for the gNB | ⭐⭐⭐ |

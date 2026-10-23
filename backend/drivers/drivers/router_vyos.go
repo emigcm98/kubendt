@@ -28,6 +28,7 @@ func NewVyOSRouterDriver() *VyOSRouterDriver {
 var _ capabilities.L2Capable = (*VyOSRouterDriver)(nil)
 var _ capabilities.L3Capable = (*VyOSRouterDriver)(nil)
 var _ capabilities.OSPFCapable = (*VyOSRouterDriver)(nil)
+var _ capabilities.RIPCapable = (*VyOSRouterDriver)(nil)
 var _ drivers_meta.EffectiveInterfaceInspector = (*VyOSRouterDriver)(nil)
 var _ drivers_meta.EffectiveSingleInterfaceInspector = (*VyOSRouterDriver)(nil)
 var _ drivers_meta.EffectiveInterfaceStateInspector = (*VyOSRouterDriver)(nil)
@@ -292,6 +293,61 @@ func (VyOSRouterDriver) RemoveDNSSearch(domain string) [][]string {
 	return [][]string{{"delete system domain-search " + domain}}
 }
 
+// ─── RIP ─────────────────────────────────────────────────────────────────────
+// `protocols rip` and `protocols ripng` carry the same nodes.
+
+func vyosRIP(v6 bool) string {
+	if v6 {
+		return "protocols ripng "
+	}
+	return "protocols rip "
+}
+
+// VyOS names the v6 OSPF ospfv3 on the redistribute node.
+func vyosRIPSource(source string, v6 bool) string {
+	if source == "ospf" && v6 {
+		return "ospfv3"
+	}
+	return source
+}
+
+func (VyOSRouterDriver) RIPAddNetwork(network string, v6 bool) [][]string {
+	return [][]string{{"set " + vyosRIP(v6) + "network " + network}}
+}
+
+func (VyOSRouterDriver) RIPRemoveNetwork(network string, v6 bool) [][]string {
+	return [][]string{{"delete " + vyosRIP(v6) + "network " + network}}
+}
+
+func (VyOSRouterDriver) RIPPassiveInterface(iface string, v6 bool) [][]string {
+	return [][]string{{"set " + vyosRIP(v6) + "passive-interface " + iface}}
+}
+
+func (VyOSRouterDriver) RIPRemovePassiveInterface(iface string, v6 bool) [][]string {
+	return [][]string{{"delete " + vyosRIP(v6) + "passive-interface " + iface}}
+}
+
+func (VyOSRouterDriver) RIPRedistribute(source string, v6 bool) [][]string {
+	return [][]string{{"set " + vyosRIP(v6) + "redistribute " + vyosRIPSource(source, v6)}}
+}
+
+func (VyOSRouterDriver) RIPRemoveRedistribute(source string, v6 bool) [][]string {
+	return [][]string{{"delete " + vyosRIP(v6) + "redistribute " + vyosRIPSource(source, v6)}}
+}
+
+func (VyOSRouterDriver) RIPSetTimers(update, timeout, garbage int, v6 bool) [][]string {
+	p := vyosRIP(v6)
+	return [][]string{
+		{fmt.Sprintf("set %stimers update %d", p, update)},
+		{fmt.Sprintf("set %stimers timeout %d", p, timeout)},
+		{fmt.Sprintf("set %stimers garbage-collection %d", p, garbage)},
+	}
+}
+
+func (VyOSRouterDriver) RIPRemoveTimers(v6 bool) [][]string {
+	return [][]string{{"delete " + vyosRIP(v6) + "timers"}}
+}
+
 // ─── OSPF ────────────────────────────────────────────────────────────────────
 
 func (VyOSRouterDriver) OSPFAddNetwork(network, area string) [][]string {
@@ -344,6 +400,14 @@ func (VyOSRouterDriver) OSPFMTUIgnore(iface string) [][]string {
 
 func (VyOSRouterDriver) OSPFRemoveMTUIgnore(iface string) [][]string {
 	return [][]string{{"delete protocols ospf interface " + iface + " mtu-ignore"}}
+}
+
+func (VyOSRouterDriver) OSPFRedistribute(source string) [][]string {
+	return [][]string{{"set protocols ospf redistribute " + source}}
+}
+
+func (VyOSRouterDriver) OSPFRemoveRedistribute(source string) [][]string {
+	return [][]string{{"delete protocols ospf redistribute " + source}}
 }
 
 // ─── EffectiveInterfaceInspector ─────────────────────────────────────────────

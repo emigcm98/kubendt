@@ -81,6 +81,10 @@ type ActionEntry struct {
 	OSPFArea string `json:"ospf_area,omitempty" example:"0"`
 	RouterID string `json:"router_id,omitempty" example:"10.0.255.1"`
 
+	// RIP: the route source to redistribute and the protocol timers.
+	Redistribute string     `json:"redistribute,omitempty" example:"connected"`
+	Timers       *RIPTimers `json:"timers,omitempty"`
+
 	// Custom, accepts a string ("sh -c" wrapper) or an array of args.
 	// Only used when type == "custom". No driver label required on the pod.
 	Command json.RawMessage `json:"command,omitempty" swaggertype:"string" example:"ip route show"`
@@ -88,6 +92,14 @@ type ActionEntry struct {
 	// container) by default. ssh_qemu is a shell in a VyOS guest, vyos_ssh_cli
 	// an op-mode command there.
 	Executor string `json:"executor,omitempty" example:"ssh_qemu"`
+}
+
+// RIPTimers are the update, timeout and garbage collection intervals of a
+// RIP process, in seconds.
+type RIPTimers struct {
+	Update  int `json:"update" example:"30"`
+	Timeout int `json:"timeout" example:"180"`
+	Garbage int `json:"garbage" example:"120"`
 }
 
 type ActionOptions struct {
