@@ -81,7 +81,7 @@ func PlanActions(namespace, podName string, driver any, driverErr error, acts []
 		p.Err = err
 		if err == nil && execName == executor.DefaultExecutorName && p.Desc != nil {
 			if pc, ok := driver.(drivers_meta.CapabilityPrecondition); ok {
-				if cmd, failure, has := pc.CapabilityPrecondition(p.Desc.Capability); has {
+				if cmd, failure, has := pc.CapabilityPrecondition(p.Desc.Capability, a); has {
 					p.Precondition = &Precondition{Command: cmd, Failure: failure}
 					// Outside the batch the guard is the action's first command.
 					if p.Flags.Get {

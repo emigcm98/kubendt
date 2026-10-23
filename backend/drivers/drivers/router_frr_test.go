@@ -3,6 +3,8 @@ package drivers
 import (
 	"reflect"
 	"testing"
+
+	"kubendt/types"
 )
 
 func TestFRRRoutesGoThroughStaticd(t *testing.T) {
@@ -36,11 +38,46 @@ func TestFRRRoutesGoThroughStaticd(t *testing.T) {
 
 func TestFRRCapabilityPrecondition(t *testing.T) {
 	var d FRRRouterDriver
-	cmd, failure, ok := d.CapabilityPrecondition("OSPFCapable")
+	cmd, failure, ok := d.CapabilityPrecondition("OSPFCapable", types.ActionEntry{})
 	if !ok || !reflect.DeepEqual(cmd, []string{"test", "-S", "/var/run/frr/ospfd.vty"}) || failure == "" {
 		t.Errorf("OSPF precondition: %v %q %v", cmd, failure, ok)
 	}
-	if _, _, ok := d.CapabilityPrecondition("L3Capable"); ok {
+	if _, _, ok := d.CapabilityPrecondition("L3Capable", types.ActionEntry{}); ok {
 		t.Errorf("L3 needs no daemon")
+	}
+	for _, c := range []struct {
+		a    types.ActionEntry
+		want string
+	}{
+		{types.ActionEntry{CIDR: "10.0.0.0/24"}, "/var/run/frr/ripd.vty"},
+		{types.ActionEntry{CIDR: "fd00::/64"}, "/var/run/frr/ripngd.vty"},
+		{types.ActionEntry{Iface: "eth1", Family: "6"}, "/var/run/frr/ripngd.vty"},
+		{types.ActionEntry{Iface: "eth1"}, "/var/run/frr/ripd.vty"},
+	} {
+		cmd, _, ok := d.CapabilityPrecondition("RIPCapable", c.a)
+		if !ok || cmd[2] != c.want {
+			t.Errorf("RIP precondition for %+v: %v", c.a, cmd)
+		}
+	}
+}
+
+func TestFRRRIPFamilies(t *testing.T) {
+	var d FRRRouterDriver
+	cases := []struct {
+		name string
+		got  [][]string
+		want [][]string
+	}{
+		{"network v4", d.RIPAddNetwork("10.0.0.0/24", false), [][]string{{"vtysh", "-c", "configure terminal", "-c", "router rip", "-c", "network 10.0.0.0/24"}}},
+		{"network v6", d.RIPAddNetwork("fd00::/64", true), [][]string{{"vtysh", "-c", "configure terminal", "-c", "router ripng", "-c", "network fd00::/64"}}},
+		{"redistribute ospf v6", d.RIPRedistribute("ospf", true), [][]string{{"vtysh", "-c", "configure terminal", "-c", "router ripng", "-c", "redistribute ospf6"}}},
+		{"timers", d.RIPSetTimers(10, 60, 40, false), [][]string{{"vtysh", "-c", "configure terminal", "-c", "router rip", "-c", "timers basic 10 60 40"}}},
+		{"no timers v6", d.RIPRemoveTimers(true), [][]string{{"vtysh", "-c", "configure terminal", "-c", "router ripng", "-c", "no timers basic"}}},
+		{"ospf redistribute rip", d.OSPFRedistribute("rip"), [][]string{{"vtysh", "-c", "configure terminal", "-c", "router ospf", "-c", "redistribute rip"}}},
+	}
+	for _, c := range cases {
+		if !reflect.DeepEqual(c.got, c.want) {
+			t.Errorf("%s:\n got  %v\n want %v", c.name, c.got, c.want)
+		}
 	}
 }

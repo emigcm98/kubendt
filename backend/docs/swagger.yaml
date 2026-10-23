@@ -94,6 +94,10 @@ definitions:
       protocol:
         example: tcp
         type: string
+      redistribute:
+        description: 'RIP: the route source to redistribute and the protocol timers.'
+        example: connected
+        type: string
       router_id:
         example: 10.0.255.1
         type: string
@@ -101,6 +105,8 @@ definitions:
         allOf:
         - $ref: '#/definitions/types.TCParamEntry'
         description: TC / Qdisc
+      timers:
+        $ref: '#/definitions/types.RIPTimers'
       type:
         example: ip
         type: string
@@ -2114,6 +2120,18 @@ definitions:
           anything installed on purpose.
         example: true
         type: boolean
+    type: object
+  types.RIPTimers:
+    properties:
+      garbage:
+        example: 120
+        type: integer
+      timeout:
+        example: 180
+        type: integer
+      update:
+        example: 30
+        type: integer
     type: object
   types.ReadinessResponse:
     properties:

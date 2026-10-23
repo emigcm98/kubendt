@@ -1,0 +1,128 @@
+{
+    "targets": [
+        {
+            "pod": "host-0",
+            "actions": [
+                {
+                    "type": "replace_ip",
+                    "iface": "eth1",
+                    "cidr": "192.168.1.51/24"
+                },
+                {
+                    "type": "set_default_route",
+                    "gateway": "192.168.1.1"
+                }
+            ]
+        },
+        {
+            "pod": "host-1",
+            "actions": [
+                {
+                    "type": "replace_ip",
+                    "iface": "eth1",
+                    "cidr": "192.168.1.52/24"
+                },
+                {
+                    "type": "set_default_route",
+                    "gateway": "192.168.1.1"
+                }
+            ]
+        },
+        {
+            "pod": "printer",
+            "actions": [
+                {
+                    "type": "set_default_route",
+                    "gateway": "192.168.4.1"
+                }
+            ]
+        },
+        {
+            "pod": "switch-0",
+            "actions": [
+                {
+                    "type": "setup_bridge",
+                    "bridge": "br0",
+                    "ifaces": [
+                        "eth1",
+                        "eth2",
+                        "eth3"
+                    ]
+                }
+            ]
+        },
+        {
+            "pod": "switch-3",
+            "actions": [
+                {
+                    "type": "setup_bridge",
+                    "bridge": "br0",
+                    "ifaces": [
+                        "eth1",
+                        "eth2"
+                    ]
+                }
+            ]
+        },
+        {
+            "pod": "router-0",
+            "actions": [
+                {
+                    "type": "set_default_route",
+                    "gateway": "10.0.0.2"
+                },
+                {
+                    "type": "ospf_set_router_id",
+                    "router_id": "10.0.0.1"
+                },
+                {
+                    "type": "ospf_add_network",
+                    "cidr": "10.0.0.0/30",
+                    "ospf_area": "0"
+                },
+                {
+                    "type": "ospf_add_network",
+                    "cidr": "192.168.1.0/24",
+                    "ospf_area": "0"
+                },
+                {
+                    "type": "ospf_add_network",
+                    "cidr": "192.168.4.0/24",
+                    "ospf_area": "0"
+                },
+                {
+                    "type": "ospf_passive_default"
+                },
+                {
+                    "type": "ospf_no_passive",
+                    "iface": "eth2"
+                }
+            ]
+        },
+        {
+            "pod": "router-1",
+            "actions": [
+                {
+                    "type": "enable_snat",
+                    "iface": "eth0"
+                },
+                {
+                    "type": "ospf_set_router_id",
+                    "router_id": "10.0.0.2"
+                },
+                {
+                    "type": "ospf_add_network",
+                    "cidr": "10.0.0.0/30",
+                    "ospf_area": "0"
+                },
+                {
+                    "type": "ospf_passive_default"
+                },
+                {
+                    "type": "ospf_no_passive",
+                    "iface": "eth1"
+                }
+            ]
+        }
+    ]
+}

@@ -65,6 +65,8 @@ var (
 	Command      = Param{Name: "command", Kind: KindCommand, Required: true}
 	Executor     = Param{Name: "executor", Kind: KindExecutor, Required: false}
 	Family       = Param{Name: "family", Kind: KindFamily, Required: false}
+	Redistribute = Param{Name: "redistribute", Kind: KindText, Required: true}
+	Timers       = Param{Name: "timers", Kind: KindObject, Required: true}
 )
 
 // ProtectedInterface is the pod's cluster interface. An action on it would

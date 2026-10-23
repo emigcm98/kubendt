@@ -1,6 +1,8 @@
 package capabilities
 
 import (
+	"fmt"
+
 	"kubendt/actions"
 	"kubendt/types"
 )
@@ -18,6 +20,20 @@ type OSPFCapable interface {
 	OSPFRemoveOriginateDefault() [][]string
 	OSPFMTUIgnore(iface string) [][]string
 	OSPFRemoveMTUIgnore(iface string) [][]string
+	OSPFRedistribute(source string) [][]string
+	OSPFRemoveRedistribute(source string) [][]string
+}
+
+// OSPFSources are the route sources an OSPF process may redistribute.
+var OSPFSources = []string{"connected", "static", "rip", "bgp", "kernel"}
+
+func ospfSource(a types.ActionEntry) (string, error) {
+	for _, s := range OSPFSources {
+		if a.Redistribute == s {
+			return s, nil
+		}
+	}
+	return "", fmt.Errorf("%s: redistribute must be one of %v, got %q", a.Type, OSPFSources, a.Redistribute)
 }
 
 func init() {
@@ -58,6 +74,22 @@ func init() {
 		actions.Action[OSPFCapable]{Type: "ospf_remove_mtu_ignore", Label: "Check MTU again", Params: actions.P(actions.Iface), State: "ospf_mtu_ignore", Key: keyIface, Clears: true,
 			Run: func(c OSPFCapable, a types.ActionEntry) ([][]string, error) {
 				return c.OSPFRemoveMTUIgnore(a.Iface), nil
+			}},
+		actions.Action[OSPFCapable]{Type: "ospf_redistribute", Label: "Redistribute routes", Params: actions.P(actions.Redistribute), State: "ospf_redistribute", Key: keyRedistribute,
+			Run: func(c OSPFCapable, a types.ActionEntry) ([][]string, error) {
+				s, err := ospfSource(a)
+				if err != nil {
+					return nil, err
+				}
+				return c.OSPFRedistribute(s), nil
+			}},
+		actions.Action[OSPFCapable]{Type: "ospf_remove_redistribute", Label: "Stop redistributing routes", Params: actions.P(actions.Redistribute), State: "ospf_redistribute", Key: keyRedistribute, Clears: true,
+			Run: func(c OSPFCapable, a types.ActionEntry) ([][]string, error) {
+				s, err := ospfSource(a)
+				if err != nil {
+					return nil, err
+				}
+				return c.OSPFRemoveRedistribute(s), nil
 			}},
 	)
 }

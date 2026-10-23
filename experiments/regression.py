@@ -91,10 +91,10 @@ def iperf_check(ex, label, path, server_pod=None):
                 "full-size segments dropped on this placement (MTU, PLAN section 7)")
 
 
-def deploy(ex, topo_path):
+def deploy(ex, topo_path, label="deploy"):
     st, r = api("POST", f"/network/deploy-network/{ex.ns}", body=json.load(open(topo_path)))
     ok = st == 200
-    ex.check("deploy", ok, r if not ok else "")
+    ex.check(label, ok, r if not ok else "")
     if ok:
         ex.timing("deploy.took_time", r.get("took_time")); ex.timing("deploy.backend_ms", r.get("timeline", {}).get("backend_ms"))
         if r.get("warnings"): ex.note(f"deploy warnings: {r['warnings']}")
@@ -166,17 +166,25 @@ def ex1():
     teardown(ex); return ex
 
 def ex2():
-    d = f"{EX}/2-test-frr-ospf"; ex = Example("2-test-frr-ospf", "frr-ospf"); setup(ex)
-    if deploy(ex, f"{d}/topology-network-test-frr-ospf.json"):
-        configure(ex, f"{d}/network_conf.json")
-        ok, det, w = retry(contains(ex.ns, "router1-0", 'vtysh -c "show ip ospf neighbor"', "Full"), 120); ex.check("router1 OSPF neighbor Full", ok, det, w)
-        for ip in ("192.168.1.52", "192.168.2.51", "192.168.3.10"):
-            ok, det, w = retry(ping(ex.ns, "host-0", ip), 60); ex.check(f"host-0 ping {ip}", ok, det, w)
-        # A throughput test across the two routers, the server started by the backend on web-0.
-        iperf_check(ex, "host-0 iperf3 to web-0 through the routers (managed server)", f"/iperf/run/{ex.ns}/host-0?dest=192.168.3.10&duration=3", server_pod="web-0")
-        if restart(ex, "router1-0"):
-            ok, det, w = retry(contains(ex.ns, "router1-0", 'vtysh -c "show ip ospf neighbor"', "Full"), 150); ex.check("router1 OSPF Full after restart (replay)", ok, det, w)
-            ok, det, w = retry(ping(ex.ns, "host-0", "192.168.2.51"), 60); ex.check("host-0 ping 192.168.2.51 after restart", ok, det, w)
+    d = f"{EX}/2-test-frr-ospf-rip"; ex = Example("2-test-frr-ospf-rip", "frr-ospf-rip"); setup(ex)
+    if deploy(ex, f"{d}/topology-network-test-frr-ospf-rip.json"):
+        configure(ex, f"{d}/network_conf_ospf.json", label="configure (ospf side)")
+        configure(ex, f"{d}/network_conf_rip.json", label="configure (rip side)")
+        # Each side routes within itself before the redistribution joins them.
+        ok, det, w = retry(ping(ex.ns, "host-0", "192.168.4.10"), 60); ex.check("host-0 ping the printer with the OSPF side alone", ok, det, w)
+        rc, out = kexec(ex.ns, "host-0", "ping -c 1 -W 2 192.168.3.10"); ex.check("host-0 cannot reach the web before the redistribution", rc != 0, out[:80] if rc == 0 else "")
+        configure(ex, f"{d}/network_conf_redistribute.json", label="configure (redistribution)")
+        ok, det, w = retry(contains(ex.ns, "router-0", 'vtysh -c "show ip ospf neighbor"', "Full"), 120); ex.check("router-0 (ospf) neighbor Full with router-1 (border)", ok, det, w)
+        ok, det, w = retry(contains(ex.ns, "router-0", 'vtysh -c "show ip route 192.168.3.0/24"', "ospf"), 120); ex.check("router-0 (ospf) learns the web LAN by OSPF (redistributed from RIP)", ok, det, w)
+        ok, det, w = retry(contains(ex.ns, "router-2", 'vtysh -c "show ip rip"', "192.168.4.0/24"), 120); ex.check("router-2 (rip) learns the printer LAN by RIP (redistributed from OSPF)", ok, det, w)
+        for ip, what in (("192.168.1.52", "same LAN"), ("192.168.2.51", "host on the RIP side, three routers"), ("192.168.3.10", "web, three routers")):
+            ok, det, w = retry(ping(ex.ns, "host-0", ip), 60); ex.check(f"host-0 ping {ip} ({what})", ok, det, w)
+        ok, det, w = retry(ping(ex.ns, "host-2", "192.168.4.10"), 60); ex.check("host-2 ping the printer (rip side to ospf side)", ok, det, w)
+        # A throughput test across the three routers, the server started by the backend on web-0.
+        iperf_check(ex, "host-0 iperf3 to web-0 through the three routers (managed server)", f"/iperf/run/{ex.ns}/host-0?dest=192.168.3.10&duration=3", server_pod="web-0")
+        if restart(ex, "router-1"):
+            ok, det, w = retry(contains(ex.ns, "router-0", 'vtysh -c "show ip ospf neighbor"', "Full"), 150); ex.check("router-0 OSPF Full after the border router restart (replay)", ok, det, w)
+            ok, det, w = retry(ping(ex.ns, "host-0", "192.168.3.10"), 90); ex.check("host-0 ping 192.168.3.10 after the border router restart (both protocols replayed)", ok, det, w)
     teardown(ex); return ex
 
 def pods_ready(ns, pod, timeout):

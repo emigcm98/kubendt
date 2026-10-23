@@ -2965,6 +2965,11 @@ const docTemplate = `{
                     "type": "string",
                     "example": "tcp"
                 },
+                "redistribute": {
+                    "description": "RIP: the route source to redistribute and the protocol timers.",
+                    "type": "string",
+                    "example": "connected"
+                },
                 "router_id": {
                     "type": "string",
                     "example": "10.0.255.1"
@@ -2976,6 +2981,9 @@ const docTemplate = `{
                             "$ref": "#/definitions/types.TCParamEntry"
                         }
                     ]
+                },
+                "timers": {
+                    "$ref": "#/definitions/types.RIPTimers"
                 },
                 "type": {
                     "type": "string",
@@ -5701,6 +5709,23 @@ const docTemplate = `{
                     "description": "False on the kernel default (noqueue, pfifo_fast, mq), true for anything installed on purpose.",
                     "type": "boolean",
                     "example": true
+                }
+            }
+        },
+        "types.RIPTimers": {
+            "type": "object",
+            "properties": {
+                "garbage": {
+                    "type": "integer",
+                    "example": 120
+                },
+                "timeout": {
+                    "type": "integer",
+                    "example": 180
+                },
+                "update": {
+                    "type": "integer",
+                    "example": 30
                 }
             }
         },

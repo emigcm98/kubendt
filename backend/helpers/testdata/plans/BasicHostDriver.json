@@ -59,11 +59,13 @@
   "ospf_no_passive": { "unsupported": true },
   "ospf_originate_default": { "unsupported": true },
   "ospf_passive_default": { "unsupported": true },
+  "ospf_redistribute": { "unsupported": true },
   "ospf_remove_mtu_ignore": { "unsupported": true },
   "ospf_remove_network": { "unsupported": true },
   "ospf_remove_no_passive": { "unsupported": true },
   "ospf_remove_originate_default": { "unsupported": true },
   "ospf_remove_passive_default": { "unsupported": true },
+  "ospf_remove_redistribute": { "unsupported": true },
   "ospf_remove_router_id": { "unsupported": true },
   "ospf_set_router_id": { "unsupported": true },
   "remove_default_route": {
@@ -104,6 +106,14 @@
       ["ip","addr","add","10.0.0.1/24","dev","eth1"]
     ]
   },
+  "rip_add_network": { "unsupported": true },
+  "rip_passive_interface": { "unsupported": true },
+  "rip_redistribute": { "unsupported": true },
+  "rip_remove_network": { "unsupported": true },
+  "rip_remove_passive_interface": { "unsupported": true },
+  "rip_remove_redistribute": { "unsupported": true },
+  "rip_remove_timers": { "unsupported": true },
+  "rip_set_timers": { "unsupported": true },
   "set_default_route": {
     "executor": "kubectl",
     "commands": [
