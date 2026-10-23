@@ -34,3 +34,23 @@ func TestShellScriptRoundTrip(t *testing.T) {
 		t.Errorf("an action without a marker is an error: %+v", res[3])
 	}
 }
+
+func TestShellScriptPrecondition(t *testing.T) {
+	pc := &Precondition{Command: []string{"test", "-S", "/var/run/frr/ospfd.vty"}, Failure: "ospfd is not running"}
+	plans := []PlannedAction{
+		{Precondition: pc, Commands: [][]string{{"vtysh", "-c", "configure terminal", "-c", "router ospf"}}},
+		{Commands: [][]string{{"ip", "link", "set", "eth1", "up"}}},
+	}
+	script := shellScript(plans)
+	want := "{ ( 'test' '-S' '/var/run/frr/ospfd.vty' || { echo 'ospfd is not running'; exit 96; }; ) && 'vtysh' '-c' 'configure terminal' '-c' 'router ospf'; } 2>&1; echo \"__kubendt_rc__ 0 $?\"\n"
+	if !strings.HasPrefix(script, want) {
+		t.Errorf("guarded action:\n got  %q\n want %q", script, want)
+	}
+	res := parseShellScript("ospfd is not running\n__kubendt_rc__ 0 96\n__kubendt_rc__ 1 0\n", 2)
+	if err := res[0].err(); err == nil || err.Error() != "ospfd is not running" {
+		t.Errorf("guard failure reported as %v", err)
+	}
+	if err := res[1].err(); err != nil {
+		t.Errorf("the next action still ran: %v", err)
+	}
+}

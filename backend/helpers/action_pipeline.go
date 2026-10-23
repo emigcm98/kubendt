@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"kubendt/actions"
+	drivers_meta "kubendt/drivers/meta"
 	"kubendt/executor"
 	"kubendt/types"
 )
@@ -16,14 +17,32 @@ import (
 // through and its commands, or the reason it cannot run. Skip marks an
 // action that is reported but not run, a duplicate for instance.
 type PlannedAction struct {
-	Action   types.ActionEntry
-	Flags    types.ActionFlags
-	Desc     *actions.Descriptor // nil for an unknown action
-	Executor string
-	Exec     executor.CommandExecutor
-	Commands [][]string
-	Skip     string
-	Err      error
+	Action       types.ActionEntry
+	Flags        types.ActionFlags
+	Desc         *actions.Descriptor // nil for an unknown action
+	Executor     string
+	Exec         executor.CommandExecutor
+	Commands     [][]string
+	Precondition *Precondition
+	Skip         string
+	Err          error
+}
+
+// Precondition is what the action's capability needs on the pod, checked
+// right before its commands: a command that exits 0 when the need is met,
+// and the message the action fails with otherwise.
+type Precondition struct {
+	Command []string
+	Failure string
+}
+
+// preconditionRC is the exit status the guard leaves, so the batch parser
+// reports the message as the error rather than an exit status.
+const preconditionRC = 96
+
+// The check runs in a subshell so its exit ends the action, not the script.
+func preconditionGuard(pc *Precondition) string {
+	return "( " + shellJoin(pc.Command) + " || { echo " + shellQuote(pc.Failure) + "; exit " + strconv.Itoa(preconditionRC) + "; }; )"
 }
 
 // CommandStrings renders the commands the way the executor runs them, for
@@ -60,6 +79,17 @@ func PlanActions(namespace, podName string, driver any, driverErr error, acts []
 		p.Executor = execName
 		p.Commands = commands
 		p.Err = err
+		if err == nil && execName == executor.DefaultExecutorName && p.Desc != nil {
+			if pc, ok := driver.(drivers_meta.CapabilityPrecondition); ok {
+				if cmd, failure, has := pc.CapabilityPrecondition(p.Desc.Capability); has {
+					p.Precondition = &Precondition{Command: cmd, Failure: failure}
+					// Outside the batch the guard is the action's first command.
+					if p.Flags.Get {
+						p.Commands = append([][]string{{"sh", "-c", preconditionGuard(p.Precondition)}}, p.Commands...)
+					}
+				}
+			}
+		}
 		out = append(out, p)
 	}
 	return out
@@ -236,7 +266,10 @@ func shellJoin(argv []string) string {
 func shellScript(plans []PlannedAction) string {
 	var b strings.Builder
 	for k, p := range plans {
-		cmds := make([]string, 0, len(p.Commands))
+		cmds := make([]string, 0, len(p.Commands)+1)
+		if p.Precondition != nil {
+			cmds = append(cmds, preconditionGuard(p.Precondition))
+		}
 		for _, row := range p.Commands {
 			if len(row) > 0 {
 				cmds = append(cmds, shellJoin(row))
@@ -263,6 +296,8 @@ func (r batchResult) err() error {
 		return errors.New("exec error: the action left no result in the batch")
 	case r.RC == 0:
 		return nil
+	case r.RC == preconditionRC && r.Output != "":
+		return errors.New(r.Output)
 	case r.RC == 127:
 		if prog := executor.MissingProgram(r.Output); prog != "" {
 			return fmt.Errorf("'%s' is not in the pod's image: add it to the image or install it from the node's commands (%s)", prog, r.Output)

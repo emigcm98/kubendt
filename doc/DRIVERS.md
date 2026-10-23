@@ -59,6 +59,7 @@ What each one feeds:
 - **GuestTools** says which of the platform's tools the guest image ships, `trace` and `iperf`, and `GuestWrapper` how an argv gets into the guest (`ssh_qemu sudo` on VyOS, a script the image's entrypoint creates). The pod listing and `GET /drivers` publish `tools`; the menus show a missing one dimmed with the reason.
 - **InterfaceNameConstraints** are checked at deploy and modify, so a name the node's configuration schema would reject fails before anything is wired.
 - **ReadinessProbeCommands** is what Ready means for the node: a VM is Ready when the backend can reach the guest, a router when its daemons answer.
+- **CapabilityPrecondition** is what a capability needs on the pod before its actions run, a daemon up for instance: a command that exits 0 when the need is met and the message the actions fail with otherwise, checked inside the pod's batch at no extra exec. FRR asks for `ospfd.vty` before any OSPF action, so a router started with `ospfd=no` says what to enable instead of failing in vtysh.
 - **The inspectors** replace the pod-side reads where the dataplane lives elsewhere: the interface list and states of the node panel, the NAT interface of the summary.
 - **GuestInterface** renames interface parameters before an action runs, for a dataplane that calls `eth1` something else.
 
