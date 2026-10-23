@@ -28,6 +28,7 @@ var _ capabilities.DefaultRoute6Remover = (*FRRRouterDriver)(nil)
 var _ capabilities.NATCapable = (*FRRRouterDriver)(nil)
 var _ capabilities.OSPFCapable = (*FRRRouterDriver)(nil)
 var _ capabilities.RIPCapable = (*FRRRouterDriver)(nil)
+var _ capabilities.OSPF6Capable = (*FRRRouterDriver)(nil)
 var _ drivers_meta.ReadinessProbeProvider = (*FRRRouterDriver)(nil)
 var _ drivers_meta.ShellProvider = (*FRRRouterDriver)(nil)
 var _ drivers_meta.CapabilityPrecondition = (*FRRRouterDriver)(nil)
@@ -57,6 +58,8 @@ func frrDaemonFor(capability string, a types.ActionEntry) string {
 	switch capability {
 	case "OSPFCapable":
 		return "ospfd"
+	case "OSPF6Capable":
+		return "ospf6d"
 	case "RIPCapable":
 		if a.Family == "6" || capabilities.IsIPv6(a.CIDR) {
 			return "ripngd"
@@ -204,6 +207,55 @@ func (FRRRouterDriver) OSPFRedistribute(source string) [][]string {
 
 func (FRRRouterDriver) OSPFRemoveRedistribute(source string) [][]string {
 	return [][]string{{"vtysh", "-c", "configure terminal", "-c", "router ospf", "-c", "no redistribute " + source}}
+}
+
+// ─── OSPF6Capable ────────────────────────────────────────────────────────────
+// The process lives under `router ospf6`, the membership under the interface.
+
+func frrOSPF6(line string) [][]string {
+	return [][]string{{"vtysh", "-c", "configure terminal", "-c", "router ospf6", "-c", line}}
+}
+
+func frrOSPF6Iface(iface, line string) [][]string {
+	return [][]string{{"vtysh", "-c", "configure terminal", "-c", "interface " + iface, "-c", line}}
+}
+
+func (FRRRouterDriver) OSPF6SetRouterID(routerID string) [][]string {
+	return frrOSPF6("ospf6 router-id " + routerID)
+}
+
+func (FRRRouterDriver) OSPF6RemoveRouterID() [][]string { return frrOSPF6("no ospf6 router-id") }
+
+func (FRRRouterDriver) OSPF6AddInterface(iface, area string) [][]string {
+	return frrOSPF6Iface(iface, "ipv6 ospf6 area "+area)
+}
+
+func (FRRRouterDriver) OSPF6RemoveInterface(iface, area string) [][]string {
+	return frrOSPF6Iface(iface, "no ipv6 ospf6 area "+area)
+}
+
+func (FRRRouterDriver) OSPF6PassiveInterface(iface string) [][]string {
+	return frrOSPF6Iface(iface, "ipv6 ospf6 passive")
+}
+
+func (FRRRouterDriver) OSPF6RemovePassiveInterface(iface string) [][]string {
+	return frrOSPF6Iface(iface, "no ipv6 ospf6 passive")
+}
+
+func (FRRRouterDriver) OSPF6Redistribute(source string) [][]string {
+	return frrOSPF6("redistribute " + source)
+}
+
+func (FRRRouterDriver) OSPF6RemoveRedistribute(source string) [][]string {
+	return frrOSPF6("no redistribute " + source)
+}
+
+func (FRRRouterDriver) OSPF6OriginateDefault() [][]string {
+	return frrOSPF6("default-information originate always")
+}
+
+func (FRRRouterDriver) OSPF6RemoveOriginateDefault() [][]string {
+	return frrOSPF6("no default-information originate")
 }
 
 // ─── RIPCapable ──────────────────────────────────────────────────────────────

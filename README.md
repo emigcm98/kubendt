@@ -57,7 +57,7 @@ KubeNDT bundles a small set of third-party SVG icons in its frontend. See [ATTRI
 
 - **Layer 2 operations**: Interface management, bridge creation, VLAN configuration
 - **Layer 3 operations**: IP address assignment, static routing, default gateway configuration, IPv4 and IPv6 alike (a link carries one family on both ends; NAT is IPv4 only)
-- **Routing protocols**: OSPFv2 and RIPv2 (RIPng too) as driver actions on FRR and VyOS routers, the rest of FRRouting reachable through its console
+- **Routing protocols**: OSPFv2, OSPFv3 and RIP (RIPv2 and RIPng) as driver actions on FRR and VyOS routers, the rest of FRRouting reachable through its console
 - **Traffic control (QoS)**: Rate limiting, traffic shaping, netem (network emulation)
 - **NAT/Port forwarding**: Source NAT (SNAT) and Destination NAT (DNAT) configurations
 - **Network diagnostics**: Real-time interface status, IP address tracking, traffic analysis
@@ -187,7 +187,7 @@ KubeNDT ships **7 reference deployments** in `deploy/examples/`, numbered in the
 | [4-test-medium-allfeatures](deploy/examples/4-test-medium-allfeatures/) | [4-README](deploy/examples/4-test-medium-allfeatures/README.md) | The common features together on 13 nodes: OSPF on three FRR routers, NAT, bridges, BIND9 DNS, mounted files, iperf3 and traffic shaping | An external uplink for the internet steps | ⭐⭐⭐ |
 | [5-test-full-open5gs](deploy/examples/5-test-full-open5gs/) | [5-README](deploy/examples/5-test-full-open5gs/README.md) | A full Open5GS 5G core with a UERANSIM gNB and UE: the UE registers, gets a PDU session and reaches the internet through the routed core | `/dev/net/tun` on the worker, an external uplink for the gNB | ⭐⭐⭐ |
 | [6-test-vyos](deploy/examples/6-test-vyos/) | [6-README](deploy/examples/6-test-vyos/README.md) | VyOS VM routers in OSPF with an external uplink, SNAT and a DNAT port forward, a mounted web page and IPv6 on two links | The VyOS image, KVM, an external uplink | ⭐⭐⭐⭐ |
-| [7-test-dual-stack](deploy/examples/7-test-dual-stack/) | [7-README](deploy/examples/7-test-dual-stack/README.md) | Dual stack: FRR with OSPF for IPv4, static IPv6 routes, an IPv6-only host next to dual stack ones, and the trace and throughput tools over IPv6 | Nothing | ⭐⭐ |
+| [7-test-dual-stack](deploy/examples/7-test-dual-stack/) | [7-README](deploy/examples/7-test-dual-stack/README.md) | Dual stack: FRR with OSPFv2 for IPv4 and OSPFv3 for IPv6, an IPv6-only host next to dual stack ones, and the trace and throughput tools over IPv6 | Nothing | ⭐⭐ |
 
 The VyOS image is built once with `build-vyos-qcow2.sh` and imported on the workers, see [deploy/custom_images/qemu/vyos-router/](deploy/custom_images/qemu/vyos-router/). The external uplink is a second interface of a pod on the host network the workers hang from. The examples label it "External Network" and their READMEs say which steps need it.
 

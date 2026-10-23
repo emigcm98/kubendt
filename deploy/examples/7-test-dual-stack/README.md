@@ -3,7 +3,7 @@
 IPv6 end-to-end scenario, dual stack where it makes sense and IPv6 only where a real network would be, to validate the IPv6 workflows of KubeNDT:
 
 - Links that carry several addresses, one per family, declared as arrays in the topology JSON
-- IPv4 routed by OSPF and IPv6 by static routes, both set from the same `network_conf.json`
+- IPv4 routed by OSPFv2 and IPv6 by OSPFv3, both set from the same `network_conf.json`
 - An IPv6-only host next to dual stack ones on the same L2 segment
 - Traceroute, mtr and iperf3 toward IPv6 targets from the dashboard
 - A router restart that brings back its addresses and its IPv6 routes
@@ -19,8 +19,8 @@ Nodes deployed:
 | `laptop` | `BasicHostDriver` | `alpine:3.24.2` | 2 | Dual stack hosts on the office LAN |
 | `sensor` | `BasicHostDriver` | `alpine:3.24.2` | 1 | IPv6-only host on the lab LAN |
 | `web` | `BasicHostDriver` | `nginx:1.31.6-alpine` | 1 | Dual stack web server on the lab LAN, serves the mounted `index.html` on both families |
-| `office-router` | `FRRRouterDriver` | `quay.io/frrouting/frr:10.7.1` | 1 | Office gateway: OSPF for IPv4, a static route toward the lab IPv6 prefix |
-| `lab-router` | `FRRRouterDriver` | `quay.io/frrouting/frr:10.7.1` | 1 | Lab gateway: OSPF for IPv4, a static route toward the office IPv6 prefix |
+| `office-router` | `FRRRouterDriver` | `quay.io/frrouting/frr:10.7.1` | 1 | Office gateway: OSPFv2 for IPv4 and OSPFv3 for IPv6 |
+| `lab-router` | `FRRRouterDriver` | `quay.io/frrouting/frr:10.7.1` | 1 | Lab gateway: OSPFv2 for IPv4 and OSPFv3 for IPv6 |
 | `office-sw`, `lab-sw` | `LinuxSwitchDriver` | `alpine:3.24.2` | 1 each | Linux bridge switches, one per LAN |
 
 Nodes without a `driver` in the topology JSON get the default of their type: `BasicHostDriver` for hosts and `LinuxSwitchDriver` for switches.
@@ -36,7 +36,7 @@ Network segments:
 ## Files In This Folder
 
 - `topology-network-test-dual-stack.json`: network inventory and links, with `localIp` and `peerIp` as arrays where an end carries both families
-- `network_conf.json`: post-deploy actions (bridges, default routes of both families on the hosts, OSPF and the IPv6 static routes on the routers)
+- `network_conf.json`: post-deploy actions (bridges, default routes of both families on the hosts, OSPFv2 and OSPFv3 on the routers)
 - `files/web/index.html`: the page `web` serves, mounted into the nginx image
 
 ## Notable Characteristics
@@ -44,7 +44,7 @@ Network segments:
 - An end of a link takes one address or an array: `["192.168.10.11/24", "fd00:10::11/64"]`. The first one is wired with the link by Meshnet; the rest are set by the platform right after wiring and again after every recreation, so a restart brings them back. `GET /network/get-network` and the topology export echo the array, and the link, node and interface panels list every address of an interface.
 - `sensor` has an IPv6 address only. The two ends of a link must share at least one family, so its link to `lab-sw` carries no IPv4 at all, while `web` next to it is dual stack.
 - Routers forward both families out of the box: `net.ipv4.ip_forward` and `net.ipv6.conf.all.forwarding` are set on every router and switch pod. The cluster's kubelet must allow both sysctls, see the cluster guide.
-- IPv4 is routed by OSPF between the two routers (`ospf_add_network`), as in the FRR example. IPv6 is routed by one static route per router (`add_static_route` with an IPv6 prefix and next hop builds `ip -6 route`), until OSPFv3 lands in a later version and replaces them.
+- IPv4 is routed by OSPFv2 between the two routers (`ospf_add_network`, network statements) and IPv6 by OSPFv3 (`ospf6_add_interface`, an interface joins an area, as the protocol is configured), each in its own FRR daemon (`ospfd` and `ospf6d`, both enabled by the startup command). The LAN interfaces are passive in OSPFv3 (`ospf6_passive_interface`); the two processes share nothing but the router ID the configuration gives them.
 - A host's default routes are two `set_default_route` actions with a gateway of each family; `remove_default_route` takes `family` (`4` or `6`) to drop one of them.
 - Every link is set to the platform MTU (1450 by default), which is above the 1280 bytes IPv6 needs. A link that declares its own `mtu` below 1280 with an IPv6 address on it is refused.
 - The web server listens on both families, so `wget http://192.168.20.10` and `wget http://[fd00:20::10]` return the same page.
@@ -71,18 +71,20 @@ Create a namespace (e.g. `dual-stack` or any name you prefer).
 
 - Click **Load network conf**.
 - Select `network_conf.json`.
-- Confirm successful actions in the result dialog. This sets up the bridges, the default routes of both families on the hosts, OSPF and the IPv6 static routes on the routers in one step.
+- Confirm successful actions in the result dialog. This sets up the bridges, the default routes of both families on the hosts, OSPFv2 and OSPFv3 on the routers in one step.
 
 ### 5. Validate routing on the routers
 
-- Open a shell on `office-router-0` and check OSPF and the IPv6 table:
+- Open a shell on `office-router-0` and check both OSPF processes and the IPv6 table:
 
   ```bash
   vtysh -c "show ip ospf neighbor"
+  vtysh -c "show ipv6 ospf6 neighbor"
+  vtysh -c "show ipv6 route"
   vtysh -c "show ipv6 route"
   ```
 
-  Expected: `lab-router` in `Full` state, and `fd00:20::/64` via `fd00:1::2` as a kernel route (`K`), since the static route is set with `ip -6 route`.
+  Expected: `lab-router` in `Full` state in both outputs (`show ipv6 ospf6 neighbor` lists it by router ID `10.0.0.2`), and `fd00:20::/64` as an OSPFv3 route (`O`) via the link-local address of `lab-router` on `eth2`, which is how OSPFv3 next hops look.
 
 ### 6. Validate end-to-end connectivity
 
@@ -92,7 +94,7 @@ Create a namespace (e.g. `dual-stack` or any name you prefer).
   ping -c 3 192.168.20.10
   ```
 
-- From `laptop-0` to `web-0` and to `sensor-0` over IPv6, through the static routes:
+- From `laptop-0` to `web-0` and to `sensor-0` over IPv6, through OSPFv3:
 
   ```bash
   ping -c 3 fd00:20::10
@@ -114,13 +116,13 @@ Create a namespace (e.g. `dual-stack` or any name you prefer).
 
 ### 8. Restart a router
 
-- Right-click `lab-router-0` and choose **Restart pod**. The pod comes back with both addresses on every link end (the first from the link, the second from the platform) and its persisted operations replayed, the IPv6 static route included.
+- Right-click `lab-router-0` and choose **Restart pod**. The pod comes back with both addresses on every link end (the first from the link, the second from the platform) and its persisted operations replayed, OSPFv3 included: both adjacencies come back.
 - Repeat the IPv6 ping from `laptop-0` to `sensor-0`.
 
 ## Troubleshooting
 
 - If `show ip ospf neighbor` is empty, verify both routers have the OSPF actions applied and that the `10.0.0.0/30` link is up.
-- If the IPv6 pings fail but the IPv4 ones work, check the static routes on both routers (`ip -6 route` or `vtysh -c "show ipv6 route"`) and the IPv6 default route on the host (`ip -6 route show default`).
+- If the IPv6 pings fail but the IPv4 ones work, check the OSPFv3 adjacency on both routers (`vtysh -c "show ipv6 ospf6 neighbor"`) and the IPv6 default route on the host (`ip -6 route show default`). An OSPFv3 action failing with "ospf6d is not running" means the router was started without that daemon.
 - If an end shows only its first address, look at the `warnings` of the deploy or restart response: the platform reports an address it could not set as `link_address_not_set`.
 - If a router pod stays in `SysctlForbidden`, the kubelet does not allow `net.ipv6.conf.all.forwarding`; the cluster guide has the `allowedUnsafeSysctls` list.
 - If `wget http://[fd00:20::10]` fails while the ping works, make sure the mounted page is in place and that `web-0` has its IPv6 default route; the nginx image listens on `[::]:80` by default.

@@ -54,6 +54,16 @@
       ["ip","link","set","eth1","up"]
     ]
   },
+  "ospf6_add_interface": { "unsupported": true },
+  "ospf6_originate_default": { "unsupported": true },
+  "ospf6_passive_interface": { "unsupported": true },
+  "ospf6_redistribute": { "unsupported": true },
+  "ospf6_remove_interface": { "unsupported": true },
+  "ospf6_remove_originate_default": { "unsupported": true },
+  "ospf6_remove_passive_interface": { "unsupported": true },
+  "ospf6_remove_redistribute": { "unsupported": true },
+  "ospf6_remove_router_id": { "unsupported": true },
+  "ospf6_set_router_id": { "unsupported": true },
   "ospf_add_network": { "unsupported": true },
   "ospf_mtu_ignore": { "unsupported": true },
   "ospf_no_passive": { "unsupported": true },

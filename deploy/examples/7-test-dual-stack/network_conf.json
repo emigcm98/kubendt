@@ -1,128 +1,154 @@
 {
-  "targets": [
-    {
-      "pod": "office-sw",
-      "actions": [
+    "targets": [
         {
-          "type": "setup_bridge",
-          "bridge": "br0",
-          "ifaces": [
-            "eth1",
-            "eth2",
-            "eth3"
-          ]
+            "pod": "office-sw",
+            "actions": [
+                {
+                    "type": "setup_bridge",
+                    "bridge": "br0",
+                    "ifaces": [
+                        "eth1",
+                        "eth2",
+                        "eth3"
+                    ]
+                }
+            ]
+        },
+        {
+            "pod": "lab-sw",
+            "actions": [
+                {
+                    "type": "setup_bridge",
+                    "bridge": "br0",
+                    "ifaces": [
+                        "eth1",
+                        "eth2",
+                        "eth3"
+                    ]
+                }
+            ]
+        },
+        {
+            "pod": "laptop-0",
+            "actions": [
+                {
+                    "type": "set_default_route",
+                    "gateway": "192.168.10.1"
+                },
+                {
+                    "type": "set_default_route",
+                    "gateway": "fd00:10::1"
+                }
+            ]
+        },
+        {
+            "pod": "laptop-1",
+            "actions": [
+                {
+                    "type": "set_default_route",
+                    "gateway": "192.168.10.1"
+                },
+                {
+                    "type": "set_default_route",
+                    "gateway": "fd00:10::1"
+                }
+            ]
+        },
+        {
+            "pod": "web",
+            "actions": [
+                {
+                    "type": "set_default_route",
+                    "gateway": "192.168.20.1"
+                },
+                {
+                    "type": "set_default_route",
+                    "gateway": "fd00:20::1"
+                }
+            ]
+        },
+        {
+            "pod": "sensor",
+            "actions": [
+                {
+                    "type": "set_default_route",
+                    "gateway": "fd00:20::1"
+                }
+            ]
+        },
+        {
+            "pod": "office-router",
+            "actions": [
+                {
+                    "type": "ospf_set_router_id",
+                    "router_id": "10.0.0.1"
+                },
+                {
+                    "type": "ospf_add_network",
+                    "cidr": "192.168.10.0/24",
+                    "ospf_area": "0"
+                },
+                {
+                    "type": "ospf_add_network",
+                    "cidr": "10.0.0.0/30",
+                    "ospf_area": "0"
+                },
+                {
+                    "type": "ospf6_set_router_id",
+                    "router_id": "10.0.0.1"
+                },
+                {
+                    "type": "ospf6_add_interface",
+                    "iface": "eth1",
+                    "ospf_area": "0"
+                },
+                {
+                    "type": "ospf6_add_interface",
+                    "iface": "eth2",
+                    "ospf_area": "0"
+                },
+                {
+                    "type": "ospf6_passive_interface",
+                    "iface": "eth1"
+                }
+            ]
+        },
+        {
+            "pod": "lab-router",
+            "actions": [
+                {
+                    "type": "ospf_set_router_id",
+                    "router_id": "10.0.0.2"
+                },
+                {
+                    "type": "ospf_add_network",
+                    "cidr": "192.168.20.0/24",
+                    "ospf_area": "0"
+                },
+                {
+                    "type": "ospf_add_network",
+                    "cidr": "10.0.0.0/30",
+                    "ospf_area": "0"
+                },
+                {
+                    "type": "ospf6_set_router_id",
+                    "router_id": "10.0.0.2"
+                },
+                {
+                    "type": "ospf6_add_interface",
+                    "iface": "eth1",
+                    "ospf_area": "0"
+                },
+                {
+                    "type": "ospf6_add_interface",
+                    "iface": "eth2",
+                    "ospf_area": "0"
+                },
+                {
+                    "type": "ospf6_passive_interface",
+                    "iface": "eth1"
+                }
+            ]
         }
-      ]
-    },
-    {
-      "pod": "lab-sw",
-      "actions": [
-        {
-          "type": "setup_bridge",
-          "bridge": "br0",
-          "ifaces": [
-            "eth1",
-            "eth2",
-            "eth3"
-          ]
-        }
-      ]
-    },
-    {
-      "pod": "laptop-0",
-      "actions": [
-        {
-          "type": "set_default_route",
-          "gateway": "192.168.10.1"
-        },
-        {
-          "type": "set_default_route",
-          "gateway": "fd00:10::1"
-        }
-      ]
-    },
-    {
-      "pod": "laptop-1",
-      "actions": [
-        {
-          "type": "set_default_route",
-          "gateway": "192.168.10.1"
-        },
-        {
-          "type": "set_default_route",
-          "gateway": "fd00:10::1"
-        }
-      ]
-    },
-    {
-      "pod": "web",
-      "actions": [
-        {
-          "type": "set_default_route",
-          "gateway": "192.168.20.1"
-        },
-        {
-          "type": "set_default_route",
-          "gateway": "fd00:20::1"
-        }
-      ]
-    },
-    {
-      "pod": "sensor",
-      "actions": [
-        {
-          "type": "set_default_route",
-          "gateway": "fd00:20::1"
-        }
-      ]
-    },
-    {
-      "pod": "office-router",
-      "actions": [
-        {
-          "type": "ospf_set_router_id",
-          "router_id": "10.0.0.1"
-        },
-        {
-          "type": "ospf_add_network",
-          "cidr": "192.168.10.0/24",
-          "ospf_area": "0"
-        },
-        {
-          "type": "ospf_add_network",
-          "cidr": "10.0.0.0/30",
-          "ospf_area": "0"
-        },
-        {
-          "type": "add_static_route",
-          "dst_cidr": "fd00:20::/64",
-          "gateway": "fd00:1::2"
-        }
-      ]
-    },
-    {
-      "pod": "lab-router",
-      "actions": [
-        {
-          "type": "ospf_set_router_id",
-          "router_id": "10.0.0.2"
-        },
-        {
-          "type": "ospf_add_network",
-          "cidr": "192.168.20.0/24",
-          "ospf_area": "0"
-        },
-        {
-          "type": "ospf_add_network",
-          "cidr": "10.0.0.0/30",
-          "ospf_area": "0"
-        },
-        {
-          "type": "add_static_route",
-          "dst_cidr": "fd00:10::/64",
-          "gateway": "fd00:1::1"
-        }
-      ]
-    }
-  ]
+    ]
 }

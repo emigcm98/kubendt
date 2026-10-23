@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Added
 
 - RIP comes as a capability of FRR and VyOS routers, RIPv2 and RIPng with the same actions: `rip_add_network` (the prefix decides the family), `rip_passive_interface`, `rip_redistribute` (connected, static, ospf, bgp, kernel) and `rip_set_timers`, each with its removal and `family: "6"` for RIPng. OSPF gains `ospf_redistribute` (connected, static, rip, bgp, kernel) and its removal. Example 2 is now `2-test-frr-ospf-rip`: three replicas of one FRR router node, OSPF on one side with two LANs, RIP on the other with two more, and the border router in between redistributing each into the other, in three configuration files (the OSPF side, the RIP side, the redistribution).
+- OSPFv3 comes as its own capability of FRR and VyOS routers, configured per interface as the protocol is: `ospf6_set_router_id`, `ospf6_add_interface` (an interface joins an area), `ospf6_passive_interface`, `ospf6_redistribute` (connected, static, ripng, bgp, kernel) and `ospf6_originate_default`, each with its removal; FRR runs it in `ospf6d`, VyOS under `protocols ospfv3`. Example 7 routes IPv6 with it instead of static routes.
 - Before the actions of a capability run on an FRR router, the backend checks that the daemon they need is up (`ospfd` for OSPF) and fails them with a message that says what to enable in `/etc/frr/daemons`, instead of a vtysh error; the check rides in the pod's batch, so it costs no exec. A driver declares it with `CapabilityPrecondition`.
 
 ### Changed

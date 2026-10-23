@@ -29,6 +29,7 @@ var _ capabilities.L2Capable = (*VyOSRouterDriver)(nil)
 var _ capabilities.L3Capable = (*VyOSRouterDriver)(nil)
 var _ capabilities.OSPFCapable = (*VyOSRouterDriver)(nil)
 var _ capabilities.RIPCapable = (*VyOSRouterDriver)(nil)
+var _ capabilities.OSPF6Capable = (*VyOSRouterDriver)(nil)
 var _ drivers_meta.EffectiveInterfaceInspector = (*VyOSRouterDriver)(nil)
 var _ drivers_meta.EffectiveSingleInterfaceInspector = (*VyOSRouterDriver)(nil)
 var _ drivers_meta.EffectiveInterfaceStateInspector = (*VyOSRouterDriver)(nil)
@@ -291,6 +292,48 @@ func (VyOSRouterDriver) AddDNSSearch(domain string) [][]string {
 
 func (VyOSRouterDriver) RemoveDNSSearch(domain string) [][]string {
 	return [][]string{{"delete system domain-search " + domain}}
+}
+
+// ─── OSPFv3 ──────────────────────────────────────────────────────────────────
+
+func (VyOSRouterDriver) OSPF6SetRouterID(routerID string) [][]string {
+	return [][]string{{"set protocols ospfv3 parameters router-id " + routerID}}
+}
+
+func (VyOSRouterDriver) OSPF6RemoveRouterID() [][]string {
+	return [][]string{{"delete protocols ospfv3 parameters router-id"}}
+}
+
+func (VyOSRouterDriver) OSPF6AddInterface(iface, area string) [][]string {
+	return [][]string{{"set protocols ospfv3 interface " + iface + " area " + area}}
+}
+
+func (VyOSRouterDriver) OSPF6RemoveInterface(iface, area string) [][]string {
+	return [][]string{{"delete protocols ospfv3 interface " + iface + " area"}}
+}
+
+func (VyOSRouterDriver) OSPF6PassiveInterface(iface string) [][]string {
+	return [][]string{{"set protocols ospfv3 interface " + iface + " passive"}}
+}
+
+func (VyOSRouterDriver) OSPF6RemovePassiveInterface(iface string) [][]string {
+	return [][]string{{"delete protocols ospfv3 interface " + iface + " passive"}}
+}
+
+func (VyOSRouterDriver) OSPF6Redistribute(source string) [][]string {
+	return [][]string{{"set protocols ospfv3 redistribute " + source}}
+}
+
+func (VyOSRouterDriver) OSPF6RemoveRedistribute(source string) [][]string {
+	return [][]string{{"delete protocols ospfv3 redistribute " + source}}
+}
+
+func (VyOSRouterDriver) OSPF6OriginateDefault() [][]string {
+	return [][]string{{"set protocols ospfv3 default-information originate always"}}
+}
+
+func (VyOSRouterDriver) OSPF6RemoveOriginateDefault() [][]string {
+	return [][]string{{"delete protocols ospfv3 default-information originate"}}
 }
 
 // ─── RIP ─────────────────────────────────────────────────────────────────────
