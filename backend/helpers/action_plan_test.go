@@ -24,7 +24,6 @@ var update = flag.Bool("update", false, "rewrite the expected plans under testda
 // Drivers whose plan resolves without a cluster. A driver that reads an
 // interface map from the pod for every interface action is left out.
 var plannedDrivers = []string{
-	"BasicHostDriver",
 	"HostDriver",
 	"LinuxSwitchDriver",
 	"OpenVSwitchDriver",

@@ -4,7 +4,7 @@
       "name": "host",
       "image": "alpine:3.24.2",
       "type": "host",
-      "driver": "BasicHostDriver",
+      "driver": "HostDriver",
       "replicas": 4
     },
     {

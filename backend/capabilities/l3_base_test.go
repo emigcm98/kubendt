@@ -22,8 +22,7 @@ func TestL3BaseCommands(t *testing.T) {
 			"ReplaceIP",
 			l3.ReplaceIP("eth0", "10.0.0.1/24"),
 			[][]string{
-				{"ip", "addr", "flush", "dev", "eth0"},
-				{"ip", "addr", "add", "10.0.0.1/24", "dev", "eth0"},
+				{"sh", "-c", `ip -o addr show dev eth0 | grep -q ' 10.0.0.1/24 ' || { ip addr flush dev eth0; ip addr add 10.0.0.1/24 dev eth0; }`},
 			},
 		},
 		{

@@ -7,7 +7,6 @@ import (
 )
 
 func RegisterAllDrivers() {
-	drivers_registry.Register(drivers.NewBasicHostDriver)
 	drivers_registry.Register(drivers.NewHostDriver)
 	drivers_registry.Register(drivers.NewLinuxSwitchDriver)
 	drivers_registry.Register(drivers.NewOpenVSwitchDriver)

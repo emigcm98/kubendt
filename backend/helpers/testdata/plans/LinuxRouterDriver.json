@@ -132,8 +132,7 @@
   "replace_ip": {
     "executor": "kubectl",
     "commands": [
-      ["ip","addr","flush","dev","eth1"],
-      ["ip","addr","add","10.0.0.1/24","dev","eth1"]
+      ["sh","-c","ip -o addr show dev eth1 | grep -q ' 10.0.0.1/24 ' || { ip addr flush dev eth1; ip addr add 10.0.0.1/24 dev eth1; }"]
     ]
   },
   "rip_add_network": { "unsupported": true },

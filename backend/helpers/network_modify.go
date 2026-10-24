@@ -67,7 +67,7 @@ func ApplyAddToExistingTopology(namespace string, request types.DeployRequest, e
 	}
 
 	if len(request.Nodes) > 0 {
-		if err := ResolveDriversForNodes(request.Nodes); err != nil {
+		if _, err := ResolveDriversForNodes(request.Nodes); err != nil {
 			return nil, nil, nil, fmt.Errorf("VALIDATION:%s", err.Error())
 		}
 		if err := ValidateNodePlacement(request.Nodes); err != nil {

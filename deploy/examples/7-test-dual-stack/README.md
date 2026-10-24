@@ -16,14 +16,14 @@ Nodes deployed:
 
 | Node | Driver | Image | Replicas | Role |
 | --- | --- | --- | --- | --- |
-| `laptop` | `BasicHostDriver` | `alpine:3.24.2` | 2 | Dual stack hosts on the office LAN |
-| `sensor` | `BasicHostDriver` | `alpine:3.24.2` | 1 | IPv6-only host on the lab LAN |
-| `web` | `BasicHostDriver` | `nginx:1.31.6-alpine` | 1 | Dual stack web server on the lab LAN, serves the mounted `index.html` on both families |
+| `laptop` | `HostDriver` | `alpine:3.24.2` | 2 | Dual stack hosts on the office LAN |
+| `sensor` | `HostDriver` | `alpine:3.24.2` | 1 | IPv6-only host on the lab LAN |
+| `web` | `HostDriver` | `nginx:1.31.6-alpine` | 1 | Dual stack web server on the lab LAN, serves the mounted `index.html` on both families |
 | `office-router` | `FRRRouterDriver` | `quay.io/frrouting/frr:10.7.1` | 1 | Office gateway: OSPFv2 for IPv4 and OSPFv3 for IPv6 |
 | `lab-router` | `FRRRouterDriver` | `quay.io/frrouting/frr:10.7.1` | 1 | Lab gateway: OSPFv2 for IPv4 and OSPFv3 for IPv6 |
 | `office-sw`, `lab-sw` | `LinuxSwitchDriver` | `alpine:3.24.2` | 1 each | Linux bridge switches, one per LAN |
 
-Nodes without a `driver` in the topology JSON get the default of their type: `BasicHostDriver` for hosts and `LinuxSwitchDriver` for switches.
+Nodes without a `driver` in the topology JSON get the default of their type: `HostDriver` for hosts and `LinuxSwitchDriver` for switches.
 
 Network segments:
 

@@ -27,23 +27,23 @@ Nodes deployed:
 
 | Node | Driver | Image | Replicas | Role |
 | --- | --- | --- | --- | --- |
-| `amf` | `BasicHostDriver` | `ghcr.io/herlesupreeth/docker_open5gs:master` | 1 | Access and Mobility Management Function |
-| `smf` | `BasicHostDriver` | `ghcr.io/herlesupreeth/docker_open5gs:master` | 1 | Session Management Function |
-| `nrf` | `BasicHostDriver` | `ghcr.io/herlesupreeth/docker_open5gs:master` | 1 | Network Repository Function |
-| `scp` | `BasicHostDriver` | `ghcr.io/herlesupreeth/docker_open5gs:master` | 1 | Service Communication Proxy |
-| `ausf` | `BasicHostDriver` | `ghcr.io/herlesupreeth/docker_open5gs:master` | 1 | Authentication Server Function |
-| `udm` | `BasicHostDriver` | `ghcr.io/herlesupreeth/docker_open5gs:master` | 1 | Unified Data Management |
-| `udr` | `BasicHostDriver` | `ghcr.io/herlesupreeth/docker_open5gs:master` | 1 | Unified Data Repository |
-| `pcf` | `BasicHostDriver` | `ghcr.io/herlesupreeth/docker_open5gs:master` | 1 | Policy Control Function |
-| `udsf` | `BasicHostDriver` | `mongo:8.0` | 1 | MongoDB (subscriber data store) |
-| `upf` | `BasicHostDriver` | `ghcr.io/herlesupreeth/docker_open5gs:master` | 1 | User Plane Function |
-| `webui` | `BasicHostDriver` | `ghcr.io/herlesupreeth/docker_open5gs:master` | 1 | Open5GS Web UI |
-| `gnb` | `BasicHostDriver` | `gradiant/ueransim:3.3.0` | 1 | UERANSIM gNB, N2/N3 on the host external network, radio link to `ue-0` |
-| `ue` | `BasicHostDriver` | `gradiant/ueransim:3.3.0` | 1 | UERANSIM UE, connects to the gNB, establishes a PDU session |
+| `amf` | `HostDriver` | `ghcr.io/herlesupreeth/docker_open5gs:master` | 1 | Access and Mobility Management Function |
+| `smf` | `HostDriver` | `ghcr.io/herlesupreeth/docker_open5gs:master` | 1 | Session Management Function |
+| `nrf` | `HostDriver` | `ghcr.io/herlesupreeth/docker_open5gs:master` | 1 | Network Repository Function |
+| `scp` | `HostDriver` | `ghcr.io/herlesupreeth/docker_open5gs:master` | 1 | Service Communication Proxy |
+| `ausf` | `HostDriver` | `ghcr.io/herlesupreeth/docker_open5gs:master` | 1 | Authentication Server Function |
+| `udm` | `HostDriver` | `ghcr.io/herlesupreeth/docker_open5gs:master` | 1 | Unified Data Management |
+| `udr` | `HostDriver` | `ghcr.io/herlesupreeth/docker_open5gs:master` | 1 | Unified Data Repository |
+| `pcf` | `HostDriver` | `ghcr.io/herlesupreeth/docker_open5gs:master` | 1 | Policy Control Function |
+| `udsf` | `HostDriver` | `mongo:8.0` | 1 | MongoDB (subscriber data store) |
+| `upf` | `HostDriver` | `ghcr.io/herlesupreeth/docker_open5gs:master` | 1 | User Plane Function |
+| `webui` | `HostDriver` | `ghcr.io/herlesupreeth/docker_open5gs:master` | 1 | Open5GS Web UI |
+| `gnb` | `HostDriver` | `gradiant/ueransim:3.3.0` | 1 | UERANSIM gNB, N2/N3 on the host external network, radio link to `ue-0` |
+| `ue` | `HostDriver` | `gradiant/ueransim:3.3.0` | 1 | UERANSIM UE, connects to the gNB, establishes a PDU session |
 | `switch` | `LinuxSwitchDriver` | `alpine:3.24.2` | 4 | Linux bridges: `switch-0` control plane, `switch-1` N4 (SMF–UPF), `switch-2` UPF uplink, `switch-3` WebUI |
 | `router` | `FRRRouterDriver` | `quay.io/frrouting/frr:10.7.1` | 2 | `router-0`: edge router with the external uplink and the WebUI DNAT; `router-1`: internet gateway (SNAT) |
 
-Nodes without a `driver` in the topology JSON get the default of their type: `BasicHostDriver` for hosts and `LinuxSwitchDriver` for switches.
+Nodes without a `driver` in the topology JSON get the default of their type: `HostDriver` for hosts and `LinuxSwitchDriver` for switches.
 
 Network segments:
 

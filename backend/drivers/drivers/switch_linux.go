@@ -17,6 +17,5 @@ func NewLinuxSwitchDriver() *LinuxSwitchDriver {
 	}
 }
 
-// Checks opcionales
 var _ capabilities.L2Capable = (*LinuxSwitchDriver)(nil)
 var _ capabilities.SwitchCapable = (*LinuxSwitchDriver)(nil)

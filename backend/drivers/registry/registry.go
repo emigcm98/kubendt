@@ -38,12 +38,28 @@ var (
 )
 
 var DefaultDriverByType = map[string]string{
-	"host":   "BasicHostDriver",
+	"host":   "HostDriver",
 	"switch": "LinuxSwitchDriver",
 	"router": "LinuxRouterDriver",
 }
 
-// Register: PASA UN CONSTRUCTOR TIPADO (func() T) donde T satisface Driver.
+// driverAliases maps names kept for one version to the driver they now
+// mean; saved topology files name them. Resolution accepts them, listings
+// do not show them, and the resolver warns.
+var driverAliases = map[string]string{
+	"BasicHostDriver": "HostDriver",
+}
+
+// Canonical returns the registered name behind name, and whether name was a
+// deprecated alias of it.
+func Canonical(name string) (string, bool) {
+	if target, ok := driverAliases[name]; ok {
+		return target, true
+	}
+	return name, false
+}
+
+// Register takes a typed constructor (func() T) whose T satisfies Driver.
 func Register[T Driver](ctor func() T) {
 	inst := ctor()
 	name := inst.Name()
@@ -60,8 +76,17 @@ func Register[T Driver](ctor func() T) {
 	registryType[name] = typ
 }
 
-func IsRegistered(name string) bool     { _, ok := registryCtor[name]; return ok }
-func TypeOf(name string) (string, bool) { v, ok := registryType[name]; return v, ok }
+func IsRegistered(name string) bool {
+	name, _ = Canonical(name)
+	_, ok := registryCtor[name]
+	return ok
+}
+
+func TypeOf(name string) (string, bool) {
+	name, _ = Canonical(name)
+	v, ok := registryType[name]
+	return v, ok
+}
 
 func ValidDriversForType(t string) []string {
 	out := []string{}
@@ -73,8 +98,10 @@ func ValidDriversForType(t string) []string {
 	return out
 }
 
-// NewByName: creates a NEW instance using the registered constructor.
+// NewByName creates a new instance from the registered constructor; an
+// alias resolves to its driver, so pods labelled with it keep working.
 func NewByName(name string) (any, error) {
+	name, _ = Canonical(name)
 	ctor, ok := registryCtor[name]
 	if !ok {
 		return nil, fmt.Errorf("driver %q not registered", name)
@@ -86,7 +113,7 @@ func ResolveDefaultForType(t string) (string, error) {
 	if d, ok := DefaultDriverByType[t]; ok {
 		return d, nil
 	}
-	return "", fmt.Errorf("no hay driver por defecto para type=%q", t)
+	return "", fmt.Errorf("no default driver for type=%q", t)
 }
 
 func ListAll() []struct {

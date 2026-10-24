@@ -8,11 +8,9 @@
 REGISTRATION TIME (Backend Startup):
 │
 ├─ RegisterAllDrivers()
-│  ├─ Register(NewBasicHostDriver)
-│  │  └─ Extracts Name="BasicHostDriver", Type="host"
-│  │     Stores: registry["BasicHostDriver"] = *BasicHostDriver type
 │  ├─ Register(NewHostDriver)
 │  │  └─ Extracts Name="HostDriver", Type="host"
+│  │     Stores: registry["HostDriver"] = *HostDriver type
 │  ├─ Register(NewLinuxSwitchDriver)
 │  │  └─ Extracts Name="LinuxSwitchDriver", Type="switch"
 │  ├─ Register(NewOpenVSwitchDriver)
@@ -26,7 +24,7 @@ REGISTRATION TIME (Backend Startup):
 │        The driver declares /dev/kvm through DeviceProvider
 │
 └─ DefaultDriverByType = {
-     "host": "BasicHostDriver" (default; "HostDriver" is opt-in)
+     "host": "HostDriver" ("BasicHostDriver" is accepted one version as its alias)
      "switch": "LinuxSwitchDriver"
      "router": "LinuxRouterDriver"
    }
