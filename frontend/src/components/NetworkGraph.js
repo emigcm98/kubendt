@@ -4264,7 +4264,7 @@ const NetworkGraph = ({
                   name: 'newnode',
                   image: 'alpine:3.24.2',
                   type: 'host',
-                  driver: 'BasicHostDriver',
+                  driver: 'HostDriver',
                 },
               ],
               links: [

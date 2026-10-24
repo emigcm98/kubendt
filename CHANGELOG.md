@@ -19,6 +19,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Static and default routes on FRR routers go through staticd (`ip route` and `ipv6 route` in vtysh) instead of the kernel, so they are in the running-config and `redistribute static` picks them up. Setting or removing a default route also drops the pod's own default route through `eth0`, as `ip route replace` did before.
 - The examples no longer install packages at startup: the alpine hosts and switches run their image as it is, the ubuntu switches moved to alpine, the Open vSwitch nodes run the image's own entrypoint, and the mongo and iperf3 nodes start only their service. `commands` is left where the command is the application, and the hosts that install `ping` for their guide declare `readiness` on it.
+- `HostDriver` is the one host driver and the default for type `host`; `BasicHostDriver` differed only in a `replace_ip` that skips an address already there, which every Linux driver does now.
+
+### Deprecated
+
+- `BasicHostDriver` as a driver name: it resolves to `HostDriver` with a `driver_deprecated` warning in the deploy response and goes in the next version.
 
 ### Fixed
 

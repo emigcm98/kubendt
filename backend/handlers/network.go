@@ -97,6 +97,7 @@ func ModifyNetwork(c *gin.Context) {
 	// when the API server or SQLite is under pressure. Fetching existingNodes
 	// here is a single StatefulSet List (cheap) and gets re-read after we hold
 	// the lock so race conditions don't matter.
+	var driverWarnings []types.Warning
 	if hasAdd && len(request.Add.Links) > 0 {
 		preValStart := time.Now()
 		preExistingNodes, err := helpers.GetExistingNodes(namespace)
@@ -106,10 +107,12 @@ func ModifyNetwork(c *gin.Context) {
 			return
 		}
 		if len(request.Add.Nodes) > 0 {
-			if err := helpers.ResolveDriversForNodes(request.Add.Nodes); err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			dw, derr := helpers.ResolveDriversForNodes(request.Add.Nodes)
+			if derr != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": derr.Error()})
 				return
 			}
+			driverWarnings = dw
 			if err := helpers.ValidateNodeInputs(namespace, request.Add.Nodes); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 				return
@@ -205,7 +208,7 @@ func ModifyNetwork(c *gin.Context) {
 	// don't exist in the namespace file manager, leading to skipped ConfigMaps).
 	// The operation still succeeds; the frontend renders these in the success
 	// modal so the user knows something they declared was not applied.
-	warnings := []types.Warning{}
+	warnings := append([]types.Warning{}, driverWarnings...)
 
 	// Validate scale cross-section BEFORE touching anything, so user input
 	// errors (overlap with add/delete, unknown nodes, etc.) surface fast.
@@ -770,7 +773,8 @@ func DeployNetwork(c *gin.Context) {
 	}
 
 	// 4. Validate that all drivers specified in nodes are known and can be used
-	if err := helpers.ResolveDriversForNodes(request.Nodes); err != nil {
+	driverWarnings, err := helpers.ResolveDriversForNodes(request.Nodes)
+	if err != nil {
 		log.Printf("❌ Driver resolution: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -904,7 +908,7 @@ func DeployNetwork(c *gin.Context) {
 	}
 
 	validMountsMap := make(map[string][]types.MountSpec)
-	warnings := make([]types.Warning, 0)
+	warnings := append(make([]types.Warning, 0), driverWarnings...)
 	for _, node := range request.Nodes {
 		for _, mount := range node.Mounts {
 			_, _, err := helpers.CreateMountResourceForFile(namespace, mount.File)

@@ -10,11 +10,11 @@ func (L3Base) SetIP(iface, cidr string) [][]string {
 	return [][]string{{"ip", "addr", "replace", cidr, "dev", iface}}
 }
 
+// ReplaceIP leaves the interface alone when it already carries the address,
+// so a replay does not flush and re-add what is there.
 func (L3Base) ReplaceIP(iface, cidr string) [][]string {
-	return [][]string{
-		{"ip", "addr", "flush", "dev", iface},
-		{"ip", "addr", "add", cidr, "dev", iface},
-	}
+	return [][]string{{"sh", "-c",
+		`ip -o addr show dev ` + iface + ` | grep -q ' ` + cidr + ` ' || { ip addr flush dev ` + iface + `; ip addr add ` + cidr + ` dev ` + iface + `; }`}}
 }
 
 // Removing an address that is not there is nothing to do, not an error: a

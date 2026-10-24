@@ -24,11 +24,11 @@ Nodes deployed:
 
 | Node | Driver | Image | Replicas | Role |
 | --- | --- | --- | --- | --- |
-| `host` | `BasicHostDriver` | `alpine:3.24.2` | 4 | Alpine hosts, one per LAN |
+| `host` | `HostDriver` | `alpine:3.24.2` | 4 | Alpine hosts, one per LAN |
 | `router` | `VyOSRouterDriver` | `localhost/vyos-router:dev` (QEMU VM) | 2 | `router-0`: edge router with the external uplink, SNAT, DNAT and a static route to the web LAN; `router-1`: internal router. Both run OSPF |
-| `web-server` | `BasicHostDriver` | `nginx:1.31.6-alpine` | 1 | nginx serving the mounted `index.html` |
+| `web-server` | `HostDriver` | `nginx:1.31.6-alpine` | 1 | nginx serving the mounted `index.html` |
 
-Nodes without a `driver` in the topology JSON get the default of their type: `BasicHostDriver` for hosts.
+Nodes without a `driver` in the topology JSON get the default of their type: `HostDriver` for hosts.
 
 Network segments:
 

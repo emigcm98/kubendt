@@ -24,7 +24,7 @@ KubeNDT implements network topology management for Kubernetes through five inter
 
 **Concrete Drivers**:
 
-- `BasicHostDriver`, `HostDriver`: L2+L3 (HostDriver overrides ReplaceIP for idempotency)
+- `HostDriver`: L2+L3 (`BasicHostDriver` is accepted one version as its alias)
 - `LinuxSwitchDriver`, `OpenVSwitchDriver`: L2+Bridge
 - `LinuxRouterDriver`, `FRRRouterDriver`: L2+L3+NAT (FRR also implements OSPFCapable via vtysh)
 - `VyOSRouterDriver`: L2+L3+NAT+OSPF for QEMU-based VyOS nodes; translates actions into VyOS CLI commands; auto-adds `/dev/kvm` device

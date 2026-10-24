@@ -35,13 +35,13 @@ Nodes deployed:
 | `dmz-sw` | `LinuxSwitchDriver` | `alpine:3.24.2` | 1 | DMZ switch (Linux bridge) |
 | `svc-sw` | `LinuxSwitchDriver` | `alpine:3.24.2` | 1 | Services switch (Linux bridge) |
 | `room-sw` | `LinuxSwitchDriver` | `alpine:3.24.2` | 2 | Room switches (Linux bridge), one per room |
-| `iperf-server` | `BasicHostDriver` | `networkstatic/iperf3:latest` | 2 | iperf3 servers: `iperf-server-0` in the DMZ, `iperf-server-1` in the services network |
-| `web-public` | `BasicHostDriver` | `nginx:1.31.6-alpine` | 1 | Public web server in the DMZ |
-| `web-internal` | `BasicHostDriver` | `nginx:1.31.6-alpine` | 1 | Internal web server in the services network |
-| `dns-server` | `BasicHostDriver` | `internetsystemsconsortium/bind9:9.20` | 1 | BIND9 authoritative DNS for `kubendt.local` |
+| `iperf-server` | `HostDriver` | `networkstatic/iperf3:latest` | 2 | iperf3 servers: `iperf-server-0` in the DMZ, `iperf-server-1` in the services network |
+| `web-public` | `HostDriver` | `nginx:1.31.6-alpine` | 1 | Public web server in the DMZ |
+| `web-internal` | `HostDriver` | `nginx:1.31.6-alpine` | 1 | Internal web server in the services network |
+| `dns-server` | `HostDriver` | `internetsystemsconsortium/bind9:9.20` | 1 | BIND9 authoritative DNS for `kubendt.local` |
 | `user` | `HostDriver` | `alpine:3.24.2` | 4 | End-user hosts, two per room |
 
-Nodes without a `driver` in the topology JSON get the default of their type: `BasicHostDriver` for hosts and `LinuxSwitchDriver` for switches.
+Nodes without a `driver` in the topology JSON get the default of their type: `HostDriver` for hosts and `LinuxSwitchDriver` for switches.
 
 Network segments:
 

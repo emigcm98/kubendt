@@ -1288,9 +1288,8 @@ definitions:
         additionalProperties:
           type: integer
         example:
-          BasicHostDriver: 5
           FRRRouterDriver: 3
-          HostDriver: 4
+          HostDriver: 9
           LinuxSwitchDriver: 6
         type: object
     type: object
@@ -1339,9 +1338,8 @@ definitions:
         additionalProperties:
           type: integer
         example:
-          '*drivers.BasicHostDriver': 5
           '*drivers.FRRRouterDriver': 7
-          '*drivers.HostDriver': 12
+          '*drivers.HostDriver': 17
           '*drivers.LinuxSwitchDriver': 6
         type: object
       last_executed_at:
@@ -1640,9 +1638,9 @@ definitions:
     properties:
       commands:
         description: |-
-          Commands replaces the image's entrypoint, `sh -c "... && sleep infinity"`
-          in the examples. It is where an image installs what the node needs at
-          startup, iproute2 for `ip` or iptables for NAT.
+          Commands replaces the image's entrypoint and then has to keep running
+          itself (`sh -c "... && sleep infinity"`). Without it the image runs as
+          it is, with a tty and stdin open so a shell entrypoint stays up.
         items:
           type: string
         type: array

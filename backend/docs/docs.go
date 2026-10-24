@@ -4581,9 +4581,8 @@ const docTemplate = `{
                         "type": "integer"
                     },
                     "example": {
-                        "BasicHostDriver": 5,
                         "FRRRouterDriver": 3,
-                        "HostDriver": 4,
+                        "HostDriver": 9,
                         "LinuxSwitchDriver": 6
                     }
                 }
@@ -4651,9 +4650,8 @@ const docTemplate = `{
                         "type": "integer"
                     },
                     "example": {
-                        "*drivers.BasicHostDriver": 5,
                         "*drivers.FRRRouterDriver": 7,
-                        "*drivers.HostDriver": 12,
+                        "*drivers.HostDriver": 17,
                         "*drivers.LinuxSwitchDriver": 6
                     }
                 },
@@ -5081,7 +5079,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "commands": {
-                    "description": "Commands replaces the image's entrypoint, ` + "`" + `sh -c \"... \u0026\u0026 sleep infinity\"` + "`" + `\nin the examples. It is where an image installs what the node needs at\nstartup, iproute2 for ` + "`" + `ip` + "`" + ` or iptables for NAT.",
+                    "description": "Commands replaces the image's entrypoint and then has to keep running\nitself (` + "`" + `sh -c \"... \u0026\u0026 sleep infinity\"` + "`" + `). Without it the image runs as\nit is, with a tty and stdin open so a shell entrypoint stays up.",
                     "type": "array",
                     "items": {
                         "type": "string"

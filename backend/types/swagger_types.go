@@ -53,7 +53,7 @@ type NamespaceSummaryPodsSection struct {
 
 // NamespaceSummaryDriversSection contains counters by driver name.
 type NamespaceSummaryDriversSection struct {
-	ByDriver map[string]int `json:"by_driver" swaggertype:"object,integer" example:"BasicHostDriver:5,FRRRouterDriver:3,HostDriver:4,LinuxSwitchDriver:6"`
+	ByDriver map[string]int `json:"by_driver" swaggertype:"object,integer" example:"FRRRouterDriver:3,HostDriver:9,LinuxSwitchDriver:6"`
 }
 
 // NamespaceSummaryRuntimeSection contains counters by runtime.
@@ -64,7 +64,7 @@ type NamespaceSummaryRuntimeSection struct {
 // NamespaceSummaryOperationsSection contains persisted operation counters.
 type NamespaceSummaryOperationsSection struct {
 	ByAction        map[string]int `json:"by_action" swaggertype:"object,integer" example:"add_dns_nameserver:4,add_dns_search:4,enable_dnat:3,enable_snat:1,remove_default_route:2,replace_ip:1,set_default_route:9,setup_bridge:6"`
-	ByDriver        map[string]int `json:"by_driver" swaggertype:"object,integer" example:"*drivers.BasicHostDriver:5,*drivers.FRRRouterDriver:7,*drivers.HostDriver:12,*drivers.LinuxSwitchDriver:6"`
+	ByDriver        map[string]int `json:"by_driver" swaggertype:"object,integer" example:"*drivers.FRRRouterDriver:7,*drivers.HostDriver:17,*drivers.LinuxSwitchDriver:6"`
 	LastExecutedAt  string         `json:"last_executed_at" example:"2026-03-23T15:15:25.402889011Z"`
 	PodsWithHistory int            `json:"pods_with_history" example:"18"`
 	TotalPersisted  int            `json:"total_persisted" example:"30"`

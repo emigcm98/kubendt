@@ -31,7 +31,7 @@ Registry Pattern:
 
 **Registered Drivers** (in register_all.go; how to write one is in [DRIVERS.md](DRIVERS.md)):
 
-- `BasicHostDriver` (type: host), basic IP manipulation
+- `HostDriver` (type: host), basic IP manipulation
 - `HostDriver` (type: host), L2, L3, TC with ReplaceIP override
 - `LinuxSwitchDriver` (type: switch), Linux bridge operations
 - `OpenVSwitchDriver` (type: switch), OVS-specific operations

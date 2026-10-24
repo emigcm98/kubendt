@@ -30,7 +30,7 @@ Nodes deployed (initial topology):
 | Node | Driver | Image | Replicas | Role |
 | --- | --- | --- | --- | --- |
 | `ubuntu-host` | `HostDriver` | `ubuntu:26.04` | 1 | Host on LAN A |
-| `alpine-host` | `BasicHostDriver` | `alpine:3.24.2` | 1 | Host on LAN B; scaled to 3 replicas in phase 2 |
+| `alpine-host` | `HostDriver` | `alpine:3.24.2` | 1 | Host on LAN B; scaled to 3 replicas in phase 2 |
 | `switch` | `OpenVSwitchDriver` | `globocom/openvswitch:latest` | 2 | Open vSwitch switches: `switch-0` for LAN A, `switch-1` for LAN B |
 | `frr-router` | `FRRRouterDriver` | `quay.io/frrouting/frr:10.7.1` (container) | 1 | LAN A gateway, OSPF over the transit link |
 | `vyos-router` | `VyOSRouterDriver` | `localhost/vyos-router:dev` (QEMU VM) | 1 | LAN B gateway, OSPF over the transit link |
@@ -62,7 +62,7 @@ The scenario is organized as six sequential phases. Each phase has a clear KubeN
 
 | Phase | Action | Mechanism exercised |
 | --- | --- | --- |
-| 1 | Deploy initial topology + apply `network_conf.json` | Driver/capability dispatch (HostDriver, BasicHostDriver, OpenVSwitchDriver, FRRRouterDriver, VyOSRouterDriver), OSPF capability across container and VM drivers, bridge setup |
+| 1 | Deploy initial topology + apply `network_conf.json` | Driver/capability dispatch (HostDriver, HostDriver, OpenVSwitchDriver, FRRRouterDriver, VyOSRouterDriver), OSPF capability across container and VM drivers, bridge setup |
 | 2 | Apply `modify-phase2-scaleup.json` + `network_conf-phase2.json` | Scale-up of an existing StatefulSet without redeployment, peer-side link upsert, post-scale configuration on new replicas |
 | 3 | Apply `modify-phase3-add.json` + `network_conf-phase3.json` | Add phase of dynamic modification (new node + new link) |
 | 4 | Apply `modify-phase4-scaledown.json` | Scale-down of an existing StatefulSet, automatic peer cleanup and operation-history pruning |
@@ -71,7 +71,7 @@ The scenario is organized as six sequential phases. Each phase has a clear KubeN
 
 ## Notable Characteristics
 
-- The scenario combines **five different drivers** in a single topology: `HostDriver`, `BasicHostDriver`, `OpenVSwitchDriver`, `FRRRouterDriver`, and the VM-based `VyOSRouterDriver`. Each modify phase exercises capability dispatch through the resolved driver of the target pod.
+- The scenario combines **five different drivers** in a single topology: `HostDriver`, `HostDriver`, `OpenVSwitchDriver`, `FRRRouterDriver`, and the VM-based `VyOSRouterDriver`. Each modify phase exercises capability dispatch through the resolved driver of the target pod.
 - The FRR and VyOS routers are configured through the **same** `ospf_*` action set, even though one is a container reached via `kubectl exec` and the other is a QEMU guest reached over SSH. This is the clearest demonstration of the driver/capability separation: a single `OSPFCapable` interface, two driver realizations.
 - OSPF networks are announced via the `ospf_add_network` action, dispatched through each router's OSPF capability rather than via raw shell commands.
 - The transit link (`10.0.254.0/30`) is announced into OSPF so that the routers learn each other's LAN prefixes dynamically. No static routes are configured between routers.

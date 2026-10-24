@@ -17,13 +17,13 @@ Nodes deployed:
 
 | Node | Driver | Image | Replicas | Role |
 | --- | --- | --- | --- | --- |
-| `pc` | `BasicHostDriver` | `alpine:3.24.2` | 4 | Alpine hosts, two per LAN; mount `test.sh` and carry `ENV1`/`ENV2` |
-| `server` | `BasicHostDriver` | `alpine:3.24.2` | 1 | Alpine host behind the OVS switch; mounts the Secret-backed `secret.env` |
+| `pc` | `HostDriver` | `alpine:3.24.2` | 4 | Alpine hosts, two per LAN; mount `test.sh` and carry `ENV1`/`ENV2` |
+| `server` | `HostDriver` | `alpine:3.24.2` | 1 | Alpine host behind the OVS switch; mounts the Secret-backed `secret.env` |
 | `sw` | `LinuxSwitchDriver` | `alpine:3.24.2` | 2 | Linux bridge switches, one per LAN |
 | `ovs` | `OpenVSwitchDriver` | `globocom/openvswitch:latest` | 1 | Open vSwitch in front of `server` |
 | `r1` | `FRRRouterDriver` | `quay.io/frrouting/frr:10.7.1` | 1 | FRR router joining the three segments, SNAT on `eth0` |
 
-Nodes without a `driver` in the topology JSON get the default of their type: `BasicHostDriver` for hosts and `LinuxSwitchDriver` for switches.
+Nodes without a `driver` in the topology JSON get the default of their type: `HostDriver` for hosts and `LinuxSwitchDriver` for switches.
 
 Network segments:
 
