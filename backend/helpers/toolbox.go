@@ -25,10 +25,18 @@ import (
 // the pod's network namespace, one per pod, reused by every tool. Kubernetes
 // never removes an ephemeral container, so the sleeper bounds its lifetime.
 
-// DefaultToolboxImage ships tshark, traceroute, mtr, tc and iperf3 and pulls
-// from Docker Hub. KUBENDT_TOOLBOX_IMAGE overrides it, for a mirror or the
-// slim image under deploy/custom_images/toolbox.
-const DefaultToolboxImage = "nicolaka/netshoot:v0.16"
+// DefaultToolboxImage is KubeNDT's own, built from deploy/custom_images/toolbox
+// and published with every release under the release's version, since the
+// backend decides what runs inside it (tshark, traceroute, mtr, tc, iperf3,
+// ip, iptables). A development backend takes latest. KUBENDT_TOOLBOX_IMAGE
+// overrides it, nicolaka/netshoot works too.
+func DefaultToolboxImage() string {
+	version := os.Getenv("KUBENDT_VERSION")
+	if version == "" || version == "dev" {
+		version = "latest"
+	}
+	return "ghcr.io/emigcm98/kubendt-toolbox:" + version
+}
 
 const toolboxSleeperSeconds = "86400"
 
@@ -51,7 +59,7 @@ func ToolboxImage() string {
 			return img
 		}
 	}
-	return DefaultToolboxImage
+	return DefaultToolboxImage()
 }
 
 // ValidToolboxName reports whether s is a toolbox container name we minted.

@@ -340,7 +340,7 @@ func readPodMTUs(namespace string, byPod map[string][]mtuEnd, known map[string]m
 // podLinkMTUs reads the pod's interfaces in one exec: ip -o link show, or the
 // sysfs values of the link interfaces when that output does not parse.
 func podLinkMTUs(namespace, pod string, ends []mtuEnd) map[string]int {
-	stdout, _, err := ExecInPod(namespace, pod, []string{"ip", "-o", "link", "show"})
+	stdout, _, err := ExecNetns(namespace, pod, []string{"ip", "-o", "link", "show"})
 	if err == nil {
 		if mtus := parseLinkMTUs(stdout); len(mtus) > 0 {
 			return mtus
@@ -535,7 +535,7 @@ func setLinkMTUs(namespace string, eff int, ends []mtuEnd, current map[string]ma
 			for i, it := range todo {
 				keys[i] = it.key()
 			}
-			stdout, stderr, err := ExecInPod(namespace, podName, []string{"sh", "-c", setScript(todo)})
+			stdout, stderr, err := ExecNetns(namespace, podName, []string{"sh", "-c", setScript(todo)})
 			if err != nil {
 				podWarnings = append(podWarnings, types.Warning{
 					Node:   podName,

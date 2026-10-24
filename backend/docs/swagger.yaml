@@ -1682,6 +1682,20 @@ definitions:
       privileged:
         example: true
         type: boolean
+      readiness:
+        description: |-
+          Readiness is a command run in the container every 2 s until it exits 0;
+          the node is Ready then, and a deploy or a modify waits for it. For a
+          node whose startup installs or starts what the lab uses (a daemon, a
+          tool its checks run). Without it a node is Ready when its container
+          runs, or when its driver's probe passes.
+        example:
+        - sh
+        - -c
+        - command -v ping
+        items:
+          type: string
+        type: array
       replicas:
         example: 1
         type: integer

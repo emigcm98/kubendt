@@ -62,7 +62,7 @@ var (
 // 192.168.10.1 resolve to the UPF even though it is a runtime interface not in
 // the declared topology. One cheap exec per pod.
 func podAddresses(namespace, podName string) map[string]string {
-	stdout, _, err := ExecInPod(namespace, podName, []string{"ip", "-o", "addr", "show"})
+	stdout, _, err := ExecNetns(namespace, podName, []string{"ip", "-o", "addr", "show"})
 	if err != nil {
 		return map[string]string{}
 	}

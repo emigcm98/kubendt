@@ -23,8 +23,8 @@ func TestValidToolboxName(t *testing.T) {
 func TestToolboxImage(t *testing.T) {
 	t.Setenv("KUBENDT_TOOLBOX_IMAGE", "")
 	t.Setenv("KUBENDT_CAPTURE_IMAGE", "")
-	if got := ToolboxImage(); got != DefaultToolboxImage {
-		t.Errorf("default image %q, want %q", got, DefaultToolboxImage)
+	if got := ToolboxImage(); got != DefaultToolboxImage() {
+		t.Errorf("default image %q, want %q", got, DefaultToolboxImage())
 	}
 	t.Setenv("KUBENDT_CAPTURE_IMAGE", "mirror/capture:1")
 	if got := ToolboxImage(); got != "mirror/capture:1" {

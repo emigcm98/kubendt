@@ -17,12 +17,15 @@ import (
 // through and its commands, or the reason it cannot run. Skip marks an
 // action that is reported but not run, a duplicate for instance.
 type PlannedAction struct {
-	Action       types.ActionEntry
-	Flags        types.ActionFlags
-	Desc         *actions.Descriptor // nil for an unknown action
-	Executor     string
-	Exec         executor.CommandExecutor
-	Commands     [][]string
+	Action   types.ActionEntry
+	Flags    types.ActionFlags
+	Desc     *actions.Descriptor // nil for an unknown action
+	Executor string
+	Exec     executor.CommandExecutor
+	Commands [][]string
+	// Container runs the kubectl commands: the pod's own when empty, its
+	// toolbox when the image lacks the netns tool the action needs.
+	Container    string
 	Precondition *Precondition
 	Skip         string
 	Err          error
@@ -129,6 +132,26 @@ func RunPlannedActions(namespace, podName string, plans []PlannedAction, opts Ru
 	for i := range plans {
 		outcomes[i].Err = plans[i].Err
 	}
+	// Where each kubectl action runs: the pod, or its toolbox when the image
+	// lacks the netns tool the action needs. Decided here, at run time, so
+	// planning never touches the cluster.
+	for i := range plans {
+		p := &plans[i]
+		if p.Err != nil || p.Skip != "" || p.Executor != executor.DefaultExecutorName {
+			continue
+		}
+		class := toolClassOfRows(p.Commands)
+		if class == toolNone {
+			continue
+		}
+		c, err := NetnsContainer(namespace, podName, class)
+		if err != nil {
+			p.Err = fmt.Errorf("the pod has no %s and no toolbox could be injected: %w", toolProbe(class), err)
+			outcomes[i].Err = p.Err
+			continue
+		}
+		p.Container = c
+	}
 
 	i := 0
 	for i < len(plans) {
@@ -178,7 +201,7 @@ func RunPlannedActions(namespace, podName string, plans []PlannedAction, opts Ru
 			j := i
 			for j < len(plans) {
 				gp := plans[j]
-				if gp.Skip != "" || gp.Err != nil || gp.Executor != p.Executor || gp.Flags.Get {
+				if gp.Skip != "" || gp.Err != nil || gp.Executor != p.Executor || gp.Flags.Get || gp.Container != p.Container {
 					break
 				}
 				j++
@@ -186,7 +209,9 @@ func RunPlannedActions(namespace, podName string, plans []PlannedAction, opts Ru
 			var output string
 			execErr := exec(func() error {
 				var err error
-				output, err = p.Exec.ExecCommandAndGet(podName, namespace, executor.NewArgsCommand([]string{"sh", "-c", shellScript(plans[i:j])}))
+				cmd := executor.NewArgsCommand([]string{"sh", "-c", shellScript(plans[i:j])})
+				cmd.Container = p.Container
+				output, err = p.Exec.ExecCommandAndGet(podName, namespace, cmd)
 				return err
 			})
 			if execErr != nil {
@@ -216,6 +241,7 @@ func RunPlannedActions(namespace, podName string, plans []PlannedAction, opts Ru
 		var outputs []string
 		var actionErr error
 		for _, cmd := range executor.CommandsFromLegacyForExecutor(p.Commands, p.Executor) {
+			cmd.Container = p.Container
 			var output string
 			execErr := exec(func() error {
 				var err error

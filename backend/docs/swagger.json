@@ -5125,6 +5125,18 @@
                     "type": "boolean",
                     "example": true
                 },
+                "readiness": {
+                    "description": "Readiness is a command run in the container every 2 s until it exits 0;\nthe node is Ready then, and a deploy or a modify waits for it. For a\nnode whose startup installs or starts what the lab uses (a daemon, a\ntool its checks run). Without it a node is Ready when its container\nruns, or when its driver's probe passes.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "sh",
+                        "-c",
+                        "command -v ping"
+                    ]
+                },
                 "replicas": {
                     "type": "integer",
                     "example": 1

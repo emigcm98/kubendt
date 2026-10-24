@@ -58,7 +58,7 @@ func ExecInPod(namespace, podName string, command []string) (stdout, stderr stri
 }
 
 func GetInterfacesFromPod(podName, namespace string) ([]map[string]string, error) {
-	stdout, stderr, err := ExecInPod(namespace, podName, []string{"ip", "a"})
+	stdout, stderr, err := ExecNetns(namespace, podName, []string{"ip", "a"})
 	if err != nil {
 		return nil, fmt.Errorf("error executing command in pod: %w\nstderr: %s", err, stderr)
 	}
@@ -261,12 +261,23 @@ func resolveDriverForProbe(driverName string) any {
 	return drv
 }
 
-// buildReadinessProbe returns a Kubernetes readiness probe tailored to the pod type.
-// If the driver for the node implements drivers_meta.ReadinessProbeProvider, its probe
-// spec is used. Otherwise the default checks the baseline every image needs,
-// the `ip` command, and says so when it is missing, since the kubelet records
-// the probe's output in the pod's events and the Ready timeout quotes it.
-func buildReadinessProbe(driver any) *v1.Probe {
+// buildReadinessProbe returns the readiness probe of a node: the one its
+// spec declares, else the driver's when it implements
+// drivers_meta.ReadinessProbeProvider (FRR's daemons, a VM's guest), else
+// none.
+func buildReadinessProbe(driver any, node types.NodeSpec) *v1.Probe {
+	if len(node.Readiness) > 0 {
+		// The node says what Ready means for it; no initial delay, probed
+		// every 2 s, a minute of consecutive failures before a Ready pod is
+		// flagged again.
+		return &v1.Probe{
+			ProbeHandler:        v1.ProbeHandler{Exec: &v1.ExecAction{Command: node.Readiness}},
+			InitialDelaySeconds: 0,
+			PeriodSeconds:       2,
+			TimeoutSeconds:      3,
+			FailureThreshold:    30,
+		}
+	}
 	if provider, ok := driver.(drivers_meta.ReadinessProbeProvider); ok {
 		spec := provider.ReadinessProbeCommands()
 		return &v1.Probe{
@@ -279,24 +290,10 @@ func buildReadinessProbe(driver any) *v1.Probe {
 			FailureThreshold:    spec.FailureThreshold,
 		}
 	}
-	// No initial delay: the kubelet runs the first probe as soon as the
-	// container starts, so a node that already has `ip` is Ready right away
-	// instead of 5-10 s later. Nodes that still install tools at startup
-	// just stay NotReady and are re-probed every 2 s until it shows up, the
-	// threshold plays no part in that. It only decides how many consecutive
-	// failures flip an already Ready pod back to NotReady, and since `ip`
-	// never disappears the only failures are exec timeouts under load. 30
-	// means a full minute of them before a healthy pod is flagged.
-	return &v1.Probe{
-		ProbeHandler: v1.ProbeHandler{
-			Exec: &v1.ExecAction{
-				Command: []string{"sh", "-c", "command -v ip || { echo 'ip not found in PATH, the image needs iproute2'; exit 1; }"},
-			},
-		},
-		InitialDelaySeconds: 0,
-		PeriodSeconds:       2,
-		FailureThreshold:    30,
-	}
+	// A plain node is Ready when its container runs: what the platform needs
+	// in its network namespace it brings itself, through the toolbox, when
+	// the image lacks it.
+	return nil
 }
 
 func CreateNetworkStatefulSet(namespace string, node types.NodeSpec, validMounts []types.MountSpec, links []types.LinkSpec) error {
@@ -343,7 +340,7 @@ func CreateNetworkStatefulSet(namespace string, node types.NodeSpec, validMounts
 				Add: []v1.Capability{"NET_ADMIN"},
 			},
 		},
-		ReadinessProbe: buildReadinessProbe(resolveDriverForProbe(node.Driver)),
+		ReadinessProbe: buildReadinessProbe(resolveDriverForProbe(node.Driver), node),
 		Env:            guestLinkEnv(node, links),
 	}
 
@@ -924,7 +921,7 @@ func deletePeerVethsForPod(namespace, podName string) {
 			continue
 		}
 
-		_, stderr, execErr := ExecInPod(namespace, peer, []string{"ip", "link", "del", peerIntf})
+		_, stderr, execErr := ExecNetns(namespace, peer, []string{"ip", "link", "del", peerIntf})
 		if execErr != nil {
 			if strings.Contains(stderr, "Cannot find device") || strings.Contains(stderr, "does not exist") {
 				log.Printf("ℹ️ deletePeerVeths: %s/%s already absent (peer of %s)", peer, peerIntf, podName)

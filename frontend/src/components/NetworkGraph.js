@@ -60,6 +60,7 @@ const NODE_SPEC_FIELDS = new Set([
   'privileged',
   'replicas',
   'commands',
+  'readiness',
   'env',
   'mounts',
   'devices',
@@ -162,6 +163,11 @@ const validateNodeSpecFields = (node, label) => {
   if (node.commands !== undefined && node.commands !== null) {
     if (!Array.isArray(node.commands) || !node.commands.every((c) => typeof c === 'string')) {
       throw new Error(`${label}: 'commands' must be an array of strings.`);
+    }
+  }
+  if (node.readiness !== undefined && node.readiness !== null) {
+    if (!Array.isArray(node.readiness) || !node.readiness.every((c) => typeof c === 'string')) {
+      throw new Error(`${label}: 'readiness' must be an array of strings (a command).`);
     }
   }
   if (node.env !== undefined && node.env !== null) {

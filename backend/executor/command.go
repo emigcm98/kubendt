@@ -23,6 +23,10 @@ type Command struct {
 	Args  []string
 	Line  string
 	Lines []string
+	// Container names where a kubectl command runs, the pod's main
+	// container when empty; the helpers point it at the toolbox for a pod
+	// whose image lacks the tool.
+	Container string
 }
 
 func NewArgsCommand(args []string) Command {
