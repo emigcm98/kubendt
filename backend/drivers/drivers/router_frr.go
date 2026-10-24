@@ -32,6 +32,7 @@ var _ capabilities.OSPF6Capable = (*FRRRouterDriver)(nil)
 var _ drivers_meta.ReadinessProbeProvider = (*FRRRouterDriver)(nil)
 var _ drivers_meta.ShellProvider = (*FRRRouterDriver)(nil)
 var _ drivers_meta.CapabilityPrecondition = (*FRRRouterDriver)(nil)
+var _ drivers_meta.StartupCommandsProvider = (*FRRRouterDriver)(nil)
 
 // ReadinessProbeCommands makes the pod Ready only when zebra, and every
 // daemon enabled in /etc/frr/daemons, answer on their vty socket. The
@@ -49,6 +50,24 @@ func (FRRRouterDriver) ReadinessProbeCommands() drivers_meta.ReadinessProbeSpec 
 		TimeoutSeconds:      3,
 		FailureThreshold:    30,
 	}
+}
+
+// frrDaemons are the daemons behind the driver's capabilities, enabled by the
+// default startup command; an FRR image enables none out of the box.
+var frrDaemons = []string{"ospfd", "ospf6d", "ripd", "ripngd"}
+
+// StartupCommands prepares a stock FRR image: the daemons the capabilities
+// need, the two config files the image ships without, then the image's own
+// start. iptables is not installed here, NAT says so when it is missing.
+func (FRRRouterDriver) StartupCommands() []string {
+	var sed []string
+	for _, d := range frrDaemons {
+		sed = append(sed, "s/^"+d+"=no/"+d+"=yes/")
+	}
+	return []string{"sh", "-c",
+		"sed -i '" + strings.Join(sed, "; ") + "' /etc/frr/daemons && " +
+			"touch /etc/frr/frr.conf /etc/frr/vtysh.conf && chown frr:frr /etc/frr/frr.conf /etc/frr/vtysh.conf && " +
+			"exec /sbin/tini -- /usr/lib/frr/docker-start"}
 }
 
 // FRR starts a daemon only when its line in /etc/frr/daemons says yes, and

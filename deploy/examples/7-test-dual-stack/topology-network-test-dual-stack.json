@@ -36,23 +36,13 @@
       "name": "office-router",
       "image": "quay.io/frrouting/frr:10.7.1",
       "type": "router",
-      "driver": "FRRRouterDriver",
-      "commands": [
-        "sh",
-        "-c",
-        "sed -i 's/^ospfd=no/ospfd=yes/; s/^ospf6d=no/ospf6d=yes/' /etc/frr/daemons && touch /etc/frr/frr.conf /etc/frr/vtysh.conf && chown frr:frr /etc/frr/frr.conf /etc/frr/vtysh.conf && exec /sbin/tini -- /usr/lib/frr/docker-start"
-      ]
+      "driver": "FRRRouterDriver"
     },
     {
       "name": "lab-router",
       "image": "quay.io/frrouting/frr:10.7.1",
       "type": "router",
-      "driver": "FRRRouterDriver",
-      "commands": [
-        "sh",
-        "-c",
-        "sed -i 's/^ospfd=no/ospfd=yes/; s/^ospf6d=no/ospf6d=yes/' /etc/frr/daemons && touch /etc/frr/frr.conf /etc/frr/vtysh.conf && chown frr:frr /etc/frr/frr.conf /etc/frr/vtysh.conf && exec /sbin/tini -- /usr/lib/frr/docker-start"
-      ]
+      "driver": "FRRRouterDriver"
     },
     {
       "name": "office-sw",

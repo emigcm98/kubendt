@@ -50,7 +50,7 @@ The command behind the action needs a program the image does not ship, `iptables
 
 ## An action fails with "ospfd is not running"
 
-The capability behind the action needs a daemon the FRR image starts only when its line in `/etc/frr/daemons` says `yes`, and the node was started without it (`ospfd=no` is the file's default). FRR does not start daemons on the fly, so the backend checks the daemon's vty socket before the actions of that capability and fails them with this message instead of a vtysh error. Enable it in the node's startup `commands` before FRR starts, as the examples do (`sed -i 's/^ospfd=no/ospfd=yes/' /etc/frr/daemons`), and restart or redeploy the node.
+The capability behind the action needs a daemon the FRR image starts only when its line in `/etc/frr/daemons` says `yes`, and the node was started without it (`ospfd=no` is the file's default). FRR does not start daemons on the fly, so the backend checks the daemon's vty socket before the actions of that capability and fails them with this message instead of a vtysh error. It happens on a node that sets its own `commands` without enabling the daemon: when a node sets none, `FRRRouterDriver` enables every daemon behind its capabilities at startup. Enable it in those `commands` (`sed -i 's/^ospfd=no/ospfd=yes/' /etc/frr/daemons` before FRR starts) or drop them, and restart or redeploy the node.
 
 ## Backend changes not reflected during development
 
