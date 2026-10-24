@@ -39,6 +39,15 @@ definitions:
           Only used when type == "custom". No driver label required on the pod.
         example: ip route show
         type: string
+      cost:
+        description: |-
+          OSPF interface parameters. Priority 0 means never the DR, so a pointer
+          tells it apart from unset. Intervals are seconds.
+        example: 100
+        type: integer
+      dead_interval:
+        example: 40
+        type: integer
       device:
         example: /dev/net/tun
         type: string
@@ -72,6 +81,9 @@ definitions:
       gateway:
         example: 192.168.1.254
         type: string
+      hello_interval:
+        example: 10
+        type: integer
       iface:
         example: eth1
         type: string
@@ -85,12 +97,18 @@ definitions:
       internalPort:
         example: 80
         type: integer
+      network_type:
+        example: point-to-point
+        type: string
       options:
         $ref: '#/definitions/types.ActionOptions'
       ospf_area:
         description: OSPF
         example: "0"
         type: string
+      priority:
+        example: 255
+        type: integer
       protocol:
         example: tcp
         type: string

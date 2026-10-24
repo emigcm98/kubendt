@@ -226,6 +226,47 @@ func (FRRRouterDriver) OSPFRemoveRedistribute(source string) [][]string {
 	return [][]string{{"vtysh", "-c", "configure terminal", "-c", "router ospf", "-c", "no redistribute " + source}}
 }
 
+// frrOSPFIface applies interface-level OSPF lines (`ip ospf ...`).
+func frrOSPFIface(iface string, lines ...string) [][]string {
+	cmd := []string{"vtysh", "-c", "configure terminal", "-c", "interface " + iface}
+	for _, l := range lines {
+		cmd = append(cmd, "-c", l)
+	}
+	return [][]string{cmd}
+}
+
+func (FRRRouterDriver) OSPFSetCost(iface string, cost int) [][]string {
+	return frrOSPFIface(iface, fmt.Sprintf("ip ospf cost %d", cost))
+}
+
+func (FRRRouterDriver) OSPFRemoveCost(iface string) [][]string {
+	return frrOSPFIface(iface, "no ip ospf cost")
+}
+
+func (FRRRouterDriver) OSPFSetPriority(iface string, priority int) [][]string {
+	return frrOSPFIface(iface, fmt.Sprintf("ip ospf priority %d", priority))
+}
+
+func (FRRRouterDriver) OSPFRemovePriority(iface string) [][]string {
+	return frrOSPFIface(iface, "no ip ospf priority")
+}
+
+func (FRRRouterDriver) OSPFSetTimers(iface string, hello, dead int) [][]string {
+	return frrOSPFIface(iface, fmt.Sprintf("ip ospf hello-interval %d", hello), fmt.Sprintf("ip ospf dead-interval %d", dead))
+}
+
+func (FRRRouterDriver) OSPFRemoveTimers(iface string) [][]string {
+	return frrOSPFIface(iface, "no ip ospf hello-interval", "no ip ospf dead-interval")
+}
+
+func (FRRRouterDriver) OSPFSetNetworkType(iface, networkType string) [][]string {
+	return frrOSPFIface(iface, "ip ospf network "+networkType)
+}
+
+func (FRRRouterDriver) OSPFRemoveNetworkType(iface string) [][]string {
+	return frrOSPFIface(iface, "no ip ospf network")
+}
+
 // ─── OSPF6Capable ────────────────────────────────────────────────────────────
 // The process lives under `router ospf6`, the membership under the interface.
 

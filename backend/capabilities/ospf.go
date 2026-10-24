@@ -22,6 +22,34 @@ type OSPFCapable interface {
 	OSPFRemoveMTUIgnore(iface string) [][]string
 	OSPFRedistribute(source string) [][]string
 	OSPFRemoveRedistribute(source string) [][]string
+	OSPFSetCost(iface string, cost int) [][]string
+	OSPFRemoveCost(iface string) [][]string
+	OSPFSetPriority(iface string, priority int) [][]string
+	OSPFRemovePriority(iface string) [][]string
+	OSPFSetTimers(iface string, hello, dead int) [][]string
+	OSPFRemoveTimers(iface string) [][]string
+	OSPFSetNetworkType(iface, networkType string) [][]string
+	OSPFRemoveNetworkType(iface string) [][]string
+}
+
+// OSPFNetworkTypes are the interface network types OSPF accepts; point-to-point
+// on a /30 skips the DR election, as a serial line would.
+var OSPFNetworkTypes = []string{"broadcast", "non-broadcast", "point-to-multipoint", "point-to-point"}
+
+func ospfRange(action, field string, n, lo, hi int) error {
+	if n < lo || n > hi {
+		return fmt.Errorf("%s: %s must be between %d and %d, got %d", action, field, lo, hi, n)
+	}
+	return nil
+}
+
+func ospfNetworkType(a types.ActionEntry) (string, error) {
+	for _, t := range OSPFNetworkTypes {
+		if a.NetworkType == t {
+			return t, nil
+		}
+	}
+	return "", fmt.Errorf("%s: network_type must be one of %v, got %q", a.Type, OSPFNetworkTypes, a.NetworkType)
 }
 
 // OSPFSources are the route sources an OSPF process may redistribute.
@@ -90,6 +118,53 @@ func init() {
 					return nil, err
 				}
 				return c.OSPFRemoveRedistribute(s), nil
+			}},
+		actions.Action[OSPFCapable]{Type: "ospf_set_cost", Label: "Set interface cost", Params: actions.P(actions.Iface, actions.Cost), State: "ospf_cost", Key: keyIface,
+			Run: func(c OSPFCapable, a types.ActionEntry) ([][]string, error) {
+				if err := ospfRange(a.Type, "cost", a.Cost, 1, 65535); err != nil {
+					return nil, err
+				}
+				return c.OSPFSetCost(a.Iface, a.Cost), nil
+			}},
+		actions.Action[OSPFCapable]{Type: "ospf_remove_cost", Label: "Reset interface cost", Params: actions.P(actions.Iface), State: "ospf_cost", Key: keyIface, Clears: true,
+			Run: func(c OSPFCapable, a types.ActionEntry) ([][]string, error) { return c.OSPFRemoveCost(a.Iface), nil }},
+		actions.Action[OSPFCapable]{Type: "ospf_set_priority", Label: "Set interface priority", Params: actions.P(actions.Iface, actions.Priority), State: "ospf_priority", Key: keyIface,
+			Run: func(c OSPFCapable, a types.ActionEntry) ([][]string, error) {
+				if err := ospfRange(a.Type, "priority", *a.Priority, 0, 255); err != nil {
+					return nil, err
+				}
+				return c.OSPFSetPriority(a.Iface, *a.Priority), nil
+			}},
+		actions.Action[OSPFCapable]{Type: "ospf_remove_priority", Label: "Reset interface priority", Params: actions.P(actions.Iface), State: "ospf_priority", Key: keyIface, Clears: true,
+			Run: func(c OSPFCapable, a types.ActionEntry) ([][]string, error) {
+				return c.OSPFRemovePriority(a.Iface), nil
+			}},
+		actions.Action[OSPFCapable]{Type: "ospf_set_timers", Label: "Set hello and dead intervals", Params: actions.P(actions.Iface, actions.HelloInterval, actions.DeadInterval), State: "ospf_timers", Key: keyIface,
+			Run: func(c OSPFCapable, a types.ActionEntry) ([][]string, error) {
+				if err := ospfRange(a.Type, "hello_interval", a.HelloInterval, 1, 65535); err != nil {
+					return nil, err
+				}
+				if err := ospfRange(a.Type, "dead_interval", a.DeadInterval, 1, 65535); err != nil {
+					return nil, err
+				}
+				if a.DeadInterval <= a.HelloInterval {
+					return nil, fmt.Errorf("%s: dead_interval must be longer than hello_interval, got %d and %d", a.Type, a.DeadInterval, a.HelloInterval)
+				}
+				return c.OSPFSetTimers(a.Iface, a.HelloInterval, a.DeadInterval), nil
+			}},
+		actions.Action[OSPFCapable]{Type: "ospf_remove_timers", Label: "Reset hello and dead intervals", Params: actions.P(actions.Iface), State: "ospf_timers", Key: keyIface, Clears: true,
+			Run: func(c OSPFCapable, a types.ActionEntry) ([][]string, error) { return c.OSPFRemoveTimers(a.Iface), nil }},
+		actions.Action[OSPFCapable]{Type: "ospf_set_network_type", Label: "Set interface network type", Params: actions.P(actions.Iface, actions.NetworkType), State: "ospf_network_type", Key: keyIface,
+			Run: func(c OSPFCapable, a types.ActionEntry) ([][]string, error) {
+				t, err := ospfNetworkType(a)
+				if err != nil {
+					return nil, err
+				}
+				return c.OSPFSetNetworkType(a.Iface, t), nil
+			}},
+		actions.Action[OSPFCapable]{Type: "ospf_remove_network_type", Label: "Reset interface network type", Params: actions.P(actions.Iface), State: "ospf_network_type", Key: keyIface, Clears: true,
+			Run: func(c OSPFCapable, a types.ActionEntry) ([][]string, error) {
+				return c.OSPFRemoveNetworkType(a.Iface), nil
 			}},
 	)
 }

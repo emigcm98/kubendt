@@ -21,7 +21,7 @@ type otherDriver struct{}
 func init() {
 	Register[pinger](
 		Capability{ID: "PingCapable", Label: "Ping"},
-		Action[pinger]{Type: "test_ping", Label: "Ping", Params: P(Iface, CIDR, Gateway.Optional(), ExternalPort.Optional()),
+		Action[pinger]{Type: "test_ping", Label: "Ping", Params: P(Iface, CIDR, Gateway.Optional(), ExternalPort.Optional(), Cost.Optional(), Priority.Optional()),
 			Run: func(c pinger, a types.ActionEntry) ([][]string, error) { return c.Ping(a.Iface, a.CIDR), nil }},
 		Action[pinger]{Type: "test_ping_eth0", Label: "Ping from eth0", Params: P(Iface), AllowProtectedIface: true,
 			Run: func(c pinger, a types.ActionEntry) ([][]string, error) { return c.Ping(a.Iface, ""), nil }},
@@ -50,6 +50,8 @@ func TestValidate(t *testing.T) {
 		{"bad iface", types.ActionEntry{Iface: "eth/1", CIDR: "10.0.0.1/24"}, `field "iface"`},
 		{"bad gateway", types.ActionEntry{Iface: "eth1", CIDR: "10.0.0.1/24", Gateway: "router"}, `field "gateway" must be an IP`},
 		{"port out of range", types.ActionEntry{Iface: "eth1", CIDR: "10.0.0.1/24", ExternalPort: 70000}, `between 1 and 65535`},
+		{"negative number", types.ActionEntry{Iface: "eth1", CIDR: "10.0.0.1/24", Cost: -1}, `must not be negative`},
+		{"zero through a pointer is present and fine", types.ActionEntry{Iface: "eth1", CIDR: "10.0.0.1/24", Priority: new(int)}, ""},
 		{"protected iface", types.ActionEntry{Iface: "eth0", CIDR: "10.0.0.1/24"}, "protected interface eth0 (only test_ping_eth0)"},
 	}
 	for _, c := range cases {

@@ -96,3 +96,24 @@ func TestVyOSOSPF6(t *testing.T) {
 		}
 	}
 }
+
+func TestVyOSOSPFInterface(t *testing.T) {
+	var d VyOSRouterDriver
+	cases := []struct {
+		name string
+		got  [][]string
+		want [][]string
+	}{
+		{"cost", d.OSPFSetCost("eth2", 100), [][]string{{"set protocols ospf interface eth2 cost 100"}}},
+		{"no cost", d.OSPFRemoveCost("eth2"), [][]string{{"delete protocols ospf interface eth2 cost"}}},
+		{"priority", d.OSPFSetPriority("eth1", 0), [][]string{{"set protocols ospf interface eth1 priority 0"}}},
+		{"timers", d.OSPFSetTimers("eth2", 5, 20), [][]string{{"set protocols ospf interface eth2 hello-interval 5"}, {"set protocols ospf interface eth2 dead-interval 20"}}},
+		{"network type", d.OSPFSetNetworkType("eth2", "point-to-point"), [][]string{{"set protocols ospf interface eth2 network point-to-point"}}},
+		{"no network type", d.OSPFRemoveNetworkType("eth2"), [][]string{{"delete protocols ospf interface eth2 network"}}},
+	}
+	for _, c := range cases {
+		if !reflect.DeepEqual(c.got, c.want) {
+			t.Errorf("%s:\n got  %v\n want %v", c.name, c.got, c.want)
+		}
+	}
+}

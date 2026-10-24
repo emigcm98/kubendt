@@ -80,6 +80,13 @@ type ActionEntry struct {
 	// OSPF
 	OSPFArea string `json:"ospf_area,omitempty" example:"0"`
 	RouterID string `json:"router_id,omitempty" example:"10.0.255.1"`
+	// OSPF interface parameters. Priority 0 means never the DR, so a pointer
+	// tells it apart from unset. Intervals are seconds.
+	Cost          int    `json:"cost,omitempty" example:"100"`
+	Priority      *int   `json:"priority,omitempty" example:"255"`
+	HelloInterval int    `json:"hello_interval,omitempty" example:"10"`
+	DeadInterval  int    `json:"dead_interval,omitempty" example:"40"`
+	NetworkType   string `json:"network_type,omitempty" example:"point-to-point"`
 
 	// RIP: the route source to redistribute and the protocol timers.
 	Redistribute string     `json:"redistribute,omitempty" example:"connected"`
