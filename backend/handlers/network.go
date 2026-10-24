@@ -587,6 +587,21 @@ func ModifyNetwork(c *gin.Context) {
 	warnings = append(warnings, mtuPass.Warnings...)
 	mtuDur := time.Since(mtuAt)
 
+	// A recreated or new node whose process ended restarts forever; the
+	// modify is applied, the response says which node is not usable.
+	if len(waitSet) > 0 {
+		waited := make([]string, 0, len(waitSet))
+		for p := range waitSet {
+			waited = append(waited, p)
+		}
+		if exited := helpers.ExitedPods(namespace, waited, startedAt); len(exited) > 0 {
+			exitErr := helpers.ExitedPodsError(exited)
+			log.Printf("❌ Modify in %s: %v", namespace, exitErr)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": exitErr.Error()})
+			return
+		}
+	}
+
 	if _, err := helpers.SyncNamespaceTopologyState(namespace); err != nil {
 		log.Printf("⚠️ Could not refresh topology state after modify in namespace '%s': %v", namespace, err)
 	}
@@ -996,6 +1011,19 @@ func DeployNetwork(c *gin.Context) {
 	}
 	warnings = append(warnings, mtuPass.Warnings...)
 	mtuDur := time.Since(mtuAt)
+
+	// A node whose process ended was Ready for an instant and restarts
+	// forever: as unusable as a pod that never got Ready, rolled back alike.
+	if exited := helpers.ExitedPods(namespace, helpers.PodNamesForNodes(request.Nodes), startedAt); len(exited) > 0 {
+		exitErr := helpers.ExitedPodsError(exited)
+		log.Printf("❌ %v, rolling back created resources", exitErr)
+		helpers.RollbackNamespaceTopology(namespace)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":      exitErr.Error(),
+			"rolledBack": true,
+		})
+		return
+	}
 
 	// 13. The shaping declared on the links, on both ends, persisted like any
 	// operation so a restart replays it.

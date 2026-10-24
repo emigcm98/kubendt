@@ -115,6 +115,9 @@ func WaitForPodsReadyTimeline(namespace string, podNames []string, requestStart 
 		if reason, detail, bad := fatalPodImageError(pod); bad {
 			return fmt.Errorf("pod '%s' cannot start due to an image error (%s)%s", pod.Name, reason, detail)
 		}
+		if exit, exited := mainContainerExited(pod, requestStart); exited {
+			return fmt.Errorf("pod %s exited (%s); %s", pod.Name, exit, exitedHint)
+		}
 		ok, reason := isPodReady(pod)
 		if !ok {
 			pending[pod.Name] = reason
@@ -217,6 +220,72 @@ func followPodEvents(ctx context.Context, w watch.Interface, pending map[string]
 			}
 		}
 	}
+}
+
+const exitedHint = "a node's process has to keep running, a daemon in the foreground or no 'commands' so the image's shell stays up"
+
+// ExitedPods names, among the pods, those whose main container ended since
+// the request began, with how it ended. A node like that is Ready for an
+// instant and then restarts forever, so a deploy or a modify reports it
+// instead of handing over a lab that looks fine and loops.
+func ExitedPods(namespace string, podNames []string, since time.Time) []string {
+	list, err := kubeclient.Clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return nil
+	}
+	wanted := make(map[string]bool, len(podNames))
+	for _, n := range podNames {
+		wanted[n] = true
+	}
+	var out []string
+	for i := range list.Items {
+		pod := &list.Items[i]
+		if !wanted[pod.Name] {
+			continue
+		}
+		if exit, exited := mainContainerExited(pod, since); exited {
+			out = append(out, fmt.Sprintf("%s (%s)", pod.Name, exit))
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+// ExitedPodsError is the user-facing error for what ExitedPods found.
+func ExitedPodsError(exited []string) error {
+	noun := "pod"
+	if len(exited) > 1 {
+		noun = "pods"
+	}
+	return fmt.Errorf("%s %s exited; %s", noun, strings.Join(exited, ", "), exitedHint)
+}
+
+// mainContainerExited reports a container of the pod that ended, with how it
+// ended. Kubernetes restarts it forever, so the wait would only time out: a
+// container dead now, one in restart backoff, or one restarted since the
+// request began. A death older than the request on a container running now
+// is history, not this wait's concern.
+func mainContainerExited(pod *v1.Pod, since time.Time) (string, bool) {
+	for _, cs := range pod.Status.ContainerStatuses {
+		t := cs.State.Terminated
+		if t == nil && cs.State.Running == nil {
+			t = cs.LastTerminationState.Terminated
+		}
+		if t == nil && cs.State.Running != nil {
+			if last := cs.LastTerminationState.Terminated; last != nil && last.FinishedAt.After(since) {
+				t = last
+			}
+		}
+		if t == nil {
+			continue
+		}
+		reason := t.Reason
+		if reason == "" {
+			reason = "terminated"
+		}
+		return fmt.Sprintf("%s, exit code %d", reason, t.ExitCode), true
+	}
+	return "", false
 }
 
 func timelinesOf(trackers map[string]*podTracker) map[string]*types.PodTimeline {

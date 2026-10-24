@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"sync/atomic"
 
@@ -42,11 +43,24 @@ func NewExecutor(method string, u *url.URL) (remotecommand.Executor, error) {
 		if !httpstream.IsUpgradeFailure(err) && !httpstream.IsHTTPSProxyError(err) {
 			return false
 		}
-		if spdyOnly.CompareAndSwap(false, true) {
+		if upgradeRefused(err) && spdyOnly.CompareAndSwap(false, true) {
 			log.Printf("⚠️ The API server does not upgrade execs to WebSocket (%v): using SPDY from now on, as before 1.6.0", err)
 		}
 		return true
 	})
+}
+
+var upgradeStatusRe = regexp.MustCompile(`bad handshake \((\d{3}) `)
+
+// upgradeRefused tells a server or proxy that cannot upgrade to WebSocket (a
+// 4xx, or no status at all) from a 5xx about the pod itself, a container not
+// running for instance: that one falls back for this exec only.
+func upgradeRefused(err error) bool {
+	m := upgradeStatusRe.FindStringSubmatch(err.Error())
+	if m == nil {
+		return true
+	}
+	return m[1][0] != '5'
 }
 
 // ExecTransport is the transport the backend is set to, "websocket" or

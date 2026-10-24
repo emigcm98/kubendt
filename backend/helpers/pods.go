@@ -344,7 +344,10 @@ func CreateNetworkStatefulSet(namespace string, node types.NodeSpec, validMounts
 		Env:            guestLinkEnv(node, links),
 	}
 
-	if useSerialShell {
+	// A node that sets no commands runs the image's own entrypoint, and an
+	// interactive one (alpine's sh, ubuntu's bash) exits on a closed stdin.
+	// An open stdin and a tty keep it up; a real daemon does not care.
+	if useSerialShell || len(node.Commands) == 0 {
 		container.Stdin = true
 		container.TTY = true
 	}
