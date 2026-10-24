@@ -31,12 +31,7 @@
             "image": "quay.io/frrouting/frr:10.7.1",
             "type": "router",
             "driver": "FRRRouterDriver",
-            "replicas": 3,
-            "commands": [
-                "sh",
-                "-c",
-                "apk add --no-cache iptables && sed -i 's/^ospfd=no/ospfd=yes/; s/^ripd=no/ripd=yes/; s/^ripngd=no/ripngd=yes/' /etc/frr/daemons && touch /etc/frr/frr.conf /etc/frr/vtysh.conf && chown frr:frr /etc/frr/frr.conf /etc/frr/vtysh.conf && exec /sbin/tini -- /usr/lib/frr/docker-start"
-            ]
+            "replicas": 3
         },
         {
             "name": "switch",

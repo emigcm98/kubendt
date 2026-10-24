@@ -53,6 +53,16 @@ jobs:
             KUBENDT_COMMIT=${{ steps.meta.outputs.commit }}
             KUBENDT_BUILD_DATE=${{ steps.meta.outputs.build_date }}
 
+      - name: Build & push toolbox
+        uses: docker/build-push-action@v6
+        with:
+          context: ./deploy/custom_images/toolbox
+          push: true
+          # The backend of this version pulls the toolbox of this version.
+          tags: |
+            ghcr.io/emigcm98/kubendt-toolbox:${{ steps.meta.outputs.version }}
+            ghcr.io/emigcm98/kubendt-toolbox:latest
+
       - name: Build & push frontend (React + nginx)
         uses: docker/build-push-action@v6
         with:

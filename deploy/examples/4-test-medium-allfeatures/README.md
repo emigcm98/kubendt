@@ -117,7 +117,7 @@ These files are mounted into the corresponding nodes at deploy time:
 - `iperf-server-*` nodes auto-start `iperf3 -s -p 5201` on boot. No manual server startup needed.
 - DNS is fully functional after applying `network_conf.json`: `user-*` nodes can resolve `web-internal` and `web-public` by short name.
 - The `dist-sw` to `room-router` backbone link declares `"delay": "10ms"` and `"bandwidth": "50mbit"` in the topology JSON. The platform applies them on both ends right after wiring the link and replays them after a restart, so every path from the rooms to the services network pays 20 ms of RTT and is capped at 50 Mbit/s. The link panel shows them as **Declared**. The same shaping can be applied later by hand, see [step 13](#13-apply-traffic-shaping-tc-and-observe-bandwidth-drop).
-- FRR routers run `quay.io/frrouting/frr:10.7.1` through the image's own init (`watchfrr` under `tini`). The startup command installs `iptables`, which the NAT actions need and the image does not ship, and enables `ospfd`. A router is Ready only when zebra and the enabled daemons answer on their vty socket.
+- FRR routers run `quay.io/frrouting/frr:10.7.1` with no startup command: the `FRRRouterDriver` enables the routing daemons and creates the files vtysh expects before the image's own init (`watchfrr` under `tini`) starts FRR, and `iptables`, which the NAT actions need and the image does not ship, runs from the pod's toolbox. A router is Ready only when zebra and the enabled daemons answer on their vty socket.
 
 ## Step-By-Step (UI)
 

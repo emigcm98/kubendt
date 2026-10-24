@@ -4,7 +4,7 @@ Full Open5GS 5G Core deployment with a simulated RAN and UE using UERANSIM, vali
 
 - All 5GC control-plane network functions (AMF, SMF, NRF, SCP, AUSF, UDM, UDR, PCF)
 - User Plane Function (UPF) with TUN interfaces for UE traffic
-- MongoDB as the subscriber data store (UDSF node)
+- MongoDB as the subscriber data store (UDSF node), with a `readiness` command that makes the node Ready only when `mongod` answers, so the subscriber import of step 11 never runs too early
 - Open5GS Web UI for subscriber management
 - UERANSIM gNB (`gnb-0`) connected to the host's external network (labeled "External Network" in the topology), N2/N3 traffic reaches AMF and UPF through the routed core network
 - UERANSIM UE (`ue-0`) connected to the gNB via a simulated radio link, establishes a 5G PDU session and routes all traffic through `uesimtun0`
@@ -152,7 +152,7 @@ Each NF node mounts its own `<nf>.yaml` and `<nf>_init.sh` from the correspondin
 - `router-0` additionally exposes the WebUI externally via a DNAT rule: external TCP `9999` is forwarded to `webui-0` (`10.5.3.10:9999`).
 - The Open5GS WebUI runs on `webui-0` port `9999`. After deployment it is reachable at `http://<router-0-external-ip>:9999` from the physical network (via the DNAT), or directly at `http://10.5.3.10:9999` from any node on the `10.5.3.0/24` segment.
 - Default MCC/MNC is `999/30`, TAC `1`. These values are set as environment variables in the topology file and can be adjusted before importing.
-- FRR routers run `quay.io/frrouting/frr:10.7.1` through the image's own init (`watchfrr` under `tini`). The startup command installs `iptables`, which the NAT actions need and the image does not ship, and enables `ospfd`. A router is Ready only when zebra and the enabled daemons answer on their vty socket.
+- FRR routers run `quay.io/frrouting/frr:10.7.1` with no startup command: the `FRRRouterDriver` enables the routing daemons and creates the files vtysh expects before the image's own init (`watchfrr` under `tini`) starts FRR, and `iptables`, which the NAT actions need and the image does not ship, runs from the pod's toolbox. A router is Ready only when zebra and the enabled daemons answer on their vty socket.
 
 ## Step-By-Step (UI)
 

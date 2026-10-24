@@ -51,7 +51,7 @@ Network segments:
 - Configuration file intentionally uses both reference styles:
   - explicit pod names (`pc-0`, `r1-0`, `sw-0`)
   - single-replica base names (`server`, `ovs`)
-- `r1` runs `quay.io/frrouting/frr:10.7.1` through the image's own init (`watchfrr` under `tini`). The startup command installs `iptables`, which `enable_snat` needs and the image does not ship, and enables `ospfd`. The pod is Ready only when zebra and the enabled daemons answer on their vty socket.
+- `r1` runs `quay.io/frrouting/frr:10.7.1` with no startup command: the `FRRRouterDriver` enables the routing daemons and creates the files vtysh expects before the image's own init (`watchfrr` under `tini`) starts FRR, and `iptables`, which `enable_snat` needs and the image does not ship, runs from the pod's toolbox. The pod is Ready only when zebra and the enabled daemons answer on their vty socket.
 
 ## Step-By-Step (UI)
 

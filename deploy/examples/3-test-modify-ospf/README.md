@@ -4,7 +4,7 @@ End-to-end scenario that exercises the full topology lifecycle of KubeNDT on a h
 
 - Initial deployment with two routers of **different families**, one container-based FRR router and one VM-based VyOS router (QEMU), forming an OSPF adjacency over a transit link
 - Scale-up of a host node from 1 to 3 replicas
-- Addition of a new node with its link
+- Addition of a new node with its link (the new host declares a `readiness` command, so the modify waits until its startup has installed what the checks use)
 - Scale-down back to 1 replica
 - Deletion of the added node
 - Replay-based recovery after a forced pod restart
@@ -77,7 +77,7 @@ The scenario is organized as six sequential phases. Each phase has a clear KubeN
 - The transit link (`10.0.254.0/30`) is announced into OSPF so that the routers learn each other's LAN prefixes dynamically. No static routes are configured between routers.
 - Each modify phase that introduces new pods is paired with a small post-modify configuration file (`network_conf-phase2.json`, `network_conf-phase3.json`). The original `network_conf.json` is not re-applied; only the deltas required for the new pods are issued.
 - The replay step does not use a dedicated configuration file. It relies entirely on the operation history persisted by KubeNDT during phases 1, 2, and 3.
-- FRR routers run `quay.io/frrouting/frr:10.7.1` through the image's own init (`watchfrr` under `tini`). The startup command installs `iptables`, which the NAT actions need and the image does not ship, and enables `ospfd`. A router is Ready only when zebra and the enabled daemons answer on their vty socket.
+- FRR routers run `quay.io/frrouting/frr:10.7.1` with no startup command: the `FRRRouterDriver` enables the routing daemons and creates the files vtysh expects before the image's own init (`watchfrr` under `tini`) starts FRR, and `iptables`, which the NAT actions need and the image does not ship, runs from the pod's toolbox. A router is Ready only when zebra and the enabled daemons answer on their vty socket.
 
 For a VyOS-focused scenario that exercises the VM driver's full capability surface (SNAT/DNAT, DNS, external/physical uplink, multiple VyOS routers), see [`6-test-vyos`](../6-test-vyos/README.md).
 

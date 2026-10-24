@@ -158,11 +158,17 @@ type NodeSpec struct {
 	// Commands replaces the image's entrypoint, `sh -c "... && sleep infinity"`
 	// in the examples. It is where an image installs what the node needs at
 	// startup, iproute2 for `ip` or iptables for NAT.
-	Commands []string          `json:"commands,omitempty"`
-	Env      map[string]string `json:"env,omitempty"`
-	Mounts   []MountSpec       `json:"mounts,omitempty"`
-	Devices  []DeviceSpec      `json:"devices,omitempty"`
-	Driver   string            `json:"driver,omitempty" example:"frr-router"`
+	Commands []string `json:"commands,omitempty"`
+	// Readiness is a command run in the container every 2 s until it exits 0;
+	// the node is Ready then, and a deploy or a modify waits for it. For a
+	// node whose startup installs or starts what the lab uses (a daemon, a
+	// tool its checks run). Without it a node is Ready when its container
+	// runs, or when its driver's probe passes.
+	Readiness []string          `json:"readiness,omitempty" example:"sh,-c,command -v ping"`
+	Env       map[string]string `json:"env,omitempty"`
+	Mounts    []MountSpec       `json:"mounts,omitempty"`
+	Devices   []DeviceSpec      `json:"devices,omitempty"`
+	Driver    string            `json:"driver,omitempty" example:"frr-router"`
 	// Seconds Kubernetes waits for the pod to exit on SIGTERM before it is
 	// killed. Bounds restart, delete and scale-down latency. Defaults to
 	// DefaultTerminationGracePeriodSeconds, must be >= 1 when set.

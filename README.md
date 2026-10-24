@@ -8,7 +8,7 @@
    <a href="https://doi.org/10.5281/zenodo.21276320"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.21276320.svg" alt="DOI" /></a>
 </p>
 
-> Last reviewed: 23 Oct 2026
+> Last reviewed: 24 Oct 2026
 
 **KubeNDT** is a platform for deploying and operating virtual network topologies on Kubernetes.
 
@@ -85,7 +85,7 @@ KubeNDT bundles a small set of third-party SVG icons in its frontend. See [ATTRI
 - Docker & Docker Compose (for production deployment)
 - Optional: QEMU support for VM-based node types (requires `/dev/kvm`)
 
-**Node images.** Any container image can be a node as long as its main container has `sh` and the `ip` command of iproute2 (BusyBox's applet is enough for a host). The default readiness probe checks for `ip`, so a node without it stays NotReady and the deploy says so. Whatever else a capability needs, `iptables` for NAT or `vtysh` for OSPF, comes with the image or gets installed at startup through the node's `commands`, as the examples do.
+**Node images.** Any container image can be a node as long as its main container keeps running (alpine's default `sh` exits, so give such an image `commands` like `sleep infinity`). What the platform needs in the node's network namespace it brings itself when the image lacks it: `ip`, `bridge`, `tc` and `iptables` run from the pod's toolbox then, as capture, trace and throughput tests always do, and a node is Ready as soon as its container runs, or when the `readiness` command its spec declares succeeds, for a node whose startup installs or starts what the lab uses. What only the node's own filesystem can do stays the image's: `vtysh` for FRR comes with the image (the driver prepares the stock image at startup when the node sets no `commands`), the DNS actions need `sh`. The toolbox is `ghcr.io/emigcm98/kubendt-toolbox`, published with every release; `KUBENDT_TOOLBOX_IMAGE` points elsewhere.
 
 **For local development, also install:**
 

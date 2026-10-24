@@ -139,7 +139,6 @@
         }
       ]
     },
-    
     {
       "name": "ausf",
       "image": "ghcr.io/herlesupreeth/docker_open5gs:master",
@@ -292,7 +291,12 @@
       ],
       "env": {
         "MONGO_IP": "10.5.0.18"
-      }
+      },
+      "readiness": [
+        "sh",
+        "-c",
+        "mongosh --quiet --eval 'db.runCommand({ping:1})' >/dev/null"
+      ]
     },
     {
       "name": "upf",
@@ -448,12 +452,7 @@
       "image": "quay.io/frrouting/frr:10.7.1",
       "driver": "FRRRouterDriver",
       "type": "router",
-      "replicas": 2,
-      "commands": [
-        "sh",
-        "-c",
-        "apk add --no-cache iptables && sed -i 's/^ospfd=no/ospfd=yes/' /etc/frr/daemons && touch /etc/frr/frr.conf /etc/frr/vtysh.conf && chown frr:frr /etc/frr/frr.conf /etc/frr/vtysh.conf && exec /sbin/tini -- /usr/lib/frr/docker-start"
-      ]
+      "replicas": 2
     }
   ],
   "links": [
@@ -491,7 +490,6 @@
       "localIp": "10.5.0.13/24",
       "peerIp": ""
     },
-    
     {
       "localIntf": "eth1",
       "node": "ausf",

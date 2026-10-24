@@ -633,7 +633,7 @@ func readPodLinks(namespace, podName string, pod *v1.Pod, tries int) (map[string
 	}
 
 	for i := 0; i < tries; i++ {
-		stdout, _, err := ExecInPod(namespace, podName, []string{"ip", "-o", "link", "show"})
+		stdout, _, err := ExecNetns(namespace, podName, []string{"ip", "-o", "link", "show"})
 		if err == nil {
 			if mtus := parseLinkMTUs(stdout); len(mtus) > 0 {
 				return mtus, "present"

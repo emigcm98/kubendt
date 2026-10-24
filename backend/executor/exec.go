@@ -117,7 +117,7 @@ var execTimeout = func() time.Duration {
 	return 30 * time.Second
 }()
 
-func execViaKubectl(podName, namespace string, prefix []string, command []string, executorName string) (string, error) {
+func execViaKubectl(podName, namespace, container string, prefix []string, command []string, executorName string) (string, error) {
 	if len(command) == 0 {
 		return "", fmt.Errorf("empty command for executor %q", executorName)
 	}
@@ -139,11 +139,12 @@ func execViaKubectl(podName, namespace string, prefix []string, command []string
 		Namespace(namespace).
 		SubResource("exec").
 		VersionedParams(&v1.PodExecOptions{
-			Command: effectiveCommand,
-			Stdin:   false,
-			Stdout:  true,
-			Stderr:  true,
-			TTY:     false,
+			Container: container,
+			Command:   effectiveCommand,
+			Stdin:     false,
+			Stdout:    true,
+			Stderr:    true,
+			TTY:       false,
 		}, scheme.ParameterCodec)
 
 	executor, err := kubeclient.NewExecutor("POST", req.URL())
@@ -233,6 +234,18 @@ func Exec(podName, namespace string, command []string) error {
 		return err
 	}
 	return executor.ExecCommand(podName, namespace, NewArgsCommand(command))
+}
+
+// NetnsReadHook, set by the helpers package, runs a read wherever the pod
+// has its netns tools, the pod itself or its toolbox. nil reads in the pod.
+var NetnsReadHook func(namespace, pod string, command []string) ([]byte, error)
+
+// ExecAndGetNetns is ExecAndGet for a command that needs a netns tool.
+func ExecAndGetNetns(namespace, pod string, command []string) ([]byte, error) {
+	if NetnsReadHook != nil {
+		return NetnsReadHook(namespace, pod, command)
+	}
+	return ExecAndGet(namespace, pod, command)
 }
 
 func ExecAndGet(namespace, pod string, command []string) ([]byte, error) {

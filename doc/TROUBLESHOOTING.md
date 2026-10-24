@@ -34,7 +34,7 @@ kubectl describe pod -n <namespace> <pod-name>
 
 ## A node never becomes Ready
 
-The deploy ends with `timeout waiting for pods to be Ready: <pod> (running-not-ready, readiness probe failed: ...)`. The probe's output says what is missing. The default probe needs the `ip` command of iproute2 in the main container, and prints `ip not found in PATH, the image needs iproute2` when it is not there: add it to the image, or install it at startup through the node's `commands` as the examples do. FRR, Open vSwitch and VyOS nodes have their own probe (the vty sockets, `ovs-vsctl`, SSH into the guest), so for them the message points at the daemon that is not up yet. `kubectl describe pod -n <namespace> <pod>` shows the same events.
+The deploy ends with `timeout waiting for pods to be Ready: <pod> (running-not-ready, readiness probe failed: ...)`. A plain node has no probe and is Ready when its container runs, so this comes from a driver's probe and its output says what is missing. FRR, Open vSwitch and VyOS nodes have their own probe (the vty sockets, `ovs-vsctl`, SSH into the guest), so for them the message points at the daemon that is not up yet. `kubectl describe pod -n <namespace> <pod>` shows the same events.
 
 ## Router and switch pods stay in SysctlForbidden
 
@@ -46,7 +46,7 @@ The response says `KUBENDT_LINK_MTU=N does not fit link a:eth1 ↔ b:eth1: worke
 
 ## An action fails with "'X' is not in the pod's image"
 
-The command behind the action needs a program the image does not ship, `iptables` for NAT on a plain Linux router for instance. Add it to the image or install it at startup through the node's `commands` (`apk add iptables` on the FRR image in the examples). Traffic control needs nothing in the image, it falls back to a toolbox container.
+The command behind the action needs a program the image does not ship and the toolbox does not carry, `vtysh` on an image that is not FRR for instance. The netns tools (`ip`, `bridge`, `tc`, `iptables`) never give this: when the image lacks them the action runs from the pod's toolbox. For anything else, add the program to the image or install it at startup through the node's `commands`.
 
 ## An action fails with "ospfd is not running"
 

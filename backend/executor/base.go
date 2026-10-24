@@ -83,7 +83,7 @@ func (b KubectlBase) ExecCommandAndGet(podName, namespace string, command Comman
 		return "", err
 	}
 
-	return execViaKubectl(podName, namespace, b.prefix, execArgs, b.name)
+	return execViaKubectl(podName, namespace, command.Container, b.prefix, execArgs, b.name)
 }
 
 // KubectlExecutor runs commands directly via "kubectl exec" (default).

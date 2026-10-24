@@ -248,6 +248,7 @@ Right after the heal pass of a deploy, and on a restart or a modify before the h
     - nodeSelector / nodeName from the node, when set
     - QEMU pods: Stdin=true, TTY=true, /dev/kvm added, Privileged=true
     - Non-QEMU pods: NET_ADMIN capability
+    - Readiness probe: the node's `readiness` command when set, else the driver's, else none (Ready when running)
     - Routers/switches: net.ipv4.ip_forward and net.ipv6.conf.all.forwarding sysctls = 1
 
 12. Wait for pods ready (watch on pod events, 180s timeout)
@@ -742,7 +743,7 @@ There is no dedicated capture pod. `tshark` runs in the pod's **toolbox**, an ep
 
 Capture, traceroute and traffic control share one toolbox per pod. `helpers.EnsureToolbox` reuses the running one, whichever tool injected it, or injects a fresh `toolbox-*` container and waits for it, serialized per pod so concurrent tools converge on one. Kubernetes never removes an ephemeral container, so a self-terminating sleeper bounds its life and the pod's deletion collects it. Code: `backend/helpers/toolbox.go`.
 
-Image: `nicolaka/netshoot:v0.16` by default (no build step), which ships every tool the toolbox runs; override with `KUBENDT_TOOLBOX_IMAGE` (`KUBENDT_CAPTURE_IMAGE` still works); a slim build lives in `deploy/custom_images/toolbox/`. The container is granted `NET_RAW`+`NET_ADMIN`. Requires cluster support for ephemeral containers (GA since k8s 1.25).
+Image: `ghcr.io/emigcm98/kubendt-toolbox:<backend version>` by default, built from `deploy/custom_images/toolbox/` and published with every release (`latest` for a development backend), with every tool the backend execs; override with `KUBENDT_TOOLBOX_IMAGE` (`KUBENDT_CAPTURE_IMAGE` still works), `nicolaka/netshoot` carries the same tools. The container is granted `NET_RAW`+`NET_ADMIN`. Requires cluster support for ephemeral containers (GA since k8s 1.25).
 
 ### 11.2 One tshark, two outputs
 
