@@ -313,6 +313,10 @@ func CreateNetworkStatefulSet(namespace string, node types.NodeSpec, validMounts
 	if len(node.Commands) > 0 {
 		commands = node.Commands
 		useCustomCommand = true
+	} else if p, ok := resolveDriverForProbe(node.Driver).(drivers_meta.StartupCommandsProvider); ok {
+		// The driver knows what its image needs before the actions work.
+		commands = p.StartupCommands()
+		useCustomCommand = true
 	}
 
 	// Create environment variables ConfigMap

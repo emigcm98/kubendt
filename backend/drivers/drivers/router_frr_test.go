@@ -2,6 +2,7 @@ package drivers
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	"kubendt/types"
@@ -103,5 +104,20 @@ func TestFRROSPF6(t *testing.T) {
 	cmd, _, ok := d.CapabilityPrecondition("OSPF6Capable", types.ActionEntry{})
 	if !ok || cmd[2] != "/var/run/frr/ospf6d.vty" {
 		t.Errorf("OSPFv3 precondition: %v %v", cmd, ok)
+	}
+}
+
+func TestFRRStartupCommands(t *testing.T) {
+	cmd := FRRRouterDriver{}.StartupCommands()
+	if len(cmd) != 3 || cmd[0] != "sh" || cmd[1] != "-c" {
+		t.Fatalf("startup command: %v", cmd)
+	}
+	for _, want := range []string{"s/^ospfd=no/ospfd=yes/", "s/^ospf6d=no/ospf6d=yes/", "s/^ripd=no/ripd=yes/", "s/^ripngd=no/ripngd=yes/", "touch /etc/frr/frr.conf /etc/frr/vtysh.conf", "exec /sbin/tini -- /usr/lib/frr/docker-start"} {
+		if !strings.Contains(cmd[2], want) {
+			t.Errorf("startup command lacks %q: %s", want, cmd[2])
+		}
+	}
+	if strings.Contains(cmd[2], "apk") {
+		t.Errorf("the default must not install packages: %s", cmd[2])
 	}
 }
