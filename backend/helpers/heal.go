@@ -630,7 +630,7 @@ func readPodLinks(namespace, podName string, pod *v1.Pod, tries int) (map[string
 		return nil, "pod-terminating"
 	}
 	// A restart does not heal a container that exits, the handler reports it.
-	if _, exited := mainContainerExited(pod, time.Now()); exited {
+	if _, _, exited := mainContainerExited(pod, time.Now()); exited {
 		return nil, "container-exited"
 	}
 	if !isPodReadyFast(pod) {

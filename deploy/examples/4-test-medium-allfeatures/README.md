@@ -30,16 +30,16 @@ Nodes deployed:
 | `edge-router` | `FRRRouterDriver` | `quay.io/frrouting/frr:10.7.1` | 1 | Edge router: OSPF (originates the default route), SNAT on `eth0`, external uplink with DNAT on `eth1` |
 | `svc-router` | `FRRRouterDriver` | `quay.io/frrouting/frr:10.7.1` | 1 | Services router, OSPF |
 | `room-router` | `FRRRouterDriver` | `quay.io/frrouting/frr:10.7.1` | 1 | User rooms router, OSPF |
-| `core-sw` | `LinuxSwitchDriver` | `globocom/openvswitch:latest` | 1 | Core switch (Linux bridge on the Open vSwitch image) |
-| `dist-sw` | `LinuxSwitchDriver` | `globocom/openvswitch:latest` | 1 | Distribution switch (Linux bridge on the Open vSwitch image) |
-| `dmz-sw` | `LinuxSwitchDriver` | `ubuntu:26.04` | 1 | DMZ switch (Linux bridge) |
-| `svc-sw` | `LinuxSwitchDriver` | `ubuntu:26.04` | 1 | Services switch (Linux bridge) |
-| `room-sw` | `LinuxSwitchDriver` | `ubuntu:26.04` | 2 | Room switches (Linux bridge), one per room |
+| `core-sw` | `OpenVSwitchDriver` | `globocom/openvswitch:latest` | 1 | Core switch, Open vSwitch |
+| `dist-sw` | `OpenVSwitchDriver` | `globocom/openvswitch:latest` | 1 | Distribution switch, Open vSwitch |
+| `dmz-sw` | `LinuxSwitchDriver` | `alpine:3.24.2` | 1 | DMZ switch (Linux bridge) |
+| `svc-sw` | `LinuxSwitchDriver` | `alpine:3.24.2` | 1 | Services switch (Linux bridge) |
+| `room-sw` | `LinuxSwitchDriver` | `alpine:3.24.2` | 2 | Room switches (Linux bridge), one per room |
 | `iperf-server` | `BasicHostDriver` | `networkstatic/iperf3:latest` | 2 | iperf3 servers: `iperf-server-0` in the DMZ, `iperf-server-1` in the services network |
 | `web-public` | `BasicHostDriver` | `nginx:1.31.6-alpine` | 1 | Public web server in the DMZ |
 | `web-internal` | `BasicHostDriver` | `nginx:1.31.6-alpine` | 1 | Internal web server in the services network |
 | `dns-server` | `BasicHostDriver` | `internetsystemsconsortium/bind9:9.20` | 1 | BIND9 authoritative DNS for `kubendt.local` |
-| `user` | `HostDriver` | `alpine:3.24.2` | 4 | End-user hosts, two per room, with `iproute2-tc` for the traffic shaping test |
+| `user` | `HostDriver` | `alpine:3.24.2` | 4 | End-user hosts, two per room |
 
 Nodes without a `driver` in the topology JSON get the default of their type: `BasicHostDriver` for hosts and `LinuxSwitchDriver` for switches.
 
@@ -112,8 +112,7 @@ These files are mounted into the corresponding nodes at deploy time:
 - `edge-router-0` has SNAT on `eth0`, the pod's Kubernetes interface, so every node reaches the internet through the cluster network, and two DNAT rules on the external uplink `eth1`:
   - TCP/UDP `5201` → `iperf-server-0` (`10.0.255.10:5201`) for external iperf3 tests.
   - TCP `80` → `web-public-0` (`10.0.255.20:80`) for external web access.
-- Every switch is bridged by the default `LinuxSwitchDriver` (a Linux bridge set up by `setup_bridge`), because the topology declares no `driver` for them. `core-sw-0` and `dist-sw-0` run on the Open vSwitch image with its daemons started, but OVS is not what bridges them; declare `"driver": "OpenVSwitchDriver"` on those nodes, as example 1 does with `ovs`, to bridge through OVS.
-- `user-*` nodes start with `iproute2-tc` installed (for optional traffic shaping tests).
+- The room, DMZ and services switches are Linux bridges from the default `LinuxSwitchDriver` (set up by `setup_bridge`), since the topology declares no `driver` for them. `core-sw-0` and `dist-sw-0` run the Open vSwitch image, whose entrypoint starts its daemons, and declare `OpenVSwitchDriver`, so the same `setup_bridge` goes through `ovs-vsctl` there.
 - `iperf-server-*` nodes auto-start `iperf3 -s -p 5201` on boot. No manual server startup needed.
 - DNS is fully functional after applying `network_conf.json`: `user-*` nodes can resolve `web-internal` and `web-public` by short name.
 - The `dist-sw` to `room-router` backbone link declares `"delay": "10ms"` and `"bandwidth": "50mbit"` in the topology JSON. The platform applies them on both ends right after wiring the link and replays them after a restart, so every path from the rooms to the services network pays 20 ms of RTT and is capped at 50 Mbit/s. The link panel shows them as **Declared**. The same shaping can be applied later by hand, see [step 13](#13-apply-traffic-shaping-tc-and-observe-bandwidth-drop).
@@ -266,7 +265,7 @@ Expected: successful replies, translated by `edge-router-0` on `eth0` toward the
 
 ### 13. Apply traffic shaping (TC) and observe bandwidth drop
 
-The `user-*` nodes have `iproute2-tc` installed, so traffic shaping can be applied straight from the UI without touching the shell. Shaping works on any node now, not just these.
+Traffic shaping is applied from the UI on any node; `tc` runs from the pod's toolbox where the image lacks it, as on these alpine hosts.
 
 The `dist-sw` to `room-router` link is already shaped from the topology JSON (10 ms, 50 Mbit/s). What follows adds shaping by hand on a user's own interface; both end up as persisted operations and survive a restart alike.
 

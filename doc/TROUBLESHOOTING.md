@@ -38,7 +38,9 @@ The deploy ends with `timeout waiting for pods to be Ready: <pod> (running-not-r
 
 ## A node exits and the deploy is rolled back
 
-The deploy fails with `pod <name> exited (Completed, exit code 0); a node's process has to keep running...` and `rolledBack: true`; a modify that recreates or adds such a node answers with the same message. The node's main process ended, so Kubernetes restarts it forever: `commands` that finish (an install with nothing after it) or an image whose entrypoint runs once and exits. A node without `commands` runs its image with a tty and an open stdin, so a shell entrypoint (alpine, ubuntu) stays up by itself; with `commands` the last one has to stay in the foreground (`sleep infinity`, the daemon itself), and a one-shot image needs `commands` that do. A process that ends later, after the deploy answered, shows the same way in `kubectl get pods -n <namespace>`: RESTARTS climbing with `Completed` or `CrashLoopBackOff`, and the actions on it failing with exec errors.
+The deploy fails with `pod <name> exited (Completed, exit code 0); a node's process has to keep running...` and `rolledBack: true`; a modify that recreates or adds such a node answers with the same message. The node's main process finished, so Kubernetes restarts it forever: `commands` that end (an install with nothing after it) or an image whose entrypoint runs once and exits. A node without `commands` runs its image with a tty and an open stdin, so a shell entrypoint (alpine, ubuntu) stays up by itself; with `commands` the last one has to stay in the foreground (`sleep infinity`, the daemon itself), and a one-shot image needs `commands` that do.
+
+A process that exits with an error instead is a `node_crashed` warning in the response (`exited (Error, exit code 255) and restarted`), not a failure: an application may fail until what it depends on is up (the Open5GS functions exit until the NRF answers) and start fine on a later restart. If RESTARTS keeps climbing in `kubectl get pods -n <namespace>`, the node's logs say why it does not start.
 
 ## Router and switch pods stay in SysctlForbidden
 

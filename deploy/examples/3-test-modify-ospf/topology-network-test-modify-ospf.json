@@ -9,30 +9,25 @@
         "sh",
         "-c",
         "apt update && apt install -y iproute2 iputils-ping && sleep infinity"
+      ],
+      "readiness": [
+        "sh",
+        "-c",
+        "command -v ping"
       ]
     },
     {
       "name": "alpine-host",
       "image": "alpine:3.24.2",
       "type": "host",
-      "driver": "BasicHostDriver",
-      "commands": [
-        "sh",
-        "-c",
-        "apk update && apk add iproute2 iputils && sleep infinity"
-      ]
+      "driver": "BasicHostDriver"
     },
     {
       "name": "switch",
       "image": "globocom/openvswitch:latest",
       "type": "switch",
       "driver": "OpenVSwitchDriver",
-      "replicas": 2,
-      "commands": [
-        "sh",
-        "-c",
-        "apk update && apk add --no-cache iproute2 iputils && ovsdb-server --remote=punix:/var/run/openvswitch/db.sock --remote=db:Open_vSwitch,Open_vSwitch,manager_options --pidfile --detach && ovs-vswitchd --pidfile --detach && tail -f /dev/null"
-      ]
+      "replicas": 2
     },
     {
       "name": "frr-router",

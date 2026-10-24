@@ -594,11 +594,15 @@ func ModifyNetwork(c *gin.Context) {
 		for p := range waitSet {
 			waited = append(waited, p)
 		}
-		if exited := helpers.ExitedPods(namespace, waited, startedAt); len(exited) > 0 {
-			exitErr := helpers.ExitedPodsError(exited)
+		finished, crashed := helpers.ExitedPods(namespace, waited, startedAt)
+		if len(finished) > 0 {
+			exitErr := helpers.ExitedPodsError(finished)
 			log.Printf("❌ Modify in %s: %v", namespace, exitErr)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": exitErr.Error()})
 			return
+		}
+		if len(crashed) > 0 {
+			warnings = append(warnings, crashed...)
 		}
 	}
 
@@ -1014,8 +1018,9 @@ func DeployNetwork(c *gin.Context) {
 
 	// A node whose process ended was Ready for an instant and restarts
 	// forever: as unusable as a pod that never got Ready, rolled back alike.
-	if exited := helpers.ExitedPods(namespace, helpers.PodNamesForNodes(request.Nodes), startedAt); len(exited) > 0 {
-		exitErr := helpers.ExitedPodsError(exited)
+	finished, crashed := helpers.ExitedPods(namespace, helpers.PodNamesForNodes(request.Nodes), startedAt)
+	if len(finished) > 0 {
+		exitErr := helpers.ExitedPodsError(finished)
 		log.Printf("❌ %v, rolling back created resources", exitErr)
 		helpers.RollbackNamespaceTopology(namespace)
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -1023,6 +1028,9 @@ func DeployNetwork(c *gin.Context) {
 			"rolledBack": true,
 		})
 		return
+	}
+	if len(crashed) > 0 {
+		warnings = append(warnings, crashed...)
 	}
 
 	// 13. The shaping declared on the links, on both ends, persisted like any

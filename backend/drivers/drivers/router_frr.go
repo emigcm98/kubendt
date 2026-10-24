@@ -35,12 +35,10 @@ var _ drivers_meta.CapabilityPrecondition = (*FRRRouterDriver)(nil)
 var _ drivers_meta.StartupCommandsProvider = (*FRRRouterDriver)(nil)
 
 // ReadinessProbeCommands makes the pod Ready only when zebra, and every
-// daemon enabled in /etc/frr/daemons, answer on their vty socket. The
-// default probe (`command -v ip`) passes as soon as the image is up, while
-// the daemons are still starting (or, in the shipped examples, while apk is
-// still installing iptables), and an OSPF or NAT action landing in that gap
-// fails. Daemons started by hand with ospfd=no in the file are not checked,
-// so the old manual startup keeps working.
+// daemon enabled in /etc/frr/daemons, answer on their vty socket; the
+// container runs seconds before they do, and an OSPF action landing in that
+// gap fails. Daemons started by hand with ospfd=no in the file are not
+// checked, so a manual startup keeps working.
 func (FRRRouterDriver) ReadinessProbeCommands() drivers_meta.ReadinessProbeSpec {
 	return drivers_meta.ReadinessProbeSpec{
 		Command: []string{"sh", "-c",

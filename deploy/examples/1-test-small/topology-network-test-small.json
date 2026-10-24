@@ -5,11 +5,6 @@
       "image": "alpine:3.24.2",
       "type": "host",
       "replicas": 4,
-      "commands": [
-        "sh",
-        "-c",
-        "apk update && apk add iproute2 && sleep infinity"
-      ],
       "env": {
         "ENV1": "I don't know why",
         "ENV2": "to cry"
@@ -27,11 +22,6 @@
       "type": "host",
       "driver": "BasicHostDriver",
       "replicas": 1,
-      "commands": [
-        "sh",
-        "-c",
-        "apk update && apk add iproute2 && sleep infinity"
-      ],
       "mounts": [
         {
           "file": "secret.env",
@@ -48,26 +38,16 @@
     },
     {
       "name": "sw",
-      "image": "ubuntu:26.04",
+      "image": "alpine:3.24.2",
       "type": "switch",
-      "replicas": 2,
-      "commands": [
-        "sh",
-        "-c",
-        "apt update && apt install -y iproute2 bridge-utils iputils-ping && sleep infinity"
-      ]
+      "replicas": 2
     },
     {
       "name": "ovs",
       "image": "globocom/openvswitch:latest",
       "driver": "OpenVSwitchDriver",
       "type": "switch",
-      "replicas": 1,
-      "commands": [
-        "sh",
-        "-c",
-        "apk update && apk add --no-cache iproute2 iputils && ovsdb-server --remote=punix:/var/run/openvswitch/db.sock --remote=db:Open_vSwitch,Open_vSwitch,manager_options --pidfile --detach && ovs-vswitchd --pidfile --detach && tail -f /dev/null"
-      ]
+      "replicas": 1
     }
   ],
   "links": [

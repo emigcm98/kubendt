@@ -20,7 +20,7 @@ Nodes deployed:
 | `printer` | `BasicHostDriver` | `alpine:3.24.2` | 1 | A printer on its own LAN on the OSPF side |
 | `web` | `BasicHostDriver` | `nginxdemos/hello:0.4` | 1 | Web server on its own LAN on the RIP side |
 | `router` | `FRRRouterDriver` | `quay.io/frrouting/frr:10.7.1` | 3 | One node, three roles given by the configuration: `router-0` is the OSPF router (two LANs), `router-1` the border router (OSPF on one side, RIP on the other, redistribution both ways, SNAT on `eth0` for internet access), `router-2` the RIP router (two LANs) |
-| `switch` | `LinuxSwitchDriver` | `ubuntu:26.04` | 4 | Linux bridge switches, one per LAN |
+| `switch` | `LinuxSwitchDriver` | `alpine:3.24.2` | 4 | Linux bridge switches, one per LAN |
 
 Nodes without a `driver` in the topology JSON get the default of their type: `BasicHostDriver` for hosts and `LinuxSwitchDriver` for switches.
 

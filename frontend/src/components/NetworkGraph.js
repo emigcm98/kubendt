@@ -4202,18 +4202,12 @@ const NetworkGraph = ({
                 image: 'alpine:3.24.2',
                 type: 'host',
                 replicas: 2,
-                commands: ['sh', '-c', 'apk add --no-cache iproute2 && sleep infinity'],
               },
               {
                 name: 'router1',
                 image: 'quay.io/frrouting/frr:10.7.1',
                 type: 'router',
                 driver: 'FRRRouterDriver',
-                commands: [
-                  'sh',
-                  '-c',
-                  "apk add --no-cache iptables && sed -i 's/^ospfd=no/ospfd=yes/' /etc/frr/daemons && touch /etc/frr/frr.conf /etc/frr/vtysh.conf && chown frr:frr /etc/frr/frr.conf /etc/frr/vtysh.conf && exec /sbin/tini -- /usr/lib/frr/docker-start",
-                ],
               },
             ],
             links: [
@@ -4271,7 +4265,6 @@ const NetworkGraph = ({
                   image: 'alpine:3.24.2',
                   type: 'host',
                   driver: 'BasicHostDriver',
-                  commands: ['sh', '-c', 'apk add --no-cache iproute2 && sleep infinity'],
                 },
               ],
               links: [

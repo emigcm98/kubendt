@@ -285,9 +285,10 @@
       "type": "host",
       "replicas": 1,
       "commands": [
-        "sh",
-        "-c",
-        "apt update && apt install -y iproute2 iputils-ping && docker-entrypoint.sh mongod --bind_ip 0.0.0.0"
+        "docker-entrypoint.sh",
+        "mongod",
+        "--bind_ip",
+        "0.0.0.0"
       ],
       "env": {
         "MONGO_IP": "10.5.0.18"
@@ -438,14 +439,9 @@
     },
     {
       "name": "switch",
-      "image": "ubuntu:26.04",
+      "image": "alpine:3.24.2",
       "type": "switch",
-      "replicas": 4,
-      "commands": [
-        "sh",
-        "-c",
-        "apt update && apt install -y iproute2 bridge-utils iputils-ping && sleep infinity"
-      ]
+      "replicas": 4
     },
     {
       "name": "router",

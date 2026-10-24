@@ -235,7 +235,7 @@ KubeNDT is actively developed. The following limitations are known:
 
 ### Pod shutdown
 
-Nodes get a 2 s termination grace period instead of the Kubernetes default of 30 s. Emulated nodes are stateless (their configuration is replayed after a restart) and the usual `sh -c "... && sleep infinity"` entrypoint ignores SIGTERM, so the longer wait only delayed restarts, deletions and scale-downs. If a node runs something that needs an orderly shutdown, set `terminationGracePeriodSeconds` on that node in the topology JSON.
+Nodes get a 2 s termination grace period instead of the Kubernetes default of 30 s. Emulated nodes are stateless (their configuration is replayed after a restart) and a shell or a `sleep infinity` as the main process ignores SIGTERM, so the longer wait only delayed restarts, deletions and scale-downs. If a node runs something that needs an orderly shutdown, set `terminationGracePeriodSeconds` on that node in the topology JSON.
 
 ### Pod placement
 

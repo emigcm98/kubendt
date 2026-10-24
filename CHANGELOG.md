@@ -18,10 +18,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Changed
 
 - Static and default routes on FRR routers go through staticd (`ip route` and `ipv6 route` in vtysh) instead of the kernel, so they are in the running-config and `redistribute static` picks them up. Setting or removing a default route also drops the pod's own default route through `eth0`, as `ip route replace` did before.
+- The examples no longer install packages at startup: the alpine hosts and switches run their image as it is, the ubuntu switches moved to alpine, the Open vSwitch nodes run the image's own entrypoint, and the mongo and iperf3 nodes start only their service. `commands` is left where the command is the application, and the hosts that install `ping` for their guide declare `readiness` on it.
 
 ### Fixed
 
-- A node whose process ends (`commands` that finish, a one-shot image) deployed as a success and looped on restarts while the heal pass restarted it in vain; the deploy now fails naming the pod and its exit and rolls back, a modify reports it the same way, and the heal pass leaves such a pod alone.
+- A node whose process ends (`commands` that finish, a one-shot image) deployed as a success and looped on restarts while the heal pass restarted it in vain; the deploy now fails naming the pod when its process finished (exit code 0) and rolls back, a modify reports it the same way, an exit with an error is a warning in the response since the application may start on a later restart, and the heal pass leaves such a pod alone.
 - One exec against a container that was not running made the backend fall back to SPDY for every exec from then on: the WebSocket upgrade failure of a 5xx about the pod no longer counts as the API server refusing the upgrade.
 
 ## [1.6.0] - 2026-10-21
