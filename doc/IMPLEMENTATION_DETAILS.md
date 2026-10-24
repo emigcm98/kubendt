@@ -247,6 +247,7 @@ Right after the heal pass of a deploy, and on a restart or a modify before the h
     - terminationGracePeriodSeconds from the node (default 2 s, not the Kubernetes 30 s)
     - nodeSelector / nodeName from the node, when set
     - QEMU pods: Stdin=true, TTY=true, /dev/kvm added, Privileged=true
+    - Any node without `commands`: Stdin=true, TTY=true, so an image whose entrypoint is a shell stays up
     - Non-QEMU pods: NET_ADMIN capability
     - Readiness probe: the node's `readiness` command when set, else the driver's, else none (Ready when running)
     - Routers/switches: net.ipv4.ip_forward and net.ipv6.conf.all.forwarding sysctls = 1

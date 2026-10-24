@@ -445,8 +445,8 @@ Driver Assignment       Yes (default by type)      No (empty) by default;
 Driver Operations       Replayed                   N/A (unmanaged) or
                                                    Replayed (VyOS driver)
 ────────────────────────────────────────────────────────────────
-Container.Stdin         false                      true
-Container.TTY           false                      true
+Container.Stdin         true without `commands`    true
+Container.TTY           true without `commands`    true
 SecurityContext.Priv    false (or if router)       true
 ────────────────────────────────────────────────────────────────
 DeviceMount: /dev/kvm   No                         Yes (auto-add)

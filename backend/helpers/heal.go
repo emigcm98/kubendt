@@ -616,7 +616,8 @@ func shouldCountAsMissing(reason string) bool {
 
 // readPodLinks lists a pod's interfaces with their MTU in one exec, retrying
 // a failed exec a few times. Returns nil and the reason when the pod cannot
-// be read: pod-not-found, pod-terminating, pod-not-ready, exec-error.
+// be read: pod-not-found, pod-terminating, container-exited, pod-not-ready,
+// exec-error.
 func readPodLinks(namespace, podName string, pod *v1.Pod, tries int) (map[string]int, string) {
 	if pod == nil {
 		fetched, err := kubeclient.Clientset.CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
@@ -627,6 +628,10 @@ func readPodLinks(namespace, podName string, pod *v1.Pod, tries int) (map[string
 	}
 	if pod.DeletionTimestamp != nil {
 		return nil, "pod-terminating"
+	}
+	// A restart does not heal a container that exits, the handler reports it.
+	if _, exited := mainContainerExited(pod, time.Now()); exited {
+		return nil, "container-exited"
 	}
 	if !isPodReadyFast(pod) {
 		return nil, "pod-not-ready"

@@ -85,7 +85,7 @@ KubeNDT bundles a small set of third-party SVG icons in its frontend. See [ATTRI
 - Docker & Docker Compose (for production deployment)
 - Optional: QEMU support for VM-based node types (requires `/dev/kvm`)
 
-**Node images.** Any container image can be a node as long as its main container keeps running (alpine's default `sh` exits, so give such an image `commands` like `sleep infinity`). What the platform needs in the node's network namespace it brings itself when the image lacks it: `ip`, `bridge`, `tc` and `iptables` run from the pod's toolbox then, as capture, trace and throughput tests always do, and a node is Ready as soon as its container runs, or when the `readiness` command its spec declares succeeds, for a node whose startup installs or starts what the lab uses. What only the node's own filesystem can do stays the image's: `vtysh` for FRR comes with the image (the driver prepares the stock image at startup when the node sets no `commands`), the DNS actions need `sh`. The toolbox is `ghcr.io/emigcm98/kubendt-toolbox`, published with every release; `KUBENDT_TOOLBOX_IMAGE` points elsewhere.
+**Node images.** Any container image can be a node: with no `commands` it runs its entrypoint with a tty, so a plain alpine or ubuntu stays up as it is, and `commands` replaces the entrypoint and has to keep running. What the platform needs in the node's network namespace (`ip`, `tc`, `iptables`, capture) comes from the pod's toolbox when the image lacks it, `ghcr.io/emigcm98/kubendt-toolbox` unless `KUBENDT_TOOLBOX_IMAGE` says otherwise. A node whose startup installs or starts what the lab uses can declare a `readiness` command. The detail is in [doc/DRIVERS.md](doc/DRIVERS.md).
 
 **For local development, also install:**
 

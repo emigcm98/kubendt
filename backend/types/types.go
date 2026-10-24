@@ -155,9 +155,9 @@ type NodeSpec struct {
 	Qemu       bool `json:"-"`
 	Privileged bool `json:"privileged,omitempty" example:"true"`
 	Replicas   int  `json:"replicas,omitempty" example:"1"`
-	// Commands replaces the image's entrypoint, `sh -c "... && sleep infinity"`
-	// in the examples. It is where an image installs what the node needs at
-	// startup, iproute2 for `ip` or iptables for NAT.
+	// Commands replaces the image's entrypoint and then has to keep running
+	// itself (`sh -c "... && sleep infinity"`). Without it the image runs as
+	// it is, with a tty and stdin open so a shell entrypoint stays up.
 	Commands []string `json:"commands,omitempty"`
 	// Readiness is a command run in the container every 2 s until it exits 0;
 	// the node is Ready then, and a deploy or a modify waits for it. For a

@@ -13,10 +13,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Any image that keeps running can be a node: `ip`, `bridge`, `tc` and `iptables` run from the pod's toolbox when the image lacks them (the heal and MTU passes, the interface reads and the Linux actions alike, decided once per pod at first contact), a plain node is Ready as soon as its container runs instead of when `ip` answers, and NAT works on routers without iptables. The toolbox is KubeNDT's own image now, `ghcr.io/emigcm98/kubendt-toolbox`, built from `deploy/custom_images/toolbox` with iptables added and published with every release under its version, `latest` for a development backend; `KUBENDT_TOOLBOX_IMAGE` still overrides it. Every FRR router of the examples loses its startup command. A node whose startup installs or starts what the lab uses can declare a `readiness` command in the topology JSON, run every 2 s until it exits 0, and a deploy or a modify waits for it, as the debian host of example 3 and the MongoDB node of example 5 do.
 - An FRR router on the stock image needs no startup command: when a node sets no `commands`, its driver enables the routing daemons behind its capabilities, creates the files vtysh expects and starts FRR as the image does (`StartupCommandsProvider`, for drivers tied to an image). Example 7 drops the command its routers carried.
 - Before the actions of a capability run on an FRR router, the backend checks that the daemon they need is up (`ospfd` for OSPF) and fails them with a message that says what to enable in `/etc/frr/daemons`, instead of a vtysh error; the check rides in the pod's batch, so it costs no exec. A driver declares it with `CapabilityPrecondition`.
+- A node that sets no `commands` runs its image with a tty and an open stdin, so an image whose entrypoint is a shell (alpine, ubuntu) stays up without `sleep infinity`; `commands` keeps replacing the entrypoint and then has to stay running itself.
 
 ### Changed
 
 - Static and default routes on FRR routers go through staticd (`ip route` and `ipv6 route` in vtysh) instead of the kernel, so they are in the running-config and `redistribute static` picks them up. Setting or removing a default route also drops the pod's own default route through `eth0`, as `ip route replace` did before.
+
+### Fixed
+
+- A node whose process ends (`commands` that finish, a one-shot image) deployed as a success and looped on restarts while the heal pass restarted it in vain; the deploy now fails naming the pod and its exit and rolls back, a modify reports it the same way, and the heal pass leaves such a pod alone.
+- One exec against a container that was not running made the backend fall back to SPDY for every exec from then on: the WebSocket upgrade failure of a 5xx about the pod no longer counts as the API server refusing the upgrade.
 
 ## [1.6.0] - 2026-10-21
 
