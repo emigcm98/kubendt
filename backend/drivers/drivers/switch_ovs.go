@@ -22,9 +22,8 @@ var _ capabilities.SwitchCapable = (*OpenVSwitchDriver)(nil)
 var _ drivers_meta.ReadinessProbeProvider = (*OpenVSwitchDriver)(nil)
 
 // ReadinessProbeCommands makes the pod Ready only once ovs-vsctl can talk to
-// ovsdb-server. The default probe (`command -v ip`) passes as soon as the
-// image has iproute2, seconds before the OVS daemons listen, and a bridge
-// setup or a replay landing in that window fails.
+// ovsdb-server: the image's entrypoint starts the daemons seconds after the
+// container runs, and a bridge setup or a replay landing in that window fails.
 func (OpenVSwitchDriver) ReadinessProbeCommands() drivers_meta.ReadinessProbeSpec {
 	return drivers_meta.ReadinessProbeSpec{
 		Command:             []string{"sh", "-c", "ovs-vsctl --timeout=2 show >/dev/null"},

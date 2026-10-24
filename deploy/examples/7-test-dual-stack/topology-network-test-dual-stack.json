@@ -4,22 +4,12 @@
       "name": "laptop",
       "image": "alpine:3.24.2",
       "type": "host",
-      "replicas": 2,
-      "commands": [
-        "sh",
-        "-c",
-        "apk update && apk add iproute2 && sleep infinity"
-      ]
+      "replicas": 2
     },
     {
       "name": "sensor",
       "image": "alpine:3.24.2",
-      "type": "host",
-      "commands": [
-        "sh",
-        "-c",
-        "apk update && apk add iproute2 && sleep infinity"
-      ]
+      "type": "host"
     },
     {
       "name": "web",
@@ -47,22 +37,12 @@
     {
       "name": "office-sw",
       "image": "alpine:3.24.2",
-      "type": "switch",
-      "commands": [
-        "sh",
-        "-c",
-        "apk update && apk add iproute2 && sleep infinity"
-      ]
+      "type": "switch"
     },
     {
       "name": "lab-sw",
       "image": "alpine:3.24.2",
-      "type": "switch",
-      "commands": [
-        "sh",
-        "-c",
-        "apk update && apk add iproute2 && sleep infinity"
-      ]
+      "type": "switch"
     }
   ],
   "links": [

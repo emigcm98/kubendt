@@ -115,7 +115,7 @@ func WaitForPodsReadyTimeline(namespace string, podNames []string, requestStart 
 		if reason, detail, bad := fatalPodImageError(pod); bad {
 			return fmt.Errorf("pod '%s' cannot start due to an image error (%s)%s", pod.Name, reason, detail)
 		}
-		if exit, exited := mainContainerExited(pod, requestStart); exited {
+		if exit, code, exited := mainContainerExited(pod, requestStart); exited && code == 0 {
 			return fmt.Errorf("pod %s exited (%s); %s", pod.Name, exit, exitedHint)
 		}
 		ok, reason := isPodReady(pod)
@@ -225,47 +225,55 @@ func followPodEvents(ctx context.Context, w watch.Interface, pending map[string]
 const exitedHint = "a node's process has to keep running, a daemon in the foreground or no 'commands' so the image's shell stays up"
 
 // ExitedPods names, among the pods, those whose main container ended since
-// the request began, with how it ended. A node like that is Ready for an
-// instant and then restarts forever, so a deploy or a modify reports it
-// instead of handing over a lab that looks fine and loops.
-func ExitedPods(namespace string, podNames []string, since time.Time) []string {
+// the request began. Finished ones exited with 0: the command is over and
+// nothing keeps the container up, so Kubernetes restarts it forever and the
+// lab is unusable. Crashed ones exited with an error: an application that
+// did not start, which may well do on a later restart once what it waits
+// for is up (the Open5GS functions retry until the NRF answers), so they
+// are reported, not failed.
+func ExitedPods(namespace string, podNames []string, since time.Time) (finished []string, crashed []types.Warning) {
 	list, err := kubeclient.Clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
-		return nil
+		return nil, nil
 	}
 	wanted := make(map[string]bool, len(podNames))
 	for _, n := range podNames {
 		wanted[n] = true
 	}
-	var out []string
 	for i := range list.Items {
 		pod := &list.Items[i]
 		if !wanted[pod.Name] {
 			continue
 		}
-		if exit, exited := mainContainerExited(pod, since); exited {
-			out = append(out, fmt.Sprintf("%s (%s)", pod.Name, exit))
+		exit, code, exited := mainContainerExited(pod, since)
+		switch {
+		case !exited:
+		case code == 0:
+			finished = append(finished, fmt.Sprintf("%s (%s)", pod.Name, exit))
+		default:
+			crashed = append(crashed, types.Warning{Node: pod.Name, Kind: "node_crashed",
+				Detail: fmt.Sprintf("exited (%s) and restarted; a node that keeps restarting is an application that does not start, its logs say why", exit)})
 		}
 	}
-	sort.Strings(out)
-	return out
+	sort.Strings(finished)
+	sort.Slice(crashed, func(i, j int) bool { return crashed[i].Node < crashed[j].Node })
+	return finished, crashed
 }
 
-// ExitedPodsError is the user-facing error for what ExitedPods found.
-func ExitedPodsError(exited []string) error {
+// ExitedPodsError is the user-facing error for the finished pods.
+func ExitedPodsError(finished []string) error {
 	noun := "pod"
-	if len(exited) > 1 {
+	if len(finished) > 1 {
 		noun = "pods"
 	}
-	return fmt.Errorf("%s %s exited; %s", noun, strings.Join(exited, ", "), exitedHint)
+	return fmt.Errorf("%s %s exited; %s", noun, strings.Join(finished, ", "), exitedHint)
 }
 
 // mainContainerExited reports a container of the pod that ended, with how it
-// ended. Kubernetes restarts it forever, so the wait would only time out: a
-// container dead now, one in restart backoff, or one restarted since the
-// request began. A death older than the request on a container running now
-// is history, not this wait's concern.
-func mainContainerExited(pod *v1.Pod, since time.Time) (string, bool) {
+// ended and its exit code: a container dead now, one in restart backoff, or
+// one restarted since the request began. A death older than the request on
+// a container running now is history, not this request's concern.
+func mainContainerExited(pod *v1.Pod, since time.Time) (string, int32, bool) {
 	for _, cs := range pod.Status.ContainerStatuses {
 		t := cs.State.Terminated
 		if t == nil && cs.State.Running == nil {
@@ -283,9 +291,9 @@ func mainContainerExited(pod *v1.Pod, since time.Time) (string, bool) {
 		if reason == "" {
 			reason = "terminated"
 		}
-		return fmt.Sprintf("%s, exit code %d", reason, t.ExitCode), true
+		return fmt.Sprintf("%s, exit code %d", reason, t.ExitCode), t.ExitCode, true
 	}
-	return "", false
+	return "", 0, false
 }
 
 func timelinesOf(trackers map[string]*podTracker) map[string]*types.PodTimeline {

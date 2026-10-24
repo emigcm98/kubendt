@@ -4,22 +4,12 @@
             "name": "host",
             "image": "alpine:3.24.2",
             "type": "host",
-            "replicas": 4,
-            "commands": [
-                "sh",
-                "-c",
-                "sleep infinity"
-            ]
+            "replicas": 4
         },
         {
             "name": "printer",
             "image": "alpine:3.24.2",
-            "type": "host",
-            "commands": [
-                "sh",
-                "-c",
-                "sleep infinity"
-            ]
+            "type": "host"
         },
         {
             "name": "web",
@@ -35,14 +25,9 @@
         },
         {
             "name": "switch",
-            "image": "ubuntu:26.04",
+            "image": "alpine:3.24.2",
             "type": "switch",
-            "replicas": 4,
-            "commands": [
-                "sh",
-                "-c",
-                "apt update && apt install -y iproute2 bridge-utils iputils-ping && sleep infinity"
-            ]
+            "replicas": 4
         }
     ],
     "links": [

@@ -1,6 +1,8 @@
 package helpers
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -49,9 +51,12 @@ func TestMainContainerExited(t *testing.T) {
 		{"no reason", pod(term("", 2, since.Add(time.Second)), v1.ContainerState{}), "terminated, exit code 2"},
 	}
 	for _, c := range cases {
-		got, exited := mainContainerExited(c.pod, since)
+		got, code, exited := mainContainerExited(c.pod, since)
 		if exited != (c.want != "") || got != c.want {
 			t.Errorf("%s: got %q, %v", c.name, got, exited)
+		}
+		if exited && !strings.HasSuffix(got, fmt.Sprintf("exit code %d", code)) {
+			t.Errorf("%s: code %d does not match %q", c.name, code, got)
 		}
 	}
 }

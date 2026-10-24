@@ -40,7 +40,7 @@ Nodes deployed:
 | `webui` | `BasicHostDriver` | `ghcr.io/herlesupreeth/docker_open5gs:master` | 1 | Open5GS Web UI |
 | `gnb` | `BasicHostDriver` | `gradiant/ueransim:3.3.0` | 1 | UERANSIM gNB, N2/N3 on the host external network, radio link to `ue-0` |
 | `ue` | `BasicHostDriver` | `gradiant/ueransim:3.3.0` | 1 | UERANSIM UE, connects to the gNB, establishes a PDU session |
-| `switch` | `LinuxSwitchDriver` | `ubuntu:26.04` | 4 | Linux bridges: `switch-0` control plane, `switch-1` N4 (SMF–UPF), `switch-2` UPF uplink, `switch-3` WebUI |
+| `switch` | `LinuxSwitchDriver` | `alpine:3.24.2` | 4 | Linux bridges: `switch-0` control plane, `switch-1` N4 (SMF–UPF), `switch-2` UPF uplink, `switch-3` WebUI |
 | `router` | `FRRRouterDriver` | `quay.io/frrouting/frr:10.7.1` | 2 | `router-0`: edge router with the external uplink and the WebUI DNAT; `router-1`: internet gateway (SNAT) |
 
 Nodes without a `driver` in the topology JSON get the default of their type: `BasicHostDriver` for hosts and `LinuxSwitchDriver` for switches.

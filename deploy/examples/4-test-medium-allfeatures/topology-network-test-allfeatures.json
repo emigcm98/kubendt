@@ -6,11 +6,6 @@
       "type": "host",
       "driver": "HostDriver",
       "replicas": 4,
-      "commands": [
-        "sh",
-        "-c",
-        "apk add iproute2-tc && sleep infinity"
-      ],
       "env": {
         "HOST_VAR": "soy una variable de entorno compartida entre todas las replicas"
       }
@@ -71,9 +66,10 @@
       "type": "host",
       "replicas": 2,
       "commands": [
-        "sh",
-        "-c",
-        "apt update && apt install -y iproute2 iputils-ping && iperf3 -s -p 5201"
+        "iperf3",
+        "-s",
+        "-p",
+        "5201"
       ]
     },
     {
@@ -98,52 +94,29 @@
       "name": "core-sw",
       "image": "globocom/openvswitch:latest",
       "type": "switch",
-      "commands": [
-        "sh",
-        "-c",
-        "apk update && apk add --no-cache iproute2 iputils && ovsdb-server --remote=punix:/var/run/openvswitch/db.sock --remote=db:Open_vSwitch,Open_vSwitch,manager_options --pidfile --detach && ovs-vswitchd --pidfile --detach && tail -f /dev/null"
-      ]
+      "driver": "OpenVSwitchDriver"
     },
     {
       "name": "dist-sw",
       "image": "globocom/openvswitch:latest",
       "type": "switch",
-      "commands": [
-        "sh",
-        "-c",
-        "apk update && apk add --no-cache iproute2 iputils && ovsdb-server --remote=punix:/var/run/openvswitch/db.sock --remote=db:Open_vSwitch,Open_vSwitch,manager_options --pidfile --detach && ovs-vswitchd --pidfile --detach && tail -f /dev/null"
-      ]
+      "driver": "OpenVSwitchDriver"
     },
     {
       "name": "dmz-sw",
-      "image": "ubuntu:26.04",
-      "type": "switch",
-      "commands": [
-        "sh",
-        "-c",
-        "apt update && apt install -y iproute2 bridge-utils iputils-ping && sleep infinity"
-      ]
+      "image": "alpine:3.24.2",
+      "type": "switch"
     },
     {
       "name": "svc-sw",
-      "image": "ubuntu:26.04",
-      "type": "switch",
-      "commands": [
-        "sh",
-        "-c",
-        "apt update && apt install -y iproute2 bridge-utils iputils-ping && sleep infinity"
-      ]
+      "image": "alpine:3.24.2",
+      "type": "switch"
     },
     {
       "name": "room-sw",
       "replicas": 2,
-      "image": "ubuntu:26.04",
-      "type": "switch",
-      "commands": [
-        "sh",
-        "-c",
-        "apt update && apt install -y iproute2 bridge-utils iputils-ping && sleep infinity"
-      ]
+      "image": "alpine:3.24.2",
+      "type": "switch"
     }
   ],
   "links": [
