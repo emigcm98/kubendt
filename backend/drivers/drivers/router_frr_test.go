@@ -1,6 +1,7 @@
 package drivers
 
 import (
+	"kubendt/actions"
 	"reflect"
 	"strings"
 	"testing"
@@ -107,6 +108,27 @@ func TestFRROSPF6(t *testing.T) {
 	}
 }
 
+func TestFRROSPFInterface(t *testing.T) {
+	var d FRRRouterDriver
+	cases := []struct {
+		name string
+		got  [][]string
+		want [][]string
+	}{
+		{"cost", d.OSPFSetCost("eth2", 100), [][]string{{"vtysh", "-c", "configure terminal", "-c", "interface eth2", "-c", "ip ospf cost 100"}}},
+		{"priority", d.OSPFSetPriority("eth1", 255), [][]string{{"vtysh", "-c", "configure terminal", "-c", "interface eth1", "-c", "ip ospf priority 255"}}},
+		{"timers", d.OSPFSetTimers("eth2", 5, 20), [][]string{{"vtysh", "-c", "configure terminal", "-c", "interface eth2", "-c", "ip ospf hello-interval 5", "-c", "ip ospf dead-interval 20"}}},
+		{"no timers", d.OSPFRemoveTimers("eth2"), [][]string{{"vtysh", "-c", "configure terminal", "-c", "interface eth2", "-c", "no ip ospf hello-interval", "-c", "no ip ospf dead-interval"}}},
+		{"network type", d.OSPFSetNetworkType("eth2", "point-to-point"), [][]string{{"vtysh", "-c", "configure terminal", "-c", "interface eth2", "-c", "ip ospf network point-to-point"}}},
+		{"no network type", d.OSPFRemoveNetworkType("eth2"), [][]string{{"vtysh", "-c", "configure terminal", "-c", "interface eth2", "-c", "no ip ospf network"}}},
+	}
+	for _, c := range cases {
+		if !reflect.DeepEqual(c.got, c.want) {
+			t.Errorf("%s:\n got  %v\n want %v", c.name, c.got, c.want)
+		}
+	}
+}
+
 func TestFRRStartupCommands(t *testing.T) {
 	cmd := FRRRouterDriver{}.StartupCommands()
 	if len(cmd) != 3 || cmd[0] != "sh" || cmd[1] != "-c" {
@@ -119,5 +141,40 @@ func TestFRRStartupCommands(t *testing.T) {
 	}
 	if strings.Contains(cmd[2], "apk") {
 		t.Errorf("the default must not install packages: %s", cmd[2])
+	}
+}
+
+func TestOSPFInterfaceRanges(t *testing.T) {
+	prio := func(n int) *int { return &n }
+	cases := []struct {
+		name string
+		a    types.ActionEntry
+		want string // substring of the error, empty when it runs
+	}{
+		{"cost zero", types.ActionEntry{Type: "ospf_set_cost", Iface: "eth1", Cost: 0}, "missing required field"},
+		{"cost too big", types.ActionEntry{Type: "ospf_set_cost", Iface: "eth1", Cost: 70000}, "between 1 and 65535"},
+		{"cost fine", types.ActionEntry{Type: "ospf_set_cost", Iface: "eth1", Cost: 100}, ""},
+		{"priority zero", types.ActionEntry{Type: "ospf_set_priority", Iface: "eth1", Priority: prio(0)}, ""},
+		{"priority too big", types.ActionEntry{Type: "ospf_set_priority", Iface: "eth1", Priority: prio(256)}, "between 0 and 255"},
+		{"dead not longer", types.ActionEntry{Type: "ospf_set_timers", Iface: "eth1", HelloInterval: 10, DeadInterval: 10}, "longer than hello_interval"},
+		{"timers fine", types.ActionEntry{Type: "ospf_set_timers", Iface: "eth1", HelloInterval: 5, DeadInterval: 20}, ""},
+		{"network type unknown", types.ActionEntry{Type: "ospf_set_network_type", Iface: "eth1", NetworkType: "serial"}, "network_type must be one of"},
+		{"network type fine", types.ActionEntry{Type: "ospf_set_network_type", Iface: "eth1", NetworkType: "point-to-point"}, ""},
+	}
+	for _, c := range cases {
+		d, ok := actions.Lookup(c.a.Type)
+		if !ok {
+			t.Fatalf("%s: action %s not registered", c.name, c.a.Type)
+		}
+		err := d.Validate(c.a)
+		if err == nil {
+			_, err = d.Run(FRRRouterDriver{}, c.a)
+		}
+		if c.want == "" && err != nil {
+			t.Errorf("%s: unexpected error %v", c.name, err)
+		}
+		if c.want != "" && (err == nil || !strings.Contains(err.Error(), c.want)) {
+			t.Errorf("%s: want error containing %q, got %v", c.name, c.want, err)
+		}
 	}
 }

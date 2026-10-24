@@ -170,6 +170,12 @@
       ["vtysh","-c","configure terminal","-c","router ospf","-c","redistribute rip"]
     ]
   },
+  "ospf_remove_cost": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","interface eth2","-c","no ip ospf cost"]
+    ]
+  },
   "ospf_remove_mtu_ignore": {
     "executor": "kubectl",
     "commands": [
@@ -180,6 +186,12 @@
     "executor": "kubectl",
     "commands": [
       ["vtysh","-c","configure terminal","-c","router ospf","-c","no network 10.0.0.0/24 area 0"]
+    ]
+  },
+  "ospf_remove_network_type": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","interface eth2","-c","no ip ospf network"]
     ]
   },
   "ospf_remove_no_passive": {
@@ -200,6 +212,12 @@
       ["vtysh","-c","configure terminal","-c","router ospf","-c","no passive-interface default"]
     ]
   },
+  "ospf_remove_priority": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","interface eth1","-c","no ip ospf priority"]
+    ]
+  },
   "ospf_remove_redistribute": {
     "executor": "kubectl",
     "commands": [
@@ -212,10 +230,40 @@
       ["vtysh","-c","configure terminal","-c","router ospf","-c","no ospf router-id"]
     ]
   },
+  "ospf_remove_timers": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","interface eth2","-c","no ip ospf hello-interval","-c","no ip ospf dead-interval"]
+    ]
+  },
+  "ospf_set_cost": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","interface eth2","-c","ip ospf cost 100"]
+    ]
+  },
+  "ospf_set_network_type": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","interface eth2","-c","ip ospf network point-to-point"]
+    ]
+  },
+  "ospf_set_priority": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","interface eth1","-c","ip ospf priority 255"]
+    ]
+  },
   "ospf_set_router_id": {
     "executor": "kubectl",
     "commands": [
       ["vtysh","-c","configure terminal","-c","router ospf","-c","ospf router-id 10.255.0.1"]
+    ]
+  },
+  "ospf_set_timers": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","interface eth2","-c","ip ospf hello-interval 5","-c","ip ospf dead-interval 20"]
     ]
   },
   "remove_default_route": {

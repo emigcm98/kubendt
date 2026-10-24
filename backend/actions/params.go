@@ -26,6 +26,7 @@ const (
 	KindCommand   Kind = "command"  // a string or an argv array
 	KindExecutor  Kind = "executor" // the name of a registered executor
 	KindFamily    Kind = "family"   // "4" or "6"
+	KindNumber    Kind = "number"   // a non-negative integer, the action checks its range
 )
 
 // Param is one field of ActionEntry an action reads, by its JSON name.
@@ -46,27 +47,32 @@ func P(params ...Param) []Param { return params }
 
 // The fields of ActionEntry, by the JSON name the API takes.
 var (
-	Iface        = Param{Name: "iface", Kind: KindIface, Required: true}
-	Ifaces       = Param{Name: "ifaces", Kind: KindIfaceList, Required: true}
-	CIDR         = Param{Name: "cidr", Kind: KindCIDR, Required: true}
-	Gateway      = Param{Name: "gateway", Kind: KindIP, Required: true}
-	DstCIDR      = Param{Name: "dst_cidr", Kind: KindCIDR, Required: true}
-	Device       = Param{Name: "device", Kind: KindIface, Required: true}
-	Bridge       = Param{Name: "bridge", Kind: KindText, Required: true}
-	ExternalPort = Param{Name: "externalPort", Kind: KindPort, Required: true}
-	InternalIP   = Param{Name: "internalIP", Kind: KindIP, Required: true}
-	InternalPort = Param{Name: "internalPort", Kind: KindPort, Required: true}
-	Protocol     = Param{Name: "protocol", Kind: KindText, Required: true}
-	DNSServer    = Param{Name: "dns_server", Kind: KindIP, Required: true}
-	DNSDomain    = Param{Name: "dns_domain", Kind: KindText, Required: true}
-	TCParams     = Param{Name: "tcparams", Kind: KindObject, Required: true}
-	OSPFArea     = Param{Name: "ospf_area", Kind: KindText, Required: true}
-	RouterID     = Param{Name: "router_id", Kind: KindIP, Required: true}
-	Command      = Param{Name: "command", Kind: KindCommand, Required: true}
-	Executor     = Param{Name: "executor", Kind: KindExecutor, Required: false}
-	Family       = Param{Name: "family", Kind: KindFamily, Required: false}
-	Redistribute = Param{Name: "redistribute", Kind: KindText, Required: true}
-	Timers       = Param{Name: "timers", Kind: KindObject, Required: true}
+	Iface         = Param{Name: "iface", Kind: KindIface, Required: true}
+	Ifaces        = Param{Name: "ifaces", Kind: KindIfaceList, Required: true}
+	CIDR          = Param{Name: "cidr", Kind: KindCIDR, Required: true}
+	Gateway       = Param{Name: "gateway", Kind: KindIP, Required: true}
+	DstCIDR       = Param{Name: "dst_cidr", Kind: KindCIDR, Required: true}
+	Device        = Param{Name: "device", Kind: KindIface, Required: true}
+	Bridge        = Param{Name: "bridge", Kind: KindText, Required: true}
+	ExternalPort  = Param{Name: "externalPort", Kind: KindPort, Required: true}
+	InternalIP    = Param{Name: "internalIP", Kind: KindIP, Required: true}
+	InternalPort  = Param{Name: "internalPort", Kind: KindPort, Required: true}
+	Protocol      = Param{Name: "protocol", Kind: KindText, Required: true}
+	DNSServer     = Param{Name: "dns_server", Kind: KindIP, Required: true}
+	DNSDomain     = Param{Name: "dns_domain", Kind: KindText, Required: true}
+	TCParams      = Param{Name: "tcparams", Kind: KindObject, Required: true}
+	OSPFArea      = Param{Name: "ospf_area", Kind: KindText, Required: true}
+	RouterID      = Param{Name: "router_id", Kind: KindIP, Required: true}
+	Command       = Param{Name: "command", Kind: KindCommand, Required: true}
+	Executor      = Param{Name: "executor", Kind: KindExecutor, Required: false}
+	Family        = Param{Name: "family", Kind: KindFamily, Required: false}
+	Redistribute  = Param{Name: "redistribute", Kind: KindText, Required: true}
+	Timers        = Param{Name: "timers", Kind: KindObject, Required: true}
+	Cost          = Param{Name: "cost", Kind: KindNumber, Required: true}
+	Priority      = Param{Name: "priority", Kind: KindNumber, Required: true}
+	HelloInterval = Param{Name: "hello_interval", Kind: KindNumber, Required: true}
+	DeadInterval  = Param{Name: "dead_interval", Kind: KindNumber, Required: true}
+	NetworkType   = Param{Name: "network_type", Kind: KindText, Required: true}
 )
 
 // ProtectedInterface is the pod's cluster interface. An action on it would
@@ -169,6 +175,14 @@ func checkKind(k Kind, v reflect.Value) error {
 	case KindFamily:
 		if s := v.String(); s != "4" && s != "6" {
 			return fmt.Errorf("must be 4 or 6, got %q", s)
+		}
+	case KindNumber:
+		n := v
+		if n.Kind() == reflect.Pointer {
+			n = n.Elem()
+		}
+		if n.Int() < 0 {
+			return fmt.Errorf("must not be negative, got %d", n.Int())
 		}
 	}
 	return nil

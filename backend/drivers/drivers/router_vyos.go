@@ -453,6 +453,44 @@ func (VyOSRouterDriver) OSPFRemoveRedistribute(source string) [][]string {
 	return [][]string{{"delete protocols ospf redistribute " + source}}
 }
 
+func (VyOSRouterDriver) OSPFSetCost(iface string, cost int) [][]string {
+	return [][]string{{fmt.Sprintf("set protocols ospf interface %s cost %d", iface, cost)}}
+}
+
+func (VyOSRouterDriver) OSPFRemoveCost(iface string) [][]string {
+	return [][]string{{"delete protocols ospf interface " + iface + " cost"}}
+}
+
+func (VyOSRouterDriver) OSPFSetPriority(iface string, priority int) [][]string {
+	return [][]string{{fmt.Sprintf("set protocols ospf interface %s priority %d", iface, priority)}}
+}
+
+func (VyOSRouterDriver) OSPFRemovePriority(iface string) [][]string {
+	return [][]string{{"delete protocols ospf interface " + iface + " priority"}}
+}
+
+func (VyOSRouterDriver) OSPFSetTimers(iface string, hello, dead int) [][]string {
+	return [][]string{
+		{fmt.Sprintf("set protocols ospf interface %s hello-interval %d", iface, hello)},
+		{fmt.Sprintf("set protocols ospf interface %s dead-interval %d", iface, dead)},
+	}
+}
+
+func (VyOSRouterDriver) OSPFRemoveTimers(iface string) [][]string {
+	return [][]string{
+		{"delete protocols ospf interface " + iface + " hello-interval"},
+		{"delete protocols ospf interface " + iface + " dead-interval"},
+	}
+}
+
+func (VyOSRouterDriver) OSPFSetNetworkType(iface, networkType string) [][]string {
+	return [][]string{{"set protocols ospf interface " + iface + " network " + networkType}}
+}
+
+func (VyOSRouterDriver) OSPFRemoveNetworkType(iface string) [][]string {
+	return [][]string{{"delete protocols ospf interface " + iface + " network"}}
+}
+
 // ─── EffectiveInterfaceInspector ─────────────────────────────────────────────
 
 // vyosConfigCache collapses the bursts of /retrieve calls the poller and the

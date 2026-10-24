@@ -2899,6 +2899,15 @@ const docTemplate = `{
                     "type": "string",
                     "example": "ip route show"
                 },
+                "cost": {
+                    "description": "OSPF interface parameters. Priority 0 means never the DR, so a pointer\ntells it apart from unset. Intervals are seconds.",
+                    "type": "integer",
+                    "example": 100
+                },
+                "dead_interval": {
+                    "type": "integer",
+                    "example": 40
+                },
                 "device": {
                     "type": "string",
                     "example": "/dev/net/tun"
@@ -2935,6 +2944,10 @@ const docTemplate = `{
                     "type": "string",
                     "example": "192.168.1.254"
                 },
+                "hello_interval": {
+                    "type": "integer",
+                    "example": 10
+                },
                 "iface": {
                     "type": "string",
                     "example": "eth1"
@@ -2953,6 +2966,10 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 80
                 },
+                "network_type": {
+                    "type": "string",
+                    "example": "point-to-point"
+                },
                 "options": {
                     "$ref": "#/definitions/types.ActionOptions"
                 },
@@ -2960,6 +2977,10 @@ const docTemplate = `{
                     "description": "OSPF",
                     "type": "string",
                     "example": "0"
+                },
+                "priority": {
+                    "type": "integer",
+                    "example": 255
                 },
                 "protocol": {
                     "type": "string",
