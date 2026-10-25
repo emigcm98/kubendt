@@ -32,6 +32,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - A node whose process ends (`commands` that finish, a one-shot image) deployed as a success and looped on restarts while the heal pass restarted it in vain; the deploy now fails naming the pod when its process finished (exit code 0) and rolls back, a modify reports it the same way, an exit with an error is a warning in the response since the application may start on a later restart, and the heal pass leaves such a pod alone.
 - One exec against a container that was not running made the backend fall back to SPDY for every exec from then on: the WebSocket upgrade failure of a 5xx about the pod no longer counts as the API server refusing the upgrade.
+- The trace tool spaces its probes 10 ms apart: the toolbox's traceroute fires them at once, and on a link between workers the identical ICMP probes share one VXLAN flow whose simultaneous first packets the worker's conntrack drops, so hops in the middle of a path read as timeouts.
 
 ## [1.6.0] - 2026-10-21
 
