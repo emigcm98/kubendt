@@ -1,0 +1,30 @@
+{
+    "targets": [
+        {
+            "pod": "ra-1",
+            "actions": [
+                {
+                    "type": "rip_add_network",
+                    "cidr": "172.22.50.196/30"
+                }
+            ]
+        },
+        {
+            "pod": "rb-0",
+            "actions": [
+                {
+                    "type": "rip_add_network",
+                    "cidr": "172.22.50.196/30"
+                },
+                {
+                    "type": "rip_redistribute",
+                    "redistribute": "ospf"
+                },
+                {
+                    "type": "ospf_redistribute",
+                    "redistribute": "rip"
+                }
+            ]
+        }
+    ]
+}

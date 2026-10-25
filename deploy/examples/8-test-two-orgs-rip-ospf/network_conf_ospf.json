@@ -1,0 +1,398 @@
+{
+    "targets": [
+        {
+            "pod": "hb-0",
+            "actions": [
+                {
+                    "type": "set_default_route",
+                    "gateway": "172.22.16.1"
+                }
+            ]
+        },
+        {
+            "pod": "hb-1",
+            "actions": [
+                {
+                    "type": "set_default_route",
+                    "gateway": "172.22.16.97"
+                }
+            ]
+        },
+        {
+            "pod": "hb-2",
+            "actions": [
+                {
+                    "type": "set_default_route",
+                    "gateway": "172.22.16.129"
+                }
+            ]
+        },
+        {
+            "pod": "hb-3",
+            "actions": [
+                {
+                    "type": "set_default_route",
+                    "gateway": "172.22.16.161"
+                }
+            ]
+        },
+        {
+            "pod": "sb-0",
+            "actions": [
+                {
+                    "type": "setup_bridge",
+                    "bridge": "br0",
+                    "ifaces": [
+                        "eth1",
+                        "eth2"
+                    ]
+                }
+            ]
+        },
+        {
+            "pod": "sb-1",
+            "actions": [
+                {
+                    "type": "setup_bridge",
+                    "bridge": "br0",
+                    "ifaces": [
+                        "eth1",
+                        "eth2"
+                    ]
+                }
+            ]
+        },
+        {
+            "pod": "sb-2",
+            "actions": [
+                {
+                    "type": "setup_bridge",
+                    "bridge": "br0",
+                    "ifaces": [
+                        "eth1",
+                        "eth2"
+                    ]
+                }
+            ]
+        },
+        {
+            "pod": "sb-3",
+            "actions": [
+                {
+                    "type": "setup_bridge",
+                    "bridge": "br0",
+                    "ifaces": [
+                        "eth1",
+                        "eth2"
+                    ]
+                }
+            ]
+        },
+        {
+            "pod": "sb-4",
+            "actions": [
+                {
+                    "type": "setup_bridge",
+                    "bridge": "br0",
+                    "ifaces": [
+                        "eth1",
+                        "eth2"
+                    ]
+                }
+            ]
+        },
+        {
+            "pod": "rb-0",
+            "actions": [
+                {
+                    "type": "ospf_set_router_id",
+                    "router_id": "172.22.19.1"
+                },
+                {
+                    "type": "ospf_add_network",
+                    "cidr": "172.22.17.0/30",
+                    "ospf_area": "0"
+                },
+                {
+                    "type": "ospf_add_network",
+                    "cidr": "172.22.17.4/30",
+                    "ospf_area": "0"
+                },
+                {
+                    "type": "ospf_passive_default"
+                },
+                {
+                    "type": "ospf_no_passive",
+                    "iface": "eth2"
+                },
+                {
+                    "type": "ospf_no_passive",
+                    "iface": "eth3"
+                },
+                {
+                    "type": "ospf_set_network_type",
+                    "iface": "eth2",
+                    "network_type": "point-to-point"
+                },
+                {
+                    "type": "ospf_set_network_type",
+                    "iface": "eth3",
+                    "network_type": "point-to-point"
+                }
+            ]
+        },
+        {
+            "pod": "rb-1",
+            "actions": [
+                {
+                    "type": "ospf_set_router_id",
+                    "router_id": "172.22.19.2"
+                },
+                {
+                    "type": "ospf_add_area_range",
+                    "ospf_area": "1",
+                    "cidr": "172.22.16.0/26"
+                },
+                {
+                    "type": "ospf_add_network",
+                    "cidr": "172.22.17.0/30",
+                    "ospf_area": "0"
+                },
+                {
+                    "type": "ospf_add_network",
+                    "cidr": "172.22.17.8/30",
+                    "ospf_area": "0"
+                },
+                {
+                    "type": "ospf_add_network",
+                    "cidr": "172.22.16.0/26",
+                    "ospf_area": "1"
+                },
+                {
+                    "type": "ospf_passive_default"
+                },
+                {
+                    "type": "ospf_no_passive",
+                    "iface": "eth1"
+                },
+                {
+                    "type": "ospf_no_passive",
+                    "iface": "eth2"
+                },
+                {
+                    "type": "ospf_set_network_type",
+                    "iface": "eth1",
+                    "network_type": "point-to-point"
+                },
+                {
+                    "type": "ospf_set_network_type",
+                    "iface": "eth2",
+                    "network_type": "point-to-point"
+                }
+            ]
+        },
+        {
+            "pod": "rb-2",
+            "actions": [
+                {
+                    "type": "ospf_set_router_id",
+                    "router_id": "172.22.19.3"
+                },
+                {
+                    "type": "ospf_add_area_range",
+                    "ospf_area": "2",
+                    "cidr": "172.22.16.64/26"
+                },
+                {
+                    "type": "ospf_add_area_range",
+                    "ospf_area": "3",
+                    "cidr": "172.22.16.128/25"
+                },
+                {
+                    "type": "ospf_add_network",
+                    "cidr": "172.22.17.4/30",
+                    "ospf_area": "0"
+                },
+                {
+                    "type": "ospf_add_network",
+                    "cidr": "172.22.17.8/30",
+                    "ospf_area": "0"
+                },
+                {
+                    "type": "ospf_add_network",
+                    "cidr": "172.22.16.64/27",
+                    "ospf_area": "2"
+                },
+                {
+                    "type": "ospf_add_network",
+                    "cidr": "172.22.16.192/30",
+                    "ospf_area": "3"
+                },
+                {
+                    "type": "ospf_add_network",
+                    "cidr": "172.22.16.196/30",
+                    "ospf_area": "3"
+                },
+                {
+                    "type": "ospf_passive_default"
+                },
+                {
+                    "type": "ospf_no_passive",
+                    "iface": "eth1"
+                },
+                {
+                    "type": "ospf_no_passive",
+                    "iface": "eth2"
+                },
+                {
+                    "type": "ospf_no_passive",
+                    "iface": "eth3"
+                },
+                {
+                    "type": "ospf_no_passive",
+                    "iface": "eth4"
+                },
+                {
+                    "type": "ospf_no_passive",
+                    "iface": "eth5"
+                },
+                {
+                    "type": "ospf_set_network_type",
+                    "iface": "eth1",
+                    "network_type": "point-to-point"
+                },
+                {
+                    "type": "ospf_set_network_type",
+                    "iface": "eth2",
+                    "network_type": "point-to-point"
+                },
+                {
+                    "type": "ospf_set_network_type",
+                    "iface": "eth4",
+                    "network_type": "point-to-point"
+                },
+                {
+                    "type": "ospf_set_network_type",
+                    "iface": "eth5",
+                    "network_type": "point-to-point"
+                }
+            ]
+        },
+        {
+            "pod": "rb-3",
+            "actions": [
+                {
+                    "type": "ospf_set_router_id",
+                    "router_id": "172.22.19.4"
+                },
+                {
+                    "type": "ospf_add_network",
+                    "cidr": "172.22.16.64/27",
+                    "ospf_area": "2"
+                },
+                {
+                    "type": "ospf_add_network",
+                    "cidr": "172.22.16.96/27",
+                    "ospf_area": "2"
+                },
+                {
+                    "type": "ospf_passive_default"
+                },
+                {
+                    "type": "ospf_no_passive",
+                    "iface": "eth1"
+                }
+            ]
+        },
+        {
+            "pod": "rb-4",
+            "actions": [
+                {
+                    "type": "ospf_set_router_id",
+                    "router_id": "172.22.19.5"
+                },
+                {
+                    "type": "ospf_add_network",
+                    "cidr": "172.22.16.128/27",
+                    "ospf_area": "3"
+                },
+                {
+                    "type": "ospf_add_network",
+                    "cidr": "172.22.16.192/30",
+                    "ospf_area": "3"
+                },
+                {
+                    "type": "ospf_add_network",
+                    "cidr": "172.22.16.200/30",
+                    "ospf_area": "3"
+                },
+                {
+                    "type": "ospf_passive_default"
+                },
+                {
+                    "type": "ospf_no_passive",
+                    "iface": "eth2"
+                },
+                {
+                    "type": "ospf_no_passive",
+                    "iface": "eth3"
+                },
+                {
+                    "type": "ospf_set_network_type",
+                    "iface": "eth2",
+                    "network_type": "point-to-point"
+                },
+                {
+                    "type": "ospf_set_network_type",
+                    "iface": "eth3",
+                    "network_type": "point-to-point"
+                }
+            ]
+        },
+        {
+            "pod": "rb-5",
+            "actions": [
+                {
+                    "type": "ospf_set_router_id",
+                    "router_id": "172.22.19.6"
+                },
+                {
+                    "type": "ospf_add_network",
+                    "cidr": "172.22.16.160/27",
+                    "ospf_area": "3"
+                },
+                {
+                    "type": "ospf_add_network",
+                    "cidr": "172.22.16.196/30",
+                    "ospf_area": "3"
+                },
+                {
+                    "type": "ospf_add_network",
+                    "cidr": "172.22.16.200/30",
+                    "ospf_area": "3"
+                },
+                {
+                    "type": "ospf_passive_default"
+                },
+                {
+                    "type": "ospf_no_passive",
+                    "iface": "eth2"
+                },
+                {
+                    "type": "ospf_no_passive",
+                    "iface": "eth3"
+                },
+                {
+                    "type": "ospf_set_network_type",
+                    "iface": "eth2",
+                    "network_type": "point-to-point"
+                },
+                {
+                    "type": "ospf_set_network_type",
+                    "iface": "eth3",
+                    "network_type": "point-to-point"
+                }
+            ]
+        }
+    ]
+}

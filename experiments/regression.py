@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""End-to-end regression over the seven shipped examples, following their READMEs.
+"""End-to-end regression over the eight shipped examples, following their READMEs.
 
 Each example is deployed into the namespace its README uses, configured, checked
 (pings, OSPF adjacencies, DNS, HTTP, 5G registration, mounts), restarted through the
@@ -7,7 +7,7 @@ API to exercise replay, and torn down. Results go to results/regression/<stamp>/
 with one row per check. It is the gate before tagging a release and it needs a
 cluster, so it is not part of CI.
 
-  python3 regression.py            # all seven
+  python3 regression.py            # all eight
   python3 regression.py 2 3        # a subset
   KEEP=5 ...                       # leave example 5 deployed
   SKIP_RAW=1 ...                   # skip the raw kubectl delete check in example 3
@@ -358,7 +358,50 @@ def ex7():
     teardown(ex); return ex
 
 
-ALL = {"1": ex1, "2": ex2, "3": ex3, "4": ex4, "5": ex5, "6": ex6, "7": ex7}
+def ex8():
+    d = f"{EX}/8-test-two-orgs-rip-ospf"; ex = Example("8-test-two-orgs-rip-ospf", "two-orgs"); setup(ex)
+    def ia(pod):
+        rc, out = kexec(ex.ns, pod, 'vtysh -c "show ip ospf route"')
+        return [l.split()[2] for l in out.splitlines() if l.startswith("N IA")], out
+    def path_has(pod, ip, hop):
+        def f():
+            rc, out = kexec(ex.ns, pod, f"traceroute -n -w 1 -q 1 {ip} 2>&1")
+            return hop in out, out[-200:]
+        return f
+    if deploy(ex, f"{d}/topology-network-test-two-orgs-rip-ospf.json"):
+        # Organization A on RIP.
+        configure(ex, f"{d}/network_conf_rip.json", label="configure (organization A, rip)")
+        ok, det, w = retry(lambda: (all(p in kexec(ex.ns, "ra-3", 'vtysh -c "show ip rip"')[1] for p in ("172.22.48.0/23", "172.22.50.0/25", "172.22.50.128/27")), kexec(ex.ns, "ra-3", 'vtysh -c "show ip rip"')[1][-300:]), 120); ex.check("ra-3 (RA4) learns the three LANs of A by RIP", ok, det, w)
+        ok, det, w = retry(ping(ex.ns, "ha-0", "172.22.50.138"), 60); ex.check("ha-0 ping ha-2 across A (LAN A1 to LAN A6)", ok, det, w)
+        # Organization B on OSPF, four areas.
+        configure(ex, f"{d}/network_conf_ospf.json", label="configure (organization B, ospf)")
+        ok, det, w = retry(lambda: (kexec(ex.ns, "rb-2", 'vtysh -c "show ip ospf neighbor"')[1].count("Full") == 5, kexec(ex.ns, "rb-2", 'vtysh -c "show ip ospf neighbor"')[1]), 150); ex.check("rb-2 (RB3) Full with its five neighbours", ok, det, w)
+        ok, det, w = retry(ping(ex.ns, "hb-0", "172.22.16.170"), 90); ex.check("hb-0 ping hb-3 across B (area 1 to area 3)", ok, det, w)
+        ok, det, w = retry(lambda: ("IA 172.22.16.64/26" in ia("rb-1")[1] and "IA 172.22.16.128/25" in ia("rb-1")[1] and "172.22.16.96/27" not in ia("rb-1")[1], ia("rb-1")[1][-300:]), 120); ex.check("rb-1 (RB2) sees the area 2 and 3 aggregates, not their subnets", ok, det, w)
+        # DR and BDR, area types, cost, ranges and keys.
+        configure(ex, f"{d}/network_conf_ospf_advanced.json", label="configure (ospf advanced: dr, areas, cost, ranges, md5)")
+        ok, det, w = retry(lambda: ("State DR" in kexec(ex.ns, "rb-3", 'vtysh -c "show ip ospf interface eth1"')[1] and "State Backup" in kexec(ex.ns, "rb-2", 'vtysh -c "show ip ospf interface eth3"')[1], kexec(ex.ns, "rb-2", 'vtysh -c "show ip ospf interface eth3"')[1][-200:]), 120); ex.check("LAN B3: rb-3 (RB4) is DR and rb-2 (RB3) is BDR", ok, det, w)
+        # FRR floods the aggregates of the ABR's other areas into a totally stubby area too, so area 3's /25 stays next to the default.
+        tstub = lambda: (set(ia("rb-3")[0]) == {"0.0.0.0/0", "172.22.16.128/25"}, ia("rb-3")[1][-300:])
+        ok, det, w = retry(tstub, 120); ex.check("area 2 totally stubby: rb-3 holds the default and no plain inter-area route", ok, det, w)
+        ok, det, w = retry(path_has("rb-3", "172.22.16.138", "172.22.16.198"), 120); ex.check("rb-3 reaches LAN B5 through rb-5 (RB6) after the cost change", ok, det, w)
+        ok, det, w = retry(ping(ex.ns, "hb-1", "172.22.16.10"), 60); ex.check("hb-1 (totally stubby area) ping hb-0 through the default from the ABR", ok, det, w)
+        ok, det, w = retry(lambda: (kexec(ex.ns, "rb-0", 'vtysh -c "show ip ospf neighbor"')[1].count("Full") == 2, kexec(ex.ns, "rb-0", 'vtysh -c "show ip ospf neighbor"')[1]), 120); ex.check("rb-0 (RB1) Full with both backbone neighbours over md5", ok, det, w)
+        # Joining the organizations.
+        configure(ex, f"{d}/network_conf_redistribute.json", label="configure (redistribution on rb-0)")
+        ok, det, w = retry(lambda: (all(p in kexec(ex.ns, "ra-3", 'vtysh -c "show ip rip"')[1] for p in ("172.22.16.0/26", "172.22.16.64/26", "172.22.16.128/25")), kexec(ex.ns, "ra-3", 'vtysh -c "show ip rip"')[1][-300:]), 150); ex.check("ra-3 (RA4) learns B's aggregates by RIP (redistributed from OSPF)", ok, det, w)
+        ok, det, w = retry(contains(ex.ns, "rb-1", 'vtysh -c "show ip ospf route"', "E2 172.22.48.0/23"), 120); ex.check("rb-1 (RB2) learns LAN A1 as an E2 route (redistributed from RIP)", ok, det, w)
+        rc, out = kexec(ex.ns, "rb-4", 'vtysh -c "show ip ospf route"'); ex.check("rb-4 (RB5, stub area) sees no E2 routes", "E2" not in out and "IA 0.0.0.0/0" in out, out[-200:])
+        for pod, ip, what in (("hb-0", "172.22.48.10", "LAN B2 to LAN A1"), ("ha-1", "172.22.16.170", "LAN A5 to LAN B6")):
+            ok, det, w = retry(ping(ex.ns, pod, ip), 90); ex.check(f"{pod} ping {ip} ({what})", ok, det, w)
+        iperf_check(ex, "ha-0 iperf3 to hb-3 across both organizations (managed server)", f"/iperf/run/{ex.ns}/ha-0?dest=172.22.16.170&duration=3", server_pod="hb-3")
+        if restart(ex, "rb-2"):
+            ok, det, w = retry(lambda: (kexec(ex.ns, "rb-2", 'vtysh -c "show ip ospf neighbor"')[1].count("Full") == 5, kexec(ex.ns, "rb-2", 'vtysh -c "show ip ospf neighbor"')[1]), 180); ex.check("rb-2 Full with its five neighbours after the restart (replay)", ok, det, w)
+            ok, det, w = retry(lambda: ("IA 172.22.16.64/26" in ia("rb-1")[1] and tstub()[0], ia("rb-1")[1][-200:]), 150); ex.check("ranges and area types back after the replay", ok, det, w)
+            ok, det, w = retry(ping(ex.ns, "hb-0", "172.22.48.10"), 90); ex.check("hb-0 ping ha-0 after the ABR restart", ok, det, w)
+    teardown(ex); return ex
+
+ALL = {"1": ex1, "2": ex2, "3": ex3, "4": ex4, "5": ex5, "6": ex6, "7": ex7, "8": ex8}
 
 
 def main():

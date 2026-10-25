@@ -1,0 +1,334 @@
+{
+    "nodes": [
+        {
+            "name": "ha",
+            "image": "alpine:3.24.2",
+            "type": "host",
+            "replicas": 3
+        },
+        {
+            "name": "sa",
+            "image": "globocom/openvswitch:latest",
+            "type": "switch",
+            "driver": "OpenVSwitchDriver",
+            "replicas": 3
+        },
+        {
+            "name": "ra",
+            "image": "quay.io/frrouting/frr:10.7.1",
+            "type": "router",
+            "driver": "FRRRouterDriver",
+            "replicas": 6
+        },
+        {
+            "name": "hb",
+            "image": "alpine:3.24.2",
+            "type": "host",
+            "replicas": 4
+        },
+        {
+            "name": "sb",
+            "image": "globocom/openvswitch:latest",
+            "type": "switch",
+            "driver": "OpenVSwitchDriver",
+            "replicas": 5
+        },
+        {
+            "name": "rb",
+            "image": "quay.io/frrouting/frr:10.7.1",
+            "type": "router",
+            "driver": "FRRRouterDriver",
+            "replicas": 6
+        }
+    ],
+    "links": [
+        {
+            "node": "ha-0",
+            "localIntf": "eth1",
+            "localIp": "172.22.48.10/23",
+            "peerNode": "sa-0",
+            "peerIntf": "eth2",
+            "peerIp": "",
+            "name": "LAN A1"
+        },
+        {
+            "node": "ra-0",
+            "localIntf": "eth1",
+            "localIp": "172.22.48.1/23",
+            "peerNode": "sa-0",
+            "peerIntf": "eth1",
+            "peerIp": "",
+            "name": "LAN A1"
+        },
+        {
+            "node": "ha-1",
+            "localIntf": "eth1",
+            "localIp": "172.22.50.10/25",
+            "peerNode": "sa-1",
+            "peerIntf": "eth2",
+            "peerIp": "",
+            "name": "LAN A5"
+        },
+        {
+            "node": "ra-4",
+            "localIntf": "eth1",
+            "localIp": "172.22.50.1/25",
+            "peerNode": "sa-1",
+            "peerIntf": "eth1",
+            "peerIp": "",
+            "name": "LAN A5"
+        },
+        {
+            "node": "ha-2",
+            "localIntf": "eth1",
+            "localIp": "172.22.50.138/27",
+            "peerNode": "sa-2",
+            "peerIntf": "eth2",
+            "peerIp": "",
+            "name": "LAN A6"
+        },
+        {
+            "node": "ra-5",
+            "localIntf": "eth1",
+            "localIp": "172.22.50.129/27",
+            "peerNode": "sa-2",
+            "peerIntf": "eth1",
+            "peerIp": "",
+            "name": "LAN A6"
+        },
+        {
+            "node": "ra-0",
+            "localIntf": "eth2",
+            "localIp": "172.22.50.161/30",
+            "peerNode": "ra-1",
+            "peerIntf": "eth1",
+            "peerIp": "172.22.50.162/30",
+            "name": "P2P A1-2"
+        },
+        {
+            "node": "ra-0",
+            "localIntf": "eth3",
+            "localIp": "172.22.50.165/30",
+            "peerNode": "ra-2",
+            "peerIntf": "eth1",
+            "peerIp": "172.22.50.166/30",
+            "name": "P2P A1-3"
+        },
+        {
+            "node": "ra-0",
+            "localIntf": "eth4",
+            "localIp": "172.22.50.169/30",
+            "peerNode": "ra-3",
+            "peerIntf": "eth1",
+            "peerIp": "172.22.50.170/30",
+            "name": "P2P A1-4"
+        },
+        {
+            "node": "ra-1",
+            "localIntf": "eth2",
+            "localIp": "172.22.50.173/30",
+            "peerNode": "ra-2",
+            "peerIntf": "eth2",
+            "peerIp": "172.22.50.174/30",
+            "name": "P2P A2-3"
+        },
+        {
+            "node": "ra-1",
+            "localIntf": "eth3",
+            "localIp": "172.22.50.177/30",
+            "peerNode": "ra-5",
+            "peerIntf": "eth2",
+            "peerIp": "172.22.50.178/30",
+            "name": "P2P A2-6"
+        },
+        {
+            "node": "ra-2",
+            "localIntf": "eth3",
+            "localIp": "172.22.50.181/30",
+            "peerNode": "ra-3",
+            "peerIntf": "eth2",
+            "peerIp": "172.22.50.182/30",
+            "name": "P2P A3-4"
+        },
+        {
+            "node": "ra-2",
+            "localIntf": "eth4",
+            "localIp": "172.22.50.185/30",
+            "peerNode": "ra-5",
+            "peerIntf": "eth3",
+            "peerIp": "172.22.50.186/30",
+            "name": "P2P A3-6"
+        },
+        {
+            "node": "ra-3",
+            "localIntf": "eth3",
+            "localIp": "172.22.50.189/30",
+            "peerNode": "ra-4",
+            "peerIntf": "eth2",
+            "peerIp": "172.22.50.190/30",
+            "name": "P2P A4-5"
+        },
+        {
+            "node": "ra-3",
+            "localIntf": "eth4",
+            "localIp": "172.22.50.193/30",
+            "peerNode": "ra-5",
+            "peerIntf": "eth4",
+            "peerIp": "172.22.50.194/30",
+            "name": "P2P A4-6"
+        },
+        {
+            "node": "ra-1",
+            "localIntf": "eth4",
+            "localIp": "172.22.50.197/30",
+            "peerNode": "rb-0",
+            "peerIntf": "eth1",
+            "peerIp": "172.22.50.198/30",
+            "name": "P2P A-B"
+        },
+        {
+            "node": "rb-0",
+            "localIntf": "eth2",
+            "localIp": "172.22.17.1/30",
+            "peerNode": "rb-1",
+            "peerIntf": "eth1",
+            "peerIp": "172.22.17.2/30",
+            "name": "P2P B1-2"
+        },
+        {
+            "node": "rb-0",
+            "localIntf": "eth3",
+            "localIp": "172.22.17.5/30",
+            "peerNode": "rb-2",
+            "peerIntf": "eth1",
+            "peerIp": "172.22.17.6/30",
+            "name": "P2P B1-3"
+        },
+        {
+            "node": "rb-1",
+            "localIntf": "eth2",
+            "localIp": "172.22.17.9/30",
+            "peerNode": "rb-2",
+            "peerIntf": "eth2",
+            "peerIp": "172.22.17.10/30",
+            "name": "P2P B2-3"
+        },
+        {
+            "node": "hb-0",
+            "localIntf": "eth1",
+            "localIp": "172.22.16.10/26",
+            "peerNode": "sb-0",
+            "peerIntf": "eth2",
+            "peerIp": "",
+            "name": "LAN B2"
+        },
+        {
+            "node": "rb-1",
+            "localIntf": "eth3",
+            "localIp": "172.22.16.1/26",
+            "peerNode": "sb-0",
+            "peerIntf": "eth1",
+            "peerIp": "",
+            "name": "LAN B2"
+        },
+        {
+            "node": "rb-2",
+            "localIntf": "eth3",
+            "localIp": "172.22.16.65/27",
+            "peerNode": "sb-1",
+            "peerIntf": "eth1",
+            "peerIp": "",
+            "name": "LAN B3"
+        },
+        {
+            "node": "rb-3",
+            "localIntf": "eth1",
+            "localIp": "172.22.16.66/27",
+            "peerNode": "sb-1",
+            "peerIntf": "eth2",
+            "peerIp": "",
+            "name": "LAN B3"
+        },
+        {
+            "node": "hb-1",
+            "localIntf": "eth1",
+            "localIp": "172.22.16.106/27",
+            "peerNode": "sb-2",
+            "peerIntf": "eth2",
+            "peerIp": "",
+            "name": "LAN B4"
+        },
+        {
+            "node": "rb-3",
+            "localIntf": "eth2",
+            "localIp": "172.22.16.97/27",
+            "peerNode": "sb-2",
+            "peerIntf": "eth1",
+            "peerIp": "",
+            "name": "LAN B4"
+        },
+        {
+            "node": "hb-2",
+            "localIntf": "eth1",
+            "localIp": "172.22.16.138/27",
+            "peerNode": "sb-3",
+            "peerIntf": "eth2",
+            "peerIp": "",
+            "name": "LAN B5"
+        },
+        {
+            "node": "rb-4",
+            "localIntf": "eth1",
+            "localIp": "172.22.16.129/27",
+            "peerNode": "sb-3",
+            "peerIntf": "eth1",
+            "peerIp": "",
+            "name": "LAN B5"
+        },
+        {
+            "node": "hb-3",
+            "localIntf": "eth1",
+            "localIp": "172.22.16.170/27",
+            "peerNode": "sb-4",
+            "peerIntf": "eth2",
+            "peerIp": "",
+            "name": "LAN B6"
+        },
+        {
+            "node": "rb-5",
+            "localIntf": "eth1",
+            "localIp": "172.22.16.161/27",
+            "peerNode": "sb-4",
+            "peerIntf": "eth1",
+            "peerIp": "",
+            "name": "LAN B6"
+        },
+        {
+            "node": "rb-2",
+            "localIntf": "eth4",
+            "localIp": "172.22.16.193/30",
+            "peerNode": "rb-4",
+            "peerIntf": "eth2",
+            "peerIp": "172.22.16.194/30",
+            "name": "P2P B3-5"
+        },
+        {
+            "node": "rb-2",
+            "localIntf": "eth5",
+            "localIp": "172.22.16.197/30",
+            "peerNode": "rb-5",
+            "peerIntf": "eth2",
+            "peerIp": "172.22.16.198/30",
+            "name": "P2P B3-6"
+        },
+        {
+            "node": "rb-4",
+            "localIntf": "eth3",
+            "localIp": "172.22.16.201/30",
+            "peerNode": "rb-5",
+            "peerIntf": "eth3",
+            "peerIp": "172.22.16.202/30",
+            "name": "P2P B5-6"
+        }
+    ]
+}
