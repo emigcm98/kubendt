@@ -140,6 +140,12 @@
       ["set protocols ospfv3 parameters router-id 10.255.0.1"]
     ]
   },
+  "ospf_add_area_range": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["set protocols ospf area 2 range 172.22.16.64/26"]
+    ]
+  },
   "ospf_add_network": {
     "executor": "vyos_api_apply",
     "commands": [
@@ -174,6 +180,24 @@
     "executor": "vyos_api_apply",
     "commands": [
       ["set protocols ospf redistribute rip"]
+    ]
+  },
+  "ospf_remove_area_range": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["delete protocols ospf area 2 range 172.22.16.64/26"]
+    ]
+  },
+  "ospf_remove_area_type": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["delete protocols ospf area 2 area-type"]
+    ]
+  },
+  "ospf_remove_authentication": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["delete protocols ospf interface eth1 authentication"]
     ]
   },
   "ospf_remove_cost": {
@@ -241,6 +265,18 @@
     "commands": [
       ["delete protocols ospf interface eth2 hello-interval"],
       ["delete protocols ospf interface eth2 dead-interval"]
+    ]
+  },
+  "ospf_set_area_type": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["set protocols ospf area 2 area-type stub no-summary"]
+    ]
+  },
+  "ospf_set_authentication": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["set protocols ospf interface eth1 authentication md5 key-id 1 md5-key s3cret"]
     ]
   },
   "ospf_set_cost": {

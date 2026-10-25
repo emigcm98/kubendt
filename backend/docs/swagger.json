@@ -2879,6 +2879,23 @@
         "types.ActionEntry": {
             "type": "object",
             "properties": {
+                "area_type": {
+                    "description": "OSPF areas and authentication. AreaType is stub, totally-stub, nssa or\ntotally-nssa (the Cisco names; FRR says stub no-summary). AuthType is\nplain (a key of up to 8 characters) or md5 (up to 16, with a key id).",
+                    "type": "string",
+                    "example": "stub"
+                },
+                "auth_key": {
+                    "type": "string",
+                    "example": "s3cret"
+                },
+                "auth_key_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "auth_type": {
+                    "type": "string",
+                    "example": "md5"
+                },
                 "bridge": {
                     "type": "string",
                     "example": "br0"

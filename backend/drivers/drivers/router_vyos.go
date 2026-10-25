@@ -491,6 +491,45 @@ func (VyOSRouterDriver) OSPFRemoveNetworkType(iface string) [][]string {
 	return [][]string{{"delete protocols ospf interface " + iface + " network"}}
 }
 
+// vyosAreaType maps the Cisco names to VyOS's: totally means no-summary.
+func vyosAreaType(areaType string) string {
+	switch areaType {
+	case "totally-stub":
+		return "stub no-summary"
+	case "totally-nssa":
+		return "nssa no-summary"
+	default:
+		return areaType
+	}
+}
+
+func (VyOSRouterDriver) OSPFSetAreaType(area, areaType string) [][]string {
+	return [][]string{{"set protocols ospf area " + area + " area-type " + vyosAreaType(areaType)}}
+}
+
+func (VyOSRouterDriver) OSPFRemoveAreaType(area, areaType string) [][]string {
+	return [][]string{{"delete protocols ospf area " + area + " area-type"}}
+}
+
+func (VyOSRouterDriver) OSPFAddAreaRange(area, cidr string) [][]string {
+	return [][]string{{"set protocols ospf area " + area + " range " + cidr}}
+}
+
+func (VyOSRouterDriver) OSPFRemoveAreaRange(area, cidr string) [][]string {
+	return [][]string{{"delete protocols ospf area " + area + " range " + cidr}}
+}
+
+func (VyOSRouterDriver) OSPFSetAuthentication(iface, authType, key string, keyID int) [][]string {
+	if authType == "md5" {
+		return [][]string{{fmt.Sprintf("set protocols ospf interface %s authentication md5 key-id %d md5-key %s", iface, keyID, key)}}
+	}
+	return [][]string{{"set protocols ospf interface " + iface + " authentication plaintext-password " + key}}
+}
+
+func (VyOSRouterDriver) OSPFRemoveAuthentication(iface, authType string, keyID int) [][]string {
+	return [][]string{{"delete protocols ospf interface " + iface + " authentication"}}
+}
+
 // ─── EffectiveInterfaceInspector ─────────────────────────────────────────────
 
 // vyosConfigCache collapses the bursts of /retrieve calls the poller and the

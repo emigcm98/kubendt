@@ -30,6 +30,54 @@ type OSPFCapable interface {
 	OSPFRemoveTimers(iface string) [][]string
 	OSPFSetNetworkType(iface, networkType string) [][]string
 	OSPFRemoveNetworkType(iface string) [][]string
+	OSPFSetAreaType(area, areaType string) [][]string
+	OSPFRemoveAreaType(area, areaType string) [][]string
+	OSPFAddAreaRange(area, cidr string) [][]string
+	OSPFRemoveAreaRange(area, cidr string) [][]string
+	OSPFSetAuthentication(iface, authType, key string, keyID int) [][]string
+	OSPFRemoveAuthentication(iface, authType string, keyID int) [][]string
+}
+
+// OSPFAreaTypes are the area types an ABR and its area's routers may set,
+// by their Cisco names: totally-stub is stub with no-summary on the ABR.
+var OSPFAreaTypes = []string{"stub", "totally-stub", "nssa", "totally-nssa"}
+
+// OSPFAuthTypes are the interface authentication modes: a plain key of up
+// to 8 characters, or MD5 with a key id and a key of up to 16.
+var OSPFAuthTypes = []string{"plain", "md5"}
+
+func ospfOneOf(a types.ActionEntry, field, value string, allowed []string) error {
+	for _, s := range allowed {
+		if value == s {
+			return nil
+		}
+	}
+	return fmt.Errorf("%s: %s must be one of %v, got %q", a.Type, field, allowed, value)
+}
+
+// ospfAuth checks the authentication fields and fills the key id default.
+func ospfAuth(a types.ActionEntry, withKey bool) (keyID int, err error) {
+	if err := ospfOneOf(a, "auth_type", a.AuthType, OSPFAuthTypes); err != nil {
+		return 0, err
+	}
+	keyID = a.AuthKeyID
+	if keyID == 0 {
+		keyID = 1
+	}
+	if err := ospfRange(a.Type, "auth_key_id", keyID, 1, 255); err != nil {
+		return 0, err
+	}
+	if !withKey {
+		return keyID, nil
+	}
+	limit := 8
+	if a.AuthType == "md5" {
+		limit = 16
+	}
+	if len(a.AuthKey) > limit {
+		return 0, fmt.Errorf("%s: auth_key must be at most %d characters for %s, got %d", a.Type, limit, a.AuthType, len(a.AuthKey))
+	}
+	return keyID, nil
 }
 
 // OSPFNetworkTypes are the interface network types OSPF accepts; point-to-point
@@ -165,6 +213,44 @@ func init() {
 		actions.Action[OSPFCapable]{Type: "ospf_remove_network_type", Label: "Reset interface network type", Params: actions.P(actions.Iface), State: "ospf_network_type", Key: keyIface, Clears: true,
 			Run: func(c OSPFCapable, a types.ActionEntry) ([][]string, error) {
 				return c.OSPFRemoveNetworkType(a.Iface), nil
+			}},
+		actions.Action[OSPFCapable]{Type: "ospf_set_area_type", Label: "Set area type", Params: actions.P(actions.OSPFArea, actions.AreaType), State: "ospf_area_type", Key: keyArea,
+			Run: func(c OSPFCapable, a types.ActionEntry) ([][]string, error) {
+				if err := ospfOneOf(a, "area_type", a.AreaType, OSPFAreaTypes); err != nil {
+					return nil, err
+				}
+				return c.OSPFSetAreaType(a.OSPFArea, a.AreaType), nil
+			}},
+		actions.Action[OSPFCapable]{Type: "ospf_remove_area_type", Label: "Make area normal again", Params: actions.P(actions.OSPFArea, actions.AreaType), State: "ospf_area_type", Key: keyArea, Clears: true,
+			Run: func(c OSPFCapable, a types.ActionEntry) ([][]string, error) {
+				if err := ospfOneOf(a, "area_type", a.AreaType, OSPFAreaTypes); err != nil {
+					return nil, err
+				}
+				return c.OSPFRemoveAreaType(a.OSPFArea, a.AreaType), nil
+			}},
+		actions.Action[OSPFCapable]{Type: "ospf_add_area_range", Label: "Summarize area", Params: actions.P(actions.OSPFArea, actions.CIDR), State: "ospf_area_range", Key: keyNetworkArea,
+			Run: func(c OSPFCapable, a types.ActionEntry) ([][]string, error) {
+				return c.OSPFAddAreaRange(a.OSPFArea, a.CIDR), nil
+			}},
+		actions.Action[OSPFCapable]{Type: "ospf_remove_area_range", Label: "Stop summarizing area", Params: actions.P(actions.OSPFArea, actions.CIDR), State: "ospf_area_range", Key: keyNetworkArea, Clears: true,
+			Run: func(c OSPFCapable, a types.ActionEntry) ([][]string, error) {
+				return c.OSPFRemoveAreaRange(a.OSPFArea, a.CIDR), nil
+			}},
+		actions.Action[OSPFCapable]{Type: "ospf_set_authentication", Label: "Authenticate interface", Params: actions.P(actions.Iface, actions.AuthType, actions.AuthKey, actions.AuthKeyID), State: "ospf_auth", Key: keyIface,
+			Run: func(c OSPFCapable, a types.ActionEntry) ([][]string, error) {
+				keyID, err := ospfAuth(a, true)
+				if err != nil {
+					return nil, err
+				}
+				return c.OSPFSetAuthentication(a.Iface, a.AuthType, a.AuthKey, keyID), nil
+			}},
+		actions.Action[OSPFCapable]{Type: "ospf_remove_authentication", Label: "Stop authenticating interface", Params: actions.P(actions.Iface, actions.AuthType, actions.AuthKeyID), State: "ospf_auth", Key: keyIface, Clears: true,
+			Run: func(c OSPFCapable, a types.ActionEntry) ([][]string, error) {
+				keyID, err := ospfAuth(a, false)
+				if err != nil {
+					return nil, err
+				}
+				return c.OSPFRemoveAuthentication(a.Iface, a.AuthType, keyID), nil
 			}},
 	)
 }

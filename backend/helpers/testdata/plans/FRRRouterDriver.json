@@ -134,6 +134,12 @@
       ["vtysh","-c","configure terminal","-c","router ospf6","-c","ospf6 router-id 10.255.0.1"]
     ]
   },
+  "ospf_add_area_range": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router ospf","-c","area 2 range 172.22.16.127/26"]
+    ]
+  },
   "ospf_add_network": {
     "executor": "kubectl",
     "commands": [
@@ -168,6 +174,24 @@
     "executor": "kubectl",
     "commands": [
       ["vtysh","-c","configure terminal","-c","router ospf","-c","redistribute rip"]
+    ]
+  },
+  "ospf_remove_area_range": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router ospf","-c","no area 2 range 172.22.16.127/26"]
+    ]
+  },
+  "ospf_remove_area_type": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router ospf","-c","no area 2 stub"]
+    ]
+  },
+  "ospf_remove_authentication": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","interface eth1","-c","no ip ospf authentication","-c","no ip ospf message-digest-key 1"]
     ]
   },
   "ospf_remove_cost": {
@@ -234,6 +258,18 @@
     "executor": "kubectl",
     "commands": [
       ["vtysh","-c","configure terminal","-c","interface eth2","-c","no ip ospf hello-interval","-c","no ip ospf dead-interval"]
+    ]
+  },
+  "ospf_set_area_type": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","vtysh -c 'configure terminal' -c 'router ospf' -c 'no area 2 stub' \u003e/dev/null 2\u003e\u00261; vtysh -c 'configure terminal' -c 'router ospf' -c 'area 2 stub no-summary'"]
+    ]
+  },
+  "ospf_set_authentication": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","interface eth1","-c","ip ospf authentication message-digest","-c","ip ospf message-digest-key 1 md5 s3cret"]
     ]
   },
   "ospf_set_cost": {

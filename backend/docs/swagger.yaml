@@ -27,6 +27,22 @@ definitions:
     type: object
   types.ActionEntry:
     properties:
+      area_type:
+        description: |-
+          OSPF areas and authentication. AreaType is stub, totally-stub, nssa or
+          totally-nssa (the Cisco names; FRR says stub no-summary). AuthType is
+          plain (a key of up to 8 characters) or md5 (up to 16, with a key id).
+        example: stub
+        type: string
+      auth_key:
+        example: s3cret
+        type: string
+      auth_key_id:
+        example: 1
+        type: integer
+      auth_type:
+        example: md5
+        type: string
       bridge:
         example: br0
         type: string

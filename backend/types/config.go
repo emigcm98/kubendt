@@ -87,6 +87,13 @@ type ActionEntry struct {
 	HelloInterval int    `json:"hello_interval,omitempty" example:"10"`
 	DeadInterval  int    `json:"dead_interval,omitempty" example:"40"`
 	NetworkType   string `json:"network_type,omitempty" example:"point-to-point"`
+	// OSPF areas and authentication. AreaType is stub, totally-stub, nssa or
+	// totally-nssa (the Cisco names; FRR says stub no-summary). AuthType is
+	// plain (a key of up to 8 characters) or md5 (up to 16, with a key id).
+	AreaType  string `json:"area_type,omitempty" example:"stub"`
+	AuthType  string `json:"auth_type,omitempty" example:"md5"`
+	AuthKey   string `json:"auth_key,omitempty" example:"s3cret"`
+	AuthKeyID int    `json:"auth_key_id,omitempty" example:"1"`
 
 	// RIP: the route source to redistribute and the protocol timers.
 	Redistribute string     `json:"redistribute,omitempty" example:"connected"`

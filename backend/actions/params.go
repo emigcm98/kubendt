@@ -73,6 +73,10 @@ var (
 	HelloInterval = Param{Name: "hello_interval", Kind: KindNumber, Required: true}
 	DeadInterval  = Param{Name: "dead_interval", Kind: KindNumber, Required: true}
 	NetworkType   = Param{Name: "network_type", Kind: KindText, Required: true}
+	AreaType      = Param{Name: "area_type", Kind: KindText, Required: true}
+	AuthType      = Param{Name: "auth_type", Kind: KindText, Required: true}
+	AuthKey       = Param{Name: "auth_key", Kind: KindText, Required: true}
+	AuthKeyID     = Param{Name: "auth_key_id", Kind: KindNumber, Required: false}
 )
 
 // ProtectedInterface is the pod's cluster interface. An action on it would
