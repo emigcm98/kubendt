@@ -117,3 +117,25 @@ func TestVyOSOSPFInterface(t *testing.T) {
 		}
 	}
 }
+
+func TestVyOSOSPFAreasAndAuth(t *testing.T) {
+	var d VyOSRouterDriver
+	cases := []struct {
+		name string
+		got  [][]string
+		want [][]string
+	}{
+		{"stub", d.OSPFSetAreaType("3", "stub"), [][]string{{"set protocols ospf area 3 area-type stub"}}},
+		{"totally stub", d.OSPFSetAreaType("2", "totally-stub"), [][]string{{"set protocols ospf area 2 area-type stub no-summary"}}},
+		{"no area type", d.OSPFRemoveAreaType("2", "totally-stub"), [][]string{{"delete protocols ospf area 2 area-type"}}},
+		{"range", d.OSPFAddAreaRange("2", "172.22.16.64/26"), [][]string{{"set protocols ospf area 2 range 172.22.16.64/26"}}},
+		{"plain auth", d.OSPFSetAuthentication("eth1", "plain", "pass", 1), [][]string{{"set protocols ospf interface eth1 authentication plaintext-password pass"}}},
+		{"md5 auth", d.OSPFSetAuthentication("eth1", "md5", "s3cret", 2), [][]string{{"set protocols ospf interface eth1 authentication md5 key-id 2 md5-key s3cret"}}},
+		{"no auth", d.OSPFRemoveAuthentication("eth1", "md5", 2), [][]string{{"delete protocols ospf interface eth1 authentication"}}},
+	}
+	for _, c := range cases {
+		if !reflect.DeepEqual(c.got, c.want) {
+			t.Errorf("%s:\n got  %v\n want %v", c.name, c.got, c.want)
+		}
+	}
+}

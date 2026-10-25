@@ -2,6 +2,7 @@ package drivers
 
 import (
 	"fmt"
+	"net"
 	"strings"
 
 	"kubendt/capabilities"
@@ -265,6 +266,85 @@ func (FRRRouterDriver) OSPFSetNetworkType(iface, networkType string) [][]string 
 
 func (FRRRouterDriver) OSPFRemoveNetworkType(iface string) [][]string {
 	return frrOSPFIface(iface, "no ip ospf network")
+}
+
+func frrOSPF(line string) [][]string {
+	return [][]string{{"vtysh", "-c", "configure terminal", "-c", "router ospf", "-c", line}}
+}
+
+// frrAreaType maps the Cisco names to FRR's: totally means no-summary.
+func frrAreaType(areaType string) string {
+	switch areaType {
+	case "totally-stub":
+		return "stub no-summary"
+	case "totally-nssa":
+		return "nssa no-summary"
+	default:
+		return areaType
+	}
+}
+
+// A no-summary set on an area that is already stub or nssa only flips a
+// flag in FRR, nothing withdraws the summaries until the next ABR run, so
+// the area type is dropped and set again, which does schedule one.
+func (FRRRouterDriver) OSPFSetAreaType(area, areaType string) [][]string {
+	if !strings.HasPrefix(areaType, "totally-") {
+		return frrOSPF("area " + area + " " + frrAreaType(areaType))
+	}
+	kind := strings.TrimPrefix(areaType, "totally-")
+	return [][]string{{"sh", "-c",
+		"vtysh -c 'configure terminal' -c 'router ospf' -c 'no area " + area + " " + kind + "' >/dev/null 2>&1; " +
+			"vtysh -c 'configure terminal' -c 'router ospf' -c 'area " + area + " " + frrAreaType(areaType) + "'"}}
+}
+
+// Dropping the stub or nssa flag drops its no-summary with it.
+func (FRRRouterDriver) OSPFRemoveAreaType(area, areaType string) [][]string {
+	kind := "stub"
+	if strings.HasSuffix(areaType, "nssa") {
+		kind = "nssa"
+	}
+	return frrOSPF("no area " + area + " " + kind)
+}
+
+// frrRangePrefix writes the range with its host bits set. ospfd dies when a
+// range summary collides in Link State ID with a more specific summary this
+// router already originated (RFC 2328 E.3 in ospf_handle_summarylsa_lsId_chg,
+// FRR 9.1 to 10.7.1); an ID with the host bits set is what appendix E gives
+// a colliding summary anyway, receivers mask it, and FRR shows the range
+// normalized in its running-config.
+func frrRangePrefix(cidr string) string {
+	_, ipnet, err := net.ParseCIDR(cidr)
+	if err != nil || ipnet.IP.To4() == nil {
+		return cidr
+	}
+	ip := ipnet.IP.To4()
+	for i := range ip {
+		ip[i] |= ^ipnet.Mask[i]
+	}
+	ones, _ := ipnet.Mask.Size()
+	return fmt.Sprintf("%s/%d", ip, ones)
+}
+
+func (FRRRouterDriver) OSPFAddAreaRange(area, cidr string) [][]string {
+	return frrOSPF("area " + area + " range " + frrRangePrefix(cidr))
+}
+
+func (FRRRouterDriver) OSPFRemoveAreaRange(area, cidr string) [][]string {
+	return frrOSPF("no area " + area + " range " + frrRangePrefix(cidr))
+}
+
+func (FRRRouterDriver) OSPFSetAuthentication(iface, authType, key string, keyID int) [][]string {
+	if authType == "md5" {
+		return frrOSPFIface(iface, "ip ospf authentication message-digest", fmt.Sprintf("ip ospf message-digest-key %d md5 %s", keyID, key))
+	}
+	return frrOSPFIface(iface, "ip ospf authentication", "ip ospf authentication-key "+key)
+}
+
+func (FRRRouterDriver) OSPFRemoveAuthentication(iface, authType string, keyID int) [][]string {
+	if authType == "md5" {
+		return frrOSPFIface(iface, "no ip ospf authentication", fmt.Sprintf("no ip ospf message-digest-key %d", keyID))
+	}
+	return frrOSPFIface(iface, "no ip ospf authentication", "no ip ospf authentication-key")
 }
 
 // ─── OSPF6Capable ────────────────────────────────────────────────────────────

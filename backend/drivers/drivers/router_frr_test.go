@@ -129,6 +129,43 @@ func TestFRROSPFInterface(t *testing.T) {
 	}
 }
 
+func TestFRROSPFAreasAndAuth(t *testing.T) {
+	var d FRRRouterDriver
+	ospf := func(line string) [][]string {
+		return [][]string{{"vtysh", "-c", "configure terminal", "-c", "router ospf", "-c", line}}
+	}
+	cases := []struct {
+		name string
+		got  [][]string
+		want [][]string
+	}{
+		{"stub", d.OSPFSetAreaType("3", "stub"), ospf("area 3 stub")},
+		{"totally stub", d.OSPFSetAreaType("2", "totally-stub"), [][]string{{"sh", "-c", "vtysh -c 'configure terminal' -c 'router ospf' -c 'no area 2 stub' >/dev/null 2>&1; vtysh -c 'configure terminal' -c 'router ospf' -c 'area 2 stub no-summary'"}}},
+		{"totally nssa", d.OSPFSetAreaType("4", "totally-nssa"), [][]string{{"sh", "-c", "vtysh -c 'configure terminal' -c 'router ospf' -c 'no area 4 nssa' >/dev/null 2>&1; vtysh -c 'configure terminal' -c 'router ospf' -c 'area 4 nssa no-summary'"}}},
+		{"no totally stub", d.OSPFRemoveAreaType("2", "totally-stub"), ospf("no area 2 stub")},
+		{"no nssa", d.OSPFRemoveAreaType("4", "nssa"), ospf("no area 4 nssa")},
+		{"range", d.OSPFAddAreaRange("2", "172.22.16.64/26"), ospf("area 2 range 172.22.16.127/26")},
+		{"no range", d.OSPFRemoveAreaRange("2", "172.22.16.64/26"), ospf("no area 2 range 172.22.16.127/26")},
+		{"plain auth", d.OSPFSetAuthentication("eth1", "plain", "pass", 1), [][]string{{"vtysh", "-c", "configure terminal", "-c", "interface eth1", "-c", "ip ospf authentication", "-c", "ip ospf authentication-key pass"}}},
+		{"md5 auth", d.OSPFSetAuthentication("eth1", "md5", "s3cret", 2), [][]string{{"vtysh", "-c", "configure terminal", "-c", "interface eth1", "-c", "ip ospf authentication message-digest", "-c", "ip ospf message-digest-key 2 md5 s3cret"}}},
+		{"no md5 auth", d.OSPFRemoveAuthentication("eth1", "md5", 2), [][]string{{"vtysh", "-c", "configure terminal", "-c", "interface eth1", "-c", "no ip ospf authentication", "-c", "no ip ospf message-digest-key 2"}}},
+	}
+	for _, c := range cases {
+		if !reflect.DeepEqual(c.got, c.want) {
+			t.Errorf("%s:\n got  %v\n want %v", c.name, c.got, c.want)
+		}
+	}
+}
+
+func TestFRRRangePrefix(t *testing.T) {
+	cases := map[string]string{"172.22.16.64/26": "172.22.16.127/26", "10.0.16.0/26": "10.0.16.63/26", "172.22.16.0/22": "172.22.19.255/22", "10.0.0.0/8": "10.255.255.255/8", "nonsense": "nonsense"}
+	for in, want := range cases {
+		if got := frrRangePrefix(in); got != want {
+			t.Errorf("%s: got %s, want %s", in, got, want)
+		}
+	}
+}
+
 func TestFRRStartupCommands(t *testing.T) {
 	cmd := FRRRouterDriver{}.StartupCommands()
 	if len(cmd) != 3 || cmd[0] != "sh" || cmd[1] != "-c" {
@@ -160,6 +197,13 @@ func TestOSPFInterfaceRanges(t *testing.T) {
 		{"timers fine", types.ActionEntry{Type: "ospf_set_timers", Iface: "eth1", HelloInterval: 5, DeadInterval: 20}, ""},
 		{"network type unknown", types.ActionEntry{Type: "ospf_set_network_type", Iface: "eth1", NetworkType: "serial"}, "network_type must be one of"},
 		{"network type fine", types.ActionEntry{Type: "ospf_set_network_type", Iface: "eth1", NetworkType: "point-to-point"}, ""},
+		{"area type unknown", types.ActionEntry{Type: "ospf_set_area_type", OSPFArea: "2", AreaType: "totally"}, "area_type must be one of"},
+		{"area type fine", types.ActionEntry{Type: "ospf_set_area_type", OSPFArea: "2", AreaType: "totally-stub"}, ""},
+		{"auth type unknown", types.ActionEntry{Type: "ospf_set_authentication", Iface: "eth1", AuthType: "sha", AuthKey: "k"}, "auth_type must be one of"},
+		{"plain key too long", types.ActionEntry{Type: "ospf_set_authentication", Iface: "eth1", AuthType: "plain", AuthKey: "123456789"}, "at most 8 characters"},
+		{"md5 key fine", types.ActionEntry{Type: "ospf_set_authentication", Iface: "eth1", AuthType: "md5", AuthKey: "1234567890123456"}, ""},
+		{"key id too big", types.ActionEntry{Type: "ospf_set_authentication", Iface: "eth1", AuthType: "md5", AuthKey: "k", AuthKeyID: 300}, "between 1 and 255"},
+		{"remove auth defaults the key id", types.ActionEntry{Type: "ospf_remove_authentication", Iface: "eth1", AuthType: "md5"}, ""},
 	}
 	for _, c := range cases {
 		d, ok := actions.Lookup(c.a.Type)

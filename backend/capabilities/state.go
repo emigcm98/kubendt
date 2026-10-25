@@ -41,6 +41,8 @@ func keyPortForward(a types.ActionEntry) string {
 
 func keyNetworkArea(a types.ActionEntry) string { return a.CIDR + " " + a.OSPFArea }
 
+func keyArea(a types.ActionEntry) string { return a.OSPFArea }
+
 func keyCIDR(a types.ActionEntry) string { return a.CIDR }
 
 func keyFamily(a types.ActionEntry) string { return keyDefaultRouteFamily(a) }

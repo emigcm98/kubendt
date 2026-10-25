@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Before the actions of a capability run on an FRR router, the backend checks that the daemon they need is up (`ospfd` for OSPF) and fails them with a message that says what to enable in `/etc/frr/daemons`, instead of a vtysh error; the check rides in the pod's batch, so it costs no exec. A driver declares it with `CapabilityPrecondition`.
 - A node that sets no `commands` runs its image with a tty and an open stdin, so an image whose entrypoint is a shell (alpine, ubuntu) stays up without `sleep infinity`; `commands` keeps replacing the entrypoint and then has to stay running itself.
 - OSPF interface parameters on FRR and VyOS routers: `ospf_set_cost`, `ospf_set_priority` (the DR and BDR election), `ospf_set_timers` (hello and dead intervals) and `ospf_set_network_type` (point-to-point on a /30 skips the DR election), each with its reset.
+- OSPF areas and authentication on FRR and VyOS routers: `ospf_set_area_type` (stub, totally-stub, nssa, totally-nssa, the Cisco names), `ospf_add_area_range` (the ABR summarizes its area; FRR gets the range with its host bits set, since ospfd crashes when the summary's Link State ID collides with a more specific one of its own) and `ospf_set_authentication` (plain or MD5 per interface), each with its removal.
 
 ### Changed
 

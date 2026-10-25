@@ -42,6 +42,10 @@ The deploy fails with `pod <name> exited (Completed, exit code 0); a node's proc
 
 A process that exits with an error instead is a `node_crashed` warning in the response (`exited (Error, exit code 255) and restarted`), not a failure: an application may fail until what it depends on is up (the Open5GS functions exit until the NRF answers) and start fine on a later restart. If RESTARTS keeps climbing in `kubectl get pods -n <namespace>`, the node's logs say why it does not start.
 
+## An OSPF area range on FRR shows an odd Link State ID
+
+`show ip ospf database summary` on FRR routers lists the summary of an `ospf_add_area_range` with the last address of the block as Link State ID (`172.22.16.127` for `172.22.16.64/26`), while `show running-config` shows the range as written. The driver sets the range with its host bits on purpose: ospfd crashes when a range summary takes the Link State ID of a more specific summary the router already announced (RFC 2328 E.3, FRR 9.1 to 10.7.1), and an ID with the host bits set is what appendix E assigns to a colliding summary anyway. Receivers mask it, so the route is the block itself.
+
 ## Router and switch pods stay in SysctlForbidden
 
 `kubectl get pods` shows every router and switch of the namespace at `0/1 SysctlForbidden` and the deploy times out. Those pods set `net.ipv4.ip_forward` and `net.ipv6.conf.all.forwarding` through the pod security context, and the kubelet only applies sysctls it has been told to allow. Add both to `allowedUnsafeSysctls` on every node, as the [cluster guide](How-to-deploy-a-K8s-cluster.md) does for minikube, kind and kubeadm; its troubleshooting section shows how to add them to a cluster that is already running. An allowlist with only `net.ipv4.ip_forward` ran every version before 1.6.0, which added the IPv6 sysctl, so an older cluster needs the second entry.
