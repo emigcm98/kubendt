@@ -76,6 +76,9 @@ func TestBFSPath(t *testing.T) {
 
 func TestBuildTraceCommand(t *testing.T) {
 	icmp := BuildTraceCommand("8.8.8.8", "icmp")
+	if !contains(icmp, "-z") {
+		t.Errorf("probes must be spaced: %v", icmp)
+	}
 	if !contains(icmp, "-I") || icmp[len(icmp)-1] != "8.8.8.8" {
 		t.Errorf("icmp command = %v", icmp)
 	}
