@@ -16,7 +16,53 @@
   overflow: hidden;
 }
 
-/* Fondo del minimap */
+/* The hide button sits on the map's corner; hidden, it is the only thing left
+   in that corner, a button the size of the graph controls. */
+.minimap-toggle {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 60;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-body);
+  cursor: pointer;
+}
+
+.minimap-toggle .app-icon {
+  width: 13px;
+  height: 13px;
+}
+
+.minimap-toggle:hover {
+  background: var(--info-bg);
+  color: var(--primary);
+}
+
+.minimap-toggle-collapsed {
+  top: auto;
+  bottom: 1rem;
+  right: 1rem;
+  width: 32px;
+  height: 32px;
+  z-index: 50;
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.minimap-toggle-collapsed .app-icon {
+  width: 15px;
+  height: 15px;
+}
+
+/* Minimap background */
 .react-flow__minimap {
   background: white;
   margin: 0;

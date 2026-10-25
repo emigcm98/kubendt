@@ -8,7 +8,7 @@ import './PodLogsModal.css';
 
 // A floating viewer of a pod's container log, of the same family as the
 // shell window but a viewer, not a terminal: the stream from
-// /pods/logs/ws sends the tail and then follows, the viewer keeps a bounded
+// /pods/logstream sends the tail and then follows, the viewer keeps a bounded
 // number of lines, follows the end unless the user scrolls up, and filters
 // on the client.
 const MAX_LINES = 5000;
@@ -52,7 +52,7 @@ const PodLogsModal = ({
     if (timestamps) params.set('timestamps', '1');
     if (previous) params.set('previous', '1');
     if (container) params.set('container', container);
-    const ws = new WebSocket(`${WS_BASE_URL}/pods/logs/ws/${namespace}/${podName}?${params}`);
+    const ws = new WebSocket(`${WS_BASE_URL}/pods/logstream/${namespace}/${podName}?${params}`);
     ws.binaryType = 'arraybuffer';
     wsRef.current = ws;
     let pending = [];

@@ -17,12 +17,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - OSPF interface parameters on FRR and VyOS routers: `ospf_set_cost`, `ospf_set_priority` (the DR and BDR election), `ospf_set_timers` (hello and dead intervals) and `ospf_set_network_type` (point-to-point on a /30 skips the DR election), each with its reset.
 - OSPF areas and authentication on FRR and VyOS routers: `ospf_set_area_type` (stub, totally-stub, nssa, totally-nssa, the Cisco names), `ospf_add_area_range` (the ABR summarizes its area; FRR gets the range with its host bits set, since ospfd crashes when the summary's Link State ID collides with a more specific one of its own) and `ospf_set_authentication` (plain or MD5 per interface), each with its removal.
 - Example 8, `8-test-two-orgs-rip-ospf`, two organizations on 27 nodes: A on RIPv2 over a six router mesh, B on OSPFv2 in four areas with DR and BDR, stub and totally stubby areas, summarization and MD5, and a border router redistributing between them, in four configuration files.
+- The minimap hides behind a button on its corner and comes back from the same corner; the browser remembers the choice.
 
 ### Changed
 
 - Static and default routes on FRR routers go through staticd (`ip route` and `ipv6 route` in vtysh) instead of the kernel, so they are in the running-config and `redistribute static` picks them up. Setting or removing a default route also drops the pod's own default route through `eth0`, as `ip route replace` did before.
 - The examples no longer install packages at startup: the alpine hosts and switches run their image as it is, the ubuntu switches moved to alpine, the Open vSwitch nodes run the image's own entrypoint, and the mongo and iperf3 nodes start only their service. `commands` is left where the command is the application, and the hosts that install `ping` for their guide declare `readiness` on it.
 - `HostDriver` is the one host driver and the default for type `host`; `BasicHostDriver` differed only in a `replace_ip` that skips an address already there, which every Linux driver does now.
+- The log stream WebSocket moved from `/pods/logs/ws/{namespace}/{pod}` to `/pods/logstream/{namespace}/{pod}`: with a static `ws` where a namespace goes, a namespace named `ws` could not read its logs.
 
 ### Deprecated
 
@@ -33,6 +35,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - A node whose process ends (`commands` that finish, a one-shot image) deployed as a success and looped on restarts while the heal pass restarted it in vain; the deploy now fails naming the pod when its process finished (exit code 0) and rolls back, a modify reports it the same way, an exit with an error is a warning in the response since the application may start on a later restart, and the heal pass leaves such a pod alone.
 - One exec against a container that was not running made the backend fall back to SPDY for every exec from then on: the WebSocket upgrade failure of a 5xx about the pod no longer counts as the API server refusing the upgrade.
 - The trace tool spaces its probes 10 ms apart: the toolbox's traceroute fires them at once, and on a link between workers the identical ICMP probes share one VXLAN flow whose simultaneous first packets the worker's conntrack drops, so hops in the middle of a path read as timeouts.
+- The trace panel's node picker shows the node it picked, as the throughput panel does.
 
 ## [1.6.0] - 2026-10-21
 
