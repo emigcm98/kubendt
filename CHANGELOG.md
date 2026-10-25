@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-10-25
+
 ### Added
 
 - RIP comes as a capability of FRR and VyOS routers, RIPv2 and RIPng with the same actions: `rip_add_network` (the prefix decides the family), `rip_passive_interface`, `rip_redistribute` (connected, static, ospf, bgp, kernel) and `rip_set_timers`, each with its removal and `family: "6"` for RIPng. OSPF gains `ospf_redistribute` (connected, static, rip, bgp, kernel) and its removal. Example 2 is now `2-test-frr-ospf-rip`: three replicas of one FRR router node, OSPF on one side with two LANs, RIP on the other with two more, and the border router in between redistributing each into the other, in three configuration files (the OSPF side, the RIP side, the redistribution).
@@ -253,7 +255,8 @@ Initial public release. KubeNDT deploys and operates virtual network topologies 
 - Health, readiness and version endpoints, and Swagger docs at `/swagger`.
 - Container images published to GHCR and a Docker Compose deployment.
 
-[Unreleased]: https://github.com/emigcm98/kubendt/compare/v1.6.0...HEAD
+[Unreleased]: https://github.com/emigcm98/kubendt/compare/v1.7.0...HEAD
+[1.7.0]: https://github.com/emigcm98/kubendt/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/emigcm98/kubendt/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/emigcm98/kubendt/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/emigcm98/kubendt/compare/v1.3.0...v1.4.0
