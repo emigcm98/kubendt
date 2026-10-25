@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - A node that sets no `commands` runs its image with a tty and an open stdin, so an image whose entrypoint is a shell (alpine, ubuntu) stays up without `sleep infinity`; `commands` keeps replacing the entrypoint and then has to stay running itself.
 - OSPF interface parameters on FRR and VyOS routers: `ospf_set_cost`, `ospf_set_priority` (the DR and BDR election), `ospf_set_timers` (hello and dead intervals) and `ospf_set_network_type` (point-to-point on a /30 skips the DR election), each with its reset.
 - OSPF areas and authentication on FRR and VyOS routers: `ospf_set_area_type` (stub, totally-stub, nssa, totally-nssa, the Cisco names), `ospf_add_area_range` (the ABR summarizes its area; FRR gets the range with its host bits set, since ospfd crashes when the summary's Link State ID collides with a more specific one of its own) and `ospf_set_authentication` (plain or MD5 per interface), each with its removal.
+- Example 8, `8-test-two-orgs-rip-ospf`, two organizations on 27 nodes: A on RIPv2 over a six router mesh, B on OSPFv2 in four areas with DR and BDR, stub and totally stubby areas, summarization and MD5, and a border router redistributing between them, in four configuration files.
 
 ### Changed
 

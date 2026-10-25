@@ -44,7 +44,7 @@ A process that exits with an error instead is a `node_crashed` warning in the re
 
 ## An OSPF area range on FRR shows an odd Link State ID
 
-`show ip ospf database summary` on FRR routers lists the summary of an `ospf_add_area_range` with the last address of the block as Link State ID (`172.22.16.127` for `172.22.16.64/26`), while `show running-config` shows the range as written. The driver sets the range with its host bits on purpose: ospfd crashes when a range summary takes the Link State ID of a more specific summary the router already announced (RFC 2328 E.3, FRR 9.1 to 10.7.1), and an ID with the host bits set is what appendix E assigns to a colliding summary anyway. Receivers mask it, so the route is the block itself.
+`show ip ospf database summary` on FRR routers lists the summary of an `ospf_add_area_range` with the last address of the block as Link State ID (`172.22.16.127` for `172.22.16.64/26`), while `show running-config` shows the range as written. The driver sets the range with its host bits on purpose: ospfd crashes when a range summary takes the Link State ID of a more specific summary the router already announced (RFC 2328 E.3, FRR 9.1 to 10.7.1), and an ID with the host bits set is what appendix E assigns to a colliding summary anyway. Receivers mask it, so the route is the block itself. The host bits protect the ABR that sets the range, not another ABR that already announced the covered subnets and has to re-summarize them when the aggregate arrives, so on FRR set the ranges in the same configuration as the network statements and never on a converged network with several ABRs.
 
 ## Router and switch pods stay in SysctlForbidden
 
