@@ -88,7 +88,9 @@ func SetupRoutes(router *gin.Engine) {
 		podGroup.GET("/counters/:namespace/:podName", handlers.GetPodInterfaceCounters)
 		// 7. Container log as text, and as a stream that follows it
 		podGroup.GET("/logs/:namespace/:podName", handlers.GetPodLogs)
-		podGroup.GET("/logs/ws/:namespace/:podName", handlers.PodLogsWebSocket)
+		// A verb of its own, not /logs/ws: a namespace named "ws" could not read
+		// its logs through /logs/:namespace otherwise (gin takes the static branch).
+		podGroup.GET("/logstream/:namespace/:podName", handlers.PodLogsWebSocket)
 	}
 
 	nsGroup := router.Group("/namespaces")

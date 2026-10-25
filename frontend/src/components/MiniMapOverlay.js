@@ -1,8 +1,36 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MiniMap } from 'reactflow';
+import { ReactComponent as MinusIcon } from '../assets/images/icons/minus.svg';
+import { ReactComponent as MaximizeIcon } from '../assets/images/icons/maximize.svg';
 import './MiniMapOverlay.css';
 
+// Whether the minimap is hidden is a per-browser convenience, so it lives in
+// localStorage; a browser that refuses storage just starts with it shown.
+const STORAGE_KEY = 'kubendt.minimap';
+const readHidden = () => {
+  try {
+    return localStorage.getItem(STORAGE_KEY) === 'hidden';
+  } catch (e) {
+    return false;
+  }
+};
+const storeHidden = (hidden) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, hidden ? 'hidden' : 'shown');
+  } catch (e) {
+    /* storage unavailable, the choice lasts the session */
+  }
+};
+
 const MiniMapOverlay = ({ nodes, selectedNodeId }) => {
+  const [hidden, setHidden] = useState(readHidden);
+  const toggle = () => {
+    setHidden((h) => {
+      storeHidden(!h);
+      return !h;
+    });
+  };
+
   const getColor = (node) => {
     const type = node.data?.type || node.type;
     switch (type) {
@@ -32,8 +60,31 @@ const MiniMapOverlay = ({ nodes, selectedNodeId }) => {
     return node.id === selectedNodeId ? `${base} selected` : base;
   };
 
+  if (hidden) {
+    return (
+      <button
+        type="button"
+        className="minimap-toggle minimap-toggle-collapsed"
+        title="Show the minimap"
+        aria-label="Show the minimap"
+        onClick={toggle}
+      >
+        <MaximizeIcon className="app-icon" />
+      </button>
+    );
+  }
+
   return (
     <div className="minimap-container">
+      <button
+        type="button"
+        className="minimap-toggle"
+        title="Hide the minimap"
+        aria-label="Hide the minimap"
+        onClick={toggle}
+      >
+        <MinusIcon className="app-icon" />
+      </button>
       <MiniMap
         nodes={nodes}
         nodeColor={getColor}

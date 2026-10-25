@@ -135,7 +135,7 @@ func GetPodLogs(c *gin.Context) {
 	}
 }
 
-// GET /pods/logs/ws/:namespace/:podName -> the tail of the log, then every
+// GET /pods/logstream/:namespace/:podName -> the tail of the log, then every
 // new line as it is written, until the client closes. The first frame is a
 // text frame with the metadata, log lines go as binary frames (one per line,
 // raw bytes), and a final text frame says the stream ended, which happens

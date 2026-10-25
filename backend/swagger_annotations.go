@@ -952,7 +952,7 @@ func swaggerGetPodInterfaceCounters() {}
 // swaggerGetPodLogs godoc
 //
 //	@Summary      Container log of a pod
-//	@Description  Returns the log of one container of a pod as text, like kubectl logs, read from the kubelet through the API server (no exec). The main container by default. `tail` is 500 lines unless given, 0 reads everything. The same log can be followed over WebSocket at /pods/logs/ws/{namespace}/{podName} with the same query: a first text frame with the metadata (containers, restarts), one binary frame per line, and a final text frame when the stream ends.
+//	@Description  Returns the log of one container of a pod as text, like kubectl logs, read from the kubelet through the API server (no exec). The main container by default. `tail` is 500 lines unless given, 0 reads everything. The same log can be followed over WebSocket at /pods/logstream/{namespace}/{podName} with the same query: a first text frame with the metadata (containers, restarts), one binary frame per line, and a final text frame when the stream ends.
 //	@Tags         pods
 //	@Produce      plain
 //	@Param        namespace   path      string  true   "Namespace name"

@@ -84,6 +84,7 @@ const TracePanel = ({
 
   const [dest, setDest] = useState('');
   const [destAddrs, setDestAddrs] = useState([]); // the picked node's addresses to choose from
+  const [destNode, setDestNode] = useState(''); // the node picked, '' when the address was typed
   const [method, setMethod] = useState('icmp');
   const [mode, setMode] = useState('trace'); // 'trace' | 'metrics'
   const [cycles, setCycles] = useState(5); // metrics probe rounds
@@ -634,6 +635,7 @@ const TracePanel = ({
             value={dest}
             onChange={(e) => {
               setDest(e.target.value);
+              setDestNode('');
               setDestAddrs([]);
             }}
             onKeyDown={(e) => {
@@ -662,10 +664,10 @@ const TracePanel = ({
           <span className="trace-label">Node</span>
           <select
             className="trace-select"
-            value=""
+            value={destNode}
             onChange={(e) => {
+              setDestNode(e.target.value);
               pickDestNode(e.target.value);
-              e.target.value = '';
             }}
           >
             <option value="">pick a node…</option>
