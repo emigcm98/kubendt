@@ -1,0 +1,196 @@
+{
+    "targets": [
+        {
+            "pod": "ha-0",
+            "actions": [
+                {
+                    "type": "set_default_route",
+                    "gateway": "172.22.48.1"
+                }
+            ]
+        },
+        {
+            "pod": "ha-1",
+            "actions": [
+                {
+                    "type": "set_default_route",
+                    "gateway": "172.22.50.1"
+                }
+            ]
+        },
+        {
+            "pod": "ha-2",
+            "actions": [
+                {
+                    "type": "set_default_route",
+                    "gateway": "172.22.50.129"
+                }
+            ]
+        },
+        {
+            "pod": "sa-0",
+            "actions": [
+                {
+                    "type": "setup_bridge",
+                    "bridge": "br0",
+                    "ifaces": [
+                        "eth1",
+                        "eth2"
+                    ]
+                }
+            ]
+        },
+        {
+            "pod": "sa-1",
+            "actions": [
+                {
+                    "type": "setup_bridge",
+                    "bridge": "br0",
+                    "ifaces": [
+                        "eth1",
+                        "eth2"
+                    ]
+                }
+            ]
+        },
+        {
+            "pod": "sa-2",
+            "actions": [
+                {
+                    "type": "setup_bridge",
+                    "bridge": "br0",
+                    "ifaces": [
+                        "eth1",
+                        "eth2"
+                    ]
+                }
+            ]
+        },
+        {
+            "pod": "ra-0",
+            "actions": [
+                {
+                    "type": "rip_add_network",
+                    "cidr": "172.22.48.0/23"
+                },
+                {
+                    "type": "rip_add_network",
+                    "cidr": "172.22.50.160/30"
+                },
+                {
+                    "type": "rip_add_network",
+                    "cidr": "172.22.50.164/30"
+                },
+                {
+                    "type": "rip_add_network",
+                    "cidr": "172.22.50.168/30"
+                },
+                {
+                    "type": "rip_passive_interface",
+                    "iface": "eth1"
+                }
+            ]
+        },
+        {
+            "pod": "ra-1",
+            "actions": [
+                {
+                    "type": "rip_add_network",
+                    "cidr": "172.22.50.160/30"
+                },
+                {
+                    "type": "rip_add_network",
+                    "cidr": "172.22.50.172/30"
+                },
+                {
+                    "type": "rip_add_network",
+                    "cidr": "172.22.50.176/30"
+                }
+            ]
+        },
+        {
+            "pod": "ra-2",
+            "actions": [
+                {
+                    "type": "rip_add_network",
+                    "cidr": "172.22.50.164/30"
+                },
+                {
+                    "type": "rip_add_network",
+                    "cidr": "172.22.50.172/30"
+                },
+                {
+                    "type": "rip_add_network",
+                    "cidr": "172.22.50.180/30"
+                },
+                {
+                    "type": "rip_add_network",
+                    "cidr": "172.22.50.184/30"
+                }
+            ]
+        },
+        {
+            "pod": "ra-3",
+            "actions": [
+                {
+                    "type": "rip_add_network",
+                    "cidr": "172.22.50.168/30"
+                },
+                {
+                    "type": "rip_add_network",
+                    "cidr": "172.22.50.180/30"
+                },
+                {
+                    "type": "rip_add_network",
+                    "cidr": "172.22.50.188/30"
+                },
+                {
+                    "type": "rip_add_network",
+                    "cidr": "172.22.50.192/30"
+                }
+            ]
+        },
+        {
+            "pod": "ra-4",
+            "actions": [
+                {
+                    "type": "rip_add_network",
+                    "cidr": "172.22.50.0/25"
+                },
+                {
+                    "type": "rip_add_network",
+                    "cidr": "172.22.50.188/30"
+                },
+                {
+                    "type": "rip_passive_interface",
+                    "iface": "eth1"
+                }
+            ]
+        },
+        {
+            "pod": "ra-5",
+            "actions": [
+                {
+                    "type": "rip_add_network",
+                    "cidr": "172.22.50.128/27"
+                },
+                {
+                    "type": "rip_add_network",
+                    "cidr": "172.22.50.176/30"
+                },
+                {
+                    "type": "rip_add_network",
+                    "cidr": "172.22.50.184/30"
+                },
+                {
+                    "type": "rip_add_network",
+                    "cidr": "172.22.50.192/30"
+                },
+                {
+                    "type": "rip_passive_interface",
+                    "iface": "eth1"
+                }
+            ]
+        }
+    ]
+}

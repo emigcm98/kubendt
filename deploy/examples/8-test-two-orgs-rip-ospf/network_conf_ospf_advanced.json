@@ -1,0 +1,119 @@
+{
+    "targets": [
+        {
+            "pod": "rb-3",
+            "actions": [
+                {
+                    "type": "remove_default_route"
+                },
+                {
+                    "type": "ospf_set_priority",
+                    "iface": "eth1",
+                    "priority": 255
+                },
+                {
+                    "type": "ospf_set_area_type",
+                    "ospf_area": "2",
+                    "area_type": "stub"
+                }
+            ]
+        },
+        {
+            "pod": "rb-2",
+            "actions": [
+                {
+                    "type": "ospf_set_area_type",
+                    "ospf_area": "2",
+                    "area_type": "totally-stub"
+                },
+                {
+                    "type": "ospf_set_area_type",
+                    "ospf_area": "3",
+                    "area_type": "stub"
+                },
+                {
+                    "type": "ospf_set_cost",
+                    "iface": "eth4",
+                    "cost": 100
+                },
+                {
+                    "type": "ospf_set_authentication",
+                    "iface": "eth1",
+                    "auth_type": "md5",
+                    "auth_key": "area0key"
+                },
+                {
+                    "type": "ospf_set_authentication",
+                    "iface": "eth2",
+                    "auth_type": "md5",
+                    "auth_key": "area0key"
+                }
+            ]
+        },
+        {
+            "pod": "rb-4",
+            "actions": [
+                {
+                    "type": "remove_default_route"
+                },
+                {
+                    "type": "ospf_set_area_type",
+                    "ospf_area": "3",
+                    "area_type": "stub"
+                },
+                {
+                    "type": "ospf_set_cost",
+                    "iface": "eth2",
+                    "cost": 100
+                }
+            ]
+        },
+        {
+            "pod": "rb-5",
+            "actions": [
+                {
+                    "type": "remove_default_route"
+                },
+                {
+                    "type": "ospf_set_area_type",
+                    "ospf_area": "3",
+                    "area_type": "stub"
+                }
+            ]
+        },
+        {
+            "pod": "rb-1",
+            "actions": [
+                {
+                    "type": "ospf_set_authentication",
+                    "iface": "eth1",
+                    "auth_type": "md5",
+                    "auth_key": "area0key"
+                },
+                {
+                    "type": "ospf_set_authentication",
+                    "iface": "eth2",
+                    "auth_type": "md5",
+                    "auth_key": "area0key"
+                }
+            ]
+        },
+        {
+            "pod": "rb-0",
+            "actions": [
+                {
+                    "type": "ospf_set_authentication",
+                    "iface": "eth2",
+                    "auth_type": "md5",
+                    "auth_key": "area0key"
+                },
+                {
+                    "type": "ospf_set_authentication",
+                    "iface": "eth3",
+                    "auth_type": "md5",
+                    "auth_key": "area0key"
+                }
+            ]
+        }
+    ]
+}
