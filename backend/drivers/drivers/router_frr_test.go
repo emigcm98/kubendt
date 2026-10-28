@@ -50,6 +50,9 @@ func TestFRRCapabilityPrecondition(t *testing.T) {
 	if cmd, _, ok := d.CapabilityPrecondition("BGPCapable", types.ActionEntry{}); !ok || cmd[2] != "/var/run/frr/bgpd.vty" {
 		t.Errorf("BGP precondition: %v", cmd)
 	}
+	if cmd, _, ok := d.CapabilityPrecondition("ISISCapable", types.ActionEntry{}); !ok || cmd[2] != "/var/run/frr/isisd.vty" {
+		t.Errorf("IS-IS precondition: %v", cmd)
+	}
 	for _, c := range []struct {
 		a    types.ActionEntry
 		want string
@@ -174,7 +177,7 @@ func TestFRRStartupCommands(t *testing.T) {
 	if len(cmd) != 3 || cmd[0] != "sh" || cmd[1] != "-c" {
 		t.Fatalf("startup command: %v", cmd)
 	}
-	for _, want := range []string{"s/^ospfd=no/ospfd=yes/", "s/^ospf6d=no/ospf6d=yes/", "s/^ripd=no/ripd=yes/", "s/^ripngd=no/ripngd=yes/", "s/^bgpd=no/bgpd=yes/", "touch /etc/frr/frr.conf /etc/frr/vtysh.conf", "exec /sbin/tini -- /usr/lib/frr/docker-start"} {
+	for _, want := range []string{"s/^ospfd=no/ospfd=yes/", "s/^ospf6d=no/ospf6d=yes/", "s/^ripd=no/ripd=yes/", "s/^ripngd=no/ripngd=yes/", "s/^bgpd=no/bgpd=yes/", "s/^isisd=no/isisd=yes/", "touch /etc/frr/frr.conf /etc/frr/vtysh.conf", "exec /sbin/tini -- /usr/lib/frr/docker-start"} {
 		if !strings.Contains(cmd[2], want) {
 			t.Errorf("startup command lacks %q: %s", want, cmd[2])
 		}
@@ -257,5 +260,55 @@ func TestFRRBGP(t *testing.T) {
 		if !reflect.DeepEqual(c.got, c.want) {
 			t.Errorf("%s:\n got  %v\n want %v", c.name, c.got, c.want)
 		}
+	}
+}
+
+func TestFRRISIS(t *testing.T) {
+	var d FRRRouterDriver
+	conf := []string{"vtysh", "-c", "configure terminal"}
+	isis := func(lines ...string) [][]string {
+		argv := append(append([]string{}, conf...), "-c", "router isis kubendt")
+		for _, l := range lines {
+			argv = append(argv, "-c", l)
+		}
+		return [][]string{argv}
+	}
+	iface := func(name string, lines ...string) [][]string {
+		argv := append(append([]string{}, conf...), "-c", "interface "+name)
+		for _, l := range lines {
+			argv = append(argv, "-c", l)
+		}
+		return [][]string{argv}
+	}
+	cases := []struct {
+		name string
+		got  [][]string
+		want [][]string
+	}{
+		{"router level-2", d.ISISSetRouter("49.0001.0000.0000.0001.00", "level-2"), isis("net 49.0001.0000.0000.0001.00", "lsp-mtu 1277", "is-type level-2-only")},
+		{"router default level", d.ISISSetRouter("49.0001.0000.0000.0001.00", ""), isis("net 49.0001.0000.0000.0001.00", "lsp-mtu 1277", "no is-type")},
+		{"interface both families", d.ISISAddInterface("eth1", "", true, true), iface("eth1", "ip router isis kubendt", "ipv6 router isis kubendt", "no isis circuit-type")},
+		{"interface v6 only level-1", d.ISISAddInterface("eth1", "level-1", false, true), iface("eth1", "ipv6 router isis kubendt", "no ip router isis kubendt", "isis circuit-type level-1")},
+		{"passive", d.ISISPassiveInterface("eth1"), iface("eth1", "isis passive")},
+		{"metric", d.ISISSetMetric("eth1", 50), iface("eth1", "isis metric 50")},
+		{"no metric", d.ISISRemoveMetric("eth1"), iface("eth1", "no isis metric")},
+		{"point-to-point", d.ISISSetNetworkType("eth1", "point-to-point"), iface("eth1", "isis network point-to-point")},
+		{"broadcast is the default", d.ISISSetNetworkType("eth1", "broadcast"), iface("eth1", "no isis network point-to-point")},
+		{"redistribute v4", d.ISISRedistribute("connected", "level-2", false), isis("redistribute ipv4 connected level-2")},
+		{"redistribute ospf v6 level-1", d.ISISRedistribute("ospf", "level-1", true), isis("redistribute ipv6 ospf6 level-1")},
+		{"no redistribute rip v6", d.ISISRemoveRedistribute("rip", "level-2", true), isis("no redistribute ipv6 ripng level-2")},
+	}
+	for _, c := range cases {
+		if !reflect.DeepEqual(c.got, c.want) {
+			t.Errorf("%s:\n got  %v\n want %v", c.name, c.got, c.want)
+		}
+	}
+	stop := d.ISISRemoveRouter()[0]
+	if stop[0] != "sh" || !strings.Contains(stop[2], "no router isis kubendt") || !strings.Contains(stop[2], "'^ isis ' '^ (ip|ipv6) router isis '") {
+		t.Errorf("stop must drop the process and sweep the interfaces, parameters first: %v", stop)
+	}
+	leave := d.ISISRemoveInterface("eth1")[0]
+	if leave[0] != "sh" || !strings.Contains(leave[2], "if vtysh") || !strings.Contains(leave[2], "-c 'no isis passive'") || !strings.HasSuffix(leave[2], "-c 'no ipv6 router isis kubendt'; fi") {
+		t.Errorf("leaving must be guarded and end with the membership: %v", leave)
 	}
 }

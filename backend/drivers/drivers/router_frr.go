@@ -31,6 +31,7 @@ var _ capabilities.OSPFCapable = (*FRRRouterDriver)(nil)
 var _ capabilities.RIPCapable = (*FRRRouterDriver)(nil)
 var _ capabilities.OSPF6Capable = (*FRRRouterDriver)(nil)
 var _ capabilities.BGPCapable = (*FRRRouterDriver)(nil)
+var _ capabilities.ISISCapable = (*FRRRouterDriver)(nil)
 var _ drivers_meta.ReadinessProbeProvider = (*FRRRouterDriver)(nil)
 var _ drivers_meta.ShellProvider = (*FRRRouterDriver)(nil)
 var _ drivers_meta.CapabilityPrecondition = (*FRRRouterDriver)(nil)
@@ -54,7 +55,7 @@ func (FRRRouterDriver) ReadinessProbeCommands() drivers_meta.ReadinessProbeSpec 
 
 // frrDaemons are the daemons behind the driver's capabilities, enabled by the
 // default startup command; an FRR image enables none out of the box.
-var frrDaemons = []string{"ospfd", "ospf6d", "ripd", "ripngd", "bgpd"}
+var frrDaemons = []string{"ospfd", "ospf6d", "ripd", "ripngd", "bgpd", "isisd"}
 
 // StartupCommands prepares a stock FRR image: the daemons the capabilities
 // need, the two config files the image ships without, then the image's own
@@ -81,6 +82,8 @@ func frrDaemonFor(capability string, a types.ActionEntry) string {
 		return "ospf6d"
 	case "BGPCapable":
 		return "bgpd"
+	case "ISISCapable":
+		return "isisd"
 	case "RIPCapable":
 		if a.Family == "6" || capabilities.IsIPv6(a.CIDR) {
 			return "ripngd"
@@ -471,8 +474,8 @@ func frrBGPFamily(v6 bool, lines ...string) [][]string {
 	return frrBGP(append([]string{af}, lines...)...)
 }
 
-// FRR names the v6 OSPF and RIP ospf6 and ripng on the redistribute line.
-func frrBGPSource(source string, v6 bool) string {
+// FRR names the v6 OSPF and RIP ospf6 and ripng on a redistribute line.
+func frrV6Source(source string, v6 bool) string {
 	if v6 {
 		switch source {
 		case "ospf":
@@ -536,11 +539,135 @@ func (FRRRouterDriver) BGPRemoveNetwork(network string, v6 bool) [][]string {
 }
 
 func (FRRRouterDriver) BGPRedistribute(source string, v6 bool) [][]string {
-	return frrBGPFamily(v6, "redistribute "+frrBGPSource(source, v6))
+	return frrBGPFamily(v6, "redistribute "+frrV6Source(source, v6))
 }
 
 func (FRRRouterDriver) BGPRemoveRedistribute(source string, v6 bool) [][]string {
-	return frrBGPFamily(v6, "no redistribute "+frrBGPSource(source, v6))
+	return frrBGPFamily(v6, "no redistribute "+frrV6Source(source, v6))
+}
+
+// ─── ISISCapable ─────────────────────────────────────────────────────────────
+// One process, `router isis kubendt`, since FRR wants a tag and VyOS has
+// none. Interface parameters need the interface in IS-IS first (the YANG
+// model refuses them otherwise), and stopping the process leaves every
+// interface line in place, so the stop sweeps them, parameters first.
+
+const frrISISTag = "kubendt"
+
+func frrISIS(lines ...string) [][]string {
+	argv := []string{"vtysh", "-c", "configure terminal", "-c", "router isis " + frrISISTag}
+	for _, l := range lines {
+		argv = append(argv, "-c", l)
+	}
+	return [][]string{argv}
+}
+
+func frrISISIface(iface string, lines ...string) [][]string {
+	argv := []string{"vtysh", "-c", "configure terminal", "-c", "interface " + iface}
+	for _, l := range lines {
+		argv = append(argv, "-c", l)
+	}
+	return [][]string{argv}
+}
+
+// FRR says level-2-only where the others say level-2.
+func frrISISLevel(level string) string {
+	if level == "level-2" {
+		return "level-2-only"
+	}
+	return level
+}
+
+func (FRRRouterDriver) ISISSetRouter(net, level string) [][]string {
+	mtu := fmt.Sprintf("lsp-mtu %d", capabilities.ISISLSPMTU)
+	if level == "" {
+		return frrISIS("net "+net, mtu, "no is-type")
+	}
+	return frrISIS("net "+net, mtu, "is-type "+frrISISLevel(level))
+}
+
+func (FRRRouterDriver) ISISRemoveRouter() [][]string {
+	return [][]string{{"sh", "-c",
+		"vtysh -c 'configure terminal' -c 'no router isis " + frrISISTag + "'; " +
+			"for p in '^ isis ' '^ (ip|ipv6) router isis '; do " +
+			"vtysh -c 'show running-config' | awk -v p=\"$p\" '/^interface /{i=$2} $0 ~ p {print i\" \"$0}' | " +
+			"while read -r i l; do vtysh -c 'configure terminal' -c \"interface $i\" -c \"no $l\"; done; done"}}
+}
+
+// The wanted family joins first so the interface holds the area tag before
+// the other family is cleared.
+func (FRRRouterDriver) ISISAddInterface(iface, level string, v4, v6 bool) [][]string {
+	var lines []string
+	if v4 {
+		lines = append(lines, "ip router isis "+frrISISTag)
+	}
+	if v6 {
+		lines = append(lines, "ipv6 router isis "+frrISISTag)
+	}
+	if !v4 {
+		lines = append(lines, "no ip router isis "+frrISISTag)
+	}
+	if !v6 {
+		lines = append(lines, "no ipv6 router isis "+frrISISTag)
+	}
+	if level == "" {
+		lines = append(lines, "no isis circuit-type")
+	} else {
+		lines = append(lines, "isis circuit-type "+frrISISLevel(level))
+	}
+	return frrISISIface(iface, lines...)
+}
+
+// Only when the interface is in IS-IS, since the parameter lines fail on
+// one that is not; nothing to do then.
+func (FRRRouterDriver) ISISRemoveInterface(iface string) [][]string {
+	return [][]string{{"sh", "-c",
+		"if vtysh -c 'show running-config' | awk -v i=" + iface + " '$0==\"interface \"i{f=1;next} /^exit/{f=0} f && / router isis /{m=1} END{exit !m}'; then " +
+			"vtysh -c 'configure terminal' -c 'interface " + iface + "' -c 'no isis passive' -c 'no isis metric' -c 'no isis circuit-type' -c 'no isis network point-to-point' " +
+			"-c 'no ip router isis " + frrISISTag + "' -c 'no ipv6 router isis " + frrISISTag + "'; fi"}}
+}
+
+func (FRRRouterDriver) ISISPassiveInterface(iface string) [][]string {
+	return frrISISIface(iface, "isis passive")
+}
+
+func (FRRRouterDriver) ISISRemovePassiveInterface(iface string) [][]string {
+	return frrISISIface(iface, "no isis passive")
+}
+
+func (FRRRouterDriver) ISISSetMetric(iface string, metric int) [][]string {
+	return frrISISIface(iface, fmt.Sprintf("isis metric %d", metric))
+}
+
+func (FRRRouterDriver) ISISRemoveMetric(iface string) [][]string {
+	return frrISISIface(iface, "no isis metric")
+}
+
+// Broadcast is FRR's default and has no keyword of its own.
+func (FRRRouterDriver) ISISSetNetworkType(iface, networkType string) [][]string {
+	if networkType == "point-to-point" {
+		return frrISISIface(iface, "isis network point-to-point")
+	}
+	return frrISISIface(iface, "no isis network point-to-point")
+}
+
+func (FRRRouterDriver) ISISRemoveNetworkType(iface string) [][]string {
+	return frrISISIface(iface, "no isis network point-to-point")
+}
+
+func frrISISFamily(v6 bool) string {
+	if v6 {
+		return "ipv6"
+	}
+	return "ipv4"
+}
+
+func (FRRRouterDriver) ISISRedistribute(source, level string, v6 bool) [][]string {
+	return frrISIS("redistribute " + frrISISFamily(v6) + " " + frrV6Source(source, v6) + " " + level)
+}
+
+func (FRRRouterDriver) ISISRemoveRedistribute(source, level string, v6 bool) [][]string {
+	return frrISIS("no redistribute " + frrISISFamily(v6) + " " + frrV6Source(source, v6) + " " + level)
 }
 
 // Shells: vtysh, the FRR console.

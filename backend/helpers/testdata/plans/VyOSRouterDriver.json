@@ -120,6 +120,81 @@
       ["set nat source rule 190 translation address masquerade"]
     ]
   },
+  "isis_add_interface": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["set protocols isis interface eth1"],
+      ["set protocols isis interface eth1 circuit-type level-2-only"]
+    ]
+  },
+  "isis_passive_interface": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["set protocols isis interface eth1 passive"]
+    ]
+  },
+  "isis_redistribute": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["set protocols isis redistribute ipv6 ospfv3 level-2"]
+    ]
+  },
+  "isis_remove_interface": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["delete protocols isis interface eth1"]
+    ]
+  },
+  "isis_remove_metric": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["delete protocols isis interface eth1 metric"]
+    ]
+  },
+  "isis_remove_network_type": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["delete protocols isis interface eth1 network"]
+    ]
+  },
+  "isis_remove_passive_interface": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["delete protocols isis interface eth1 passive"]
+    ]
+  },
+  "isis_remove_redistribute": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["delete protocols isis redistribute ipv4 connected"]
+    ]
+  },
+  "isis_remove_router": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["delete protocols isis"]
+    ]
+  },
+  "isis_set_metric": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["set protocols isis interface eth1 metric 50"]
+    ]
+  },
+  "isis_set_network_type": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["set protocols isis interface eth1 network point-to-point"]
+    ]
+  },
+  "isis_set_router": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["set protocols isis net 49.0001.0000.0000.0001.00"],
+      ["set protocols isis lsp-mtu 1277"],
+      ["set protocols isis level level-2"]
+    ]
+  },
   "link_down": {
     "executor": "vyos_api_apply",
     "commands": [

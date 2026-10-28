@@ -70,19 +70,24 @@ func rowsOnState(ops []PersistedDriverOperation, state, key string) []PersistedD
 	return out
 }
 
-// clearedWith is the list of states an action takes down besides its own.
-func clearedWith(action types.ActionEntry) []string {
+// clearedWith is the list of states an action takes down besides its own,
+// and whether only the rows on the action's own key go.
+func clearedWith(action types.ActionEntry) ([]string, bool) {
 	if d, ok := actions.Lookup(action.Type); ok {
-		return d.ClearsAlso
+		return d.ClearsAlso, d.Key != nil
 	}
-	return nil
+	return nil, false
 }
 
-// rowsOnStates is every row on any of the states, whatever its key.
-func rowsOnStates(ops []PersistedDriverOperation, states []string) []PersistedDriverOperation {
+// rowsOnStates is every row on any of the states, on the given key when
+// keyed and whatever its key otherwise.
+func rowsOnStates(ops []PersistedDriverOperation, states []string, key string, keyed bool) []PersistedDriverOperation {
 	var out []PersistedDriverOperation
 	for _, op := range ops {
-		s, _, _, _ := stateOf(opAction(op))
+		s, k, _, _ := stateOf(opAction(op))
+		if keyed && k != key {
+			continue
+		}
 		for _, want := range states {
 			if s == want {
 				out = append(out, op)
@@ -119,7 +124,8 @@ func SaveDriverOperation(namespace, podName, driverType string, action types.Act
 		if err != nil {
 			return fmt.Errorf("error reconciling the history of %s/%s: %w", namespace, podName, err)
 		}
-		for _, op := range append(rowsOnState(ops, state, key), rowsOnStates(ops, clearedWith(action))...) {
+		states, keyed := clearedWith(action)
+		for _, op := range append(rowsOnState(ops, state, key), rowsOnStates(ops, states, key, keyed)...) {
 			if err := DeleteDriverOperationHistoryByID(op.ID); err != nil && err != sql.ErrNoRows {
 				return fmt.Errorf("error reconciling the history of %s/%s: %w", namespace, podName, err)
 			}

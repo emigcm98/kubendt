@@ -82,6 +82,8 @@ var (
 	Neighbor      = Param{Name: "neighbor", Kind: KindIP, Required: true}
 	UpdateSource  = Param{Name: "update_source", Kind: KindText, Required: false}
 	Multihop      = Param{Name: "multihop", Kind: KindNumber, Required: false}
+	NET           = Param{Name: "net", Kind: KindText, Required: true}
+	Level         = Param{Name: "level", Kind: KindText, Required: false}
 )
 
 // ProtectedInterface is the pod's cluster interface. An action on it would

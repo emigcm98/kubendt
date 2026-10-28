@@ -120,11 +120,21 @@ definitions:
       internalPort:
         example: 80
         type: integer
+      level:
+        example: level-2
+        type: string
       multihop:
         example: 2
         type: integer
       neighbor:
         example: 10.0.0.2
+        type: string
+      net:
+        description: |-
+          IS-IS: the NET of the process and a level, which is the process type
+          (level-1, level-2, level-1-2), an interface's circuit type, or the
+          level routes are redistributed into (level-1 or level-2).
+        example: 49.0001.0000.0000.0001.00
         type: string
       network_type:
         example: point-to-point

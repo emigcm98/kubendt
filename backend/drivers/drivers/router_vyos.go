@@ -31,6 +31,7 @@ var _ capabilities.OSPFCapable = (*VyOSRouterDriver)(nil)
 var _ capabilities.RIPCapable = (*VyOSRouterDriver)(nil)
 var _ capabilities.OSPF6Capable = (*VyOSRouterDriver)(nil)
 var _ capabilities.BGPCapable = (*VyOSRouterDriver)(nil)
+var _ capabilities.ISISCapable = (*VyOSRouterDriver)(nil)
 var _ drivers_meta.EffectiveInterfaceInspector = (*VyOSRouterDriver)(nil)
 var _ drivers_meta.EffectiveSingleInterfaceInspector = (*VyOSRouterDriver)(nil)
 var _ drivers_meta.EffectiveInterfaceStateInspector = (*VyOSRouterDriver)(nil)
@@ -464,6 +465,90 @@ func (VyOSRouterDriver) BGPRedistribute(source string, v6 bool) [][]string {
 
 func (VyOSRouterDriver) BGPRemoveRedistribute(source string, v6 bool) [][]string {
 	return [][]string{{"delete " + vyosBGPFamily(v6) + "redistribute " + vyosBGPSource(source, v6)}}
+}
+
+// ─── IS-IS ───────────────────────────────────────────────────────────────────
+// One process under `protocols isis`. An interface joins for both families,
+// VyOS has no per-family switch, so `family` is accepted and ignored. Only
+// set lines, as with BGP: an option dropped means removing and adding again.
+// VyOS commits the process only with a NET and an interface together, so
+// isis_set_router and the first isis_add_interface go in one configure
+// (one batch), and the last interface leaves by stopping IS-IS.
+
+// The circuit type says level-2-only where the process level says level-2.
+func vyosISISCircuitType(level string) string {
+	if level == "level-2" {
+		return "level-2-only"
+	}
+	return level
+}
+
+func vyosISISFamily(v6 bool) string {
+	if v6 {
+		return "ipv6"
+	}
+	return "ipv4"
+}
+
+// VyOS refuses an interface whose MTU is under the LSP MTU (1497 by
+// default) and the cross-worker links are 1450, so the LSP MTU is the one
+// that fits any link of 1280 or more, as on FRR.
+func (VyOSRouterDriver) ISISSetRouter(net, level string) [][]string {
+	cmds := [][]string{{"set protocols isis net " + net}, {fmt.Sprintf("set protocols isis lsp-mtu %d", capabilities.ISISLSPMTU)}}
+	if level != "" {
+		cmds = append(cmds, []string{"set protocols isis level " + level})
+	}
+	return cmds
+}
+
+func (VyOSRouterDriver) ISISRemoveRouter() [][]string {
+	return [][]string{{"delete protocols isis"}}
+}
+
+func (VyOSRouterDriver) ISISAddInterface(iface, level string, v4, v6 bool) [][]string {
+	cmds := [][]string{{"set protocols isis interface " + iface}}
+	if level != "" {
+		cmds = append(cmds, []string{"set protocols isis interface " + iface + " circuit-type " + vyosISISCircuitType(level)})
+	}
+	return cmds
+}
+
+func (VyOSRouterDriver) ISISRemoveInterface(iface string) [][]string {
+	return [][]string{{"delete protocols isis interface " + iface}}
+}
+
+func (VyOSRouterDriver) ISISPassiveInterface(iface string) [][]string {
+	return [][]string{{"set protocols isis interface " + iface + " passive"}}
+}
+
+func (VyOSRouterDriver) ISISRemovePassiveInterface(iface string) [][]string {
+	return [][]string{{"delete protocols isis interface " + iface + " passive"}}
+}
+
+func (VyOSRouterDriver) ISISSetMetric(iface string, metric int) [][]string {
+	return [][]string{{fmt.Sprintf("set protocols isis interface %s metric %d", iface, metric)}}
+}
+
+func (VyOSRouterDriver) ISISRemoveMetric(iface string) [][]string {
+	return [][]string{{"delete protocols isis interface " + iface + " metric"}}
+}
+
+func (VyOSRouterDriver) ISISSetNetworkType(iface, networkType string) [][]string {
+	return [][]string{{"set protocols isis interface " + iface + " network " + networkType}}
+}
+
+func (VyOSRouterDriver) ISISRemoveNetworkType(iface string) [][]string {
+	return [][]string{{"delete protocols isis interface " + iface + " network"}}
+}
+
+func (VyOSRouterDriver) ISISRedistribute(source, level string, v6 bool) [][]string {
+	return [][]string{{"set protocols isis redistribute " + vyosISISFamily(v6) + " " + vyosBGPSource(source, v6) + " " + level}}
+}
+
+// The whole source node goes: a redistribute left without its level fails
+// the commit.
+func (VyOSRouterDriver) ISISRemoveRedistribute(source, level string, v6 bool) [][]string {
+	return [][]string{{"delete protocols isis redistribute " + vyosISISFamily(v6) + " " + vyosBGPSource(source, v6)}}
 }
 
 // ─── OSPF ────────────────────────────────────────────────────────────────────

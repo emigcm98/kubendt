@@ -58,6 +58,12 @@ func TestStatePairs(t *testing.T) {
 		{types.ActionEntry{Type: "bgp_add_neighbor", Neighbor: "10.0.0.2", RemoteAS: 65002}, types.ActionEntry{Type: "bgp_remove_neighbor", Neighbor: "10.0.0.2"}, "bgp_neighbor", false},
 		{types.ActionEntry{Type: "bgp_add_network", CIDR: "10.1.0.0/24"}, types.ActionEntry{Type: "bgp_remove_network", CIDR: "10.1.0.0/24"}, "bgp_network", false},
 		{types.ActionEntry{Type: "bgp_redistribute", Redistribute: "connected", Family: "6"}, types.ActionEntry{Type: "bgp_remove_redistribute", Redistribute: "connected", Family: "6"}, "bgp_redistribute", false},
+		{types.ActionEntry{Type: "isis_set_router", NET: "49.0001.0000.0000.0001.00"}, types.ActionEntry{Type: "isis_remove_router"}, "isis_router", false},
+		{types.ActionEntry{Type: "isis_add_interface", Iface: "eth1", Family: "6"}, types.ActionEntry{Type: "isis_remove_interface", Iface: "eth1"}, "isis_interface", false},
+		{types.ActionEntry{Type: "isis_passive_interface", Iface: "eth1"}, types.ActionEntry{Type: "isis_remove_passive_interface", Iface: "eth1"}, "isis_passive", false},
+		{types.ActionEntry{Type: "isis_set_metric", Iface: "eth1", Cost: 50}, types.ActionEntry{Type: "isis_remove_metric", Iface: "eth1"}, "isis_metric", false},
+		{types.ActionEntry{Type: "isis_set_network_type", Iface: "eth1", NetworkType: "point-to-point"}, types.ActionEntry{Type: "isis_remove_network_type", Iface: "eth1"}, "isis_network_type", false},
+		{types.ActionEntry{Type: "isis_redistribute", Redistribute: "connected", Level: "level-1"}, types.ActionEntry{Type: "isis_remove_redistribute", Redistribute: "connected", Level: "level-1"}, "isis_redistribute", false},
 	}
 	for _, p := range pairs {
 		s1, k1, c1, u1 := stateOf(p.set)
@@ -142,18 +148,40 @@ func TestRowsOnStatesClearedWith(t *testing.T) {
 		{ID: 6, ActionType: "set_ip", Action: types.ActionEntry{Type: "set_ip", Iface: "eth1", CIDR: "10.0.0.2/30"}},
 		{ID: 7, ActionType: "ospf_add_network", Action: types.ActionEntry{Type: "ospf_add_network", CIDR: "10.2.0.0/24", OSPFArea: "0"}},
 	}
-	states := clearedWith(types.ActionEntry{Type: "bgp_remove_router"})
-	if len(states) != 3 {
-		t.Fatalf("bgp_remove_router clears %v", states)
+	states, keyed := clearedWith(types.ActionEntry{Type: "bgp_remove_router"})
+	if len(states) != 3 || keyed {
+		t.Fatalf("bgp_remove_router clears %v keyed=%v", states, keyed)
 	}
-	var got []int64
-	for _, r := range rowsOnStates(ops, states) {
-		got = append(got, r.ID)
+	ids := func(rows []PersistedDriverOperation) []int64 {
+		var out []int64
+		for _, r := range rows {
+			out = append(out, r.ID)
+		}
+		return out
 	}
-	if len(got) != 4 || got[0] != 2 || got[1] != 3 || got[2] != 4 || got[3] != 5 {
+	if got := ids(rowsOnStates(ops, states, "", false)); len(got) != 4 || got[0] != 2 || got[1] != 3 || got[2] != 4 || got[3] != 5 {
 		t.Errorf("rows taken down with BGP: %v", got)
 	}
-	if rows := rowsOnStates(ops, clearedWith(types.ActionEntry{Type: "bgp_remove_neighbor", Neighbor: "10.0.0.1"})); len(rows) != 0 {
+	states, keyed = clearedWith(types.ActionEntry{Type: "bgp_remove_neighbor", Neighbor: "10.0.0.1"})
+	if rows := rowsOnStates(ops, states, "10.0.0.1", keyed); len(rows) != 0 {
 		t.Errorf("removing one neighbour clears nothing else, got %d rows", len(rows))
+	}
+
+	// An interface leaving IS-IS takes its own passive flag and metric, not
+	// another interface's.
+	isis := []PersistedDriverOperation{
+		{ID: 1, ActionType: "isis_add_interface", Action: types.ActionEntry{Type: "isis_add_interface", Iface: "eth1"}},
+		{ID: 2, ActionType: "isis_passive_interface", Action: types.ActionEntry{Type: "isis_passive_interface", Iface: "eth1"}},
+		{ID: 3, ActionType: "isis_set_metric", Action: types.ActionEntry{Type: "isis_set_metric", Iface: "eth1", Cost: 50}},
+		{ID: 4, ActionType: "isis_passive_interface", Action: types.ActionEntry{Type: "isis_passive_interface", Iface: "eth2"}},
+		{ID: 5, ActionType: "isis_redistribute", Action: types.ActionEntry{Type: "isis_redistribute", Redistribute: "connected"}},
+	}
+	states, keyed = clearedWith(types.ActionEntry{Type: "isis_remove_interface", Iface: "eth1"})
+	if got := ids(rowsOnStates(isis, states, "eth1", keyed)); !keyed || len(got) != 2 || got[0] != 2 || got[1] != 3 {
+		t.Errorf("rows taken down with eth1 leaving IS-IS: %v keyed=%v", got, keyed)
+	}
+	states, keyed = clearedWith(types.ActionEntry{Type: "isis_remove_router"})
+	if got := ids(rowsOnStates(isis, states, "", keyed)); keyed || len(got) != 5 {
+		t.Errorf("rows taken down with IS-IS stopping: %v keyed=%v", got, keyed)
 	}
 }

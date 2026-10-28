@@ -55,9 +55,10 @@ type Action[C any] struct {
 	// up by itself. Otherwise an undo and the action it undoes cancel each
 	// other and neither is kept, since nothing would put the state back.
 	UndoPersists bool
-	// ClearsAlso names the states this action takes down with its own,
-	// every key of them: stopping a routing process removes its neighbours
-	// and what it announced, so their rows must not survive it.
+	// ClearsAlso names the states this action takes down with its own: on
+	// its own key when it has one (an interface leaving IS-IS takes its
+	// passive flag and metric), on every key when it has none (stopping a
+	// routing process removes its neighbours and what it announced).
 	ClearsAlso []string
 	Run        func(c C, a types.ActionEntry) ([][]string, error)
 }

@@ -108,6 +108,12 @@ type ActionEntry struct {
 	UpdateSource string `json:"update_source,omitempty" example:"eth1"`
 	Multihop     int    `json:"multihop,omitempty" example:"2"`
 
+	// IS-IS: the NET of the process and a level, which is the process type
+	// (level-1, level-2, level-1-2), an interface's circuit type, or the
+	// level routes are redistributed into (level-1 or level-2).
+	NET   string `json:"net,omitempty" example:"49.0001.0000.0000.0001.00"`
+	Level string `json:"level,omitempty" example:"level-2"`
+
 	// Custom, accepts a string ("sh -c" wrapper) or an array of args.
 	// Only used when type == "custom". No driver label required on the pod.
 	Command json.RawMessage `json:"command,omitempty" swaggertype:"string" example:"ip route show"`
