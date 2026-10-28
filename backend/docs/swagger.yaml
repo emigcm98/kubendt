@@ -740,6 +740,15 @@ definitions:
         example: 0.1.0-pre
         type: string
     type: object
+  types.InspectionColumn:
+    properties:
+      label:
+        example: Destination
+        type: string
+      name:
+        example: destination
+        type: string
+    type: object
   types.InterfaceCounters:
     properties:
       rx_bytes:
@@ -1927,6 +1936,28 @@ definitions:
         type: string
       uptime:
         example: 1 days, 4 hours, 5 minutes
+        type: string
+    type: object
+  types.PodInspectionResponse:
+    properties:
+      capability:
+        example: OSPFCapable
+        type: string
+      columns:
+        items:
+          $ref: '#/definitions/types.InspectionColumn'
+        type: array
+      label:
+        example: OSPF neighbors
+        type: string
+      rows:
+        items:
+          additionalProperties:
+            type: string
+          type: object
+        type: array
+      what:
+        example: ospf_neighbors
         type: string
     type: object
   types.PodInterfaceEntry:
@@ -4198,6 +4229,50 @@ paths:
           schema:
             $ref: '#/definitions/types.ErrorResponse'
       summary: Interface counters of a pod
+      tags:
+      - pods
+  /pods/inspect/{namespace}/{podName}:
+    get:
+      description: Runs one live read of the pod's driver, named by `what` (routes,
+        neighbors, nat_rules, bridge_fdb, ospf_neighbors, ospf_interfaces, ospf6_neighbors,
+        rip_routes, bgp_summary, isis_neighbors, as GET /drivers lists them per capability),
+        and returns its rows with their columns. Without `what` it lists the inspections
+        the pod's driver offers. Nothing of it goes to the history.
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: Pod name
+        in: path
+        name: podName
+        required: true
+        type: string
+      - description: Inspection ID; empty lists the available ones
+        in: query
+        name: what
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.PodInspectionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Inspect a pod
       tags:
       - pods
   /pods/ips/{namespace}/{podName}:

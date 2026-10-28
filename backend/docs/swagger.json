@@ -2297,6 +2297,66 @@
                 }
             }
         },
+        "/pods/inspect/{namespace}/{podName}": {
+            "get": {
+                "description": "Runs one live read of the pod's driver, named by `what` (routes, neighbors, nat_rules, bridge_fdb, ospf_neighbors, ospf_interfaces, ospf6_neighbors, rip_routes, bgp_summary, isis_neighbors, as GET /drivers lists them per capability), and returns its rows with their columns. Without `what` it lists the inspections the pod's driver offers. Nothing of it goes to the history.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pods"
+                ],
+                "summary": "Inspect a pod",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pod name",
+                        "name": "podName",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Inspection ID; empty lists the available ones",
+                        "name": "what",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.PodInspectionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/pods/ips/{namespace}/{podName}": {
             "get": {
                 "description": "Returns interface list (name, MAC, IPv4) for a single pod. By\ndefault the result is scoped to the interfaces declared in the\npod's topology (its link endpoints), excluding the reserved CNI\nmanagement interface, loopback and kernel pseudo-interfaces. Use\nscope=all for the full set including the management interface.",
@@ -3823,6 +3883,19 @@
                 "version": {
                     "type": "string",
                     "example": "0.1.0-pre"
+                }
+            }
+        },
+        "types.InspectionColumn": {
+            "type": "object",
+            "properties": {
+                "label": {
+                    "type": "string",
+                    "example": "Destination"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "destination"
                 }
             }
         },
@@ -5425,6 +5498,38 @@
                 "uptime": {
                     "type": "string",
                     "example": "1 days, 4 hours, 5 minutes"
+                }
+            }
+        },
+        "types.PodInspectionResponse": {
+            "type": "object",
+            "properties": {
+                "capability": {
+                    "type": "string",
+                    "example": "OSPFCapable"
+                },
+                "columns": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.InspectionColumn"
+                    }
+                },
+                "label": {
+                    "type": "string",
+                    "example": "OSPF neighbors"
+                },
+                "rows": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "what": {
+                    "type": "string",
+                    "example": "ospf_neighbors"
                 }
             }
         },

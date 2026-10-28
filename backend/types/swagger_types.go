@@ -829,3 +829,31 @@ type TraceReportResponse struct {
 	FinishedAt  string        `json:"finishedAt" example:"2026-07-15T14:30:05Z"`
 	Hops        []TraceHopDoc `json:"hops"`
 }
+
+// InspectionColumn is one field of an inspection row.
+type InspectionColumn struct {
+	Name  string `json:"name" example:"destination"`
+	Label string `json:"label" example:"Destination"`
+}
+
+// InspectionInfo describes one inspection a driver offers.
+type InspectionInfo struct {
+	ID         string             `json:"id" example:"ospf_neighbors"`
+	Label      string             `json:"label" example:"OSPF neighbors"`
+	Capability string             `json:"capability" example:"OSPFCapable"`
+	Columns    []InspectionColumn `json:"columns"`
+}
+
+// PodInspectionsResponse lists the inspections a pod's driver offers.
+type PodInspectionsResponse struct {
+	Inspections []InspectionInfo `json:"inspections"`
+}
+
+// PodInspectionResponse is one inspection read live from a pod.
+type PodInspectionResponse struct {
+	What       string              `json:"what" example:"ospf_neighbors"`
+	Label      string              `json:"label" example:"OSPF neighbors"`
+	Capability string              `json:"capability" example:"OSPFCapable"`
+	Columns    []InspectionColumn  `json:"columns"`
+	Rows       []map[string]string `json:"rows"`
+}

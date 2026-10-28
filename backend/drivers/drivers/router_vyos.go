@@ -32,6 +32,15 @@ var _ capabilities.RIPCapable = (*VyOSRouterDriver)(nil)
 var _ capabilities.OSPF6Capable = (*VyOSRouterDriver)(nil)
 var _ capabilities.BGPCapable = (*VyOSRouterDriver)(nil)
 var _ capabilities.ISISCapable = (*VyOSRouterDriver)(nil)
+var _ capabilities.VtyshRunner = (*VyOSRouterDriver)(nil)
+var _ capabilities.RouteInspector = (*VyOSRouterDriver)(nil)
+var _ capabilities.NeighborInspector = (*VyOSRouterDriver)(nil)
+var _ capabilities.NATRuleInspector = (*VyOSRouterDriver)(nil)
+var _ capabilities.OSPFInspector = (*VyOSRouterDriver)(nil)
+var _ capabilities.OSPF6Inspector = (*VyOSRouterDriver)(nil)
+var _ capabilities.RIPInspector = (*VyOSRouterDriver)(nil)
+var _ capabilities.BGPInspector = (*VyOSRouterDriver)(nil)
+var _ capabilities.ISISInspector = (*VyOSRouterDriver)(nil)
 var _ drivers_meta.EffectiveInterfaceInspector = (*VyOSRouterDriver)(nil)
 var _ drivers_meta.EffectiveSingleInterfaceInspector = (*VyOSRouterDriver)(nil)
 var _ drivers_meta.EffectiveInterfaceStateInspector = (*VyOSRouterDriver)(nil)
@@ -407,6 +416,101 @@ func (VyOSRouterDriver) RIPSetTimers(update, timeout, garbage int, v6 bool) [][]
 
 func (VyOSRouterDriver) RIPRemoveTimers(v6 bool) [][]string {
 	return [][]string{{"delete " + vyosRIP(v6) + "timers"}}
+}
+
+// ─── Inspections ─────────────────────────────────────────────────────────────
+// VyOS runs FRR, so the routing reads are the same vtysh commands inside
+// the guest; the neighbour table comes from the guest's ip, and the NAT
+// rules from the configuration, which is what VyOS applies.
+
+// ssh joins its arguments with spaces and the guest's shell splits them
+// again, so the vtysh command travels in single quotes as one word.
+func vyosVtyshArgv(command string) []string {
+	return []string{"ssh_qemu", "sudo", "vtysh", "-c", "'" + command + "'"}
+}
+
+func (VyOSRouterDriver) Vtysh(namespace, pod, command string) ([]byte, error) {
+	return executor.ExecAndGet(namespace, pod, vyosVtyshArgv(command))
+}
+
+func (d VyOSRouterDriver) Routes(namespace, pod string) (capabilities.Rows, error) {
+	return capabilities.FRRRoutes(d, namespace, pod)
+}
+
+// Neighbors leaves out the slirp management NIC, which is not a data
+// interface of the node.
+func (VyOSRouterDriver) Neighbors(namespace, pod string) (capabilities.Rows, error) {
+	rows, err := capabilities.LinuxNeighborsThrough(func(argv []string) ([]byte, error) {
+		return executor.ExecAndGet(namespace, pod, append([]string{"ssh_qemu", "sudo"}, argv...))
+	})
+	if err != nil {
+		return nil, err
+	}
+	out := rows[:0]
+	for _, r := range rows {
+		if r["interface"] != vyosInternalMgmtIface {
+			out = append(out, r)
+		}
+	}
+	return out, nil
+}
+
+func (d VyOSRouterDriver) OSPFNeighbors(namespace, pod string) (capabilities.Rows, error) {
+	return capabilities.FRROSPFNeighbors(d, namespace, pod)
+}
+
+func (d VyOSRouterDriver) OSPFInterfaces(namespace, pod string) (capabilities.Rows, error) {
+	return capabilities.FRROSPFInterfaces(d, namespace, pod)
+}
+
+func (d VyOSRouterDriver) OSPF6Neighbors(namespace, pod string) (capabilities.Rows, error) {
+	return capabilities.FRROSPF6Neighbors(d, namespace, pod)
+}
+
+func (d VyOSRouterDriver) RIPRoutes(namespace, pod string) (capabilities.Rows, error) {
+	return capabilities.FRRRIPRoutes(d, namespace, pod)
+}
+
+func (d VyOSRouterDriver) BGPSummary(namespace, pod string) (capabilities.Rows, error) {
+	return capabilities.FRRBGPSummary(d, namespace, pod)
+}
+
+func (d VyOSRouterDriver) ISISNeighbors(namespace, pod string) (capabilities.Rows, error) {
+	return capabilities.FRRISISNeighbors(d, namespace, pod)
+}
+
+// NATRules lists the source and destination rules of nat and nat66 as the
+// configuration holds them.
+func (d *VyOSRouterDriver) NATRules(namespace, pod string) (capabilities.Rows, error) {
+	cfg, err := vyosRetrieveConfig(namespace, pod)
+	if err != nil {
+		return nil, err
+	}
+	var rows capabilities.Rows
+	for _, t := range []struct{ tree, family string }{{"nat", "4"}, {"nat66", "6"}} {
+		for _, kind := range []string{"source", "destination"} {
+			rules, ok := cfgChild(cfg, t.tree, kind, "rule")
+			if !ok {
+				continue
+			}
+			nums := make([]string, 0, len(rules))
+			for n := range rules {
+				nums = append(nums, n)
+			}
+			sort.Strings(nums)
+			for _, n := range nums {
+				rule, _ := rules[n].(map[string]interface{})
+				var parts []string
+				for _, path := range [][]string{{"inbound-interface", "name"}, {"outbound-interface", "name"}, {"source", "address"}, {"source", "prefix"}, {"protocol"}, {"destination", "port"}, {"translation", "address"}, {"translation", "port"}} {
+					if v, ok := cfgLeaf(rule, path...); ok {
+						parts = append(parts, strings.Join(path, " ")+" "+v)
+					}
+				}
+				rows = append(rows, map[string]string{"family": t.family, "chain": kind + " rule " + n, "rule": strings.Join(parts, ", ")})
+			}
+		}
+	}
+	return rows, nil
 }
 
 // ─── NAT64 ───────────────────────────────────────────────────────────────────

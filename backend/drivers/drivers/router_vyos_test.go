@@ -226,3 +226,10 @@ func TestVyOSNAT64(t *testing.T) {
 		t.Errorf("disable: %v", got)
 	}
 }
+
+func TestVyOSVtyshArgvQuotesTheCommand(t *testing.T) {
+	got := vyosVtyshArgv("show bgp summary json")
+	if len(got) != 5 || got[0] != "ssh_qemu" || got[1] != "sudo" || got[2] != "vtysh" || got[3] != "-c" || got[4] != "'show bgp summary json'" {
+		t.Errorf("argv: %v", got)
+	}
+}

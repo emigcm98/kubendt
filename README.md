@@ -59,6 +59,7 @@ KubeNDT bundles a small set of third-party SVG icons in its frontend. See [ATTRI
 - **Layer 3 operations**: IP address assignment, static routing, default gateway configuration, IPv4 and IPv6 alike (a link carries one family on both ends)
 - **Routing protocols**: OSPFv2, OSPFv3, RIP (RIPv2 and RIPng), BGP and IS-IS as driver actions on FRR and VyOS routers, the rest of FRRouting reachable through its console
 - **Traffic control (QoS)**: Rate limiting, traffic shaping, netem (network emulation)
+- **Live reads per node**: routing table, ARP and NDP, NAT rules, MAC tables, OSPF, OSPFv3, RIP, BGP and IS-IS state, through one endpoint for every driver
 - **NAT/Port forwarding**: Source NAT (SNAT) and Destination NAT (DNAT) for both families, and NAT64 for IPv6-only hosts reaching IPv4
 - **Network diagnostics**: Real-time interface status, IP address tracking, traffic analysis
 - **Live packet capture**: Wireshark-like per-interface capture streamed to the dashboard, with `.pcap` export

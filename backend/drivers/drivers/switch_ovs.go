@@ -3,6 +3,8 @@ package drivers
 import (
 	"kubendt/capabilities"
 	drivers_meta "kubendt/drivers/meta"
+	"kubendt/executor"
+	"strings"
 )
 
 type OpenVSwitchDriver struct {
@@ -63,4 +65,24 @@ func (OpenVSwitchDriver) RemoveInterfaceFromBridge(iface, bridge string) [][]str
 	return [][]string{
 		{"ovs-vsctl", "del-port", bridge, iface},
 	}
+}
+
+var _ capabilities.FDBInspector = (*OpenVSwitchDriver)(nil)
+
+// BridgeFDB reads every bridge's learned table from ovs-appctl, whose text
+// is `port VLAN MAC Age` per row.
+func (OpenVSwitchDriver) BridgeFDB(namespace, pod string) (capabilities.Rows, error) {
+	out, err := executor.ExecAndGet(namespace, pod, []string{"sh", "-c", "for b in $(ovs-vsctl list-br); do ovs-appctl fdb/show $b | awk -v b=$b 'NR>1 {print b, $1, $2, $3, $4}'; done"})
+	if err != nil {
+		return nil, err
+	}
+	var rows capabilities.Rows
+	for _, line := range strings.Split(string(out), "\n") {
+		f := strings.Fields(line)
+		if len(f) < 4 {
+			continue
+		}
+		rows = append(rows, map[string]string{"bridge": f[0], "mac": f[3], "interface": "port " + f[1], "vlan": f[2], "flags": "learned"})
+	}
+	return rows, nil
 }

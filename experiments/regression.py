@@ -65,6 +65,29 @@ def ping(ns, pod, ip, count=3):
         return rc == 0 and " 0% packet loss" in out, out.splitlines()[-2:] if out else out
     return f
 
+def inspect(ns, pod, what):
+    """Rows of one inspection of a pod, None when the endpoint fails."""
+    st, r = api("GET", f"/pods/inspect/{ns}/{pod}?what={what}", timeout=60)
+    return (r.get("rows") or []) if st == 200 and isinstance(r, dict) else None
+
+def inspect_count(ns, pod, what, column, needle, n):
+    def f():
+        rows = inspect(ns, pod, what)
+        if rows is None:
+            return False, f"{what}: no answer"
+        hit = [r for r in rows if needle in str(r.get(column, ""))]
+        return len(hit) == n, f"{len(hit)} of {n}: {hit[:n]}"
+    return f
+
+def inspect_has(ns, pod, what, column, needle):
+    def f():
+        rows = inspect(ns, pod, what)
+        if rows is None:
+            return False, f"{what}: no answer"
+        hit = [r for r in rows if needle in str(r.get(column, ""))]
+        return bool(hit), hit[:2] if hit else rows[:3]
+    return f
+
 def contains(ns, pod, cmd, needle):
     def f():
         rc, out = kexec(ns, pod, cmd)
@@ -181,16 +204,16 @@ def ex2():
         ok, det, w = retry(ping(ex.ns, "host-0", "192.168.4.10"), 60); ex.check("host-0 ping the printer with the OSPF side alone", ok, det, w)
         rc, out = kexec(ex.ns, "host-0", "ping -c 1 -W 2 192.168.3.10"); ex.check("host-0 cannot reach the web before the redistribution", rc != 0, out[:80] if rc == 0 else "")
         configure(ex, f"{d}/network_conf_redistribute.json", label="configure (redistribution)")
-        ok, det, w = retry(contains(ex.ns, "router-0", 'vtysh -c "show ip ospf neighbor"', "Full"), 120); ex.check("router-0 (ospf) neighbor Full with router-1 (border)", ok, det, w)
+        ok, det, w = retry(inspect_has(ex.ns, "router-0", "ospf_neighbors", "state", "Full"), 120); ex.check("router-0 (ospf) neighbor Full with router-1 (border)", ok, det, w)
         ok, det, w = retry(contains(ex.ns, "router-0", 'vtysh -c "show ip route 192.168.3.0/24"', "ospf"), 120); ex.check("router-0 (ospf) learns the web LAN by OSPF (redistributed from RIP)", ok, det, w)
-        ok, det, w = retry(contains(ex.ns, "router-2", 'vtysh -c "show ip rip"', "192.168.4.0/24"), 120); ex.check("router-2 (rip) learns the printer LAN by RIP (redistributed from OSPF)", ok, det, w)
+        ok, det, w = retry(inspect_has(ex.ns, "router-2", "rip_routes", "destination", "192.168.4.0/24"), 120); ex.check("router-2 (rip) learns the printer LAN by RIP (redistributed from OSPF)", ok, det, w)
         for ip, what in (("192.168.1.52", "same LAN"), ("192.168.2.51", "host on the RIP side, three routers"), ("192.168.3.10", "web, three routers")):
             ok, det, w = retry(ping(ex.ns, "host-0", ip), 60); ex.check(f"host-0 ping {ip} ({what})", ok, det, w)
         ok, det, w = retry(ping(ex.ns, "host-2", "192.168.4.10"), 60); ex.check("host-2 ping the printer (rip side to ospf side)", ok, det, w)
         # A throughput test across the three routers, the server started by the backend on web-0.
         iperf_check(ex, "host-0 iperf3 to web-0 through the three routers (managed server)", f"/iperf/run/{ex.ns}/host-0?dest=192.168.3.10&duration=3", server_pod="web-0")
         if restart(ex, "router-1"):
-            ok, det, w = retry(contains(ex.ns, "router-0", 'vtysh -c "show ip ospf neighbor"', "Full"), 150); ex.check("router-0 OSPF Full after the border router restart (replay)", ok, det, w)
+            ok, det, w = retry(inspect_has(ex.ns, "router-0", "ospf_neighbors", "state", "Full"), 150); ex.check("router-0 OSPF Full after the border router restart (replay)", ok, det, w)
             ok, det, w = retry(ping(ex.ns, "host-0", "192.168.3.10"), 90); ex.check("host-0 ping 192.168.3.10 after the border router restart (both protocols replayed)", ok, det, w)
     teardown(ex); return ex
 
@@ -206,7 +229,7 @@ def ex3():
     if deploy(ex, f"{d}/topology-network-test-modify-ospf.json"):
         wait_vyos_api(ex, ["vyos-router-0"])
         configure(ex, f"{d}/network_conf.json")
-        ok, det, w = retry(contains(ex.ns, "frr-router-0", 'vtysh -c "show ip ospf neighbor"', "Full"), 300); ex.check("frr-router OSPF Full with vyos-router", ok, det, w)
+        ok, det, w = retry(inspect_has(ex.ns, "frr-router-0", "ospf_neighbors", "state", "Full"), 300); ex.check("frr-router OSPF Full with vyos-router", ok, det, w)
         ok, det, w = retry(ping(ex.ns, "alpine-host-0", "10.0.1.11"), 60); ex.check("alpine-host-0 ping ubuntu-host (cross LAN)", ok, det, w)
         if modify(ex, f"{d}/modify-phase2-scaleup.json", "phase2 scale-up"):
             configure(ex, f"{d}/network_conf-phase2.json", "phase2 configure")
@@ -223,7 +246,7 @@ def ex3():
         ex.check("base topology has 6 pods again", len(names) == 6, names)
         if restart(ex, "frr-router-0"):
             ok, det, w = retry(contains(ex.ns, "frr-router-0", "ip a show eth1", "10.0.1.1/24"), 60); ex.check("frr eth1 IP replayed after API restart", ok, det, w)
-            ok, det, w = retry(contains(ex.ns, "frr-router-0", 'vtysh -c "show ip ospf neighbor"', "Full"), 180); ex.check("frr OSPF Full after API restart", ok, det, w)
+            ok, det, w = retry(inspect_has(ex.ns, "frr-router-0", "ospf_neighbors", "state", "Full"), 180); ex.check("frr OSPF Full after API restart", ok, det, w)
         # Optional claim test: a raw kubectl delete must not replay (documented behavior).
         ok = False
         if not os.environ.get("SKIP_RAW"):
@@ -242,7 +265,7 @@ def ex3():
                 if restart(ex, "frr-router-0"):
                     ok, det, w = retry(contains(ex.ns, "frr-router-0", 'vtysh -c "show running-config"', "network 10.0.1.0/24 area"), 60); ex.check("frr OSPF config back after API restart", ok, det, w)
         if restart(ex, "vyos-router-0"):
-            ok, det, w = retry(contains(ex.ns, "frr-router-0", 'vtysh -c "show ip ospf neighbor"', "Full"), 300); ex.check("OSPF Full again after VyOS API restart (VyOS replay)", ok, det, w)
+            ok, det, w = retry(inspect_has(ex.ns, "frr-router-0", "ospf_neighbors", "state", "Full"), 300); ex.check("OSPF Full again after VyOS API restart (VyOS replay)", ok, det, w)
     teardown(ex); return ex
 
 def ex4():
@@ -327,14 +350,14 @@ def ex6():
     if deploy(ex, f"{d}/topology-network-test-vyos.json"):
         wait_vyos_api(ex, ["router-0", "router-1"])
         configure(ex, f"{d}/network_conf.json")
-        ok, det, w = retry(vyos_op(ex.ns, "router-0", "show ip ospf neighbor", "Full"), 240); ex.check("router-0 OSPF Full with router-1", ok, det, w)
+        ok, det, w = retry(inspect_has(ex.ns, "router-0", "ospf_neighbors", "state", "Full"), 240); ex.check("router-0 OSPF Full with router-1", ok, det, w)
         for ip in ("10.0.1.10", "10.0.2.10", "10.0.4.10"):
             ok, det, w = retry(ping(ex.ns, "host-0", ip), 90); ex.check(f"host-0 ping {ip}", ok, det, w)
         ok, det, w = retry(ping(ex.ns, "host-0", "fd00:10::2"), 90); ex.check("host-0 ping fd00:10::2 over IPv6 (router-1 route6 back through router-0)", ok, det, w)
         ok, det, w = retry(contains(ex.ns, "host-0", "wget -qO- http://10.0.4.10 2>&1", "<"), 60); ex.check("host-0 wget web-server (mounted index.html)", ok, det, w)
         if restart(ex, "router-1"):
             ok, det, w = retry(ping(ex.ns, "host-0", "10.0.2.10"), 300); ex.check("host-0 ping 10.0.2.10 after router-1 restart (VyOS replay)", ok, det, w)
-            ok, det, w = retry(vyos_op(ex.ns, "router-0", "show ip ospf neighbor", "Full"), 120); ex.check("router-0 OSPF Full again after router-1 restart", ok, det, w)
+            ok, det, w = retry(inspect_has(ex.ns, "router-0", "ospf_neighbors", "state", "Full"), 120); ex.check("router-0 OSPF Full again after router-1 restart", ok, det, w)
     teardown(ex); return ex
 
 
@@ -346,8 +369,8 @@ def ex7():
         for pod, addr in (("laptop-0", "192.168.10.11/24"), ("laptop-0", "fd00:10::11/64"), ("web-0", "fd00:20::10/64"), ("sensor-0", "fd00:20::50/64")):
             ok, det, w = retry(contains(ex.ns, pod, "ip -o addr show dev eth1", addr), 30); ex.check(f"{pod} eth1 carries {addr}", ok, det, w)
         rc, out = kexec(ex.ns, "sensor-0", "ip -4 -o addr show dev eth1"); ex.check("sensor-0 is IPv6 only", rc == 0 and out.strip() == "", out)
-        ok, det, w = retry(contains(ex.ns, "office-router-0", 'vtysh -c "show ip ospf neighbor"', "Full"), 120); ex.check("office-router OSPFv2 Full with lab-router", ok, det, w)
-        ok, det, w = retry(contains(ex.ns, "office-router-0", 'vtysh -c "show ipv6 ospf6 neighbor"', "Full"), 120); ex.check("office-router OSPFv3 Full with lab-router", ok, det, w)
+        ok, det, w = retry(inspect_has(ex.ns, "office-router-0", "ospf_neighbors", "state", "Full"), 120); ex.check("office-router OSPFv2 Full with lab-router", ok, det, w)
+        ok, det, w = retry(inspect_has(ex.ns, "office-router-0", "ospf6_neighbors", "state", "Full"), 120); ex.check("office-router OSPFv3 Full with lab-router", ok, det, w)
         ok, det, w = retry(contains(ex.ns, "office-router-0", 'vtysh -c "show ipv6 route fd00:20::/64"', "ospf6"), 60); ex.check("office-router learns the lab prefix by OSPFv3", ok, det, w)
         ok, det, w = retry(ping(ex.ns, "laptop-0", "192.168.20.10"), 60); ex.check("laptop-0 ping web over IPv4 (OSPFv2)", ok, det, w)
         for ip in ("fd00:20::10", "fd00:20::50"):
@@ -367,8 +390,8 @@ def ex7():
         if restart(ex, "lab-router-0"):
             ok, det, w = retry(ping(ex.ns, "laptop-0", "fd00:20::50"), 120); ex.check("laptop-0 ping sensor over IPv6 after lab-router restart (replay)", ok, det, w)
             ok, det, w = retry(contains(ex.ns, "laptop-0", "wget -qO- http://[fd00:1::2]:8080 2>&1", "dual stack"), 120); ex.check("laptop-0 wget through the IPv6 port forward again after the restart (NAT66 replayed)", ok, det, w)
-            ok, det, w = retry(contains(ex.ns, "office-router-0", 'vtysh -c "show ip ospf neighbor"', "Full"), 150); ex.check("office-router OSPFv2 Full again after lab-router restart", ok, det, w)
-            ok, det, w = retry(contains(ex.ns, "office-router-0", 'vtysh -c "show ipv6 ospf6 neighbor"', "Full"), 150); ex.check("office-router OSPFv3 Full again after lab-router restart", ok, det, w)
+            ok, det, w = retry(inspect_has(ex.ns, "office-router-0", "ospf_neighbors", "state", "Full"), 150); ex.check("office-router OSPFv2 Full again after lab-router restart", ok, det, w)
+            ok, det, w = retry(inspect_has(ex.ns, "office-router-0", "ospf6_neighbors", "state", "Full"), 150); ex.check("office-router OSPFv3 Full again after lab-router restart", ok, det, w)
     teardown(ex); return ex
 
 
@@ -389,7 +412,7 @@ def ex8():
         ok, det, w = retry(ping(ex.ns, "ha-0", "172.22.50.138"), 60); ex.check("ha-0 ping ha-2 across A (LAN A1 to LAN A6)", ok, det, w)
         # Organization B on OSPF, four areas.
         configure(ex, f"{d}/network_conf_ospf.json", label="configure (organization B, ospf)")
-        ok, det, w = retry(lambda: (kexec(ex.ns, "rb-2", 'vtysh -c "show ip ospf neighbor"')[1].count("Full") == 5, kexec(ex.ns, "rb-2", 'vtysh -c "show ip ospf neighbor"')[1]), 150); ex.check("rb-2 (RB3) Full with its five neighbours", ok, det, w)
+        ok, det, w = retry(inspect_count(ex.ns, "rb-2", "ospf_neighbors", "state", "Full", 5), 150); ex.check("rb-2 (RB3) Full with its five neighbours", ok, det, w)
         ok, det, w = retry(ping(ex.ns, "hb-0", "172.22.16.170"), 90); ex.check("hb-0 ping hb-3 across B (area 1 to area 3)", ok, det, w)
         ok, det, w = retry(lambda: ("IA 172.22.16.64/26" in ia("rb-1")[1] and "IA 172.22.16.128/25" in ia("rb-1")[1] and "172.22.16.96/27" not in ia("rb-1")[1], ia("rb-1")[1][-300:]), 120); ex.check("rb-1 (RB2) sees the area 2 and 3 aggregates, not their subnets", ok, det, w)
         # DR and BDR, area types, cost, ranges and keys.
@@ -400,7 +423,7 @@ def ex8():
         ok, det, w = retry(tstub, 120); ex.check("area 2 totally stubby: rb-3 holds the default and no plain inter-area route", ok, det, w)
         ok, det, w = retry(path_has("rb-3", "172.22.16.138", "172.22.16.198"), 120); ex.check("rb-3 reaches LAN B5 through rb-5 (RB6) after the cost change", ok, det, w)
         ok, det, w = retry(ping(ex.ns, "hb-1", "172.22.16.10"), 60); ex.check("hb-1 (totally stubby area) ping hb-0 through the default from the ABR", ok, det, w)
-        ok, det, w = retry(lambda: (kexec(ex.ns, "rb-0", 'vtysh -c "show ip ospf neighbor"')[1].count("Full") == 2, kexec(ex.ns, "rb-0", 'vtysh -c "show ip ospf neighbor"')[1]), 120); ex.check("rb-0 (RB1) Full with both backbone neighbours over md5", ok, det, w)
+        ok, det, w = retry(inspect_count(ex.ns, "rb-0", "ospf_neighbors", "state", "Full", 2), 120); ex.check("rb-0 (RB1) Full with both backbone neighbours over md5", ok, det, w)
         # Joining the organizations.
         configure(ex, f"{d}/network_conf_redistribute.json", label="configure (redistribution on rb-0)")
         ok, det, w = retry(lambda: (all(p in kexec(ex.ns, "ra-3", 'vtysh -c "show ip rip"')[1] for p in ("172.22.16.0/26", "172.22.16.64/26", "172.22.16.128/25")), kexec(ex.ns, "ra-3", 'vtysh -c "show ip rip"')[1][-300:]), 150); ex.check("ra-3 (RA4) learns B's aggregates by RIP (redistributed from OSPF)", ok, det, w)
@@ -410,7 +433,7 @@ def ex8():
             ok, det, w = retry(ping(ex.ns, pod, ip), 90); ex.check(f"{pod} ping {ip} ({what})", ok, det, w)
         iperf_check(ex, "ha-0 iperf3 to hb-3 across both organizations (managed server)", f"/iperf/run/{ex.ns}/ha-0?dest=172.22.16.170&duration=3", server_pod="hb-3")
         if restart(ex, "rb-2"):
-            ok, det, w = retry(lambda: (kexec(ex.ns, "rb-2", 'vtysh -c "show ip ospf neighbor"')[1].count("Full") == 5, kexec(ex.ns, "rb-2", 'vtysh -c "show ip ospf neighbor"')[1]), 180); ex.check("rb-2 Full with its five neighbours after the restart (replay)", ok, det, w)
+            ok, det, w = retry(inspect_count(ex.ns, "rb-2", "ospf_neighbors", "state", "Full", 5), 180); ex.check("rb-2 Full with its five neighbours after the restart (replay)", ok, det, w)
             ok, det, w = retry(lambda: ("IA 172.22.16.64/26" in ia("rb-1")[1] and tstub()[0], ia("rb-1")[1][-200:]), 150); ex.check("ranges and area types back after the replay", ok, det, w)
             ok, det, w = retry(ping(ex.ns, "hb-0", "172.22.48.10"), 90); ex.check("hb-0 ping ha-0 after the ABR restart", ok, det, w)
     teardown(ex); return ex

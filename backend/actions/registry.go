@@ -94,10 +94,12 @@ func (d *Descriptor) StateKey(a types.ActionEntry) string {
 	return d.Key(a)
 }
 
-// CapabilityActions is a capability with the actions it declares.
+// CapabilityActions is a capability with the actions it declares and, for
+// one driver, the inspections it offers of it.
 type CapabilityActions struct {
 	Capability
-	Actions []*Descriptor
+	Actions     []*Descriptor
+	Inspections []*InspectionDescriptor
 }
 
 type registered struct {
@@ -207,7 +209,9 @@ func ForDriver(driver any) []CapabilityActions {
 	var out []CapabilityActions
 	for _, c := range capabilities {
 		if c.supports(driver) {
-			out = append(out, c.CapabilityActions)
+			ca := c.CapabilityActions
+			ca.Inspections = inspectionsOf(c.ID, driver)
+			out = append(out, ca)
 		}
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
