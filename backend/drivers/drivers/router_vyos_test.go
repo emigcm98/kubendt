@@ -216,3 +216,13 @@ func TestVyOSNAT66(t *testing.T) {
 		t.Errorf("no DNAT v6: %v", got)
 	}
 }
+
+func TestVyOSNAT64(t *testing.T) {
+	var d VyOSRouterDriver
+	if got := d.NAT64Enable("64:ff9b::/96", "172.22.19.0/24"); len(got) != 3 || got[0][0] != "set nat64 source rule 1 source prefix 64:ff9b::/96" || got[1][0] != "set nat64 source rule 1 translation pool 1 address 172.22.19.0/24" || got[2][0] != "set nat64 source rule 1 translation pool 1 port 1024-32767" {
+		t.Errorf("enable: %v", got)
+	}
+	if got := d.NAT64Disable(); got[0][0] != "delete nat64" {
+		t.Errorf("disable: %v", got)
+	}
+}

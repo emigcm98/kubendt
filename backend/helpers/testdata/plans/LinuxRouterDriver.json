@@ -94,6 +94,18 @@
       ["ip","link","set","eth1","up"]
     ]
   },
+  "nat64_disable": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","pkill -9 -x tayga 2\u003e/dev/null; tayga --rmtun -c /etc/tayga.conf 2\u003e/dev/null; ip link del nat64 2\u003e/dev/null; rm -f /etc/tayga.conf; true"]
+    ]
+  },
+  "nat64_enable": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","pkill -9 -x tayga 2\u003e/dev/null; ip link del nat64 2\u003e/dev/null; printf 'tun-device nat64\\nipv4-addr 172.22.19.1\\nipv6-addr fd64:ac16:1300::1\\nprefix 64:ff9b::/96\\ndynamic-pool 172.22.19.0/24\\nwkpf-strict no\\n' \u003e /etc/tayga.conf; tayga --mktun -c /etc/tayga.conf; ip link set nat64 up; ip route replace 172.22.19.0/24 dev nat64; ip -6 route replace 64:ff9b::/96 dev nat64; nohup tayga --nodetach --stdout -c /etc/tayga.conf \u003e/var/log/tayga.log 2\u003e\u00261 \u0026 sleep 1; for p in $(pgrep -x tayga); do grep -q '^State:.Z' /proc/$p/status || exit 0; done; exit 1"]
+    ]
+  },
   "ospf6_add_interface": { "unsupported": true },
   "ospf6_originate_default": { "unsupported": true },
   "ospf6_passive_interface": { "unsupported": true },

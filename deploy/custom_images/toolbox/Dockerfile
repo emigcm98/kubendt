@@ -10,8 +10,8 @@
 #
 # The backend execs: tshark and editcap for capture, traceroute,
 # tcptraceroute and mtr for the trace, iperf3 for throughput, ip and bridge
-# from iproute2, tc, iptables and ip6tables, tayga for NAT64; sh keeps it
-# alive with sleep.
+# from iproute2, tc, iptables and ip6tables, tayga for NAT64; tini keeps it
+# alive over a sleep and reaps what the tools leave behind.
 
 # tayga, the NAT64 of the Linux routers, built from source: no Alpine release
 # carries it. Static, so the binary does not care which libc the final
@@ -28,5 +28,5 @@ RUN apk add --no-cache build-base linux-headers curl \
 
 FROM alpine:3.20
 
-RUN apk add --no-cache tshark iproute2 traceroute tcptraceroute mtr iperf3 iptables
+RUN apk add --no-cache tini tshark iproute2 traceroute tcptraceroute mtr iperf3 iptables
 COPY --from=tayga /usr/local/sbin/tayga /usr/sbin/tayga

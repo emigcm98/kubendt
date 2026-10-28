@@ -64,6 +64,7 @@ func TestStatePairs(t *testing.T) {
 		{types.ActionEntry{Type: "isis_set_metric", Iface: "eth1", Cost: 50}, types.ActionEntry{Type: "isis_remove_metric", Iface: "eth1"}, "isis_metric", false},
 		{types.ActionEntry{Type: "isis_set_network_type", Iface: "eth1", NetworkType: "point-to-point"}, types.ActionEntry{Type: "isis_remove_network_type", Iface: "eth1"}, "isis_network_type", false},
 		{types.ActionEntry{Type: "isis_redistribute", Redistribute: "connected", Level: "level-1"}, types.ActionEntry{Type: "isis_remove_redistribute", Redistribute: "connected", Level: "level-1"}, "isis_redistribute", false},
+		{types.ActionEntry{Type: "nat64_enable", Pool: "172.22.19.0/24"}, types.ActionEntry{Type: "nat64_disable"}, "nat64", false},
 	}
 	for _, p := range pairs {
 		s1, k1, c1, u1 := stateOf(p.set)

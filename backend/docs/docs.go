@@ -3017,6 +3017,15 @@ const docTemplate = `{
                     "type": "string",
                     "example": "0"
                 },
+                "pool": {
+                    "type": "string",
+                    "example": "172.22.19.0/24"
+                },
+                "prefix": {
+                    "description": "NAT64: the IPv6 prefix that stands for the IPv4 internet (the well\nknown 64:ff9b::/96 by default) and the IPv4 pool the translator maps\nthe IPv6 hosts onto.",
+                    "type": "string",
+                    "example": "64:ff9b::/96"
+                },
                 "priority": {
                     "type": "integer",
                     "example": 255

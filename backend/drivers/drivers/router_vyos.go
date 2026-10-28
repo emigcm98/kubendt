@@ -125,6 +125,7 @@ type VyOSRouterDriver struct {
 }
 
 var _ capabilities.NATCapable = (*VyOSRouterDriver)(nil)
+var _ capabilities.NAT64Capable = (*VyOSRouterDriver)(nil)
 var _ drivers_meta.SNATInterfaceInspector = (*VyOSRouterDriver)(nil)
 
 // ─── NAT ─────────────────────────────────────────────────────────────────────
@@ -406,6 +407,23 @@ func (VyOSRouterDriver) RIPSetTimers(update, timeout, garbage int, v6 bool) [][]
 
 func (VyOSRouterDriver) RIPRemoveTimers(v6 bool) [][]string {
 	return [][]string{{"delete " + vyosRIP(v6) + "timers"}}
+}
+
+// ─── NAT64 ───────────────────────────────────────────────────────────────────
+// VyOS carries its own translator (Jool): one source rule, the prefix on the
+// IPv6 side, the pool on the IPv4 one with the port range Jool wants, kept
+// clear of the kernel's ephemeral range as VyOS checks.
+
+func (VyOSRouterDriver) NAT64Enable(prefix, pool string) [][]string {
+	return [][]string{
+		{"set nat64 source rule 1 source prefix " + prefix},
+		{"set nat64 source rule 1 translation pool 1 address " + pool},
+		{"set nat64 source rule 1 translation pool 1 port 1024-32767"},
+	}
+}
+
+func (VyOSRouterDriver) NAT64Disable() [][]string {
+	return [][]string{{"delete nat64"}}
 }
 
 // ─── BGP ─────────────────────────────────────────────────────────────────────

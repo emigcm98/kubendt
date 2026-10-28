@@ -64,6 +64,8 @@
       ["ip","link","set","eth1","up"]
     ]
   },
+  "nat64_disable": { "unsupported": true },
+  "nat64_enable": { "unsupported": true },
   "ospf6_add_interface": { "unsupported": true },
   "ospf6_originate_default": { "unsupported": true },
   "ospf6_passive_interface": { "unsupported": true },

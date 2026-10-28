@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"strings"
 	"testing"
 
 	v1 "k8s.io/api/core/v1"
@@ -51,5 +52,15 @@ func TestToolboxPullPolicy(t *testing.T) {
 		if got := toolboxPullPolicy(image); got != want {
 			t.Errorf("%s: %s, want %s", image, got, want)
 		}
+	}
+}
+
+func TestToolboxCommandFallsBackWithoutTini(t *testing.T) {
+	cmd := toolboxCommand()
+	if len(cmd) != 3 || cmd[0] != "sh" || cmd[1] != "-c" {
+		t.Fatalf("shape: %v", cmd)
+	}
+	if !strings.Contains(cmd[2], "exec tini -- sleep "+toolboxSleeperSeconds) || !strings.HasSuffix(cmd[2], "; exec sleep "+toolboxSleeperSeconds) {
+		t.Errorf("command: %s", cmd[2])
 	}
 }

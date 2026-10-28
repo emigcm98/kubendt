@@ -145,6 +145,16 @@ definitions:
         description: OSPF
         example: "0"
         type: string
+      pool:
+        example: 172.22.19.0/24
+        type: string
+      prefix:
+        description: |-
+          NAT64: the IPv6 prefix that stands for the IPv4 internet (the well
+          known 64:ff9b::/96 by default) and the IPv4 pool the translator maps
+          the IPv6 hosts onto.
+        example: 64:ff9b::/96
+        type: string
       priority:
         example: 255
         type: integer
