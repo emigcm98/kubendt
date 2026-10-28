@@ -1,0 +1,22 @@
+{
+    "targets": [
+        {
+            "pod": "lab-router",
+            "actions": [
+                {
+                    "type": "enable_snat",
+                    "iface": "eth2",
+                    "family": "6"
+                },
+                {
+                    "type": "enable_dnat",
+                    "iface": "eth2",
+                    "externalPort": 8080,
+                    "internalIP": "fd00:20::10",
+                    "internalPort": 80,
+                    "protocol": "tcp"
+                }
+            ]
+        }
+    ]
+}

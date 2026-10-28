@@ -36,7 +36,11 @@ func keyBridge(a types.ActionEntry) string { return a.Bridge }
 func keyBridgeMember(a types.ActionEntry) string { return a.Iface + " " + a.Bridge }
 
 func keyPortForward(a types.ActionEntry) string {
-	return a.Iface + " " + a.Protocol + " " + itoa(a.ExternalPort)
+	family := "4"
+	if IsIPv6(a.InternalIP) {
+		family = "6"
+	}
+	return a.Iface + " " + a.Protocol + " " + itoa(a.ExternalPort) + " " + family
 }
 
 func keyNetworkArea(a types.ActionEntry) string { return a.CIDR + " " + a.OSPFArea }

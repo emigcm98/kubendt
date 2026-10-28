@@ -6,6 +6,7 @@ IPv6 end-to-end scenario, dual stack where it makes sense and IPv6 only where a 
 - IPv4 routed by OSPFv2 and IPv6 by OSPFv3, both set from the same `network_conf.json`
 - An IPv6-only host next to dual stack ones on the same L2 segment
 - Traceroute, mtr and iperf3 toward IPv6 targets from the dashboard
+- NAT66 on the lab router: the lab masqueraded behind its transit address and a port forwarded to the web server over IPv6
 - A router restart that brings back its addresses and its IPv6 routes
 
 ## Topology Overview
@@ -37,6 +38,7 @@ Network segments:
 
 - `topology-network-test-dual-stack.json`: network inventory and links, with `localIp` and `peerIp` as arrays where an end carries both families
 - `network_conf.json`: post-deploy actions (bridges, default routes of both families on the hosts, OSPFv2 and OSPFv3 on the routers)
+- `network_conf_nat66.json`: NAT66 on `lab-router`, SNAT on its transit interface and a port forward to `web`
 - `files/web/index.html`: the page `web` serves, mounted into the nginx image
 
 ## Notable Characteristics
@@ -114,9 +116,16 @@ Create a namespace (e.g. `dual-stack` or any name you prefer).
 - Right-click `laptop-0`, open **Tools** and **Traceroute from here**. Pick `sensor` as the node: the panel lists its addresses, here only `fd00:20::50`. Run it and watch the packet cross `office-router`, `lab-router` and reach `sensor`. Over IPv6 the ICMP method sends UDP probes (BusyBox traceroute only matches those in the routers' Time Exceeded replies), the **Metrics** mode runs mtr over IPv6 with real ICMP, and TCP traceroute stays IPv4, the tool behind it has no IPv6.
 - Right-click `laptop-0` again, open **Throughput test from here** and pick `web`: choose its IPv6 address from the list and run. The platform starts the iperf3 server on `web-0` itself.
 
-### 8. Restart a router
+### 8. NAT66 on the lab router
 
-- Right-click `lab-router-0` and choose **Restart pod**. The pod comes back with both addresses on every link end (the first from the link, the second from the platform) and its persisted operations replayed, OSPFv3 included: both adjacencies come back.
+- Apply `network_conf_nat66.json` to `lab-router-0`: `enable_snat` on `eth2` with `family: "6"` masquerades everything the lab sends toward the office behind `fd00:1::2`, and `enable_dnat` on `eth2` forwards TCP 8080 to `web` on port 80; the family of a port forward comes from its internal address.
+- From `laptop-0`, `wget -qO- http://[fd00:1::2]:8080` returns the page: the forward hands the request to `web`.
+- Ping `fd00:10::11` from `sensor-0` and capture on `laptop-0 eth1` meanwhile: the echo requests arrive from `fd00:1::2`, not from the sensor. Without the SNAT they carry `fd00:20::50`.
+- The rules live in `ip6tables` inside the router's network namespace, run from the pod's toolbox since the FRR image ships no iptables; the node's history keeps both actions and replays them when the pod is recreated.
+
+### 9. Restart a router
+
+- Right-click `lab-router-0` and choose **Restart pod**. The pod comes back with both addresses on every link end (the first from the link, the second from the platform) and its persisted operations replayed, OSPFv3 included: both adjacencies come back. The NAT66 rules come back with them: the `wget` through the forward works again.
 - Repeat the IPv6 ping from `laptop-0` to `sensor-0`.
 
 ## Troubleshooting

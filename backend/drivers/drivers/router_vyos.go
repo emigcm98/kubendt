@@ -139,39 +139,54 @@ func vyosNATRuleNum(key string, base int) string {
 	return strconv.Itoa(base + (sum%90)*10)
 }
 
+// `nat` and `nat66` carry the same rule tree; the v6 source match is a
+// prefix where the v4 one is an address.
+func vyosNAT(v6 bool) string {
+	if v6 {
+		return "nat66"
+	}
+	return "nat"
+}
+
 // EnableSNAT configures MASQUERADE on VyOS for the given interface.
-func (VyOSRouterDriver) EnableSNAT(iface string) [][]string {
+func (VyOSRouterDriver) EnableSNAT(iface string, v6 bool) [][]string {
 	rule := vyosNATRuleNum(iface, 100)
+	p := "set " + vyosNAT(v6) + " source rule " + rule + " "
+	match := "source address 0.0.0.0/0"
+	if v6 {
+		match = "source prefix ::/0"
+	}
 	return [][]string{
-		{"set nat source rule " + rule + " outbound-interface name " + iface},
-		{"set nat source rule " + rule + " source address 0.0.0.0/0"},
-		{"set nat source rule " + rule + " translation address masquerade"},
+		{p + "outbound-interface name " + iface},
+		{p + match},
+		{p + "translation address masquerade"},
 	}
 }
 
 // DisableSNAT removes the MASQUERADE rule on VyOS for the given interface.
-func (VyOSRouterDriver) DisableSNAT(iface string) [][]string {
+func (VyOSRouterDriver) DisableSNAT(iface string, v6 bool) [][]string {
 	return [][]string{
-		{"delete nat source rule " + vyosNATRuleNum(iface, 100)},
+		{"delete " + vyosNAT(v6) + " source rule " + vyosNATRuleNum(iface, 100)},
 	}
 }
 
 // EnableDNAT configures DNAT port-forwarding on VyOS.
-func (VyOSRouterDriver) EnableDNAT(iface string, externalPort int, internalIP string, internalPort int, protocol string) [][]string {
+func (VyOSRouterDriver) EnableDNAT(iface string, externalPort int, internalIP string, internalPort int, protocol string, v6 bool) [][]string {
 	rule := vyosNATRuleNum(fmt.Sprintf("%s%d%s", iface, externalPort, protocol), 200)
+	p := "set " + vyosNAT(v6) + " destination rule " + rule + " "
 	return [][]string{
-		{"set nat destination rule " + rule + " inbound-interface name " + iface},
-		{"set nat destination rule " + rule + " protocol " + protocol},
-		{"set nat destination rule " + rule + " destination port " + strconv.Itoa(externalPort)},
-		{"set nat destination rule " + rule + " translation address " + internalIP},
-		{"set nat destination rule " + rule + " translation port " + strconv.Itoa(internalPort)},
+		{p + "inbound-interface name " + iface},
+		{p + "protocol " + protocol},
+		{p + "destination port " + strconv.Itoa(externalPort)},
+		{p + "translation address " + internalIP},
+		{p + "translation port " + strconv.Itoa(internalPort)},
 	}
 }
 
 // DisableDNAT removes a DNAT rule on VyOS.
-func (VyOSRouterDriver) DisableDNAT(iface string, externalPort int, internalIP string, internalPort int, protocol string) [][]string {
+func (VyOSRouterDriver) DisableDNAT(iface string, externalPort int, internalIP string, internalPort int, protocol string, v6 bool) [][]string {
 	return [][]string{
-		{"delete nat destination rule " + vyosNATRuleNum(fmt.Sprintf("%s%d%s", iface, externalPort, protocol), 200)},
+		{"delete " + vyosNAT(v6) + " destination rule " + vyosNATRuleNum(fmt.Sprintf("%s%d%s", iface, externalPort, protocol), 200)},
 	}
 }
 
