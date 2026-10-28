@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -28,7 +29,7 @@ import (
 // DefaultToolboxImage is KubeNDT's own, built from deploy/custom_images/toolbox
 // and published with every release under the release's version, since the
 // backend decides what runs inside it (tshark, traceroute, mtr, tc, iperf3,
-// ip, iptables). A development backend takes latest. KUBENDT_TOOLBOX_IMAGE
+// ip, iptables, tayga). A development backend takes latest. KUBENDT_TOOLBOX_IMAGE
 // overrides it, nicolaka/netshoot works too.
 func DefaultToolboxImage() string {
 	version := os.Getenv("KUBENDT_VERSION")
@@ -51,6 +52,24 @@ var toolboxNameRe = regexp.MustCompile(`^(toolbox|capture)-[a-z0-9]{8,16}$`)
 // toolboxLocks serializes injection per pod, so concurrent tools converge on
 // one container instead of each injecting its own.
 var toolboxLocks sync.Map // "namespace/pod" -> *sync.Mutex
+
+// toolboxPullPolicy pulls a moving tag afresh, since :latest changes with
+// every edit of the toolbox folder on main and a worker would otherwise keep
+// the one it has; a versioned tag or a digest stays cached.
+func toolboxPullPolicy(image string) v1.PullPolicy {
+	name := image[strings.LastIndex(image, "/")+1:]
+	if strings.Contains(name, "@") {
+		return v1.PullIfNotPresent
+	}
+	tag := ""
+	if i := strings.LastIndex(name, ":"); i >= 0 {
+		tag = name[i+1:]
+	}
+	if tag == "" || tag == "latest" {
+		return v1.PullAlways
+	}
+	return v1.PullIfNotPresent
+}
 
 // ToolboxImage returns the image the toolbox runs.
 func ToolboxImage() string {
@@ -139,7 +158,7 @@ func injectToolbox(namespace, podName string) (string, error) {
 		EphemeralContainerCommon: v1.EphemeralContainerCommon{
 			Name:            name,
 			Image:           ToolboxImage(),
-			ImagePullPolicy: v1.PullIfNotPresent,
+			ImagePullPolicy: toolboxPullPolicy(ToolboxImage()),
 			Command:         []string{"sleep", toolboxSleeperSeconds},
 			SecurityContext: &v1.SecurityContext{
 				Capabilities: &v1.Capabilities{Add: []v1.Capability{"NET_RAW", "NET_ADMIN"}},

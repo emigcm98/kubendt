@@ -1,6 +1,10 @@
 package helpers
 
-import "testing"
+import (
+	"testing"
+
+	v1 "k8s.io/api/core/v1"
+)
 
 func TestValidToolboxName(t *testing.T) {
 	for name, ok := range map[string]bool{
@@ -33,5 +37,19 @@ func TestToolboxImage(t *testing.T) {
 	t.Setenv("KUBENDT_TOOLBOX_IMAGE", "mirror/toolbox:1")
 	if got := ToolboxImage(); got != "mirror/toolbox:1" {
 		t.Errorf("new variable does not win, got %q", got)
+	}
+}
+
+func TestToolboxPullPolicy(t *testing.T) {
+	for image, want := range map[string]v1.PullPolicy{
+		"ghcr.io/emigcm98/kubendt-toolbox:latest":        v1.PullAlways,
+		"nicolaka/netshoot":                              v1.PullAlways,
+		"ghcr.io/emigcm98/kubendt-toolbox:1.8.0":         v1.PullIfNotPresent,
+		"localhost:5000/kubendt-toolbox:dev":             v1.PullIfNotPresent,
+		"ghcr.io/emigcm98/kubendt-toolbox@sha256:abcdef": v1.PullIfNotPresent,
+	} {
+		if got := toolboxPullPolicy(image); got != want {
+			t.Errorf("%s: %s, want %s", image, got, want)
+		}
 	}
 }
