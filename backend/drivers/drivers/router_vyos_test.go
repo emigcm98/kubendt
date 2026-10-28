@@ -193,3 +193,26 @@ func TestVyOSISIS(t *testing.T) {
 		}
 	}
 }
+
+func TestVyOSNAT66(t *testing.T) {
+	var d VyOSRouterDriver
+	v4 := d.EnableSNAT("eth2", false)
+	v6 := d.EnableSNAT("eth2", true)
+	if v4[0][0] != "set nat source rule "+vyosNATRuleNum("eth2", 100)+" outbound-interface name eth2" || v4[1][0] != "set nat source rule "+vyosNATRuleNum("eth2", 100)+" source address 0.0.0.0/0" {
+		t.Errorf("SNAT v4: %v", v4)
+	}
+	if v6[0][0] != "set nat66 source rule "+vyosNATRuleNum("eth2", 100)+" outbound-interface name eth2" || v6[1][0] != "set nat66 source rule "+vyosNATRuleNum("eth2", 100)+" source prefix ::/0" || v6[2][0] != "set nat66 source rule "+vyosNATRuleNum("eth2", 100)+" translation address masquerade" {
+		t.Errorf("SNAT v6: %v", v6)
+	}
+	if got := d.DisableSNAT("eth2", true); got[0][0] != "delete nat66 source rule "+vyosNATRuleNum("eth2", 100) {
+		t.Errorf("no SNAT v6: %v", got)
+	}
+	dnat := d.EnableDNAT("eth2", 8080, "fd00:20::10", 80, "tcp", true)
+	rule := vyosNATRuleNum("eth28080tcp", 200)
+	if dnat[0][0] != "set nat66 destination rule "+rule+" inbound-interface name eth2" || dnat[3][0] != "set nat66 destination rule "+rule+" translation address fd00:20::10" || dnat[4][0] != "set nat66 destination rule "+rule+" translation port 80" {
+		t.Errorf("DNAT v6: %v", dnat)
+	}
+	if got := d.DisableDNAT("eth2", 8080, "fd00:20::10", 80, "tcp", true); got[0][0] != "delete nat66 destination rule "+rule {
+		t.Errorf("no DNAT v6: %v", got)
+	}
+}

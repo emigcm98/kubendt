@@ -48,6 +48,13 @@ def kexec(ns, pod, cmd, timeout=60):
     return C.kexec(ns, pod, cmd, timeout=timeout)
 
 
+def toolbox_of(ns, pod):
+    """Name of the toolbox container injected into a pod, or None."""
+    rc, out, _ = C.kubectl(["-n", ns, "get", "pod", pod, "-o", "jsonpath={.spec.ephemeralContainers[*].name}"], 30)
+    names = [n for n in out.split() if n.startswith("toolbox-") or n.startswith("capture-")]
+    return names[0] if rc == 0 and names else None
+
+
 def retry(fn, timeout, every=5, label=""):
     return C.retry(fn, timeout, every)
 
@@ -351,8 +358,15 @@ def ex7():
         ok = st == 200 and r.get("outcome") == "delivered" and [h[2] for h in hops] == ["office-router-0", "lab-router-0", "sensor-0"]
         ex.check("laptop-0 traceroute to sensor over IPv6 resolves every hop", ok, hops if st == 200 else r)
         iperf_check(ex, "laptop-0 iperf3 to web over IPv6", f"/iperf/run/{ex.ns}/laptop-0?dest=fd00:20::10&duration=3", server_pod="web-0")
+        configure(ex, f"{d}/network_conf_nat66.json", label="configure (nat66 on lab-router)")
+        ok, det, w = retry(contains(ex.ns, "laptop-0", "wget -qO- http://[fd00:1::2]:8080 2>&1", "dual stack"), 60); ex.check("laptop-0 wget web through the IPv6 port forward on lab-router", ok, det, w)
+        ok, det, w = retry(ping(ex.ns, "sensor-0", "fd00:10::11"), 60); ex.check("sensor-0 ping laptop-0 from behind SNAT66", ok, det, w)
+        tb = toolbox_of(ex.ns, "lab-router-0")
+        rc, out = C.kexec(ex.ns, "lab-router-0", "ip6tables -t nat -S", container=tb) if tb else (1, "no toolbox on lab-router-0")
+        ex.check("lab-router holds the ip6tables MASQUERADE and DNAT rules", rc == 0 and "-o eth2 -j MASQUERADE" in out and "--to-destination [fd00:20::10]:80" in out, out)
         if restart(ex, "lab-router-0"):
             ok, det, w = retry(ping(ex.ns, "laptop-0", "fd00:20::50"), 120); ex.check("laptop-0 ping sensor over IPv6 after lab-router restart (replay)", ok, det, w)
+            ok, det, w = retry(contains(ex.ns, "laptop-0", "wget -qO- http://[fd00:1::2]:8080 2>&1", "dual stack"), 120); ex.check("laptop-0 wget through the IPv6 port forward again after the restart (NAT66 replayed)", ok, det, w)
             ok, det, w = retry(contains(ex.ns, "office-router-0", 'vtysh -c "show ip ospf neighbor"', "Full"), 150); ex.check("office-router OSPFv2 Full again after lab-router restart", ok, det, w)
             ok, det, w = retry(contains(ex.ns, "office-router-0", 'vtysh -c "show ipv6 ospf6 neighbor"', "Full"), 150); ex.check("office-router OSPFv3 Full again after lab-router restart", ok, det, w)
     teardown(ex); return ex

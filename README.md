@@ -56,7 +56,7 @@ KubeNDT bundles a small set of third-party SVG icons in its frontend. See [ATTRI
 ### Advanced Networking Features
 
 - **Layer 2 operations**: Interface management, bridge creation, VLAN configuration
-- **Layer 3 operations**: IP address assignment, static routing, default gateway configuration, IPv4 and IPv6 alike (a link carries one family on both ends; NAT is IPv4 only)
+- **Layer 3 operations**: IP address assignment, static routing, default gateway configuration, IPv4 and IPv6 alike (a link carries one family on both ends)
 - **Routing protocols**: OSPFv2, OSPFv3, RIP (RIPv2 and RIPng), BGP and IS-IS as driver actions on FRR and VyOS routers, the rest of FRRouting reachable through its console
 - **Traffic control (QoS)**: Rate limiting, traffic shaping, netem (network emulation)
 - **NAT/Port forwarding**: Source NAT (SNAT) and Destination NAT (DNAT) configurations
