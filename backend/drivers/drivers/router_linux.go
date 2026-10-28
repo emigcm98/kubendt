@@ -10,6 +10,7 @@ type LinuxRouterDriver struct {
 	capabilities.L2Base
 	capabilities.L3Base
 	capabilities.NATBase
+	capabilities.NAT64Base
 }
 
 func NewLinuxRouterDriver() *LinuxRouterDriver {
@@ -22,3 +23,4 @@ func NewLinuxRouterDriver() *LinuxRouterDriver {
 var _ capabilities.L2Capable = (*LinuxRouterDriver)(nil)
 var _ capabilities.L3Capable = (*LinuxRouterDriver)(nil)
 var _ capabilities.NATCapable = (*LinuxRouterDriver)(nil)
+var _ capabilities.NAT64Capable = (*LinuxRouterDriver)(nil)

@@ -207,6 +207,20 @@
       ["delete interfaces ethernet eth1 disable"]
     ]
   },
+  "nat64_disable": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["delete nat64"]
+    ]
+  },
+  "nat64_enable": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["set nat64 source rule 1 source prefix 64:ff9b::/96"],
+      ["set nat64 source rule 1 translation pool 1 address 172.22.19.0/24"],
+      ["set nat64 source rule 1 translation pool 1 port 1024-32767"]
+    ]
+  },
   "ospf6_add_interface": {
     "executor": "vyos_api_apply",
     "commands": [

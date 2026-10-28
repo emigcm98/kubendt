@@ -32,6 +32,8 @@
   {"type": "isis_set_router", "net": "49.0001.0000.0000.0001.00", "level": "level-2"},
   {"type": "link_down", "iface": "eth1"},
   {"type": "link_up", "iface": "eth1"},
+  {"type": "nat64_disable"},
+  {"type": "nat64_enable", "pool": "172.22.19.0/24"},
   {"type": "ospf6_add_interface", "iface": "eth1", "ospf_area": "0"},
   {"type": "ospf6_originate_default"},
   {"type": "ospf6_passive_interface", "iface": "eth1"},

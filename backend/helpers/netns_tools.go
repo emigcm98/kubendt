@@ -22,6 +22,7 @@ const (
 	toolNone     toolClass = ""         // files of the pod, vtysh, custom: the pod itself
 	toolNetns    toolClass = "netns"    // ip, bridge, tc
 	toolIptables toolClass = "iptables" // iptables, ip6tables
+	toolTayga    toolClass = "tayga"    // tayga, the NAT64 translator
 )
 
 var toolInToolbox sync.Map // "namespace/pod/class" -> bool
@@ -32,6 +33,7 @@ var toolInToolbox sync.Map // "namespace/pod/class" -> bool
 var (
 	netnsToolRe    = regexp.MustCompile(`(?:^|[;&|({!]\s*)(ip|bridge|tc)(?:\s|$)`)
 	iptablesToolRe = regexp.MustCompile(`(?:^|[;&|({!]\s*)(iptables|ip6tables)(?:\s|$)`)
+	taygaToolRe    = regexp.MustCompile(`(?:^|[;&|({!]\s*)tayga(?:\s|$)`)
 )
 
 // toolClassOf says which netns tools a command needs: from argv[0] for a
@@ -45,6 +47,8 @@ func toolClassOf(argv []string) toolClass {
 		text = argv[2]
 	}
 	switch {
+	case taygaToolRe.MatchString(text):
+		return toolTayga
 	case iptablesToolRe.MatchString(text):
 		return toolIptables
 	case netnsToolRe.MatchString(text):
@@ -53,23 +57,30 @@ func toolClassOf(argv []string) toolClass {
 	return toolNone
 }
 
-// toolClassOfRows is the class of an action: iptables wins when any row needs
-// it, the toolbox has both.
+// toolClassOfRows is the class of an action: the rarest tool any row needs
+// wins, the toolbox has them all.
 func toolClassOfRows(rows [][]string) toolClass {
 	class := toolNone
 	for _, r := range rows {
 		switch toolClassOf(r) {
+		case toolTayga:
+			return toolTayga
 		case toolIptables:
-			return toolIptables
+			class = toolIptables
 		case toolNetns:
-			class = toolNetns
+			if class == toolNone {
+				class = toolNetns
+			}
 		}
 	}
 	return class
 }
 
 func toolProbe(class toolClass) string {
-	if class == toolIptables {
+	switch class {
+	case toolTayga:
+		return "tayga"
+	case toolIptables:
 		return "iptables"
 	}
 	return "ip"

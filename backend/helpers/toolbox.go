@@ -19,6 +19,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/remotecommand"
+	"k8s.io/utils/ptr"
 )
 
 // The toolbox is the ephemeral container capture, traceroute and traffic
@@ -52,6 +53,14 @@ var toolboxNameRe = regexp.MustCompile(`^(toolbox|capture)-[a-z0-9]{8,16}$`)
 // toolboxLocks serializes injection per pod, so concurrent tools converge on
 // one container instead of each injecting its own.
 var toolboxLocks sync.Map // "namespace/pod" -> *sync.Mutex
+
+// toolboxCommand keeps the container alive under tini, which reaps what the
+// tools leave behind (a tayga killed by a disable would stay a zombie under
+// a bare sleep); an image without tini, netshoot or an older toolbox, gets
+// the sleep alone.
+func toolboxCommand() []string {
+	return []string{"sh", "-c", "command -v tini >/dev/null && exec tini -- sleep " + toolboxSleeperSeconds + "; exec sleep " + toolboxSleeperSeconds}
+}
 
 // toolboxPullPolicy pulls a moving tag afresh, since :latest changes with
 // every edit of the toolbox folder on main and a worker would otherwise keep
@@ -159,17 +168,32 @@ func injectToolbox(namespace, podName string) (string, error) {
 			Name:            name,
 			Image:           ToolboxImage(),
 			ImagePullPolicy: toolboxPullPolicy(ToolboxImage()),
-			Command:         []string{"sleep", toolboxSleeperSeconds},
+			Command:         toolboxCommand(),
 			SecurityContext: &v1.SecurityContext{
 				Capabilities: &v1.Capabilities{Add: []v1.Capability{"NET_RAW", "NET_ADMIN"}},
 			},
 		},
+	}
+	// A privileged pod (every router) gets a privileged toolbox, no more
+	// than it has: tayga needs the tun device, which capabilities alone do
+	// not give an ephemeral container.
+	if podIsPrivileged(pod) {
+		ec.SecurityContext.Privileged = ptr.To(true)
 	}
 	pod.Spec.EphemeralContainers = append(pod.Spec.EphemeralContainers, ec)
 	if _, err := kubeclient.Clientset.CoreV1().Pods(namespace).UpdateEphemeralContainers(ctx, podName, pod, metav1.UpdateOptions{}); err != nil {
 		return "", fmt.Errorf("could not inject the toolbox into %s/%s: %w", namespace, podName, err)
 	}
 	return name, nil
+}
+
+func podIsPrivileged(pod *v1.Pod) bool {
+	for _, c := range pod.Spec.Containers {
+		if sc := c.SecurityContext; sc != nil && sc.Privileged != nil && *sc.Privileged {
+			return true
+		}
+	}
+	return false
 }
 
 // waitToolboxRunning polls the pod until the container runs, or fails with

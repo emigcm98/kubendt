@@ -84,6 +84,8 @@ var (
 	Multihop      = Param{Name: "multihop", Kind: KindNumber, Required: false}
 	NET           = Param{Name: "net", Kind: KindText, Required: true}
 	Level         = Param{Name: "level", Kind: KindText, Required: false}
+	Prefix        = Param{Name: "prefix", Kind: KindCIDR, Required: false}
+	Pool          = Param{Name: "pool", Kind: KindCIDR, Required: true}
 )
 
 // ProtectedInterface is the pod's cluster interface. An action on it would

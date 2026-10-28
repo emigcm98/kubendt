@@ -114,6 +114,12 @@ type ActionEntry struct {
 	NET   string `json:"net,omitempty" example:"49.0001.0000.0000.0001.00"`
 	Level string `json:"level,omitempty" example:"level-2"`
 
+	// NAT64: the IPv6 prefix that stands for the IPv4 internet (the well
+	// known 64:ff9b::/96 by default) and the IPv4 pool the translator maps
+	// the IPv6 hosts onto.
+	Prefix string `json:"prefix,omitempty" example:"64:ff9b::/96"`
+	Pool   string `json:"pool,omitempty" example:"172.22.19.0/24"`
+
 	// Custom, accepts a string ("sh -c" wrapper) or an array of args.
 	// Only used when type == "custom". No driver label required on the pod.
 	Command json.RawMessage `json:"command,omitempty" swaggertype:"string" example:"ip route show"`
