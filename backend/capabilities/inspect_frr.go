@@ -66,12 +66,20 @@ func parseFRRRoutes(data []byte, family string) (Rows, error) {
 			if len(hops) == 0 {
 				hops = []any{map[string]any{}}
 			}
+			// A prefix may hold routes of several protocols; zebra installs
+			// the selected one and the rest wait in the RIB.
+			status := ""
+			if installed, ok := route["installed"].(bool); ok && !installed {
+				status = "not installed"
+			} else if selected, ok := route["selected"].(bool); !ok || !selected {
+				status = "not installed"
+			}
 			for _, h := range hops {
 				hop, _ := h.(map[string]any)
 				rows = append(rows, map[string]string{
 					"destination": prefix, "family": family, "protocol": str(route["protocol"]),
 					"gateway": str(hop["ip"]), "interface": str(hop["interfaceName"]),
-					"distance": str(route["distance"]), "metric": str(route["metric"]), "selected": str(route["selected"]),
+					"distance": str(route["distance"]), "metric": str(route["metric"]), "status": status,
 				})
 			}
 		}
@@ -141,6 +149,7 @@ func parseFRROSPFInterfaces(data []byte) (Rows, error) {
 		rows = append(rows, map[string]string{
 			"interface": name, "address": address, "area": str(i["area"]), "network_type": strings.ToLower(str(i["networkType"])),
 			"state": str(i["state"]), "cost": str(i["cost"]), "priority": str(i["priority"]), "neighbors": str(i["nbrAdjacentCount"]),
+			"passive": str(i["timerPassiveIface"]),
 		})
 	}
 	return rows, nil

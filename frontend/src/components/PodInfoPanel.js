@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { interfaceAddresses } from './addresses';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import './PodInfoPanel.css';
@@ -7,55 +6,35 @@ import AlertModal from './AlertModal';
 import InterfaceContextMenu from './InterfaceContextMenu';
 import usePanelClose from './usePanelClose';
 import { API_BASE_URL } from '../config';
-import { useCounters, CountersRows } from './counters';
+import { useCounters } from './counters';
+import { copyToClipboard } from './podpanel/clipboard';
+import SummaryTab from './podpanel/SummaryTab';
+import StateTab from './podpanel/StateTab';
+import ConfigTab from './podpanel/ConfigTab';
+import LinksTab from './podpanel/LinksTab';
+import VarsTab from './podpanel/VarsTab';
 import pcIcon from '../assets/images/nodes/host.svg';
 import routerIcon from '../assets/images/nodes/router.svg';
 import switchIcon from '../assets/images/nodes/switch.svg';
 import { ReactComponent as RefreshIcon } from '../assets/images/icons/refresh.svg';
 import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
 import { ReactComponent as LogsIcon } from '../assets/images/icons/logs.svg';
-import { ReactComponent as FileIcon } from '../assets/images/icons/file.svg';
-import { ReactComponent as EyeIcon } from '../assets/images/icons/eye.svg';
-import { ReactComponent as LockIcon } from '../assets/images/icons/lock.svg';
 import { ReactComponent as CopyIcon } from '../assets/images/icons/copy.svg';
-import { ReactComponent as WarningIcon } from '../assets/images/icons/warning.svg';
 import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
-import { ReactComponent as SlidersIcon } from '../assets/images/icons/sliders.svg';
-import { ReactComponent as PcapIcon } from '../assets/images/icons/pcap.svg';
 
 const POD_INFO_TAB_KEY_PREFIX = 'kubendt.podInfoPanel.activeTab.';
-const VALID_TABS = new Set(['summary', 'driver', 'links', 'vars']);
+const TABS = [
+  ['summary', 'Summary', 'Summary information about the pod'],
+  ['state', 'State', 'Live state of the node: routes, neighbours, protocol tables'],
+  ['config', 'Config', 'What the node has been configured with, and its driver'],
+  ['links', 'Links', 'Network links and interfaces'],
+  ['vars', 'Files/Vars', 'Environment variables and mounts'],
+];
+const VALID_TABS = new Set(TABS.map(([id]) => id));
 
-// Copy text to the clipboard with a graceful fallback. navigator.clipboard
-// is only available in secure contexts (HTTPS or localhost), so production
-// deployments served over plain HTTP must fall back to the legacy
-// execCommand('copy') trick via a hidden textarea.
-const copyToClipboard = async (text) => {
-  if (text == null) return false;
-  if (navigator.clipboard && window.isSecureContext) {
-    try {
-      await navigator.clipboard.writeText(text);
-      return true;
-    } catch {
-      // fall through to the legacy path
-    }
-  }
-  try {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    ta.setAttribute('readonly', '');
-    ta.style.position = 'absolute';
-    ta.style.left = '-9999px';
-    document.body.appendChild(ta);
-    ta.select();
-    const ok = document.execCommand('copy');
-    document.body.removeChild(ta);
-    return ok;
-  } catch {
-    return false;
-  }
-};
-
+// The node panel: a header with the pod's actions, five tabs, and the state
+// the tabs share (the driver's capabilities, the history, the interfaces).
+// Each tab's markup lives in ./podpanel.
 const PodInfoPanel = ({
   pod,
   namespace,
@@ -79,6 +58,8 @@ const PodInfoPanel = ({
   const [activeTab, setActiveTabRaw] = useState(() => {
     try {
       const stored = sessionStorage.getItem(POD_INFO_TAB_KEY_PREFIX + (namespace || ''));
+      // The driver tab became config.
+      if (stored === 'driver') return 'config';
       return stored && VALID_TABS.has(stored) ? stored : 'summary';
     } catch {
       return 'summary';
@@ -98,7 +79,6 @@ const PodInfoPanel = ({
   const [loadingLinks, setLoadingLinks] = useState(false);
   const [errorLinks, setErrorLinks] = useState(null);
 
-  // --- QDISC STATES ---
   // Read-only qdisc status for the Links tab badge; editing lives in TCPanel.
   const [qdiscByIface, setQdiscByIface] = useState({});
   const [loadingQdisc, setLoadingQdisc] = useState(false);
@@ -115,21 +95,13 @@ const PodInfoPanel = ({
     });
   };
 
-  // --- DRIVER TAB STATES ---
+  // The driver's capabilities, read once per driver: the config tab's
+  // reference and grouping, the state tab's section titles, the links tab.
   const [driverCaps, setDriverCaps] = useState([]);
   const [driverExecutor, setDriverExecutor] = useState('');
   const [driverInterfaceConstraints, setDriverInterfaceConstraints] = useState(null);
   const [loadingDriverCaps, setLoadingDriverCaps] = useState(false);
   const [errorDriverCaps, setErrorDriverCaps] = useState(null);
-  const [selectedCapabilityId, setSelectedCapabilityId] = useState(null);
-  const [methodPopover, setMethodPopover] = useState({
-    visible: false,
-    methodName: '',
-    top: 0,
-    left: 0,
-    params: [],
-  });
-  const [driverViewMode, setDriverViewMode] = useState('capabilities');
 
   // --- METRICS ---
   const [podMetrics, setPodMetrics] = useState(null); // null = loading, false = unavailable, object = data
@@ -146,7 +118,6 @@ const PodInfoPanel = ({
   const [selectedHistoryEntry, setSelectedHistoryEntry] = useState(null);
   const [deletingHistoryId, setDeletingHistoryId] = useState(null);
   const [clearingPodHistory, setClearingPodHistory] = useState(false);
-  const [historyBtnTooltip, setHistoryBtnTooltip] = useState({ visible: false, top: 0, left: 0 });
   const [historyAlert, setHistoryAlert] = useState({
     isOpen: false,
     type: 'info',
@@ -266,7 +237,6 @@ const PodInfoPanel = ({
       setDriverCaps([]);
       setDriverExecutor('');
       setDriverInterfaceConstraints(null);
-      setSelectedCapabilityId(null);
       setErrorDriverCaps(null);
       return;
     }
@@ -309,17 +279,11 @@ const PodInfoPanel = ({
       });
 
       setDriverCaps(normalizedCaps);
-      if (normalizedCaps.length > 0) {
-        setSelectedCapabilityId((prev) => prev || normalizedCaps[0].id);
-      } else {
-        setSelectedCapabilityId(null);
-      }
     } catch (err) {
       console.error('❌ Error loading driver capabilities:', err);
       setDriverCaps([]);
       setDriverExecutor('');
       setDriverInterfaceConstraints(null);
-      setSelectedCapabilityId(null);
       setErrorDriverCaps('Error loading driver capabilities');
     } finally {
       setLoadingDriverCaps(false);
@@ -352,9 +316,36 @@ const PodInfoPanel = ({
     }
   };
 
-  const deleteDriverHistoryEntry = async (operationId) => {
-    if (!operationId) return;
+  const showHistoryError = (title, message) =>
+    setHistoryAlert({
+      isOpen: true,
+      type: 'error',
+      title,
+      message,
+      confirmText: 'Accept',
+      cancelText: 'Cancel',
+      onConfirm: () => setHistoryAlert((prev) => ({ ...prev, isOpen: false })),
+      onCancel: null,
+    });
 
+  const deleteOne = async (operationId) => {
+    const res = await fetch(`${API_BASE_URL}/drivers/history/${operationId}`, { method: 'DELETE' });
+    if (!res.ok) {
+      let message = `Error ${res.status}`;
+      try {
+        const data = await res.json();
+        if (data?.error) message = data.error;
+      } catch {
+        // ignore response parsing errors
+      }
+      throw new Error(message);
+    }
+    setDriverHistory((prev) => prev.filter((entry) => entry.id !== operationId));
+    setSelectedHistoryEntry((prev) => (prev?.id === operationId ? null : prev));
+  };
+
+  const deleteDriverHistoryEntry = (operationId) => {
+    if (!operationId) return;
     setHistoryAlert({
       isOpen: true,
       type: 'confirm',
@@ -364,40 +355,46 @@ const PodInfoPanel = ({
       cancelText: 'Cancel',
       onConfirm: async () => {
         setHistoryAlert((prev) => ({ ...prev, isOpen: false }));
-
         setDeletingHistoryId(operationId);
         try {
-          const res = await fetch(`${API_BASE_URL}/drivers/history/${operationId}`, {
-            method: 'DELETE',
-          });
-
-          if (!res.ok) {
-            let message = `Error ${res.status}`;
-            try {
-              const data = await res.json();
-              if (data?.error) message = data.error;
-            } catch {
-              // ignore response parsing errors
-            }
-            throw new Error(message);
-          }
-
-          setDriverHistory((prev) => prev.filter((entry) => entry.id !== operationId));
-          setSelectedHistoryEntry((prev) => (prev?.id === operationId ? null : prev));
+          await deleteOne(operationId);
         } catch (err) {
           console.error('❌ Error deleting driver operation history entry:', err);
-          setHistoryAlert({
-            isOpen: true,
-            type: 'error',
-            title: 'Delete failed',
-            message: `Error deleting operation #${operationId}: ${err.message}`,
-            confirmText: 'Accept',
-            cancelText: 'Cancel',
-            onConfirm: () => setHistoryAlert((prev) => ({ ...prev, isOpen: false })),
-            onCancel: null,
-          });
+          showHistoryError(
+            'Delete failed',
+            `Error deleting operation #${operationId}: ${err.message}`
+          );
         } finally {
           setDeletingHistoryId(null);
+        }
+      },
+      onCancel: () => setHistoryAlert((prev) => ({ ...prev, isOpen: false })),
+    });
+  };
+
+  // The operations of one capability, deleted one by one in order.
+  const deleteDriverHistoryEntries = (ids, label) => {
+    if (!ids?.length) return;
+    setHistoryAlert({
+      isOpen: true,
+      type: 'confirm',
+      title: `Delete ${label} operations`,
+      message: `Delete the ${ids.length} ${label} operations of ${pod.name}?`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      onConfirm: async () => {
+        setHistoryAlert((prev) => ({ ...prev, isOpen: false }));
+        setClearingPodHistory(true);
+        try {
+          for (const id of ids) {
+            // eslint-disable-next-line no-await-in-loop
+            await deleteOne(id);
+          }
+        } catch (err) {
+          console.error('❌ Error deleting driver operations:', err);
+          showHistoryError('Delete failed', `Error deleting ${label} operations: ${err.message}`);
+        } finally {
+          setClearingPodHistory(false);
         }
       },
       onCancel: () => setHistoryAlert((prev) => ({ ...prev, isOpen: false })),
@@ -442,16 +439,7 @@ const PodInfoPanel = ({
           loadDriverHistory();
         } catch (err) {
           console.error('❌ Error deleting pod driver history:', err);
-          setHistoryAlert({
-            isOpen: true,
-            type: 'error',
-            title: 'Delete failed',
-            message: `Error deleting pod history: ${err.message}`,
-            confirmText: 'Accept',
-            cancelText: 'Cancel',
-            onConfirm: () => setHistoryAlert((prev) => ({ ...prev, isOpen: false })),
-            onCancel: null,
-          });
+          showHistoryError('Delete failed', `Error deleting pod history: ${err.message}`);
         } finally {
           setClearingPodHistory(false);
         }
@@ -460,31 +448,30 @@ const PodInfoPanel = ({
     });
   };
 
-  // Fetchdriver capabilities when switching to "driver" tab
+  // The capabilities serve three tabs; read them the first time one opens.
   useEffect(() => {
-    if (activeTab === 'driver') loadDriverCaps();
+    if (['summary', 'config', 'state', 'links'].includes(activeTab)) {
+      if (driverCaps.length === 0 && !loadingDriverCaps && !errorDriverCaps) loadDriverCaps();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, pod?.driver]);
 
   useEffect(() => {
-    setDriverViewMode('capabilities');
+    setDriverCaps([]);
+    setErrorDriverCaps(null);
     setDriverHistory([]);
     setLoadingDriverHistory(false);
     setErrorDriverHistory(null);
     setSelectedHistoryEntry(null);
   }, [namespace, pod?.name, pod?.driver]);
 
-  // When opening Links, make sure to have capabilities before continuing
+  // The history is read every time the config tab opens.
   useEffect(() => {
-    if (activeTab !== 'links') return;
-    if (driverCaps.length === 0 && !loadingDriverCaps && !errorDriverCaps) {
-      // prefetch if not yet loaded
-      loadDriverCaps();
-    }
+    if (activeTab === 'config') loadDriverHistory();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, pod?.driver]);
+  }, [activeTab, namespace, pod?.name]);
 
-  // Fetchinterfaces when switching to "links" tab
+  // Fetch interfaces when switching to "links" tab
   useEffect(() => {
     const fetchLinks = async () => {
       if (activeTab !== 'links') return;
@@ -639,640 +626,74 @@ const PodInfoPanel = ({
           {displayName}
         </h3>
 
-        {/* Tabs */}
         <div className="pod-tabs">
-          <div
-            className={`pod-tab ${activeTab === 'summary' ? 'active' : ''}`}
-            onClick={() => setActiveTab('summary')}
-            title="Summary information about the pod"
-          >
-            Summary
-          </div>
-          <div
-            className={`pod-tab ${activeTab === 'driver' ? 'active' : ''}`}
-            onClick={() => setActiveTab('driver')}
-            title="Driver capabilities and methods"
-          >
-            Driver
-          </div>
-          <div
-            className={`pod-tab ${activeTab === 'links' ? 'active' : ''}`}
-            onClick={() => setActiveTab('links')}
-            title="Network links and interfaces"
-          >
-            Links
-          </div>
-          <div
-            className={`pod-tab ${activeTab === 'vars' ? 'active' : ''}`}
-            onClick={() => setActiveTab('vars')}
-            title="Environment variables and mounts"
-          >
-            Files/Vars
-          </div>
+          {TABS.map(([id, label, title]) => (
+            <div
+              key={id}
+              className={`pod-tab ${activeTab === id ? 'active' : ''}`}
+              onClick={() => setActiveTab(id)}
+              title={title}
+            >
+              {label}
+            </div>
+          ))}
         </div>
 
         <div className="pod-body">
-          {/* === SUMMARY === */}
           {activeTab === 'summary' && (
-            <>
-              <div className="pod-line">
-                <span className="pod-label">Node name:</span>
-                <span className="pod-value">{pod.baseName || pod.name}</span>
-              </div>
-              <div className="pod-line">
-                <span className="pod-label">Pod name:</span>
-                <span className="pod-value">{pod.name}</span>
-              </div>
-              <div className="pod-line">
-                <span className="pod-label">Replica:</span>
-                <span className="pod-value">
-                  {pod.replicaCount > 1 ? `${pod.replicaIndex + 1}/${pod.replicaCount}` : '1/1'}
-                </span>
-              </div>
-              <div className="pod-line">
-                <span className="pod-label">Type:</span>
-                <span className={`pod-value type-${pod.type.toLowerCase()}`}>{pod.type}</span>
-              </div>
-              <div className="pod-line">
-                <span className="pod-label">Driver:</span>
-                <span className="pod-value">{driverDisplay}</span>
-              </div>
-              <div className="pod-line">
-                <span className="pod-label">Runtime:</span>
-                <span className="pod-value">{runtimeLabel}</span>
-              </div>
-              <hr />
-              <div className="pod-line">
-                <span className="pod-label">K8s Node:</span>
-                <span className="pod-value">{pod.node}</span>
-              </div>
-              <div className="pod-line">
-                <span className="pod-label">Image:</span>
-                <span
-                  className="pod-value pod-value-image"
-                  title={pod.image}
-                  onClick={handleCopyImage}
-                >
-                  {pod.image}
-                </span>
-              </div>
-              {copyFloater &&
-                createPortal(
-                  <span
-                    key={copyFloater.id}
-                    className="pod-image-copied-floater"
-                    style={{ left: copyFloater.x, top: copyFloater.y }}
-                  >
-                    Copied!
-                  </span>,
-                  document.body
-                )}
-              <hr />
-              <div className="pod-line">
-                <span className="pod-label">Status:</span>
-                <span
-                  className={`pod-value podinfo-status podinfo-status-${pod.status.toLowerCase()}`}
-                >
-                  {pod.status}
-                </span>
-              </div>
-              <div className="pod-line">
-                <span className="pod-label">Created:</span>
-                <span className="pod-value">{pod.createdAt}</span>
-              </div>
-              <div className="pod-line">
-                <span className="pod-label">Uptime:</span>
-                <span className="pod-value">{pod.uptime}</span>
-              </div>
-              <hr />
-              <div className="pod-metrics-hint">updated every 10s</div>
-              <div className="pod-metrics-block">
-                <div className="pod-metrics-item">
-                  <span className="pod-metrics-label">CPU</span>
-                  {podMetrics === null ? (
-                    <span className="pod-metrics-value pod-metrics-loading">…</span>
-                  ) : podMetrics === false ? (
-                    <span className="pod-metrics-value pod-metrics-na">
-                      n/a
-                      <span className="pod-metrics-tooltip">
-                        Error: metrics-server not available.
-                      </span>
-                    </span>
-                  ) : (
-                    <span className="pod-metrics-value">
-                      {(podMetrics.cpu_milli / 1000).toFixed(2)} <em>vCPU</em>
-                    </span>
-                  )}
-                </div>
-                <div className="pod-metrics-item">
-                  <span className="pod-metrics-label">RAM</span>
-                  {podMetrics === null ? (
-                    <span className="pod-metrics-value pod-metrics-loading">…</span>
-                  ) : podMetrics === false ? (
-                    <span className="pod-metrics-value pod-metrics-na">
-                      n/a
-                      <span className="pod-metrics-tooltip">
-                        Error: metrics-server not available.
-                      </span>
-                    </span>
-                  ) : (
-                    <span className="pod-metrics-value">
-                      {podMetrics.memory_mib} <em>MiB</em>
-                    </span>
-                  )}
-                </div>
-              </div>
-            </>
+            <SummaryTab
+              pod={pod}
+              runtimeLabel={runtimeLabel}
+              driverDisplay={driverDisplay}
+              driverCaps={driverCaps}
+              podMetrics={podMetrics}
+              onCopyImage={handleCopyImage}
+              copyFloater={copyFloater}
+            />
           )}
-          {/* === DRIVER === */}
-          {activeTab === 'driver' && (
-            <div className="driver-tab">
-              {loadingDriverCaps && <p className="links-loading">Loading capabilities...</p>}
-              {errorDriverCaps && <p className="links-error">{errorDriverCaps}</p>}
-
-              {!loadingDriverCaps && !errorDriverCaps && (
-                <>
-                  <div className="driver-header driver-header-actions">
-                    {driverViewMode === 'history' ? (
-                      <button
-                        className="driver-nav-btn"
-                        title="Back"
-                        onClick={() => setDriverViewMode('capabilities')}
-                      >
-                        ←
-                      </button>
-                    ) : (
-                      <span className="driver-nav-spacer" />
-                    )}
-
-                    <span className="driver-title">{driverDisplay}</span>
-
-                    {driverViewMode === 'capabilities' ? (
-                      <button
-                        className="driver-nav-btn"
-                        onClick={() => {
-                          setDriverViewMode('history');
-                          loadDriverHistory();
-                        }}
-                        onMouseEnter={(e) => {
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          setHistoryBtnTooltip({
-                            visible: true,
-                            top: rect.top - 6,
-                            left: rect.left + rect.width / 2,
-                          });
-                        }}
-                        onMouseLeave={() =>
-                          setHistoryBtnTooltip({ visible: false, top: 0, left: 0 })
-                        }
-                      >
-                        <FileIcon className="app-icon" />
-                      </button>
-                    ) : (
-                      <button
-                        className="driver-history-clear-pod-btn"
-                        onClick={deletePodDriverHistory}
-                        disabled={clearingPodHistory}
-                        title="Delete all operations for this pod"
-                      >
-                        {clearingPodHistory ? '…' : <TrashIcon className="app-icon" />}
-                      </button>
-                    )}
-                  </div>
-
-                  {driverViewMode === 'history' ? (
-                    <div className="driver-history-panel">
-                      {loadingDriverHistory && <p className="links-loading">Loading history...</p>}
-                      {errorDriverHistory && <p className="links-error">{errorDriverHistory}</p>}
-                      {!loadingDriverHistory &&
-                        !errorDriverHistory &&
-                        (driverHistory.length === 0 ? (
-                          <p className="no-interfaces">No operations found</p>
-                        ) : (
-                          <>
-                            <div className="driver-history-list">
-                              {driverHistory.map((entry) => (
-                                <div className="driver-history-item" key={entry.id}>
-                                  <div className="driver-history-row">
-                                    <div className="driver-history-action">
-                                      {entry.action_type || entry?.action?.type || 'unknown'}
-                                    </div>
-                                    <div className="driver-history-actions">
-                                      <button
-                                        className="driver-history-info-btn"
-                                        title="Show action details"
-                                        onClick={() => setSelectedHistoryEntry(entry)}
-                                      >
-                                        <EyeIcon className="app-icon" />
-                                      </button>
-                                      <button
-                                        className="driver-history-delete-btn"
-                                        title={`Delete operation #${entry.id}`}
-                                        onClick={() => deleteDriverHistoryEntry(entry.id)}
-                                        disabled={
-                                          deletingHistoryId === entry.id || clearingPodHistory
-                                        }
-                                      >
-                                        {deletingHistoryId === entry.id ? (
-                                          '…'
-                                        ) : (
-                                          <TrashIcon className="app-icon" />
-                                        )}
-                                      </button>
-                                    </div>
-                                  </div>
-                                  <div className="driver-history-date">
-                                    {formatHistoryDate(entry.executed_at)}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </>
-                        ))}
-                    </div>
-                  ) : (
-                    <div className="links-content">
-                      <div className="interfaces-list">
-                        {driverCaps.length === 0 ? (
-                          <p className="no-interfaces">No capabilities found</p>
-                        ) : (
-                          driverCaps.map((cap) => (
-                            <div
-                              key={cap.id}
-                              className={`interface-item ${selectedCapabilityId === cap.id ? 'selected' : ''}`}
-                              onClick={() => setSelectedCapabilityId(cap.id)}
-                              title={cap.description}
-                            >
-                              <div className="interface-name">
-                                <strong>{cap.id}</strong>
-                              </div>
-                              <div className="interface-detail">{cap.label}</div>
-                            </div>
-                          ))
-                        )}
-                      </div>
-
-                      <div className="interface-details">
-                        {selectedCapabilityId ? (
-                          <div
-                            className="details-scroll"
-                            style={{ textAlign: 'left', width: '100%' }}
-                          >
-                            {(() => {
-                              const selected = driverCaps.find(
-                                (c) => c.id === selectedCapabilityId
-                              );
-                              const methods = selected?.methods || [];
-
-                              return (
-                                <>
-                                  <h5>Executor</h5>
-                                  <p className="cap-desc">
-                                    <code className="cap-code">{driverExecutor || 'kubectl'}</code>
-                                  </p>
-                                  <h5>Interface naming</h5>
-                                  {driverInterfaceConstraints ? (
-                                    <>
-                                      <p className="cap-desc">
-                                        Pattern:{' '}
-                                        <code className="cap-code">
-                                          {driverInterfaceConstraints.patternHuman ||
-                                            driverInterfaceConstraints.pattern}
-                                        </code>
-                                      </p>
-                                      {Array.isArray(driverInterfaceConstraints.reserved) &&
-                                        driverInterfaceConstraints.reserved.length > 0 && (
-                                          <p className="cap-desc">
-                                            Reserved:{' '}
-                                            <code className="cap-code">
-                                              {driverInterfaceConstraints.reserved.join(', ')}
-                                            </code>
-                                          </p>
-                                        )}
-                                    </>
-                                  ) : (
-                                    <p className="cap-desc">
-                                      Default Linux naming (any name up to 15 chars, no{' '}
-                                      <code className="cap-code">/</code> or whitespace).
-                                    </p>
-                                  )}
-                                  <h5>Description</h5>
-                                  {selected?.description && (
-                                    <p className="cap-desc">{selected.description}</p>
-                                  )}
-                                  <h5>Driver methods</h5>
-                                  {methods.length === 0 ? (
-                                    <p className="no-interfaces">No methods defined</p>
-                                  ) : (
-                                    <ul className="cap-methods-list">
-                                      {methods.map((method, idx) => (
-                                        <li
-                                          key={`${method.name}-${idx}`}
-                                          className="method-item"
-                                          onMouseEnter={(e) => {
-                                            const rect = e.currentTarget.getBoundingClientRect();
-                                            setMethodPopover({
-                                              visible: true,
-                                              methodName: method.name,
-                                              top: rect.top + rect.height / 2,
-                                              left: rect.right + 12,
-                                              params: method.params || [],
-                                            });
-                                          }}
-                                          onMouseLeave={() => {
-                                            setMethodPopover({
-                                              visible: false,
-                                              methodName: '',
-                                              top: 0,
-                                              left: 0,
-                                              params: [],
-                                            });
-                                          }}
-                                          style={{ position: 'relative' }}
-                                        >
-                                          <code className="method-code">{method.name}</code>
-                                          <span className="method-signature">
-                                            {method.label ? ` (${method.label})` : ''}
-                                          </span>
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  )}
-                                </>
-                              );
-                            })()}
-                          </div>
-                        ) : (
-                          <p className="no-selection">Select a capability to view more details</p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
+          {activeTab === 'state' && (
+            <StateTab namespace={namespace} pod={pod} driverCaps={driverCaps} />
           )}
-          {/* === LINKS === */}
+          {activeTab === 'config' && (
+            <ConfigTab
+              driverDisplay={driverDisplay}
+              driverCaps={driverCaps}
+              driverExecutor={driverExecutor}
+              driverInterfaceConstraints={driverInterfaceConstraints}
+              loadingDriverCaps={loadingDriverCaps}
+              errorDriverCaps={errorDriverCaps}
+              driverHistory={driverHistory}
+              loadingDriverHistory={loadingDriverHistory}
+              errorDriverHistory={errorDriverHistory}
+              deletingHistoryId={deletingHistoryId}
+              clearingPodHistory={clearingPodHistory}
+              onReloadHistory={loadDriverHistory}
+              onDeleteEntry={deleteDriverHistoryEntry}
+              onDeleteEntries={deleteDriverHistoryEntries}
+              onDeletePodHistory={deletePodDriverHistory}
+              onShowEntry={setSelectedHistoryEntry}
+              formatHistoryDate={formatHistoryDate}
+            />
+          )}
           {activeTab === 'links' && (
-            <div className="links-tab">
-              {loadingLinks && <p className="links-loading">Loading interfaces...</p>}
-              {errorLinks && <p className="links-error">{errorLinks}</p>}
-
-              {!loadingLinks && !errorLinks && (
-                <div className="links-content">
-                  {/* Upper half: interfaces list */}
-                  <div className="interfaces-list">
-                    {interfaces.length === 0 ? (
-                      <p className="no-interfaces">No interfaces found</p>
-                    ) : (
-                      interfaces.map((intf) => (
-                        <div
-                          key={intf.interface}
-                          className={`interface-item ${selectedInterface === intf.interface ? 'selected' : ''}`}
-                          onClick={() => setSelectedInterface(intf.interface)}
-                          onContextMenu={(e) => {
-                            e.preventDefault();
-                            const status =
-                              intf.state === 'up'
-                                ? true
-                                : intf.state === 'down'
-                                  ? false
-                                  : undefined;
-                            setIfaceMenu({
-                              x: e.clientX,
-                              y: e.clientY,
-                              iface: intf.interface,
-                              status,
-                            });
-                          }}
-                        >
-                          <div className="interface-name">
-                            {intf.interface}
-                            {intf.guestInterface && (
-                              <span className="interface-guest-name"> → {intf.guestInterface}</span>
-                            )}
-                            {qdiscByIface[intf.interface]?.shaped && (
-                              <span
-                                className="interface-shaped"
-                                title={`traffic control: ${qdiscByIface[intf.interface].qdisc}`}
-                              >
-                                tc
-                              </span>
-                            )}
-                            {loadingInterfaces?.has(`${pod.name}:${intf.interface}`) ? (
-                              <span className="interface-state-spinner" title="applying…" />
-                            ) : (
-                              intf.state && (
-                                <span
-                                  className={`interface-state-dot ${intf.state === 'up' ? 'state-up' : 'state-down'}`}
-                                  title={intf.state}
-                                />
-                              )
-                            )}
-                          </div>
-                          {(interfaceAddresses(intf).length ? interfaceAddresses(intf) : ['—']).map(
-                            (addr) => (
-                              <div className="interface-detail" key={addr}>
-                                IP: {addr}
-                              </div>
-                            )
-                          )}
-                          <div className="interface-detail">MAC: {intf.mac}</div>
-                          {intf.mtu && <div className="interface-detail">MTU: {intf.mtu}</div>}
-                        </div>
-                      ))
-                    )}
-                  </div>
-
-                  {/* Lower half: traffic-control status + open the editor panel */}
-                  <div className="interface-details">
-                    {!selectedInterface ? (
-                      <p className="no-selection">Select an interface to view more details</p>
-                    ) : (
-                      <div className="tc-links-panel">
-                        <div className="tc-links-head">
-                          <span className="tc-links-title">Traffic</span>
-                          <span className="counters-note">
-                            {counters.last === null ? 'reading…' : 'every 5 s while open'}
-                          </span>
-                        </div>
-                        <CountersRows samples={counters} iface={selectedInterface} />
-                        <div className="tc-links-head">
-                          <span className="tc-links-title">Traffic control</span>
-                          <span
-                            className={`tc-links-status ${qdiscByIface[selectedInterface]?.shaped ? 'on' : 'off'}`}
-                          >
-                            {loadingQdisc
-                              ? 'checking…'
-                              : qdiscByIface[selectedInterface]?.shaped
-                                ? `${qdiscByIface[selectedInterface].qdisc} · active`
-                                : 'No shaping'}
-                          </span>
-                        </div>
-                        {/* Same two actions as an end of the link panel, same look. */}
-                        <div className="link-endpoint-actions">
-                          {onStartCapture && (
-                            <button
-                              className="link-capture-btn"
-                              onClick={() => onStartCapture(pod.name, selectedInterface)}
-                              title={`Capture packets on ${pod.name}:${selectedInterface}`}
-                            >
-                              <PcapIcon /> Capture
-                            </button>
-                          )}
-                          {onOpenTrafficControl && (
-                            <button
-                              className="link-tc-btn"
-                              onClick={() => onOpenTrafficControl(pod.name, selectedInterface)}
-                              title={`Traffic control on ${pod.name}:${selectedInterface}`}
-                            >
-                              <SlidersIcon /> Traffic control
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
+            <LinksTab
+              pod={pod}
+              interfaces={interfaces}
+              loadingLinks={loadingLinks}
+              errorLinks={errorLinks}
+              selectedInterface={selectedInterface}
+              onSelectInterface={setSelectedInterface}
+              onInterfaceContextMenu={setIfaceMenu}
+              qdiscByIface={qdiscByIface}
+              loadingQdisc={loadingQdisc}
+              loadingInterfaces={loadingInterfaces}
+              counters={counters}
+              onStartCapture={onStartCapture}
+              onOpenTrafficControl={onOpenTrafficControl}
+            />
           )}
-          {/* === FILES/VARS === */}
-          {activeTab === 'vars' && (
-            <div className="pod-vars-tab">
-              <div className="pod-vars-section">
-                <div className="pod-vars-header">Environment Variables</div>
-                <div className="pod-vars-list">
-                  {Object.keys(pod.env || {}).length > 0 ? (
-                    Object.entries(pod.env).map(([key, value]) => (
-                      <div key={key} className="pod-vars-row" title={`${key}: ${String(value)}`}>
-                        <span className="pod-vars-key" title={key}>
-                          {key}
-                        </span>
-                        <span className="pod-vars-value" title={String(value)}>
-                          {String(value)}
-                        </span>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="pod-vars-empty">No environment variables configured</div>
-                  )}
-                </div>
-              </div>
-
-              <div className="pod-vars-section">
-                <div className="pod-vars-header">Mounted Files</div>
-                <div className="pod-vars-list">
-                  {(pod.mounts || []).length > 0 ? (
-                    pod.mounts.map((mount, idx) => (
-                      <div
-                        key={`${mount.file}-${idx}`}
-                        className="pod-vars-row pod-vars-mount-row"
-                        title={`${mount.file} -> ${mount.mountTo}`}
-                      >
-                        <span
-                          className={`pod-vars-key pod-vars-file${
-                            mount.missing ? ' pod-vars-file-missing' : ''
-                          }`}
-                          title={
-                            mount.missing
-                              ? `${mount.file} is no longer present in the file manager`
-                              : mount.file
-                          }
-                          onClick={mount.missing ? undefined : () => handleOpenFile(mount.file)}
-                        >
-                          {mount.missing && (
-                            <span
-                              className="mount-missing-warning"
-                              title="File is no longer present in the file manager"
-                              aria-label="Missing file"
-                            >
-                              <WarningIcon className="app-icon icon-warning" />
-                            </span>
-                          )}
-                          {mount.sensitive && (
-                            <span
-                              className="sensitive-lock"
-                              title="Sensitive file (Kubernetes Secret)"
-                              aria-label="Sensitive"
-                            >
-                              <LockIcon className="app-icon" />
-                            </span>
-                          )}
-                          {mount.file}
-                        </span>
-                        <div className="pod-vars-mount-target">
-                          <span className="pod-vars-arrow">→</span>
-                          <span className="pod-vars-value" title={mount.mountTo}>
-                            {mount.mountTo}
-                          </span>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="pod-vars-empty">No mounted files</div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
+          {activeTab === 'vars' && <VarsTab pod={pod} onOpenFile={handleOpenFile} />}
         </div>
-
-        {historyBtnTooltip.visible &&
-          createPortal(
-            <div
-              className="driver-nav-portal-tooltip"
-              style={{
-                position: 'fixed',
-                top: historyBtnTooltip.top,
-                left: historyBtnTooltip.left,
-                transform: 'translateX(-50%) translateY(-100%)',
-                zIndex: 5000,
-              }}
-            >
-              Show operation history
-            </div>,
-            document.body
-          )}
-
-        {methodPopover.visible &&
-          createPortal(
-            <div
-              className="method-popover"
-              style={{
-                position: 'fixed',
-                top: methodPopover.top,
-                left: methodPopover.left,
-                transform: 'translateY(-50%)',
-                zIndex: 5000,
-              }}
-            >
-              <div className="popover-content">
-                <div className="popover-header">
-                  <strong>{methodPopover.methodName}</strong>
-                </div>
-                {methodPopover.params && methodPopover.params.length > 0 ? (
-                  <div className="popover-params">
-                    <div className="params-label">Parameters:</div>
-                    {methodPopover.params.map((param, pidx) => (
-                      <div key={pidx} className="param-item">
-                        <span className="param-name">{param.name}</span>
-                        <span className="param-type">
-                          {param.type}
-                          {param.required === false ? ', optional' : ''}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="popover-params">
-                    <div className="params-label">No parameters</div>
-                  </div>
-                )}
-              </div>
-            </div>,
-            document.body
-          )}
 
         {selectedHistoryEntry &&
           createPortal(

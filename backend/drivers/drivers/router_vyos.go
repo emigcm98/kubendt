@@ -430,7 +430,8 @@ func vyosVtyshArgv(command string) []string {
 }
 
 func (VyOSRouterDriver) Vtysh(namespace, pod, command string) ([]byte, error) {
-	return executor.ExecAndGet(namespace, pod, vyosVtyshArgv(command))
+	out, err := executor.ExecAndGet(namespace, pod, vyosVtyshArgv(command))
+	return out, capabilities.VtyshError(out, err)
 }
 
 func (d VyOSRouterDriver) Routes(namespace, pod string) (capabilities.Rows, error) {

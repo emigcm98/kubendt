@@ -1,6 +1,9 @@
 package capabilities
 
-import "testing"
+import (
+	"errors"
+	"testing"
+)
 
 func TestParseIPRouteBusyBoxAndIproute2(t *testing.T) {
 	text := "default via 172.22.48.1 dev eth1 \n10.244.2.0/24 dev eth0 scope link  src 10.244.2.150 \nunreachable 192.0.2.0/24 metric 1024\n"
@@ -38,7 +41,8 @@ func TestParseBridgeFDBAndNATRules(t *testing.T) {
 	}
 }
 
-const frrRouteSample = `{"0.0.0.0/0":[{"protocol":"kernel","selected":true,"distance":0,"metric":0,"nexthops":[{"ip":"10.244.2.1","interfaceName":"eth0","active":true}]}],
+const frrRouteSample = `{"0.0.0.0/0":[{"protocol":"kernel","selected":true,"installed":true,"distance":0,"metric":0,"nexthops":[{"ip":"10.244.2.1","interfaceName":"eth0","active":true}]}],
+"fe80::/64":[{"protocol":"connected","distance":0,"metric":0,"nexthops":[{"interfaceName":"eth1","active":true}]}],
 "172.22.16.0/26":[{"protocol":"rip","selected":true,"distance":120,"metric":2,"nexthops":[{"ip":"172.22.50.197","interfaceName":"eth5","active":true},{"ip":"172.22.50.198","interfaceName":"eth6","active":true}]}],
 "172.22.17.0/30":[{"protocol":"connected","selected":true,"distance":0,"metric":0,"nexthops":[{"interfaceName":"eth2","active":true}]}]}`
 
@@ -47,7 +51,7 @@ func TestParseFRRRoutes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(rows) != 4 || rows[0]["destination"] != "0.0.0.0/0" || rows[0]["protocol"] != "kernel" || rows[0]["selected"] != "yes" {
+	if len(rows) != 5 || rows[0]["destination"] != "0.0.0.0/0" || rows[0]["protocol"] != "kernel" || rows[0]["status"] != "" {
 		t.Errorf("routes: %v", rows)
 	}
 	if rows[1]["protocol"] != "rip" || rows[1]["distance"] != "120" || rows[1]["metric"] != "2" || rows[1]["gateway"] != "172.22.50.197" || rows[2]["gateway"] != "172.22.50.198" || rows[2]["interface"] != "eth6" {
@@ -55,6 +59,9 @@ func TestParseFRRRoutes(t *testing.T) {
 	}
 	if rows[3]["protocol"] != "connected" || rows[3]["gateway"] != "" || rows[3]["interface"] != "eth2" {
 		t.Errorf("connected: %v", rows[3])
+	}
+	if rows[4]["destination"] != "fe80::/64" || rows[4]["status"] != "not installed" {
+		t.Errorf("a route zebra did not select: %v", rows[4])
 	}
 	if empty, err := parseFRRRoutes([]byte("  \n"), "6"); err != nil || len(empty) != 0 {
 		t.Errorf("empty table: %v %v", empty, err)
@@ -78,7 +85,7 @@ func TestParseFRROSPFNeighbors(t *testing.T) {
 }
 
 const frrOSPFInterfaceSample = `{"interfaces":{"eth1":{"ifUp":true,"ipAddress":"172.22.17.2","ipAddressPrefixlen":30,"area":"0.0.0.0","networkType":"POINTOPOINT","cost":10,"state":"Point-To-Point","priority":1,"nbrAdjacentCount":1},
-"eth3":{"ifUp":true,"ipAddress":"172.22.16.1","ipAddressPrefixlen":26,"area":"0.0.0.1","networkType":"BROADCAST","cost":10,"state":"DR","priority":255,"nbrAdjacentCount":0}}}`
+"eth3":{"ifUp":true,"ipAddress":"172.22.16.1","ipAddressPrefixlen":26,"area":"0.0.0.1","networkType":"BROADCAST","cost":10,"state":"DR","priority":255,"nbrAdjacentCount":0,"timerPassiveIface":true}}}`
 
 func TestParseFRROSPFInterfaces(t *testing.T) {
 	rows, err := parseFRROSPFInterfaces([]byte(frrOSPFInterfaceSample))
@@ -88,7 +95,7 @@ func TestParseFRROSPFInterfaces(t *testing.T) {
 	if len(rows) != 2 || rows[0]["interface"] != "eth1" || rows[0]["address"] != "172.22.17.2/30" || rows[0]["network_type"] != "pointopoint" || rows[0]["neighbors"] != "1" {
 		t.Errorf("eth1: %v", rows)
 	}
-	if rows[1]["area"] != "0.0.0.1" || rows[1]["state"] != "DR" || rows[1]["priority"] != "255" || rows[1]["cost"] != "10" {
+	if rows[1]["area"] != "0.0.0.1" || rows[1]["state"] != "DR" || rows[1]["priority"] != "255" || rows[1]["cost"] != "10" || rows[1]["passive"] != "yes" || rows[0]["passive"] != "" {
 		t.Errorf("eth3: %v", rows[1])
 	}
 }
@@ -130,5 +137,23 @@ func TestParseFRROSPF6Neighbors(t *testing.T) {
 	}
 	if len(rows) != 1 || rows[0]["neighbor"] != "10.255.0.2" || rows[0]["state"] != "Full" || rows[0]["interface"] != "eth2" || rows[0]["role"] != "PointToPoint" {
 		t.Errorf("ospf6 neighbours: %v", rows)
+	}
+}
+
+func TestVtyshError(t *testing.T) {
+	if VtyshError([]byte("{}"), nil) != nil {
+		t.Error("no error stays none")
+	}
+	err := VtyshError([]byte("bgpd is not running\n"), errors.New("exec error: command terminated with exit code 1"))
+	var nr *DaemonNotRunningError
+	if !errors.As(err, &nr) || nr.Daemon != "bgpd" {
+		t.Errorf("stopped daemon: %v", err)
+	}
+	if err := VtyshError(nil, errors.New("exec error: exit status 1 | output: isisd is not running")); !errors.As(err, &nr) || nr.Daemon != "isisd" {
+		t.Errorf("stopped daemon in the error text: %v", err)
+	}
+	other := errors.New("exec error: something else")
+	if VtyshError([]byte("% Unknown command"), other) != other {
+		t.Error("another failure comes back as it was")
 	}
 }

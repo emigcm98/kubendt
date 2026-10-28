@@ -832,8 +832,9 @@ type TraceReportResponse struct {
 
 // InspectionColumn is one field of an inspection row.
 type InspectionColumn struct {
-	Name  string `json:"name" example:"destination"`
-	Label string `json:"label" example:"Destination"`
+	Name        string `json:"name" example:"distance"`
+	Label       string `json:"label" example:"AD"`
+	Description string `json:"description,omitempty" example:"Administrative distance"`
 }
 
 // InspectionInfo describes one inspection a driver offers.
@@ -856,4 +857,7 @@ type PodInspectionResponse struct {
 	Capability string              `json:"capability" example:"OSPFCapable"`
 	Columns    []InspectionColumn  `json:"columns"`
 	Rows       []map[string]string `json:"rows"`
+	// Note says why the rows are empty when the node cannot answer, the
+	// daemon behind the read not running for instance.
+	Note string `json:"note,omitempty" example:"bgpd is not running on this node"`
 }

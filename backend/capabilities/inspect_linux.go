@@ -59,7 +59,7 @@ func parseIPRoute(text, family string) Rows {
 		kv := keyed(rest, "via", "dev", "proto", "metric", "scope", "src", "table", "pref", "expires")
 		rows = append(rows, map[string]string{
 			"destination": dst, "family": family, "protocol": kv["proto"], "gateway": kv["via"],
-			"interface": kv["dev"], "distance": "", "metric": kv["metric"], "selected": "yes",
+			"interface": kv["dev"], "distance": "", "metric": kv["metric"], "status": "",
 		})
 	}
 	return rows

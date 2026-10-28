@@ -6,10 +6,13 @@ import (
 	"sync"
 )
 
-// Column is one field of an inspection row.
+// Column is one field of an inspection row. The label is short, for a
+// narrow panel; the description, when the label is an abbreviation, is what
+// a tooltip says.
 type Column struct {
-	Name  string `json:"name"`
-	Label string `json:"label"`
+	Name        string `json:"name"`
+	Label       string `json:"label"`
+	Description string `json:"description,omitempty"`
 }
 
 // Inspection declares one read of the interface C: live rows with the
