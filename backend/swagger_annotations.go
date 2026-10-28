@@ -935,6 +935,22 @@ var _ = types.TraceMetricsDoc{}
 //	@Router       /network/export-conf/{namespace} [get]
 func swaggerExportNetworkConf() {}
 
+// swaggerInspectPod godoc
+//
+//	@Summary      Inspect a pod
+//	@Description  Runs one live read of the pod's driver, named by `what` (routes, neighbors, nat_rules, bridge_fdb, ospf_neighbors, ospf_interfaces, ospf6_neighbors, rip_routes, bgp_summary, isis_neighbors, as GET /drivers lists them per capability), and returns its rows with their columns. Without `what` it lists the inspections the pod's driver offers. Nothing of it goes to the history.
+//	@Tags         pods
+//	@Produce      json
+//	@Param        namespace  path      string  true   "Namespace name"
+//	@Param        podName    path      string  true   "Pod name"
+//	@Param        what       query     string  false  "Inspection ID; empty lists the available ones"
+//	@Success      200        {object}  types.PodInspectionResponse
+//	@Failure      400        {object}  types.ErrorResponse
+//	@Failure      404        {object}  types.ErrorResponse
+//	@Failure      500        {object}  types.ErrorResponse
+//	@Router       /pods/inspect/{namespace}/{podName} [get]
+func swaggerInspectPod() {}
+
 // swaggerGetPodInterfaceCounters godoc
 //
 //	@Summary      Interface counters of a pod

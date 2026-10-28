@@ -26,10 +26,11 @@ type MethodInfo struct {
 }
 
 type CapabilityInfo struct {
-	ID          string       `json:"id"`
-	Label       string       `json:"label"`
-	Description string       `json:"description"`
-	Methods     []MethodInfo `json:"methods"`
+	ID          string                 `json:"id"`
+	Label       string                 `json:"label"`
+	Description string                 `json:"description"`
+	Methods     []MethodInfo           `json:"methods"`
+	Inspections []types.InspectionInfo `json:"inspections"`
 }
 
 // InterfaceNameConstraintsInfo is the wire DTO for a driver's pod-side
@@ -119,11 +120,16 @@ func driverCapsToResponse(d helpers.DriverCaps) DriverWithCapabilities {
 			}
 			methods = append(methods, MethodInfo{Name: act.Type, Label: act.Label, Params: params})
 		}
+		inspections := make([]types.InspectionInfo, 0, len(cd.Inspections))
+		for _, in := range cd.Inspections {
+			inspections = append(inspections, types.InspectionInfo{ID: in.ID, Label: in.Label, Capability: in.Capability, Columns: columnsInfo(in.Columns)})
+		}
 		caps = append(caps, CapabilityInfo{
 			ID:          cd.ID,
 			Label:       cd.Label,
 			Description: cd.Description,
 			Methods:     methods,
+			Inspections: inspections,
 		})
 	}
 

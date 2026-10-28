@@ -7,6 +7,7 @@ import (
 
 	"kubendt/capabilities"
 	drivers_meta "kubendt/drivers/meta"
+	"kubendt/executor"
 	"kubendt/types"
 )
 
@@ -34,6 +35,13 @@ var _ capabilities.RIPCapable = (*FRRRouterDriver)(nil)
 var _ capabilities.OSPF6Capable = (*FRRRouterDriver)(nil)
 var _ capabilities.BGPCapable = (*FRRRouterDriver)(nil)
 var _ capabilities.ISISCapable = (*FRRRouterDriver)(nil)
+var _ capabilities.VtyshRunner = (*FRRRouterDriver)(nil)
+var _ capabilities.RouteInspector = (*FRRRouterDriver)(nil)
+var _ capabilities.OSPFInspector = (*FRRRouterDriver)(nil)
+var _ capabilities.OSPF6Inspector = (*FRRRouterDriver)(nil)
+var _ capabilities.RIPInspector = (*FRRRouterDriver)(nil)
+var _ capabilities.BGPInspector = (*FRRRouterDriver)(nil)
+var _ capabilities.ISISInspector = (*FRRRouterDriver)(nil)
 var _ drivers_meta.ReadinessProbeProvider = (*FRRRouterDriver)(nil)
 var _ drivers_meta.ShellProvider = (*FRRRouterDriver)(nil)
 var _ drivers_meta.CapabilityPrecondition = (*FRRRouterDriver)(nil)
@@ -670,6 +678,42 @@ func (FRRRouterDriver) ISISRedistribute(source, level string, v6 bool) [][]strin
 
 func (FRRRouterDriver) ISISRemoveRedistribute(source, level string, v6 bool) [][]string {
 	return frrISIS("no redistribute " + frrISISFamily(v6) + " " + frrV6Source(source, v6) + " " + level)
+}
+
+// ─── Inspections ─────────────────────────────────────────────────────────────
+// Every read goes through vtysh in JSON; the routing table comes from zebra
+// rather than `ip route`, since it carries the protocol and the distance.
+
+func (FRRRouterDriver) Vtysh(namespace, pod, command string) ([]byte, error) {
+	return executor.ExecAndGet(namespace, pod, []string{"vtysh", "-c", command})
+}
+
+func (d FRRRouterDriver) Routes(namespace, pod string) (capabilities.Rows, error) {
+	return capabilities.FRRRoutes(d, namespace, pod)
+}
+
+func (d FRRRouterDriver) OSPFNeighbors(namespace, pod string) (capabilities.Rows, error) {
+	return capabilities.FRROSPFNeighbors(d, namespace, pod)
+}
+
+func (d FRRRouterDriver) OSPFInterfaces(namespace, pod string) (capabilities.Rows, error) {
+	return capabilities.FRROSPFInterfaces(d, namespace, pod)
+}
+
+func (d FRRRouterDriver) OSPF6Neighbors(namespace, pod string) (capabilities.Rows, error) {
+	return capabilities.FRROSPF6Neighbors(d, namespace, pod)
+}
+
+func (d FRRRouterDriver) RIPRoutes(namespace, pod string) (capabilities.Rows, error) {
+	return capabilities.FRRRIPRoutes(d, namespace, pod)
+}
+
+func (d FRRRouterDriver) BGPSummary(namespace, pod string) (capabilities.Rows, error) {
+	return capabilities.FRRBGPSummary(d, namespace, pod)
+}
+
+func (d FRRRouterDriver) ISISNeighbors(namespace, pod string) (capabilities.Rows, error) {
+	return capabilities.FRRISISNeighbors(d, namespace, pod)
 }
 
 // Shells: vtysh, the FRR console.

@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - NAT works for IPv6 too: `enable_snat` and `disable_snat` take `family: "6"` (ip6tables on Linux routers, `nat66` on VyOS) and a port forward follows the family of its internal address. Example 7 masquerades the lab behind its router's transit address and forwards a port to the web server over IPv6.
 - The toolbox ships tayga, built from source since no Alpine release carries it, for the NAT64 of the Linux routers. A toolbox with a moving tag (`latest`) is pulled afresh on every injection, so a change to it reaches a development backend without a release. The toolbox runs under tini, which reaps what the tools leave behind, with the plain sleep as the fallback on an image without it.
 - NAT64 as a capability of routers: `nat64_enable` takes the IPv4 pool and an optional prefix (64:ff9b::/96 by default) and `nat64_disable` removes it. Linux routers run tayga from the toolbox, which is injected privileged on a privileged pod for the tun device; VyOS uses its own `nat64`.
+- Inspections: live reads of a node, declared per capability and served by `GET /pods/inspect/{namespace}/{pod}?what=<id>`, with `GET /drivers` listing what each driver offers. Routing table and ARP/NDP on every L3 node, NAT rules, the MAC table of a switch, OSPF neighbours and interfaces, OSPFv3 neighbours, RIP routes, the BGP summary and IS-IS neighbours on FRR and VyOS. The regression reads the OSPF adjacencies through it.
 
 ## [1.7.0] - 2026-10-25
 
