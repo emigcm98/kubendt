@@ -165,3 +165,31 @@ func TestVyOSBGP(t *testing.T) {
 		}
 	}
 }
+
+func TestVyOSISIS(t *testing.T) {
+	var d VyOSRouterDriver
+	cases := []struct {
+		name string
+		got  [][]string
+		want [][]string
+	}{
+		{"router level-2", d.ISISSetRouter("49.0001.0000.0000.0001.00", "level-2"), [][]string{{"set protocols isis net 49.0001.0000.0000.0001.00"}, {"set protocols isis lsp-mtu 1277"}, {"set protocols isis level level-2"}}},
+		{"router default level", d.ISISSetRouter("49.0001.0000.0000.0001.00", ""), [][]string{{"set protocols isis net 49.0001.0000.0000.0001.00"}, {"set protocols isis lsp-mtu 1277"}}},
+		{"no router", d.ISISRemoveRouter(), [][]string{{"delete protocols isis"}}},
+		{"interface", d.ISISAddInterface("eth1", "", true, true), [][]string{{"set protocols isis interface eth1"}}},
+		{"interface level-1, family ignored", d.ISISAddInterface("eth1", "level-1", false, true), [][]string{{"set protocols isis interface eth1"}, {"set protocols isis interface eth1 circuit-type level-1"}}},
+		{"interface level-2 is level-2-only", d.ISISAddInterface("eth1", "level-2", true, true), [][]string{{"set protocols isis interface eth1"}, {"set protocols isis interface eth1 circuit-type level-2-only"}}},
+		{"no interface", d.ISISRemoveInterface("eth1"), [][]string{{"delete protocols isis interface eth1"}}},
+		{"passive", d.ISISPassiveInterface("eth1"), [][]string{{"set protocols isis interface eth1 passive"}}},
+		{"metric", d.ISISSetMetric("eth1", 50), [][]string{{"set protocols isis interface eth1 metric 50"}}},
+		{"point-to-point", d.ISISSetNetworkType("eth1", "point-to-point"), [][]string{{"set protocols isis interface eth1 network point-to-point"}}},
+		{"no network type", d.ISISRemoveNetworkType("eth1"), [][]string{{"delete protocols isis interface eth1 network"}}},
+		{"redistribute v4", d.ISISRedistribute("connected", "level-2", false), [][]string{{"set protocols isis redistribute ipv4 connected level-2"}}},
+		{"no redistribute ospf v6 drops the source node", d.ISISRemoveRedistribute("ospf", "level-1", true), [][]string{{"delete protocols isis redistribute ipv6 ospfv3"}}},
+	}
+	for _, c := range cases {
+		if !reflect.DeepEqual(c.got, c.want) {
+			t.Errorf("%s:\n got  %v\n want %v", c.name, c.got, c.want)
+		}
+	}
+}

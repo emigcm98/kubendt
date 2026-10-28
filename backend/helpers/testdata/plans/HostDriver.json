@@ -50,6 +50,18 @@
   "disable_snat": { "unsupported": true },
   "enable_dnat": { "unsupported": true },
   "enable_snat": { "unsupported": true },
+  "isis_add_interface": { "unsupported": true },
+  "isis_passive_interface": { "unsupported": true },
+  "isis_redistribute": { "unsupported": true },
+  "isis_remove_interface": { "unsupported": true },
+  "isis_remove_metric": { "unsupported": true },
+  "isis_remove_network_type": { "unsupported": true },
+  "isis_remove_passive_interface": { "unsupported": true },
+  "isis_remove_redistribute": { "unsupported": true },
+  "isis_remove_router": { "unsupported": true },
+  "isis_set_metric": { "unsupported": true },
+  "isis_set_network_type": { "unsupported": true },
+  "isis_set_router": { "unsupported": true },
   "link_down": {
     "executor": "kubectl",
     "commands": [

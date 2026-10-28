@@ -110,6 +110,78 @@
       ["sh","-c","iptables -t nat -C POSTROUTING -o eth0 -j MASQUERADE || iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE"]
     ]
   },
+  "isis_add_interface": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","interface eth1","-c","ip router isis kubendt","-c","ipv6 router isis kubendt","-c","isis circuit-type level-2-only"]
+    ]
+  },
+  "isis_passive_interface": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","interface eth1","-c","isis passive"]
+    ]
+  },
+  "isis_redistribute": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router isis kubendt","-c","redistribute ipv6 ospf6 level-2"]
+    ]
+  },
+  "isis_remove_interface": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","if vtysh -c 'show running-config' | awk -v i=eth1 '$0==\"interface \"i{f=1;next} /^exit/{f=0} f \u0026\u0026 / router isis /{m=1} END{exit !m}'; then vtysh -c 'configure terminal' -c 'interface eth1' -c 'no isis passive' -c 'no isis metric' -c 'no isis circuit-type' -c 'no isis network point-to-point' -c 'no ip router isis kubendt' -c 'no ipv6 router isis kubendt'; fi"]
+    ]
+  },
+  "isis_remove_metric": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","interface eth1","-c","no isis metric"]
+    ]
+  },
+  "isis_remove_network_type": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","interface eth1","-c","no isis network point-to-point"]
+    ]
+  },
+  "isis_remove_passive_interface": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","interface eth1","-c","no isis passive"]
+    ]
+  },
+  "isis_remove_redistribute": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router isis kubendt","-c","no redistribute ipv4 connected level-1"]
+    ]
+  },
+  "isis_remove_router": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","vtysh -c 'configure terminal' -c 'no router isis kubendt'; for p in '^ isis ' '^ (ip|ipv6) router isis '; do vtysh -c 'show running-config' | awk -v p=\"$p\" '/^interface /{i=$2} $0 ~ p {print i\" \"$0}' | while read -r i l; do vtysh -c 'configure terminal' -c \"interface $i\" -c \"no $l\"; done; done"]
+    ]
+  },
+  "isis_set_metric": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","interface eth1","-c","isis metric 50"]
+    ]
+  },
+  "isis_set_network_type": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","interface eth1","-c","isis network point-to-point"]
+    ]
+  },
+  "isis_set_router": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router isis kubendt","-c","net 49.0001.0000.0000.0001.00","-c","lsp-mtu 1277","-c","is-type level-2-only"]
+    ]
+  },
   "link_down": {
     "executor": "kubectl",
     "commands": [

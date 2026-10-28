@@ -2981,6 +2981,10 @@
                     "type": "integer",
                     "example": 80
                 },
+                "level": {
+                    "type": "string",
+                    "example": "level-2"
+                },
                 "multihop": {
                     "type": "integer",
                     "example": 2
@@ -2988,6 +2992,11 @@
                 "neighbor": {
                     "type": "string",
                     "example": "10.0.0.2"
+                },
+                "net": {
+                    "description": "IS-IS: the NET of the process and a level, which is the process type\n(level-1, level-2, level-1-2), an interface's circuit type, or the\nlevel routes are redistributed into (level-1 or level-2).",
+                    "type": "string",
+                    "example": "49.0001.0000.0000.0001.00"
                 },
                 "network_type": {
                     "type": "string",
