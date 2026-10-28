@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - BGP as a capability of FRR and VyOS routers: `bgp_set_router`, `bgp_add_neighbor`, `bgp_add_network` and `bgp_redistribute`, each with its removal, IPv4 and IPv6 by the address. FRR starts `bgpd` with the other daemons and creates the process with `ebgp-requires-policy` off. Stopping BGP drops its neighbours, networks and redistributions from the history too.
 - IS-IS as a capability of FRR and VyOS routers: `isis_set_router` (NET and level), `isis_add_interface` (both families unless `family` says one, with a circuit type), passive, metric and network type per interface, and `isis_redistribute` per family and level, each with its removal. FRR starts `isisd` with the other daemons, both drivers set an LSP MTU that fits any link, and an interface leaving IS-IS or the process stopping drops their rows from the history too.
 - NAT works for IPv6 too: `enable_snat` and `disable_snat` take `family: "6"` (ip6tables on Linux routers, `nat66` on VyOS) and a port forward follows the family of its internal address. Example 7 masquerades the lab behind its router's transit address and forwards a port to the web server over IPv6.
+- The toolbox ships tayga, built from source since no Alpine release carries it, for the NAT64 of the Linux routers. A toolbox with a moving tag (`latest`) is pulled afresh on every injection, so a change to it reaches a development backend without a release.
 
 ## [1.7.0] - 2026-10-25
 
