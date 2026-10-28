@@ -34,6 +34,13 @@ definitions:
           plain (a key of up to 8 characters) or md5 (up to 16, with a key id).
         example: stub
         type: string
+      as:
+        description: |-
+          BGP: the local AS of bgp_set_router, a neighbour by address with its
+          AS, the interface or address the session binds to, and the TTL an
+          eBGP session may cross.
+        example: 65001
+        type: integer
       auth_key:
         example: s3cret
         type: string
@@ -113,6 +120,12 @@ definitions:
       internalPort:
         example: 80
         type: integer
+      multihop:
+        example: 2
+        type: integer
+      neighbor:
+        example: 10.0.0.2
+        type: string
       network_type:
         example: point-to-point
         type: string
@@ -132,6 +145,9 @@ definitions:
         description: 'RIP: the route source to redistribute and the protocol timers.'
         example: connected
         type: string
+      remote_as:
+        example: 65002
+        type: integer
       router_id:
         example: 10.0.255.1
         type: string
@@ -143,6 +159,9 @@ definitions:
         $ref: '#/definitions/types.RIPTimers'
       type:
         example: ip
+        type: string
+      update_source:
+        example: eth1
         type: string
     type: object
   types.ActionOptions:

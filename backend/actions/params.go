@@ -77,6 +77,11 @@ var (
 	AuthType      = Param{Name: "auth_type", Kind: KindText, Required: true}
 	AuthKey       = Param{Name: "auth_key", Kind: KindText, Required: true}
 	AuthKeyID     = Param{Name: "auth_key_id", Kind: KindNumber, Required: false}
+	AS            = Param{Name: "as", Kind: KindNumber, Required: true}
+	RemoteAS      = Param{Name: "remote_as", Kind: KindNumber, Required: true}
+	Neighbor      = Param{Name: "neighbor", Kind: KindIP, Required: true}
+	UpdateSource  = Param{Name: "update_source", Kind: KindText, Required: false}
+	Multihop      = Param{Name: "multihop", Kind: KindNumber, Required: false}
 )
 
 // ProtectedInterface is the pod's cluster interface. An action on it would

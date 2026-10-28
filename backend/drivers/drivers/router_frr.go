@@ -30,6 +30,7 @@ var _ capabilities.NATCapable = (*FRRRouterDriver)(nil)
 var _ capabilities.OSPFCapable = (*FRRRouterDriver)(nil)
 var _ capabilities.RIPCapable = (*FRRRouterDriver)(nil)
 var _ capabilities.OSPF6Capable = (*FRRRouterDriver)(nil)
+var _ capabilities.BGPCapable = (*FRRRouterDriver)(nil)
 var _ drivers_meta.ReadinessProbeProvider = (*FRRRouterDriver)(nil)
 var _ drivers_meta.ShellProvider = (*FRRRouterDriver)(nil)
 var _ drivers_meta.CapabilityPrecondition = (*FRRRouterDriver)(nil)
@@ -53,7 +54,7 @@ func (FRRRouterDriver) ReadinessProbeCommands() drivers_meta.ReadinessProbeSpec 
 
 // frrDaemons are the daemons behind the driver's capabilities, enabled by the
 // default startup command; an FRR image enables none out of the box.
-var frrDaemons = []string{"ospfd", "ospf6d", "ripd", "ripngd"}
+var frrDaemons = []string{"ospfd", "ospf6d", "ripd", "ripngd", "bgpd"}
 
 // StartupCommands prepares a stock FRR image: the daemons the capabilities
 // need, the two config files the image ships without, then the image's own
@@ -78,6 +79,8 @@ func frrDaemonFor(capability string, a types.ActionEntry) string {
 		return "ospfd"
 	case "OSPF6Capable":
 		return "ospf6d"
+	case "BGPCapable":
+		return "bgpd"
 	case "RIPCapable":
 		if a.Family == "6" || capabilities.IsIPv6(a.CIDR) {
 			return "ripngd"
@@ -445,6 +448,99 @@ func (FRRRouterDriver) RIPSetTimers(update, timeout, garbage int, v6 bool) [][]s
 
 func (FRRRouterDriver) RIPRemoveTimers(v6 bool) [][]string {
 	return frrRIP(v6, "no timers basic")
+}
+
+// ─── BGPCapable ──────────────────────────────────────────────────────────────
+// One process per router. `router bgp` with no AS enters the one configured
+// and fails with "No BGP process is configured" otherwise, so only
+// bgp_set_router carries the number.
+
+func frrBGP(lines ...string) [][]string {
+	argv := []string{"vtysh", "-c", "configure terminal", "-c", "router bgp"}
+	for _, l := range lines {
+		argv = append(argv, "-c", l)
+	}
+	return [][]string{argv}
+}
+
+func frrBGPFamily(v6 bool, lines ...string) [][]string {
+	af := "address-family ipv4 unicast"
+	if v6 {
+		af = "address-family ipv6 unicast"
+	}
+	return frrBGP(append([]string{af}, lines...)...)
+}
+
+// FRR names the v6 OSPF and RIP ospf6 and ripng on the redistribute line.
+func frrBGPSource(source string, v6 bool) string {
+	if v6 {
+		switch source {
+		case "ospf":
+			return "ospf6"
+		case "rip":
+			return "ripng"
+		}
+	}
+	return source
+}
+
+// FRR's RFC 8212 default drops every eBGP route that no policy allows,
+// which a lab never wants, so the process starts with it off. Re-setting
+// with another AS fails in FRR ("already running"); stop BGP first.
+func (FRRRouterDriver) BGPSetRouter(as int, routerID string) [][]string {
+	argv := []string{"vtysh", "-c", "configure terminal", "-c", fmt.Sprintf("router bgp %d", as), "-c", "no bgp ebgp-requires-policy"}
+	if routerID != "" {
+		argv = append(argv, "-c", "bgp router-id "+routerID)
+	} else {
+		argv = append(argv, "-c", "no bgp router-id")
+	}
+	return [][]string{argv}
+}
+
+func (FRRRouterDriver) BGPRemoveRouter() [][]string {
+	return [][]string{{"vtysh", "-c", "configure terminal", "-c", "no router bgp"}}
+}
+
+// The neighbour is activated in the family of its address; the options not
+// given are cleared, so a second add replaces the first.
+func (FRRRouterDriver) BGPAddNeighbor(neighbor string, remoteAS int, updateSource string, multihop int, v6 bool) [][]string {
+	lines := []string{fmt.Sprintf("neighbor %s remote-as %d", neighbor, remoteAS)}
+	if updateSource != "" {
+		lines = append(lines, fmt.Sprintf("neighbor %s update-source %s", neighbor, updateSource))
+	} else {
+		lines = append(lines, "no neighbor "+neighbor+" update-source")
+	}
+	if multihop > 0 {
+		lines = append(lines, fmt.Sprintf("neighbor %s ebgp-multihop %d", neighbor, multihop))
+	} else {
+		lines = append(lines, "no neighbor "+neighbor+" ebgp-multihop")
+	}
+	af := "address-family ipv4 unicast"
+	if v6 {
+		af = "address-family ipv6 unicast"
+	}
+	lines = append(lines, af, "neighbor "+neighbor+" activate")
+	return frrBGP(lines...)
+}
+
+func (FRRRouterDriver) BGPRemoveNeighbor(neighbor string) [][]string {
+	return frrBGP("no neighbor " + neighbor)
+}
+
+func (FRRRouterDriver) BGPAddNetwork(network string, v6 bool) [][]string {
+	return frrBGPFamily(v6, "network "+network)
+}
+
+func (FRRRouterDriver) BGPRemoveNetwork(network string, v6 bool) [][]string {
+	return frrBGPFamily(v6, "no network "+network)
+}
+
+func (FRRRouterDriver) BGPRedistribute(source string, v6 bool) [][]string {
+	return frrBGPFamily(v6, "redistribute "+frrBGPSource(source, v6))
+}
+
+func (FRRRouterDriver) BGPRemoveRedistribute(source string, v6 bool) [][]string {
+	return frrBGPFamily(v6, "no redistribute "+frrBGPSource(source, v6))
 }
 
 // Shells: vtysh, the FRR console.

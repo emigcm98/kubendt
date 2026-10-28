@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- BGP as a capability of FRR and VyOS routers: `bgp_set_router`, `bgp_add_neighbor`, `bgp_add_network` and `bgp_redistribute`, each with its removal, IPv4 and IPv6 by the address. FRR starts `bgpd` with the other daemons and creates the process with `ebgp-requires-policy` off. Stopping BGP drops its neighbours, networks and redistributions from the history too.
+
 ## [1.7.0] - 2026-10-25
 
 ### Added

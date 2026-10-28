@@ -25,6 +25,58 @@
       ["set protocols static route 10.1.0.0/16 next-hop 10.0.0.254"]
     ]
   },
+  "bgp_add_neighbor": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["set protocols bgp neighbor 10.0.0.2 remote-as 65002"],
+      ["set protocols bgp neighbor 10.0.0.2 update-source eth1"],
+      ["set protocols bgp neighbor 10.0.0.2 ebgp-multihop 2"],
+      ["set protocols bgp neighbor 10.0.0.2 address-family ipv4-unicast"]
+    ]
+  },
+  "bgp_add_network": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["set protocols bgp address-family ipv4-unicast network 10.1.0.0/24"]
+    ]
+  },
+  "bgp_redistribute": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["set protocols bgp address-family ipv6-unicast redistribute ospfv3"]
+    ]
+  },
+  "bgp_remove_neighbor": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["delete protocols bgp neighbor fd00::2"]
+    ]
+  },
+  "bgp_remove_network": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["delete protocols bgp address-family ipv6-unicast network fd00:1::/64"]
+    ]
+  },
+  "bgp_remove_redistribute": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["delete protocols bgp address-family ipv6-unicast redistribute ripng"]
+    ]
+  },
+  "bgp_remove_router": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["delete protocols bgp"]
+    ]
+  },
+  "bgp_set_router": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["set protocols bgp system-as 65001"],
+      ["set protocols bgp parameters router-id 10.255.0.1"]
+    ]
+  },
   "custom": {
     "executor": "kubectl",
     "commands": [

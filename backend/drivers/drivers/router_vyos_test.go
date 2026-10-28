@@ -139,3 +139,29 @@ func TestVyOSOSPFAreasAndAuth(t *testing.T) {
 		}
 	}
 }
+
+func TestVyOSBGP(t *testing.T) {
+	var d VyOSRouterDriver
+	cases := []struct {
+		name string
+		got  [][]string
+		want [][]string
+	}{
+		{"router with id", d.BGPSetRouter(65001, "10.255.0.1"), [][]string{{"set protocols bgp system-as 65001"}, {"set protocols bgp parameters router-id 10.255.0.1"}}},
+		{"router without id", d.BGPSetRouter(65001, ""), [][]string{{"set protocols bgp system-as 65001"}}},
+		{"no router", d.BGPRemoveRouter(), [][]string{{"delete protocols bgp"}}},
+		{"neighbor v4 plain", d.BGPAddNeighbor("10.0.0.2", 65002, "", 0, false), [][]string{{"set protocols bgp neighbor 10.0.0.2 remote-as 65002"}, {"set protocols bgp neighbor 10.0.0.2 address-family ipv4-unicast"}}},
+		{"neighbor v6 with options", d.BGPAddNeighbor("fd00::2", 65003, "eth1", 2, true), [][]string{{"set protocols bgp neighbor fd00::2 remote-as 65003"}, {"set protocols bgp neighbor fd00::2 update-source eth1"}, {"set protocols bgp neighbor fd00::2 ebgp-multihop 2"}, {"set protocols bgp neighbor fd00::2 address-family ipv6-unicast"}}},
+		{"no neighbor", d.BGPRemoveNeighbor("10.0.0.2"), [][]string{{"delete protocols bgp neighbor 10.0.0.2"}}},
+		{"network v4", d.BGPAddNetwork("10.1.0.0/24", false), [][]string{{"set protocols bgp address-family ipv4-unicast network 10.1.0.0/24"}}},
+		{"no network v6", d.BGPRemoveNetwork("fd00:1::/64", true), [][]string{{"delete protocols bgp address-family ipv6-unicast network fd00:1::/64"}}},
+		{"redistribute ospf v6", d.BGPRedistribute("ospf", true), [][]string{{"set protocols bgp address-family ipv6-unicast redistribute ospfv3"}}},
+		{"redistribute rip v6", d.BGPRedistribute("rip", true), [][]string{{"set protocols bgp address-family ipv6-unicast redistribute ripng"}}},
+		{"no redistribute v4", d.BGPRemoveRedistribute("connected", false), [][]string{{"delete protocols bgp address-family ipv4-unicast redistribute connected"}}},
+	}
+	for _, c := range cases {
+		if !reflect.DeepEqual(c.got, c.want) {
+			t.Errorf("%s:\n got  %v\n want %v", c.name, c.got, c.want)
+		}
+	}
+}
