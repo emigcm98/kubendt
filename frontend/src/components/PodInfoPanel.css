@@ -474,9 +474,9 @@
   flex: 1;
   min-height: 0;
   display: grid;
-  /* 👈 dos filas iguales en el espacio restante */
-  grid-template-rows: 1fr 1fr;
-  /* 👈 mitad / mitad */
+  /* The list takes what the detail leaves: the detail is a fixed set of
+     rows (counters, shaping, two buttons), the list grows with the pod. */
+  grid-template-rows: 1fr auto;
   overflow: hidden;
 }
 
@@ -493,6 +493,7 @@
 /* Mitad inferior (detalles) */
 .interface-details {
   min-height: 0;
+  max-height: 55%;
   overflow-y: auto;
   padding: 0.6rem 0.8rem;
   text-align: left;
@@ -1010,26 +1011,6 @@
   background: #eef3f9;
 }
 
-/* Portal tooltip for driver history button */
-.driver-nav-portal-tooltip {
-  background: #f0f4f9;
-  color: var(--text-heading);
-  border: 1px solid var(--border);
-  font-size: 0.72rem;
-  font-weight: 500;
-  padding: 0.35rem 0.6rem;
-  border-radius: var(--radius-sm);
-  pointer-events: none;
-  white-space: nowrap;
-  box-shadow: 0 3px 10px rgba(25, 118, 210, 0.12);
-  margin-bottom: 6px;
-}
-
-.driver-nav-spacer {
-  width: 28px;
-  height: 28px;
-}
-
 .driver-history-panel {
   height: 100%;
   min-height: 0;
@@ -1403,4 +1384,275 @@
 .restart-btn:disabled {
   cursor: not-allowed;
   opacity: 1;
+}
+
+/* === STATE TAB: live reads of the node === */
+.state-tab,
+.config-tab {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+.state-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 0.8rem 0.5rem;
+  border-bottom: 1px solid var(--border-light);
+}
+.state-toolbar-title {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text-heading);
+}
+.state-toolbar-note {
+  flex: 1;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+.state-body,
+.config-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0.5rem 0.8rem 0.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.state-group-title,
+.config-group-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+.state-group-title {
+  margin: 0.35rem 0 0.1rem;
+}
+.state-group:first-child .state-group-title {
+  margin-top: 0;
+}
+.state-section {
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  margin-bottom: 0.35rem;
+  overflow: hidden;
+}
+.state-section-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.55rem;
+  cursor: pointer;
+  user-select: none;
+}
+.state-section-head:hover {
+  background: var(--info-bg);
+}
+.state-section.open .state-section-head {
+  border-bottom: 1px solid var(--border-light);
+}
+.state-chevron {
+  width: 14px;
+  height: 14px;
+  color: var(--text-muted);
+  flex: 0 0 auto;
+}
+.state-section-label {
+  flex: 1;
+  font-weight: 600;
+  font-size: 0.86rem;
+  color: var(--text-heading);
+}
+.state-count {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--border-light);
+  border-radius: 999px;
+  padding: 0.05rem 0.45rem;
+}
+.state-refresh-btn {
+  border: 1px solid #b8c7db;
+  background: #f7f9fc;
+  color: var(--text-heading);
+  border-radius: var(--radius-sm);
+  width: 22px;
+  height: 22px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.state-refresh-btn:hover:not(:disabled) {
+  background: #eef3f9;
+}
+.state-refresh-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.state-section-body {
+  display: flex;
+  flex-direction: column;
+}
+.state-empty {
+  margin: 0;
+  padding: 0.5rem;
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--text-subtle);
+}
+.state-row {
+  padding: 0.4rem 0.55rem;
+  border-bottom: 1px solid var(--border-light);
+}
+.state-row:last-child {
+  border-bottom: none;
+}
+.state-row-head {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-heading);
+  word-break: break-all;
+}
+.state-row-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.6rem;
+  margin-top: 0.15rem;
+}
+.state-field {
+  font-size: 0.76rem;
+  color: var(--text-body);
+  white-space: nowrap;
+}
+.state-field em {
+  font-style: normal;
+  color: var(--text-muted);
+}
+
+/* === CONFIG TAB: the history by capability, the driver reference folded === */
+.config-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.config-group-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.25rem;
+}
+.config-group:first-child .config-group-head {
+  margin-top: 0;
+}
+.config-group-label {
+  flex: 1;
+}
+.config-reference {
+  margin-top: 0.4rem;
+  border-top: 1px solid var(--border-light);
+  padding-top: 0.4rem;
+}
+.config-reference-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.config-reference-toggle:hover {
+  color: var(--primary);
+}
+.config-reference-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding-top: 0.45rem;
+  font-size: 0.82rem;
+}
+.config-reference-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.config-reference-caps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+.config-cap-chip {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-heading);
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+  font-size: 0.76rem;
+  cursor: pointer;
+}
+.config-cap-chip:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.config-cap-chip.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--text-on-brand);
+}
+/* The universal ones (tc, custom) run on any node outside the driver: a
+   row of their own, dashed and muted, so they do not read as the driver's. */
+.config-reference-universal {
+  align-items: center;
+}
+.config-reference-universal-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-subtle);
+}
+.config-cap-chip.universal {
+  border-style: dashed;
+  color: var(--text-muted);
+}
+.config-cap-chip.universal.active {
+  background: var(--text-muted);
+  border-color: var(--text-muted);
+  border-style: solid;
+  color: var(--text-on-brand);
+}
+.config-reference-detail {
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 0.5rem 0.6rem;
+}
+
+/* The clear of one capability's operations: text, so it does not read as
+   one more trash icon next to the rows'. */
+.config-group-clear {
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0 0.2rem;
+}
+.config-group-clear:hover:not(:disabled) {
+  color: var(--danger);
+  text-decoration: underline;
+}
+.config-group-clear:disabled {
+  opacity: 0.6;
+  cursor: default;
 }

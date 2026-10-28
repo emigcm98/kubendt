@@ -3896,13 +3896,17 @@ const docTemplate = `{
         "types.InspectionColumn": {
             "type": "object",
             "properties": {
+                "description": {
+                    "type": "string",
+                    "example": "Administrative distance"
+                },
                 "label": {
                     "type": "string",
-                    "example": "Destination"
+                    "example": "AD"
                 },
                 "name": {
                     "type": "string",
-                    "example": "destination"
+                    "example": "distance"
                 }
             }
         },
@@ -5524,6 +5528,11 @@ const docTemplate = `{
                 "label": {
                     "type": "string",
                     "example": "OSPF neighbors"
+                },
+                "note": {
+                    "description": "Note says why the rows are empty when the node cannot answer, the\ndaemon behind the read not running for instance.",
+                    "type": "string",
+                    "example": "bgpd is not running on this node"
                 },
                 "rows": {
                     "type": "array",

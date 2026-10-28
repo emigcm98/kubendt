@@ -31,6 +31,9 @@ type CapabilityInfo struct {
 	Description string                 `json:"description"`
 	Methods     []MethodInfo           `json:"methods"`
 	Inspections []types.InspectionInfo `json:"inspections"`
+	// Universal capabilities (tc, custom) run on any pod outside the driver;
+	// they are listed with every driver but are not what the driver offers.
+	Universal bool `json:"universal,omitempty"`
 }
 
 // InterfaceNameConstraintsInfo is the wire DTO for a driver's pod-side
@@ -124,12 +127,14 @@ func driverCapsToResponse(d helpers.DriverCaps) DriverWithCapabilities {
 		for _, in := range cd.Inspections {
 			inspections = append(inspections, types.InspectionInfo{ID: in.ID, Label: in.Label, Capability: in.Capability, Columns: columnsInfo(in.Columns)})
 		}
+		universal := len(cd.Actions) > 0 && cd.Actions[0].Universal
 		caps = append(caps, CapabilityInfo{
 			ID:          cd.ID,
 			Label:       cd.Label,
 			Description: cd.Description,
 			Methods:     methods,
 			Inspections: inspections,
+			Universal:   universal,
 		})
 	}
 

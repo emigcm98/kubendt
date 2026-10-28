@@ -1,12 +1,14 @@
 package handlers
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 
 	"kubendt/actions"
+	"kubendt/capabilities"
 	"kubendt/helpers"
 	"kubendt/types"
 )
@@ -44,6 +46,14 @@ func InspectPod(c *gin.Context) {
 		return
 	}
 	rows, err := d.Run(driver, namespace, podName)
+	note := ""
+	var notRunning *capabilities.DaemonNotRunningError
+	if errors.As(err, &notRunning) {
+		// A router deployed before its capability existed has no daemon for
+		// it: an empty read with the reason, not a failure.
+		note = notRunning.Daemon + " is not running on this node"
+		err = nil
+	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -51,13 +61,13 @@ func InspectPod(c *gin.Context) {
 	if rows == nil {
 		rows = []map[string]string{}
 	}
-	c.JSON(http.StatusOK, types.PodInspectionResponse{What: d.ID, Label: d.Label, Capability: d.Capability, Columns: columnsInfo(d.Columns), Rows: rows})
+	c.JSON(http.StatusOK, types.PodInspectionResponse{What: d.ID, Label: d.Label, Capability: d.Capability, Columns: columnsInfo(d.Columns), Rows: rows, Note: note})
 }
 
 func columnsInfo(cols []actions.Column) []types.InspectionColumn {
 	out := make([]types.InspectionColumn, 0, len(cols))
 	for _, c := range cols {
-		out = append(out, types.InspectionColumn{Name: c.Name, Label: c.Label})
+		out = append(out, types.InspectionColumn{Name: c.Name, Label: c.Label, Description: c.Description})
 	}
 	return out
 }

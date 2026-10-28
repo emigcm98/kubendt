@@ -685,7 +685,8 @@ func (FRRRouterDriver) ISISRemoveRedistribute(source, level string, v6 bool) [][
 // rather than `ip route`, since it carries the protocol and the distance.
 
 func (FRRRouterDriver) Vtysh(namespace, pod, command string) ([]byte, error) {
-	return executor.ExecAndGet(namespace, pod, []string{"vtysh", "-c", command})
+	out, err := executor.ExecAndGet(namespace, pod, []string{"vtysh", "-c", command})
+	return out, capabilities.VtyshError(out, err)
 }
 
 func (d FRRRouterDriver) Routes(namespace, pod string) (capabilities.Rows, error) {

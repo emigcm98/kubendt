@@ -742,11 +742,14 @@ definitions:
     type: object
   types.InspectionColumn:
     properties:
+      description:
+        example: Administrative distance
+        type: string
       label:
-        example: Destination
+        example: AD
         type: string
       name:
-        example: destination
+        example: distance
         type: string
     type: object
   types.InterfaceCounters:
@@ -1949,6 +1952,12 @@ definitions:
         type: array
       label:
         example: OSPF neighbors
+        type: string
+      note:
+        description: |-
+          Note says why the rows are empty when the node cannot answer, the
+          daemon behind the read not running for instance.
+        example: bgpd is not running on this node
         type: string
       rows:
         items:

@@ -1,6 +1,10 @@
 package capabilities
 
-import "kubendt/actions"
+import (
+	"regexp"
+
+	"kubendt/actions"
+)
 
 // Rows is what an inspection returns: one map per row, the keys the
 // declared columns, every value a string so the panel renders any of them.
@@ -46,6 +50,29 @@ type ISISInspector interface {
 	ISISNeighbors(namespace, pod string) (Rows, error)
 }
 
+// DaemonNotRunningError is what a read answers when the daemon behind it is
+// not up on the node, a router deployed before its capability existed for
+// instance; the endpoint turns it into an empty result with a note.
+type DaemonNotRunningError struct{ Daemon string }
+
+func (e *DaemonNotRunningError) Error() string { return e.Daemon + " is not running" }
+
+var notRunningRe = regexp.MustCompile(`\b([a-z0-9]+d) is not running`)
+
+// VtyshError maps vtysh's "<daemon> is not running" to its own error and
+// leaves any other failure as it came.
+func VtyshError(out []byte, err error) error {
+	if err == nil {
+		return nil
+	}
+	for _, text := range []string{string(out), err.Error()} {
+		if m := notRunningRe.FindStringSubmatch(text); m != nil {
+			return &DaemonNotRunningError{Daemon: m[1]}
+		}
+	}
+	return err
+}
+
 func cols(pairs ...string) []actions.Column {
 	out := make([]actions.Column, 0, len(pairs)/2)
 	for i := 0; i+1 < len(pairs); i += 2 {
@@ -56,7 +83,7 @@ func cols(pairs ...string) []actions.Column {
 
 func init() {
 	actions.RegisterInspections[RouteInspector]("L3Capable",
-		actions.Inspection[RouteInspector]{ID: "routes", Label: "Routing table", Columns: cols("destination", "Destination", "protocol", "Protocol", "gateway", "Gateway", "interface", "Interface", "distance", "Distance", "metric", "Metric", "selected", "Selected"),
+		actions.Inspection[RouteInspector]{ID: "routes", Label: "Routing table", Columns: append(cols("destination", "Destination", "protocol", "Protocol", "gateway", "Gateway", "interface", "Interface"), actions.Column{Name: "distance", Label: "AD", Description: "Administrative distance"}, actions.Column{Name: "metric", Label: "Metric", Description: "The protocol's own metric"}, actions.Column{Name: "status", Label: "Status"}),
 			Run: func(c RouteInspector, ns, pod string) (Rows, error) { return c.Routes(ns, pod) }})
 	actions.RegisterInspections[NeighborInspector]("L3Capable",
 		actions.Inspection[NeighborInspector]{ID: "neighbors", Label: "ARP and NDP", Columns: cols("address", "Address", "interface", "Interface", "mac", "MAC", "state", "State"),
@@ -70,7 +97,7 @@ func init() {
 	actions.RegisterInspections[OSPFInspector]("OSPFCapable",
 		actions.Inspection[OSPFInspector]{ID: "ospf_neighbors", Label: "OSPF neighbors", Columns: cols("neighbor", "Neighbor", "address", "Address", "interface", "Interface", "state", "State", "role", "Role", "priority", "Priority", "dead_time", "Dead time"),
 			Run: func(c OSPFInspector, ns, pod string) (Rows, error) { return c.OSPFNeighbors(ns, pod) }},
-		actions.Inspection[OSPFInspector]{ID: "ospf_interfaces", Label: "OSPF interfaces", Columns: cols("interface", "Interface", "address", "Address", "area", "Area", "network_type", "Network type", "state", "State", "cost", "Cost", "priority", "Priority", "neighbors", "Neighbors"),
+		actions.Inspection[OSPFInspector]{ID: "ospf_interfaces", Label: "OSPF interfaces", Columns: cols("interface", "Interface", "address", "Address", "area", "Area", "network_type", "Network type", "state", "State", "cost", "Cost", "priority", "Priority", "neighbors", "Neighbors", "passive", "Passive"),
 			Run: func(c OSPFInspector, ns, pod string) (Rows, error) { return c.OSPFInterfaces(ns, pod) }})
 	actions.RegisterInspections[OSPF6Inspector]("OSPF6Capable",
 		actions.Inspection[OSPF6Inspector]{ID: "ospf6_neighbors", Label: "OSPFv3 neighbors", Columns: cols("neighbor", "Neighbor", "interface", "Interface", "state", "State", "role", "Role", "priority", "Priority", "dead_time", "Dead time"),
