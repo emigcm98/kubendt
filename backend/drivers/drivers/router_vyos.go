@@ -30,6 +30,7 @@ var _ capabilities.L3Capable = (*VyOSRouterDriver)(nil)
 var _ capabilities.OSPFCapable = (*VyOSRouterDriver)(nil)
 var _ capabilities.RIPCapable = (*VyOSRouterDriver)(nil)
 var _ capabilities.OSPF6Capable = (*VyOSRouterDriver)(nil)
+var _ capabilities.BGPCapable = (*VyOSRouterDriver)(nil)
 var _ drivers_meta.EffectiveInterfaceInspector = (*VyOSRouterDriver)(nil)
 var _ drivers_meta.EffectiveSingleInterfaceInspector = (*VyOSRouterDriver)(nil)
 var _ drivers_meta.EffectiveInterfaceStateInspector = (*VyOSRouterDriver)(nil)
@@ -389,6 +390,80 @@ func (VyOSRouterDriver) RIPSetTimers(update, timeout, garbage int, v6 bool) [][]
 
 func (VyOSRouterDriver) RIPRemoveTimers(v6 bool) [][]string {
 	return [][]string{{"delete " + vyosRIP(v6) + "timers"}}
+}
+
+// ─── BGP ─────────────────────────────────────────────────────────────────────
+// One process under `protocols bgp`; VyOS leaves ebgp-requires-policy off
+// unless asked, so nothing to clear there.
+
+func vyosBGPFamily(v6 bool) string {
+	if v6 {
+		return "protocols bgp address-family ipv6-unicast "
+	}
+	return "protocols bgp address-family ipv4-unicast "
+}
+
+// VyOS names the v6 OSPF and RIP ospfv3 and ripng on the redistribute node.
+func vyosBGPSource(source string, v6 bool) string {
+	if v6 {
+		switch source {
+		case "ospf":
+			return "ospfv3"
+		case "rip":
+			return "ripng"
+		}
+	}
+	return source
+}
+
+func (VyOSRouterDriver) BGPSetRouter(as int, routerID string) [][]string {
+	cmds := [][]string{{fmt.Sprintf("set protocols bgp system-as %d", as)}}
+	if routerID != "" {
+		cmds = append(cmds, []string{"set protocols bgp parameters router-id " + routerID})
+	}
+	return cmds
+}
+
+func (VyOSRouterDriver) BGPRemoveRouter() [][]string {
+	return [][]string{{"delete protocols bgp"}}
+}
+
+// Only set lines: a delete of an absent node fails the commit, so an option
+// dropped from a neighbour means removing and adding it again.
+func (VyOSRouterDriver) BGPAddNeighbor(neighbor string, remoteAS int, updateSource string, multihop int, v6 bool) [][]string {
+	n := "set protocols bgp neighbor " + neighbor + " "
+	cmds := [][]string{{fmt.Sprintf("%sremote-as %d", n, remoteAS)}}
+	if updateSource != "" {
+		cmds = append(cmds, []string{n + "update-source " + updateSource})
+	}
+	if multihop > 0 {
+		cmds = append(cmds, []string{fmt.Sprintf("%sebgp-multihop %d", n, multihop)})
+	}
+	af := "address-family ipv4-unicast"
+	if v6 {
+		af = "address-family ipv6-unicast"
+	}
+	return append(cmds, []string{n + af})
+}
+
+func (VyOSRouterDriver) BGPRemoveNeighbor(neighbor string) [][]string {
+	return [][]string{{"delete protocols bgp neighbor " + neighbor}}
+}
+
+func (VyOSRouterDriver) BGPAddNetwork(network string, v6 bool) [][]string {
+	return [][]string{{"set " + vyosBGPFamily(v6) + "network " + network}}
+}
+
+func (VyOSRouterDriver) BGPRemoveNetwork(network string, v6 bool) [][]string {
+	return [][]string{{"delete " + vyosBGPFamily(v6) + "network " + network}}
+}
+
+func (VyOSRouterDriver) BGPRedistribute(source string, v6 bool) [][]string {
+	return [][]string{{"set " + vyosBGPFamily(v6) + "redistribute " + vyosBGPSource(source, v6)}}
+}
+
+func (VyOSRouterDriver) BGPRemoveRedistribute(source string, v6 bool) [][]string {
+	return [][]string{{"delete " + vyosBGPFamily(v6) + "redistribute " + vyosBGPSource(source, v6)}}
 }
 
 // ─── OSPF ────────────────────────────────────────────────────────────────────

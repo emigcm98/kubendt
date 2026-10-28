@@ -53,6 +53,8 @@ func keyRedistributeFamily(a types.ActionEntry) string { return a.Redistribute +
 
 func keyRedistribute(a types.ActionEntry) string { return a.Redistribute }
 
+func keyNeighbor(a types.ActionEntry) string { return a.Neighbor }
+
 func itoa(n int) string {
 	if n == 0 {
 		return "0"

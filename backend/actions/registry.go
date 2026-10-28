@@ -55,7 +55,11 @@ type Action[C any] struct {
 	// up by itself. Otherwise an undo and the action it undoes cancel each
 	// other and neither is kept, since nothing would put the state back.
 	UndoPersists bool
-	Run          func(c C, a types.ActionEntry) ([][]string, error)
+	// ClearsAlso names the states this action takes down with its own,
+	// every key of them: stopping a routing process removes its neighbours
+	// and what it announced, so their rows must not survive it.
+	ClearsAlso []string
+	Run        func(c C, a types.ActionEntry) ([][]string, error)
 }
 
 // Descriptor is a registered action, usable without knowing C.
@@ -72,6 +76,7 @@ type Descriptor struct {
 	Key                 func(a types.ActionEntry) string
 	Clears              bool
 	UndoPersists        bool
+	ClearsAlso          []string
 	// Universal actions are declared against any driver: they match every
 	// driver and a pod without one.
 	Universal bool
@@ -149,6 +154,7 @@ func Register[C any](capability Capability, acts ...Action[C]) {
 			Key:                 act.Key,
 			Clears:              act.Clears,
 			UndoPersists:        act.UndoPersists,
+			ClearsAlso:          act.ClearsAlso,
 			Universal:           universal,
 			supports:            supports,
 			run: func(driver any, a types.ActionEntry) ([][]string, error) {

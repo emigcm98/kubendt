@@ -70,6 +70,29 @@ func rowsOnState(ops []PersistedDriverOperation, state, key string) []PersistedD
 	return out
 }
 
+// clearedWith is the list of states an action takes down besides its own.
+func clearedWith(action types.ActionEntry) []string {
+	if d, ok := actions.Lookup(action.Type); ok {
+		return d.ClearsAlso
+	}
+	return nil
+}
+
+// rowsOnStates is every row on any of the states, whatever its key.
+func rowsOnStates(ops []PersistedDriverOperation, states []string) []PersistedDriverOperation {
+	var out []PersistedDriverOperation
+	for _, op := range ops {
+		s, _, _, _ := stateOf(opAction(op))
+		for _, want := range states {
+			if s == want {
+				out = append(out, op)
+				break
+			}
+		}
+	}
+	return out
+}
+
 // supersededAfter says whether another operation on the same state ran after
 // appliedAt with a different payload, so the applied one no longer stands.
 // Histories written before the state rule could hold such pairs.
@@ -96,7 +119,7 @@ func SaveDriverOperation(namespace, podName, driverType string, action types.Act
 		if err != nil {
 			return fmt.Errorf("error reconciling the history of %s/%s: %w", namespace, podName, err)
 		}
-		for _, op := range rowsOnState(ops, state, key) {
+		for _, op := range append(rowsOnState(ops, state, key), rowsOnStates(ops, clearedWith(action))...) {
 			if err := DeleteDriverOperationHistoryByID(op.ID); err != nil && err != sql.ErrNoRows {
 				return fmt.Errorf("error reconciling the history of %s/%s: %w", namespace, podName, err)
 			}

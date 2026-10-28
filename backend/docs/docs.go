@@ -2891,6 +2891,11 @@ const docTemplate = `{
                     "type": "string",
                     "example": "stub"
                 },
+                "as": {
+                    "description": "BGP: the local AS of bgp_set_router, a neighbour by address with its\nAS, the interface or address the session binds to, and the TTL an\neBGP session may cross.",
+                    "type": "integer",
+                    "example": 65001
+                },
                 "auth_key": {
                     "type": "string",
                     "example": "s3cret"
@@ -2983,6 +2988,14 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 80
                 },
+                "multihop": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "neighbor": {
+                    "type": "string",
+                    "example": "10.0.0.2"
+                },
                 "network_type": {
                     "type": "string",
                     "example": "point-to-point"
@@ -3008,6 +3021,10 @@ const docTemplate = `{
                     "type": "string",
                     "example": "connected"
                 },
+                "remote_as": {
+                    "type": "integer",
+                    "example": 65002
+                },
                 "router_id": {
                     "type": "string",
                     "example": "10.0.255.1"
@@ -3026,6 +3043,10 @@ const docTemplate = `{
                 "type": {
                     "type": "string",
                     "example": "ip"
+                },
+                "update_source": {
+                    "type": "string",
+                    "example": "eth1"
                 }
             }
         },

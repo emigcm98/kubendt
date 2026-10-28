@@ -54,6 +54,10 @@ func TestStatePairs(t *testing.T) {
 		{types.ActionEntry{Type: "ospf_originate_default"}, types.ActionEntry{Type: "ospf_remove_originate_default"}, "ospf_originate_default", false},
 		{types.ActionEntry{Type: "ospf_mtu_ignore", Iface: "eth1"}, types.ActionEntry{Type: "ospf_remove_mtu_ignore", Iface: "eth1"}, "ospf_mtu_ignore", false},
 		{types.ActionEntry{Type: "add_qdisc", Iface: "eth1"}, types.ActionEntry{Type: "del_qdisc", Iface: "eth1"}, "qdisc", false},
+		{types.ActionEntry{Type: "bgp_set_router", AS: 65001}, types.ActionEntry{Type: "bgp_remove_router"}, "bgp_router", false},
+		{types.ActionEntry{Type: "bgp_add_neighbor", Neighbor: "10.0.0.2", RemoteAS: 65002}, types.ActionEntry{Type: "bgp_remove_neighbor", Neighbor: "10.0.0.2"}, "bgp_neighbor", false},
+		{types.ActionEntry{Type: "bgp_add_network", CIDR: "10.1.0.0/24"}, types.ActionEntry{Type: "bgp_remove_network", CIDR: "10.1.0.0/24"}, "bgp_network", false},
+		{types.ActionEntry{Type: "bgp_redistribute", Redistribute: "connected", Family: "6"}, types.ActionEntry{Type: "bgp_remove_redistribute", Redistribute: "connected", Family: "6"}, "bgp_redistribute", false},
 	}
 	for _, p := range pairs {
 		s1, k1, c1, u1 := stateOf(p.set)
@@ -123,5 +127,33 @@ func TestRowsOnStateAndSuperseded(t *testing.T) {
 	}
 	if supersededAfter(ops, "address", "eth2 10.0.1.50/24", setJSON, setAt) {
 		t.Error("another address does not count")
+	}
+}
+
+// Stopping BGP takes its neighbours, networks and redistributions with it,
+// whatever their keys, and nothing else.
+func TestRowsOnStatesClearedWith(t *testing.T) {
+	ops := []PersistedDriverOperation{
+		{ID: 1, ActionType: "bgp_set_router", Action: types.ActionEntry{Type: "bgp_set_router", AS: 65002}},
+		{ID: 2, ActionType: "bgp_add_neighbor", Action: types.ActionEntry{Type: "bgp_add_neighbor", Neighbor: "10.0.0.1", RemoteAS: 65001}},
+		{ID: 3, ActionType: "bgp_add_neighbor", Action: types.ActionEntry{Type: "bgp_add_neighbor", Neighbor: "fd00::1", RemoteAS: 65003}},
+		{ID: 4, ActionType: "bgp_redistribute", Action: types.ActionEntry{Type: "bgp_redistribute", Redistribute: "connected"}},
+		{ID: 5, ActionType: "bgp_add_network", Action: types.ActionEntry{Type: "bgp_add_network", CIDR: "10.2.0.0/24"}},
+		{ID: 6, ActionType: "set_ip", Action: types.ActionEntry{Type: "set_ip", Iface: "eth1", CIDR: "10.0.0.2/30"}},
+		{ID: 7, ActionType: "ospf_add_network", Action: types.ActionEntry{Type: "ospf_add_network", CIDR: "10.2.0.0/24", OSPFArea: "0"}},
+	}
+	states := clearedWith(types.ActionEntry{Type: "bgp_remove_router"})
+	if len(states) != 3 {
+		t.Fatalf("bgp_remove_router clears %v", states)
+	}
+	var got []int64
+	for _, r := range rowsOnStates(ops, states) {
+		got = append(got, r.ID)
+	}
+	if len(got) != 4 || got[0] != 2 || got[1] != 3 || got[2] != 4 || got[3] != 5 {
+		t.Errorf("rows taken down with BGP: %v", got)
+	}
+	if rows := rowsOnStates(ops, clearedWith(types.ActionEntry{Type: "bgp_remove_neighbor", Neighbor: "10.0.0.1"})); len(rows) != 0 {
+		t.Errorf("removing one neighbour clears nothing else, got %d rows", len(rows))
 	}
 }

@@ -25,6 +25,14 @@
       ["ip","route","replace","10.1.0.0/16","via","10.0.0.254","dev","eth1"]
     ]
   },
+  "bgp_add_neighbor": { "unsupported": true },
+  "bgp_add_network": { "unsupported": true },
+  "bgp_redistribute": { "unsupported": true },
+  "bgp_remove_neighbor": { "unsupported": true },
+  "bgp_remove_network": { "unsupported": true },
+  "bgp_remove_redistribute": { "unsupported": true },
+  "bgp_remove_router": { "unsupported": true },
+  "bgp_set_router": { "unsupported": true },
   "custom": {
     "executor": "kubectl",
     "commands": [

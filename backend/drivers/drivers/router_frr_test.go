@@ -47,6 +47,9 @@ func TestFRRCapabilityPrecondition(t *testing.T) {
 	if _, _, ok := d.CapabilityPrecondition("L3Capable", types.ActionEntry{}); ok {
 		t.Errorf("L3 needs no daemon")
 	}
+	if cmd, _, ok := d.CapabilityPrecondition("BGPCapable", types.ActionEntry{}); !ok || cmd[2] != "/var/run/frr/bgpd.vty" {
+		t.Errorf("BGP precondition: %v", cmd)
+	}
 	for _, c := range []struct {
 		a    types.ActionEntry
 		want string
@@ -171,7 +174,7 @@ func TestFRRStartupCommands(t *testing.T) {
 	if len(cmd) != 3 || cmd[0] != "sh" || cmd[1] != "-c" {
 		t.Fatalf("startup command: %v", cmd)
 	}
-	for _, want := range []string{"s/^ospfd=no/ospfd=yes/", "s/^ospf6d=no/ospf6d=yes/", "s/^ripd=no/ripd=yes/", "s/^ripngd=no/ripngd=yes/", "touch /etc/frr/frr.conf /etc/frr/vtysh.conf", "exec /sbin/tini -- /usr/lib/frr/docker-start"} {
+	for _, want := range []string{"s/^ospfd=no/ospfd=yes/", "s/^ospf6d=no/ospf6d=yes/", "s/^ripd=no/ripd=yes/", "s/^ripngd=no/ripngd=yes/", "s/^bgpd=no/bgpd=yes/", "touch /etc/frr/frr.conf /etc/frr/vtysh.conf", "exec /sbin/tini -- /usr/lib/frr/docker-start"} {
 		if !strings.Contains(cmd[2], want) {
 			t.Errorf("startup command lacks %q: %s", want, cmd[2])
 		}
@@ -219,6 +222,40 @@ func TestOSPFInterfaceRanges(t *testing.T) {
 		}
 		if c.want != "" && (err == nil || !strings.Contains(err.Error(), c.want)) {
 			t.Errorf("%s: want error containing %q, got %v", c.name, c.want, err)
+		}
+	}
+}
+
+func TestFRRBGP(t *testing.T) {
+	var d FRRRouterDriver
+	conf := []string{"vtysh", "-c", "configure terminal"}
+	bgp := func(lines ...string) [][]string {
+		argv := append(append([]string{}, conf...), "-c", "router bgp")
+		for _, l := range lines {
+			argv = append(argv, "-c", l)
+		}
+		return [][]string{argv}
+	}
+	cases := []struct {
+		name string
+		got  [][]string
+		want [][]string
+	}{
+		{"router with id", d.BGPSetRouter(65001, "10.255.0.1"), [][]string{append(append([]string{}, conf...), "-c", "router bgp 65001", "-c", "no bgp ebgp-requires-policy", "-c", "bgp router-id 10.255.0.1")}},
+		{"router without id", d.BGPSetRouter(65001, ""), [][]string{append(append([]string{}, conf...), "-c", "router bgp 65001", "-c", "no bgp ebgp-requires-policy", "-c", "no bgp router-id")}},
+		{"no router", d.BGPRemoveRouter(), [][]string{append(append([]string{}, conf...), "-c", "no router bgp")}},
+		{"neighbor v4 plain", d.BGPAddNeighbor("10.0.0.2", 65002, "", 0, false), bgp("neighbor 10.0.0.2 remote-as 65002", "no neighbor 10.0.0.2 update-source", "no neighbor 10.0.0.2 ebgp-multihop", "address-family ipv4 unicast", "neighbor 10.0.0.2 activate")},
+		{"neighbor v6 with options", d.BGPAddNeighbor("fd00::2", 65003, "eth1", 2, true), bgp("neighbor fd00::2 remote-as 65003", "neighbor fd00::2 update-source eth1", "neighbor fd00::2 ebgp-multihop 2", "address-family ipv6 unicast", "neighbor fd00::2 activate")},
+		{"no neighbor", d.BGPRemoveNeighbor("10.0.0.2"), bgp("no neighbor 10.0.0.2")},
+		{"network v4", d.BGPAddNetwork("10.1.0.0/24", false), bgp("address-family ipv4 unicast", "network 10.1.0.0/24")},
+		{"no network v6", d.BGPRemoveNetwork("fd00:1::/64", true), bgp("address-family ipv6 unicast", "no network fd00:1::/64")},
+		{"redistribute ospf v6", d.BGPRedistribute("ospf", true), bgp("address-family ipv6 unicast", "redistribute ospf6")},
+		{"redistribute rip v6", d.BGPRedistribute("rip", true), bgp("address-family ipv6 unicast", "redistribute ripng")},
+		{"no redistribute v4", d.BGPRemoveRedistribute("connected", false), bgp("address-family ipv4 unicast", "no redistribute connected")},
+	}
+	for _, c := range cases {
+		if !reflect.DeepEqual(c.got, c.want) {
+			t.Errorf("%s:\n got  %v\n want %v", c.name, c.got, c.want)
 		}
 	}
 }

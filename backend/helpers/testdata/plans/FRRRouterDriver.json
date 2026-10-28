@@ -25,6 +25,54 @@
       ["sh","-c","{ vtysh -c 'show running-config' | grep -qxF 'ip route 10.1.0.0/16 10.0.0.254 eth1' || { vtysh -c 'show running-config' | grep '^ip route 10\\.1\\.0\\.0/16 ' | while read -r l; do vtysh -c 'configure terminal' -c \"no $l\"; done \u0026\u0026 vtysh -c 'configure terminal' -c 'ip route 10.1.0.0/16 10.0.0.254 eth1'; }; }"]
     ]
   },
+  "bgp_add_neighbor": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router bgp","-c","neighbor 10.0.0.2 remote-as 65002","-c","neighbor 10.0.0.2 update-source eth1","-c","neighbor 10.0.0.2 ebgp-multihop 2","-c","address-family ipv4 unicast","-c","neighbor 10.0.0.2 activate"]
+    ]
+  },
+  "bgp_add_network": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router bgp","-c","address-family ipv4 unicast","-c","network 10.1.0.0/24"]
+    ]
+  },
+  "bgp_redistribute": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router bgp","-c","address-family ipv6 unicast","-c","redistribute ospf6"]
+    ]
+  },
+  "bgp_remove_neighbor": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router bgp","-c","no neighbor fd00::2"]
+    ]
+  },
+  "bgp_remove_network": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router bgp","-c","address-family ipv6 unicast","-c","no network fd00:1::/64"]
+    ]
+  },
+  "bgp_remove_redistribute": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router bgp","-c","address-family ipv6 unicast","-c","no redistribute ripng"]
+    ]
+  },
+  "bgp_remove_router": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","no router bgp"]
+    ]
+  },
+  "bgp_set_router": {
+    "executor": "kubectl",
+    "commands": [
+      ["vtysh","-c","configure terminal","-c","router bgp 65001","-c","no bgp ebgp-requires-policy","-c","bgp router-id 10.255.0.1"]
+    ]
+  },
   "custom": {
     "executor": "kubectl",
     "commands": [

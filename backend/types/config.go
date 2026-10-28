@@ -99,6 +99,15 @@ type ActionEntry struct {
 	Redistribute string     `json:"redistribute,omitempty" example:"connected"`
 	Timers       *RIPTimers `json:"timers,omitempty"`
 
+	// BGP: the local AS of bgp_set_router, a neighbour by address with its
+	// AS, the interface or address the session binds to, and the TTL an
+	// eBGP session may cross.
+	AS           int    `json:"as,omitempty" example:"65001"`
+	RemoteAS     int    `json:"remote_as,omitempty" example:"65002"`
+	Neighbor     string `json:"neighbor,omitempty" example:"10.0.0.2"`
+	UpdateSource string `json:"update_source,omitempty" example:"eth1"`
+	Multihop     int    `json:"multihop,omitempty" example:"2"`
+
 	// Custom, accepts a string ("sh -c" wrapper) or an array of args.
 	// Only used when type == "custom". No driver label required on the pod.
 	Command json.RawMessage `json:"command,omitempty" swaggertype:"string" example:"ip route show"`
