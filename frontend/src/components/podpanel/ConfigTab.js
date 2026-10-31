@@ -125,6 +125,7 @@ const ConfigTab = ({
           </div>
           {referenceOpen && (
             <DriverReference
+              key={driverDisplay}
               driverCaps={driverCaps}
               driverExecutor={driverExecutor}
               driverInterfaceConstraints={driverInterfaceConstraints}

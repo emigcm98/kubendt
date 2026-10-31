@@ -452,13 +452,18 @@ const PodInfoPanel = ({
     });
   };
 
-  // The capabilities serve three tabs; read them the first time one opens.
+  // The capabilities serve four tabs: read them once per node, the first
+  // time one of them opens, and again when the node changes under an open
+  // tab. A ref, since the reset below empties the state in the same commit.
+  const capsFor = useRef('');
   useEffect(() => {
-    if (['summary', 'config', 'state', 'links'].includes(activeTab)) {
-      if (driverCaps.length === 0 && !loadingDriverCaps && !errorDriverCaps) loadDriverCaps();
-    }
+    const key = pod ? `${namespace}/${pod.name}` : '';
+    if (!key || !['summary', 'config', 'state', 'links'].includes(activeTab)) return;
+    if (capsFor.current === key) return;
+    capsFor.current = key;
+    loadDriverCaps();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, pod?.driver]);
+  }, [activeTab, namespace, pod?.name, pod?.driver]);
 
   useEffect(() => {
     setDriverCaps([]);
