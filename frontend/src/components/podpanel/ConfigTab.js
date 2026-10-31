@@ -15,6 +15,7 @@ const ConfigTab = ({
   driverCaps,
   driverExecutor,
   driverInterfaceConstraints,
+  driverKnownImages,
   loadingDriverCaps,
   errorDriverCaps,
   driverHistory,
@@ -124,9 +125,11 @@ const ConfigTab = ({
           </div>
           {referenceOpen && (
             <DriverReference
+              key={driverDisplay}
               driverCaps={driverCaps}
               driverExecutor={driverExecutor}
               driverInterfaceConstraints={driverInterfaceConstraints}
+              driverKnownImages={driverKnownImages}
               loading={loadingDriverCaps}
               error={errorDriverCaps}
             />
@@ -143,6 +146,7 @@ const DriverReference = ({
   driverCaps,
   driverExecutor,
   driverInterfaceConstraints,
+  driverKnownImages,
   loading,
   error,
 }) => {
@@ -183,6 +187,16 @@ const DriverReference = ({
             <span>Linux default</span>
           )}
         </div>
+        {driverKnownImages?.length > 0 && (
+          <div>
+            <span className="pod-label">Images tried:</span>{' '}
+            {driverKnownImages.map((img) => (
+              <code className="cap-code config-reference-image" key={img}>
+                {img}
+              </code>
+            ))}
+          </div>
+        )}
       </div>
       <div className="config-reference-caps">
         {driverCaps

@@ -100,6 +100,7 @@ const PodInfoPanel = ({
   const [driverCaps, setDriverCaps] = useState([]);
   const [driverExecutor, setDriverExecutor] = useState('');
   const [driverInterfaceConstraints, setDriverInterfaceConstraints] = useState(null);
+  const [driverKnownImages, setDriverKnownImages] = useState([]);
   const [loadingDriverCaps, setLoadingDriverCaps] = useState(false);
   const [errorDriverCaps, setErrorDriverCaps] = useState(null);
 
@@ -237,6 +238,7 @@ const PodInfoPanel = ({
       setDriverCaps([]);
       setDriverExecutor('');
       setDriverInterfaceConstraints(null);
+      setDriverKnownImages([]);
       setErrorDriverCaps(null);
       return;
     }
@@ -253,6 +255,7 @@ const PodInfoPanel = ({
       // beyond Linux kernel naming, so a null here is the normal case
       // for hosts and generic switches.
       setDriverInterfaceConstraints(data?.interfaceNameConstraints || null);
+      setDriverKnownImages(Array.isArray(data?.knownImages) ? data.knownImages : []);
 
       const normalizedCaps = (data.capabilities || []).map((cap) => {
         const rawMethods = cap?.methods;
@@ -284,6 +287,7 @@ const PodInfoPanel = ({
       setDriverCaps([]);
       setDriverExecutor('');
       setDriverInterfaceConstraints(null);
+      setDriverKnownImages([]);
       setErrorDriverCaps('Error loading driver capabilities');
     } finally {
       setLoadingDriverCaps(false);
@@ -448,13 +452,18 @@ const PodInfoPanel = ({
     });
   };
 
-  // The capabilities serve three tabs; read them the first time one opens.
+  // The capabilities serve four tabs: read them once per node, the first
+  // time one of them opens, and again when the node changes under an open
+  // tab. A ref, since the reset below empties the state in the same commit.
+  const capsFor = useRef('');
   useEffect(() => {
-    if (['summary', 'config', 'state', 'links'].includes(activeTab)) {
-      if (driverCaps.length === 0 && !loadingDriverCaps && !errorDriverCaps) loadDriverCaps();
-    }
+    const key = pod ? `${namespace}/${pod.name}` : '';
+    if (!key || !['summary', 'config', 'state', 'links'].includes(activeTab)) return;
+    if (capsFor.current === key) return;
+    capsFor.current = key;
+    loadDriverCaps();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, pod?.driver]);
+  }, [activeTab, namespace, pod?.name, pod?.driver]);
 
   useEffect(() => {
     setDriverCaps([]);
@@ -646,6 +655,7 @@ const PodInfoPanel = ({
               runtimeLabel={runtimeLabel}
               driverDisplay={driverDisplay}
               driverCaps={driverCaps}
+              driverKnownImages={driverKnownImages}
               podMetrics={podMetrics}
               onCopyImage={handleCopyImage}
               copyFloater={copyFloater}
@@ -660,6 +670,7 @@ const PodInfoPanel = ({
               driverCaps={driverCaps}
               driverExecutor={driverExecutor}
               driverInterfaceConstraints={driverInterfaceConstraints}
+              driverKnownImages={driverKnownImages}
               loadingDriverCaps={loadingDriverCaps}
               errorDriverCaps={errorDriverCaps}
               driverHistory={driverHistory}

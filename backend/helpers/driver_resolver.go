@@ -53,7 +53,26 @@ func ResolveDriversForNodes(requestNodes []types.NodeSpec) ([]types.Warning, err
 			if rp, ok := inst.(drivers_meta.RuntimeProvider); ok && rp.Runtime() == drivers_meta.RuntimeQEMU {
 				requestNodes[i].Qemu = true
 			}
+			if w := untestedImage(n.Name, n.Image, requestNodes[i].Driver, inst); w != nil {
+				warnings = append(warnings, *w)
+			}
 		}
 	}
 	return warnings, nil
+}
+
+// untestedImage is the warning for a node whose image is not one its driver
+// was tried with; nil when the driver lists none or the image is known.
+func untestedImage(node, image, driver string, inst any) *types.Warning {
+	kp, ok := inst.(drivers_meta.KnownImagesProvider)
+	if !ok || image == "" {
+		return nil
+	}
+	known := kp.KnownImages()
+	if len(known) == 0 || ImageKnown(known, image) {
+		return nil
+	}
+	log.Printf("⚠️ Node %q runs %q, not an image %s was tried with", node, image, driver)
+	return &types.Warning{Node: node, Kind: "image_untested",
+		Detail: fmt.Sprintf("image %q is not one %s was tried with (%s); it may work, nothing was checked on it", image, driver, strings.Join(known, ", "))}
 }

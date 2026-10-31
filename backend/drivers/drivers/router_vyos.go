@@ -1088,3 +1088,11 @@ func (d *VyOSRouterDriver) GetEffectiveInterfaceStates(namespace, podName string
 	}
 	return states, nil
 }
+
+var _ drivers_meta.KnownImagesProvider = (*VyOSRouterDriver)(nil)
+
+// KnownImages is the image our Dockerfile builds, imported by hand on the
+// workers; the rolling it carries is pinned in README-vyos.md.
+func (VyOSRouterDriver) KnownImages() []string {
+	return []string{"localhost/vyos-router:dev"}
+}

@@ -721,3 +721,11 @@ func (d FRRRouterDriver) ISISNeighbors(namespace, pod string) (capabilities.Rows
 func (FRRRouterDriver) Shells() []drivers_meta.ShellSpec {
 	return []drivers_meta.ShellSpec{{Mode: "vtysh", Label: "vtysh console", Command: []string{"vtysh"}}}
 }
+
+var _ drivers_meta.KnownImagesProvider = (*FRRRouterDriver)(nil)
+
+// KnownImages is the FRR release the driver was tried with; another one
+// deploys with a warning, since vtysh syntax and daemons move between them.
+func (FRRRouterDriver) KnownImages() []string {
+	return []string{"quay.io/frrouting/frr:10.7.1"}
+}

@@ -50,6 +50,7 @@ Everything beyond the minimum is an optional interface, all of them in `backend/
 | `EffectiveInterfaceInspector`, `EffectiveSingleInterfaceInspector`, `EffectiveInterfaceStateInspector` | `GetEffectiveInterfaces`, `GetEffectiveInterface`, `GetEffectiveInterfaceStates` | The pod's own `ip a` and link states | VyOS |
 | `SNATInterfaceInspector` | `GetSNATInterface()` | The namespace summary shows no NAT interface | VyOS |
 | `GuestInterfaceMapper` | `GuestInterface(ns, pod, iface)` | Interface names reach the actions as the pod names them | Guest-named dataplanes |
+| `KnownImagesProvider` | `KnownImages()` | Any image deploys quietly | FRR, VyOS, OVS, Linux switch and router |
 
 What each one feeds:
 
@@ -63,6 +64,7 @@ What each one feeds:
 - **CapabilityPrecondition** is what a capability needs on the pod before its actions run, a daemon up for instance: a command that exits 0 when the need is met and the message the actions fail with otherwise, checked inside the pod's batch at no extra exec. FRR asks for `ospfd.vty` before any OSPF action, so a router started with `ospfd=no` says what to enable instead of failing in vtysh.
 - **The inspectors** replace the pod-side reads where the dataplane lives elsewhere: the interface list and states of the node panel, the NAT interface of the summary.
 - **GuestInterface** renames interface parameters before an action runs, for a dataplane that calls `eth1` something else.
+- **KnownImages** are the references, by tag or digest, the driver was tried with: a node on any other deploys with an `image_untested` warning that names them, never a refusal, since another image may well work. A host declares none.
 
 Two more sit next to a capability rather than in `drivers/meta`: `GuestMTUSetter` (`GuestMTUCommands(iface, mtu)`), which the MTU pass uses to set a VM guest's interface, and `DefaultRoute6Remover` (`RemoveDefaultRoute6()`), which `remove_default_route` with `family: 6` needs; `L3Base` has the latter, so a driver embedding it gets it for free.
 

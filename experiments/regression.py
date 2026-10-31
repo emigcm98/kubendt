@@ -128,6 +128,8 @@ def deploy(ex, topo_path, label="deploy"):
     if ok:
         ex.timing("deploy.took_time", r.get("took_time")); ex.timing("deploy.backend_ms", r.get("timeline", {}).get("backend_ms"))
         if r.get("warnings"): ex.note(f"deploy warnings: {r['warnings']}")
+        untested = [w for w in (r.get("warnings") or []) if w.get("kind") == "image_untested"]
+        ex.check("every image is one its driver was tried with", not untested, untested)
     return ok
 
 def configure(ex, conf_path, label="configure"):

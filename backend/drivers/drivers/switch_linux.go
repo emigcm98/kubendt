@@ -19,3 +19,10 @@ func NewLinuxSwitchDriver() *LinuxSwitchDriver {
 
 var _ capabilities.L2Capable = (*LinuxSwitchDriver)(nil)
 var _ capabilities.SwitchCapable = (*LinuxSwitchDriver)(nil)
+
+var _ drivers_meta.KnownImagesProvider = (*LinuxSwitchDriver)(nil)
+
+// KnownImages is the Alpine the examples bridge with.
+func (LinuxSwitchDriver) KnownImages() []string {
+	return []string{"alpine:3.24.2"}
+}
