@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Inspections: live reads of a node, declared per capability and served by `GET /pods/inspect/{namespace}/{pod}?what=<id>`, with `GET /drivers` listing what each driver offers. Routing table and ARP/NDP on every L3 node, NAT rules, the MAC table of a switch, OSPF neighbours and interfaces, OSPFv3 neighbours, RIP routes, the BGP summary and IS-IS neighbours on FRR and VyOS. The regression reads the OSPF adjacencies through it.
 - The node panel has a State tab with the inspections of the node, one collapsible section per read grouped by capability, read when opened and on demand. The Driver tab is now Config: the node's history grouped by the capability of each action, with a delete per capability, and the driver's reference folded underneath.
 - A driver declares the images it was tried with (`knownImages` in `GET /drivers`) and a deploy or modify warns with `image_untested` on a node running any other. The node panel lists them in the driver reference and marks an untested image in the summary.
+- The node menu offers the capture with a submenu of the node's interfaces, in link order, as the link menu does per end.
 
 ## [1.7.0] - 2026-10-25
 

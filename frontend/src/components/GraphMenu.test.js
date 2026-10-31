@@ -105,6 +105,47 @@ test('a submenu entry runs its action and closes the menu', () => {
   expect(onClose).toHaveBeenCalled();
 });
 
+test('a node offers the capture per interface, in link order', () => {
+  const onStartCapture = jest.fn();
+  nodeMenu(
+    { driver: 'FRRRouterDriver', l3capable: true, tools: ALL_TOOLS, shells: [SH] },
+    { onStartCapture, interfaces: ['eth2', 'eth1'] }
+  );
+  expect(labels()).toEqual([
+    'Open info panel',
+    'View logs',
+    'Open pod shell (sh)',
+    'Tools',
+    'Capture',
+    'Restart pod',
+    'Delete pod',
+  ]);
+  fireEvent.mouseEnter(screen.getByText('Capture'));
+  expect(labels().slice(-2)).toEqual(['on eth2', 'on eth1']);
+  fireEvent.click(screen.getByText('on eth1'));
+  expect(onStartCapture).toHaveBeenCalledWith('eth1');
+});
+
+test('a node with one link collapses the capture into it, one without none', () => {
+  nodeMenu(
+    { driver: 'HostDriver', l3capable: false, shells: [SH] },
+    {
+      onStartCapture: noop,
+      interfaces: ['eth1'],
+    }
+  );
+  expect(labels()).toContain('Capture on eth1');
+  document.body.innerHTML = '';
+  nodeMenu(
+    { driver: 'HostDriver', l3capable: false, shells: [SH] },
+    {
+      onStartCapture: noop,
+      interfaces: [],
+    }
+  );
+  expect(labels()).not.toContain('Capture');
+});
+
 test('an external node keeps only the panel and the delete entries', () => {
   render(
     <ContextMenu

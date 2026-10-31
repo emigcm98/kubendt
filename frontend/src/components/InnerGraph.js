@@ -225,6 +225,16 @@ const InnerGraph = ({
   });
   const [contextMenu, setContextMenu] = useState(null);
   const [edgeContextMenu, setEdgeContextMenu] = useState(null);
+  // The interfaces of a node in link order, as the link menu names them.
+  const nodeInterfaces = (id) => [
+    ...new Set(
+      edges
+        .map((e) =>
+          e.source === id ? e.data?.localIntf : e.target === id ? e.data?.peerIntf : null
+        )
+        .filter(Boolean)
+    ),
+  ];
   const [interfaceContextMenu, setInterfaceContextMenu] = useState(null);
   // Nodes picked with a selection box or Ctrl-click. React Flow owns the
   // selection, this mirrors it for the chip and for Esc. The handler must be
@@ -1215,6 +1225,10 @@ const InnerGraph = ({
               : null
           }
           onStartTC={onStartTC ? () => onStartTC(contextMenu.nodeId, null) : null}
+          interfaces={nodeInterfaces(contextMenu.nodeId)}
+          onStartCapture={
+            onStartCapture ? (iface) => onStartCapture(contextMenu.nodeId, iface) : null
+          }
           onRestartPod={
             isBusy
               ? null
