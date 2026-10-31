@@ -21,6 +21,7 @@ type DriverCaps struct {
 	Capabilities             []actions.CapabilityActions
 	InterfaceNameConstraints *drivers_meta.InterfaceNameConstraints
 	Tools                    []string
+	KnownImages              []string
 }
 
 // ResolveDriverCaps: resolves type + capabilities for a driver by name.
@@ -51,6 +52,7 @@ func ResolveDriverCaps(name string) (DriverCaps, error) {
 		Capabilities:             actions.ForDriver(inst),
 		InterfaceNameConstraints: constraints,
 		Tools:                    DriverTools(inst),
+		KnownImages:              knownImages(inst),
 	}, nil
 }
 
@@ -66,4 +68,13 @@ func ListAllDriversCaps() ([]DriverCaps, error) {
 		out = append(out, dc)
 	}
 	return out, nil
+}
+
+// knownImages is what the driver was tried with, empty for one that takes
+// any image.
+func knownImages(inst any) []string {
+	if kp, ok := inst.(drivers_meta.KnownImagesProvider); ok {
+		return append([]string(nil), kp.KnownImages()...)
+	}
+	return nil
 }

@@ -86,3 +86,11 @@ func (OpenVSwitchDriver) BridgeFDB(namespace, pod string) (capabilities.Rows, er
 	}
 	return rows, nil
 }
+
+var _ drivers_meta.KnownImagesProvider = (*OpenVSwitchDriver)(nil)
+
+// KnownImages names the moving tag: upstream publishes no version tag and
+// `latest` has not moved since 2018.
+func (OpenVSwitchDriver) KnownImages() []string {
+	return []string{"globocom/openvswitch:latest"}
+}

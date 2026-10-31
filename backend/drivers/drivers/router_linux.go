@@ -24,3 +24,10 @@ var _ capabilities.L2Capable = (*LinuxRouterDriver)(nil)
 var _ capabilities.L3Capable = (*LinuxRouterDriver)(nil)
 var _ capabilities.NATCapable = (*LinuxRouterDriver)(nil)
 var _ capabilities.NAT64Capable = (*LinuxRouterDriver)(nil)
+
+var _ drivers_meta.KnownImagesProvider = (*LinuxRouterDriver)(nil)
+
+// KnownImages is the Alpine the Linux router was tried with.
+func (LinuxRouterDriver) KnownImages() []string {
+	return []string{"alpine:3.24.2"}
+}

@@ -66,6 +66,10 @@ The command behind the action needs a program the image does not ship and the to
 
 The capability behind the action needs a daemon the FRR image starts only when its line in `/etc/frr/daemons` says `yes`, and the node was started without it (`ospfd=no` is the file's default). FRR does not start daemons on the fly, so the backend checks the daemon's vty socket before the actions of that capability and fails them with this message instead of a vtysh error. It happens on a node that sets its own `commands` without enabling the daemon: when a node sets none, `FRRRouterDriver` enables every daemon behind its capabilities at startup. Enable it in those `commands` (`sed -i 's/^ospfd=no/ospfd=yes/' /etc/frr/daemons` before FRR starts) or drop them, and restart or redeploy the node.
 
+## A deploy warns `image_untested`
+
+The node's image is not one its driver was tried with (`GET /drivers` lists them as `knownImages`). The deploy goes on: the warning says the platform checked nothing on that image, not that it fails. Use the image the driver names, or try the node and, if it works, add the reference to the driver's list in `backend/drivers/drivers/`.
+
 ## Backend changes not reflected during development
 
 - Make sure you are running `go run .` directly and not a stale binary.

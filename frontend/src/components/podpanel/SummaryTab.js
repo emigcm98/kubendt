@@ -1,6 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { capabilityCode } from './history';
+import { imageKnown } from './images';
 
 // The pod's card: identity, placement, status and the metrics the parent
 // polls while the tab is open.
@@ -9,6 +10,7 @@ const SummaryTab = ({
   runtimeLabel,
   driverDisplay,
   driverCaps,
+  driverKnownImages,
   podMetrics,
   onCopyImage,
   copyFloater,
@@ -67,6 +69,14 @@ const SummaryTab = ({
       <span className="pod-value pod-value-image" title={pod.image} onClick={onCopyImage}>
         {pod.image}
       </span>
+      {driverKnownImages?.length > 0 && !imageKnown(driverKnownImages, pod.image) && (
+        <span
+          className="pod-image-untested"
+          title={`Not an image ${driverDisplay} was tried with: ${driverKnownImages.join(', ')}`}
+        >
+          untested
+        </span>
+      )}
     </div>
     {copyFloater &&
       createPortal(

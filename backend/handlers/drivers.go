@@ -55,6 +55,9 @@ type DriverWithCapabilities struct {
 	// The tools the driver's nodes offer: trace and iperf through the toolbox
 	// for a container node, what a guest VM driver declares.
 	Tools []string `json:"tools"`
+	// The images the driver was tried with; a node on another one deploys
+	// with an image_untested warning. Empty for a driver that takes any.
+	KnownImages []string `json:"knownImages"`
 }
 
 type DriverOperationHistoryEntry struct {
@@ -161,6 +164,7 @@ func driverCapsToResponse(d helpers.DriverCaps) DriverWithCapabilities {
 		Capabilities:             caps,
 		InterfaceNameConstraints: constraints,
 		Tools:                    d.Tools,
+		KnownImages:              append([]string{}, d.KnownImages...),
 	}
 }
 

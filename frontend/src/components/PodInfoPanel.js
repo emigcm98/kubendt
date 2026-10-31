@@ -100,6 +100,7 @@ const PodInfoPanel = ({
   const [driverCaps, setDriverCaps] = useState([]);
   const [driverExecutor, setDriverExecutor] = useState('');
   const [driverInterfaceConstraints, setDriverInterfaceConstraints] = useState(null);
+  const [driverKnownImages, setDriverKnownImages] = useState([]);
   const [loadingDriverCaps, setLoadingDriverCaps] = useState(false);
   const [errorDriverCaps, setErrorDriverCaps] = useState(null);
 
@@ -237,6 +238,7 @@ const PodInfoPanel = ({
       setDriverCaps([]);
       setDriverExecutor('');
       setDriverInterfaceConstraints(null);
+      setDriverKnownImages([]);
       setErrorDriverCaps(null);
       return;
     }
@@ -253,6 +255,7 @@ const PodInfoPanel = ({
       // beyond Linux kernel naming, so a null here is the normal case
       // for hosts and generic switches.
       setDriverInterfaceConstraints(data?.interfaceNameConstraints || null);
+      setDriverKnownImages(Array.isArray(data?.knownImages) ? data.knownImages : []);
 
       const normalizedCaps = (data.capabilities || []).map((cap) => {
         const rawMethods = cap?.methods;
@@ -284,6 +287,7 @@ const PodInfoPanel = ({
       setDriverCaps([]);
       setDriverExecutor('');
       setDriverInterfaceConstraints(null);
+      setDriverKnownImages([]);
       setErrorDriverCaps('Error loading driver capabilities');
     } finally {
       setLoadingDriverCaps(false);
@@ -646,6 +650,7 @@ const PodInfoPanel = ({
               runtimeLabel={runtimeLabel}
               driverDisplay={driverDisplay}
               driverCaps={driverCaps}
+              driverKnownImages={driverKnownImages}
               podMetrics={podMetrics}
               onCopyImage={handleCopyImage}
               copyFloater={copyFloater}
@@ -660,6 +665,7 @@ const PodInfoPanel = ({
               driverCaps={driverCaps}
               driverExecutor={driverExecutor}
               driverInterfaceConstraints={driverInterfaceConstraints}
+              driverKnownImages={driverKnownImages}
               loadingDriverCaps={loadingDriverCaps}
               errorDriverCaps={errorDriverCaps}
               driverHistory={driverHistory}
