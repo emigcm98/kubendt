@@ -9,14 +9,17 @@ import { ReactComponent as LogsIcon } from '../assets/images/icons/logs.svg';
 import { ReactComponent as RefreshIcon } from '../assets/images/icons/refresh.svg';
 import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
 import { ReactComponent as InfoIcon } from '../assets/images/icons/info.svg';
+import { ReactComponent as PcapIcon } from '../assets/images/icons/pcap.svg';
 
-// Right-click menu of a node. The shells and the tools are groups, so the
-// menu stays at six rows however many a node supports. What a node offers
-// comes from the pod listing, the menu knows no driver.
+// Right-click menu of a node. The shells, the tools and the captures are
+// groups, so the menu stays at seven rows however many a node supports.
+// What a node offers comes from the pod listing, the menu knows no driver;
+// the interfaces come from its links, in link order.
 const ContextMenu = ({
   x,
   y,
   node,
+  interfaces = [],
   onClose,
   onOpenShell,
   onOpenLogs,
@@ -25,6 +28,7 @@ const ContextMenu = ({
   onStartTrace,
   onStartIperf,
   onStartTC,
+  onStartCapture,
   onDelete,
 }) => {
   if (!node) return null;
@@ -77,6 +81,17 @@ const ContextMenu = ({
         onStartTC && { label: 'Traffic control', icon: <SlidersIcon />, onClick: onStartTC },
       ],
     },
+    isPod &&
+      onStartCapture && {
+        label: 'Capture',
+        icon: <PcapIcon />,
+        wideIcon: true,
+        children: interfaces.map((iface) => ({
+          label: `on ${iface}`,
+          alone: `Capture on ${iface}`,
+          onClick: () => onStartCapture(iface),
+        })),
+      },
     DIVIDER,
     isPod && onRestartPod && { label: 'Restart pod', icon: <RefreshIcon />, onClick: onRestartPod },
     onDelete && {
