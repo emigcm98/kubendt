@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""End-to-end regression over the eight shipped examples, following their READMEs.
+"""End-to-end regression over the nine shipped examples, following their READMEs.
 
 Each example is deployed into the namespace its README uses, configured, checked
 (pings, OSPF adjacencies, DNS, HTTP, 5G registration, mounts), restarted through the
@@ -7,7 +7,7 @@ API to exercise replay, and torn down. Results go to results/regression/<stamp>/
 with one row per check. It is the gate before tagging a release and it needs a
 cluster, so it is not part of CI.
 
-  python3 regression.py            # all eight
+  python3 regression.py            # all nine
   python3 regression.py 2 3        # a subset
   KEEP=5 ...                       # leave example 5 deployed
   SKIP_RAW=1 ...                   # skip the raw kubectl delete check in example 3
@@ -440,7 +440,42 @@ def ex8():
             ok, det, w = retry(ping(ex.ns, "hb-0", "172.22.48.10"), 90); ex.check("hb-0 ping ha-0 after the ABR restart", ok, det, w)
     teardown(ex); return ex
 
-ALL = {"1": ex1, "2": ex2, "3": ex3, "4": ex4, "5": ex5, "6": ex6, "7": ex7, "8": ex8}
+def ex9():
+    d = f"{EX}/9-test-four-orgs-bgp"; ex = Example("9-test-four-orgs-bgp", "four-orgs"); setup(ex)
+    if deploy(ex, f"{d}/topology-network-test-four-orgs-bgp.json"):
+        # Each organization on its own IGP first.
+        configure(ex, f"{d}/network_conf_a_rip.json", label="configure (organization A, rip)")
+        ok, det, w = retry(inspect_has(ex.ns, "ra-2", "rip_routes", "destination", "172.16.2.0/24"), 120); ex.check("ra-2 learns LAN A2 by RIP", ok, det, w)
+        ok, det, w = retry(ping(ex.ns, "ha-0", "172.16.2.10"), 60); ex.check("ha-0 ping ha-1 across A (LAN A1 to LAN A2)", ok, det, w)
+        configure(ex, f"{d}/network_conf_b_ospf.json", label="configure (organization B, ospf)")
+        ok, det, w = retry(inspect_count(ex.ns, "rb-2", "ospf_neighbors", "state", "Full", 2), 120); ex.check("rb-2 Full with its two OSPF neighbours", ok, det, w)
+        ok, det, w = retry(ping(ex.ns, "hb-0", "172.17.2.10"), 60); ex.check("hb-0 ping hb-1 across B", ok, det, w)
+        configure(ex, f"{d}/network_conf_c_isis.json", label="configure (organization C, is-is)")
+        ok, det, w = retry(inspect_count(ex.ns, "rc-2", "isis_neighbors", "state", "Up", 2), 120); ex.check("rc-2 Up with its two IS-IS neighbours", ok, det, w)
+        ok, det, w = retry(ping(ex.ns, "hc-0", "172.18.2.10"), 60); ex.check("hc-0 ping hc-1 across C", ok, det, w)
+        configure(ex, f"{d}/network_conf_d_isis.json", label="configure (organization D, is-is for ipv6)")
+        ok, det, w = retry(inspect_count(ex.ns, "rd-2", "isis_neighbors", "state", "Up", 2), 120); ex.check("rd-2 Up with its two IS-IS neighbours over IPv6", ok, det, w)
+        ok, det, w = retry(ping(ex.ns, "hd-0", "fd00:4:2::10"), 60); ex.check("hd-0 ping hd-1 across D over IPv6", ok, det, w)
+        # NAT64 at D's border, then the ring.
+        configure(ex, f"{d}/network_conf_d_nat64.json", label="configure (nat64 on rd-0)")
+        ok, det, w = retry(inspect_has(ex.ns, "rd-2", "routes", "destination", "64:ff9b::/96"), 90); ex.check("rd-2 learns the NAT64 prefix by IS-IS", ok, det, w)
+        configure(ex, f"{d}/network_conf_bgp.json", label="configure (ebgp ring)")
+        for pod in ("ra-0", "rb-0", "rc-0", "rd-0"):
+            ok, det, w = retry(inspect_count(ex.ns, pod, "bgp_summary", "state", "Established", 2), 120); ex.check(f"{pod} Established with both eBGP neighbours", ok, det, w)
+        ok, det, w = retry(inspect_has(ex.ns, "ra-2", "rip_routes", "destination", "172.18.2.0/24"), 150); ex.check("ra-2 learns LAN C2 by RIP (redistributed from BGP)", ok, det, w)
+        ok, det, w = retry(contains(ex.ns, "rb-1", 'vtysh -c "show ip ospf route"', "E2 172.16.1.0/24"), 120); ex.check("rb-1 learns LAN A1 as an E2 route", ok, det, w)
+        ok, det, w = retry(inspect_has(ex.ns, "rc-2", "routes", "destination", "172.19.0.0/24"), 120); ex.check("rc-2 learns D's NAT64 pool by IS-IS (redistributed from BGP)", ok, det, w)
+        for pod, ip, what in (("ha-0", "172.17.2.10", "A to B"), ("hb-0", "172.18.2.10", "B to C"), ("hc-0", "172.16.2.10", "C to A, two ASes away")):
+            ok, det, w = retry(ping(ex.ns, pod, ip), 90); ex.check(f"{pod} ping {ip} ({what})", ok, det, w)
+        ok, det, w = retry(ping(ex.ns, "hd-0", "64:ff9b::172.16.1.10"), 120); ex.check("hd-0 (IPv6 only) ping ha-0 through NAT64", ok, det, w)
+        ok, det, w = retry(ping(ex.ns, "hd-1", "64:ff9b::172.18.2.10"), 90); ex.check("hd-1 ping hc-1 through NAT64", ok, det, w)
+        iperf_check(ex, "ha-0 iperf3 to hc-1 across the ring (managed server)", f"/iperf/run/{ex.ns}/ha-0?dest=172.18.2.10&duration=3", server_pod="hc-1")
+        if restart(ex, "rd-0"):
+            ok, det, w = retry(inspect_count(ex.ns, "rd-0", "bgp_summary", "state", "Established", 2), 180); ex.check("rd-0 Established again after the restart (replay)", ok, det, w)
+            ok, det, w = retry(ping(ex.ns, "hd-0", "64:ff9b::172.16.1.10"), 150); ex.check("hd-0 ping ha-0 through NAT64 after the restart", ok, det, w)
+    teardown(ex); return ex
+
+ALL = {"1": ex1, "2": ex2, "3": ex3, "4": ex4, "5": ex5, "6": ex6, "7": ex7, "8": ex8, "9": ex9}
 
 
 def main():

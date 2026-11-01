@@ -1,0 +1,116 @@
+{
+  "targets": [
+    {
+      "pod": "ha-0",
+      "actions": [
+        {
+          "type": "set_default_route",
+          "gateway": "172.16.1.1"
+        }
+      ]
+    },
+    {
+      "pod": "ha-1",
+      "actions": [
+        {
+          "type": "set_default_route",
+          "gateway": "172.16.2.1"
+        }
+      ]
+    },
+    {
+      "pod": "sa-0",
+      "actions": [
+        {
+          "type": "setup_bridge",
+          "bridge": "br0",
+          "ifaces": [
+            "eth1",
+            "eth2"
+          ]
+        }
+      ]
+    },
+    {
+      "pod": "sa-1",
+      "actions": [
+        {
+          "type": "setup_bridge",
+          "bridge": "br0",
+          "ifaces": [
+            "eth1",
+            "eth2"
+          ]
+        }
+      ]
+    },
+    {
+      "pod": "ra-0",
+      "actions": [
+        {
+          "type": "rip_add_network",
+          "cidr": "172.16.255.0/30"
+        },
+        {
+          "type": "rip_add_network",
+          "cidr": "172.16.255.12/30"
+        }
+      ]
+    },
+    {
+      "pod": "ra-1",
+      "actions": [
+        {
+          "type": "rip_add_network",
+          "cidr": "172.16.1.0/24"
+        },
+        {
+          "type": "rip_add_network",
+          "cidr": "172.16.255.0/30"
+        },
+        {
+          "type": "rip_add_network",
+          "cidr": "172.16.255.4/30"
+        },
+        {
+          "type": "rip_passive_interface",
+          "iface": "eth1"
+        }
+      ]
+    },
+    {
+      "pod": "ra-2",
+      "actions": [
+        {
+          "type": "rip_add_network",
+          "cidr": "172.16.255.4/30"
+        },
+        {
+          "type": "rip_add_network",
+          "cidr": "172.16.255.8/30"
+        }
+      ]
+    },
+    {
+      "pod": "ra-3",
+      "actions": [
+        {
+          "type": "rip_add_network",
+          "cidr": "172.16.2.0/24"
+        },
+        {
+          "type": "rip_add_network",
+          "cidr": "172.16.255.8/30"
+        },
+        {
+          "type": "rip_add_network",
+          "cidr": "172.16.255.12/30"
+        },
+        {
+          "type": "rip_passive_interface",
+          "iface": "eth1"
+        }
+      ]
+    }
+  ]
+}

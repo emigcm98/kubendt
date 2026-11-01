@@ -1,0 +1,186 @@
+{
+  "targets": [
+    {
+      "pod": "hd-0",
+      "actions": [
+        {
+          "type": "set_default_route",
+          "gateway": "fd00:4:1::1"
+        }
+      ]
+    },
+    {
+      "pod": "hd-1",
+      "actions": [
+        {
+          "type": "set_default_route",
+          "gateway": "fd00:4:2::1"
+        }
+      ]
+    },
+    {
+      "pod": "sd-0",
+      "actions": [
+        {
+          "type": "setup_bridge",
+          "bridge": "br0",
+          "ifaces": [
+            "eth1",
+            "eth2"
+          ]
+        }
+      ]
+    },
+    {
+      "pod": "sd-1",
+      "actions": [
+        {
+          "type": "setup_bridge",
+          "bridge": "br0",
+          "ifaces": [
+            "eth1",
+            "eth2"
+          ]
+        }
+      ]
+    },
+    {
+      "pod": "rd-0",
+      "actions": [
+        {
+          "type": "isis_set_router",
+          "net": "49.0004.0000.0000.0001.00",
+          "level": "level-2"
+        },
+        {
+          "type": "isis_add_interface",
+          "iface": "eth3",
+          "family": "6"
+        },
+        {
+          "type": "isis_add_interface",
+          "iface": "eth4",
+          "family": "6"
+        },
+        {
+          "type": "isis_set_network_type",
+          "iface": "eth3",
+          "network_type": "point-to-point"
+        },
+        {
+          "type": "isis_set_network_type",
+          "iface": "eth4",
+          "network_type": "point-to-point"
+        }
+      ]
+    },
+    {
+      "pod": "rd-1",
+      "actions": [
+        {
+          "type": "isis_set_router",
+          "net": "49.0004.0000.0000.0002.00",
+          "level": "level-2"
+        },
+        {
+          "type": "isis_add_interface",
+          "iface": "eth1",
+          "family": "6"
+        },
+        {
+          "type": "isis_add_interface",
+          "iface": "eth2",
+          "family": "6"
+        },
+        {
+          "type": "isis_add_interface",
+          "iface": "eth3",
+          "family": "6"
+        },
+        {
+          "type": "isis_passive_interface",
+          "iface": "eth1"
+        },
+        {
+          "type": "isis_set_network_type",
+          "iface": "eth2",
+          "network_type": "point-to-point"
+        },
+        {
+          "type": "isis_set_network_type",
+          "iface": "eth3",
+          "network_type": "point-to-point"
+        }
+      ]
+    },
+    {
+      "pod": "rd-2",
+      "actions": [
+        {
+          "type": "isis_set_router",
+          "net": "49.0004.0000.0000.0003.00",
+          "level": "level-2"
+        },
+        {
+          "type": "isis_add_interface",
+          "iface": "eth1",
+          "family": "6"
+        },
+        {
+          "type": "isis_add_interface",
+          "iface": "eth2",
+          "family": "6"
+        },
+        {
+          "type": "isis_set_network_type",
+          "iface": "eth1",
+          "network_type": "point-to-point"
+        },
+        {
+          "type": "isis_set_network_type",
+          "iface": "eth2",
+          "network_type": "point-to-point"
+        }
+      ]
+    },
+    {
+      "pod": "rd-3",
+      "actions": [
+        {
+          "type": "isis_set_router",
+          "net": "49.0004.0000.0000.0004.00",
+          "level": "level-2"
+        },
+        {
+          "type": "isis_add_interface",
+          "iface": "eth1",
+          "family": "6"
+        },
+        {
+          "type": "isis_add_interface",
+          "iface": "eth2",
+          "family": "6"
+        },
+        {
+          "type": "isis_add_interface",
+          "iface": "eth3",
+          "family": "6"
+        },
+        {
+          "type": "isis_passive_interface",
+          "iface": "eth1"
+        },
+        {
+          "type": "isis_set_network_type",
+          "iface": "eth2",
+          "network_type": "point-to-point"
+        },
+        {
+          "type": "isis_set_network_type",
+          "iface": "eth3",
+          "network_type": "point-to-point"
+        }
+      ]
+    }
+  ]
+}

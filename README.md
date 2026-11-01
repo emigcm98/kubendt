@@ -8,7 +8,7 @@
    <a href="https://doi.org/10.5281/zenodo.21276320"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.21276320.svg" alt="DOI" /></a>
 </p>
 
-> Last reviewed: 31 Oct 2026
+> Last reviewed: 1 Nov 2026
 
 **KubeNDT** is a platform for deploying and operating virtual network topologies on Kubernetes.
 
@@ -178,7 +178,7 @@ The full technical details were moved out of this top-level README to keep first
 
 ## Use Cases & Examples
 
-KubeNDT ships **8 reference deployments** in `deploy/examples/`, numbered in the order worth trying them. Each one has a README with the steps and the checks, and the regression in [experiments/](experiments/) runs all seven end to end, with a restart in each to exercise the replay.
+KubeNDT ships **9 reference deployments** in `deploy/examples/`, numbered in the order worth trying them. Each one has a README with the steps and the checks, and the regression in [experiments/](experiments/) runs all nine end to end, with a restart in each to exercise the replay.
 
 | Example | Guide | What it exercises | Needs beyond the cluster | Complexity |
 | --- | --- | --- | --- | --- |
@@ -190,6 +190,7 @@ KubeNDT ships **8 reference deployments** in `deploy/examples/`, numbered in the
 | [6-test-vyos](deploy/examples/6-test-vyos/) | [6-README](deploy/examples/6-test-vyos/README.md) | VyOS VM routers in OSPF with an external uplink, SNAT and a DNAT port forward, a mounted web page and IPv6 on two links | The VyOS image, KVM, an external uplink | ⭐⭐⭐⭐ |
 | [7-test-dual-stack](deploy/examples/7-test-dual-stack/) | [7-README](deploy/examples/7-test-dual-stack/README.md) | Dual stack: FRR with OSPFv2 for IPv4 and OSPFv3 for IPv6, an IPv6-only host next to dual stack ones, and the trace and throughput tools over IPv6 | Nothing | ⭐⭐ |
 | [8-test-two-orgs-rip-ospf](deploy/examples/8-test-two-orgs-rip-ospf/) | [8-README](deploy/examples/8-test-two-orgs-rip-ospf/README.md) | Two organizations on 27 nodes: A on RIPv2 over a six router mesh, B on OSPFv2 in four areas with DR and BDR, stub and totally stubby areas, summarization and MD5, and a border router redistributing between them | Nothing | ⭐⭐⭐ |
+| [9-test-four-orgs-bgp](deploy/examples/9-test-four-orgs-bgp/) | [9-README](deploy/examples/9-test-four-orgs-bgp/README.md) | Four organizations on 32 nodes joined in an eBGP ring: RIPv2, OSPFv2 in one area, IS-IS over IPv4, and an IPv6-only one on IS-IS that reaches the others through NAT64 at its border | Nothing | ⭐⭐⭐⭐ |
 
 The VyOS image is built once with `build-vyos-qcow2.sh` and imported on the workers, see [deploy/custom_images/qemu/vyos-router/](deploy/custom_images/qemu/vyos-router/). The external uplink is a second interface of a pod on the host network the workers hang from. The examples label it "External Network" and their READMEs say which steps need it.
 
@@ -212,7 +213,7 @@ The VyOS image is built once with `build-vyos-qcow2.sh` and imported on the work
 
 Example images are pinned to version tags (FRR from `quay.io/frrouting/frr`, where the project publishes it). `globocom/openvswitch`, `networkstatic/iperf3` and `docker_open5gs` have no version tags and keep their moving tag. A driver declares the images it was tried with, the node panel lists them, and a deploy warns, never refuses, on any other.
 
-The measurement scripts behind the published evaluation, and the regression that runs the eight examples end to end, live in [experiments/](experiments/). They need a cluster and are not run in CI.
+The measurement scripts behind the published evaluation, and the regression that runs the nine examples end to end, live in [experiments/](experiments/). They need a cluster and are not run in CI.
 
 ## Known Limitations
 

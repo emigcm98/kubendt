@@ -53,7 +53,8 @@ const StateTab = ({ namespace, pod, driverCaps }) => {
     [namespace, podName]
   );
 
-  // The list of what the driver offers, then the first section open.
+  // The list of what the driver offers, every section folded: which one
+  // matters depends on what the user is after, so none is read unasked.
   useEffect(() => {
     let cancelled = false;
     setInspections([]);
@@ -74,10 +75,6 @@ const StateTab = ({ namespace, pod, driverCaps }) => {
       .then((list) => {
         if (cancelled) return;
         setInspections(list);
-        if (list.length > 0) {
-          setOpen(new Set([list[0].id]));
-          readOne(list[0].id);
-        }
       })
       .catch((err) => {
         if (!cancelled) setErrorList(err.message || 'Error loading the inspections');

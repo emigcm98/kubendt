@@ -1,0 +1,18 @@
+{
+  "targets": [
+    {
+      "pod": "rd-0",
+      "actions": [
+        {
+          "type": "nat64_enable",
+          "pool": "172.19.0.0/24"
+        },
+        {
+          "type": "isis_redistribute",
+          "redistribute": "kernel",
+          "family": "6"
+        }
+      ]
+    }
+  ]
+}
