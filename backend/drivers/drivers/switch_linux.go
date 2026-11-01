@@ -22,7 +22,8 @@ var _ capabilities.SwitchCapable = (*LinuxSwitchDriver)(nil)
 
 var _ drivers_meta.KnownImagesProvider = (*LinuxSwitchDriver)(nil)
 
-// KnownImages is the Alpine the examples bridge with.
+// KnownImages are the Alpine the examples bridge with and the Ubuntu
+// tried next to it, bridging through the toolbox's ip.
 func (LinuxSwitchDriver) KnownImages() []string {
-	return []string{"alpine:3.24.2"}
+	return []string{"alpine:3.24.2", "ubuntu:26.04"}
 }

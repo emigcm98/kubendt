@@ -27,7 +27,8 @@ var _ capabilities.NAT64Capable = (*LinuxRouterDriver)(nil)
 
 var _ drivers_meta.KnownImagesProvider = (*LinuxRouterDriver)(nil)
 
-// KnownImages is the Alpine the Linux router was tried with.
+// KnownImages are the Alpine and the Ubuntu the Linux router was tried
+// with; Ubuntu has no iproute2 or iptables, the toolbox brings them.
 func (LinuxRouterDriver) KnownImages() []string {
-	return []string{"alpine:3.24.2"}
+	return []string{"alpine:3.24.2", "ubuntu:26.04"}
 }
