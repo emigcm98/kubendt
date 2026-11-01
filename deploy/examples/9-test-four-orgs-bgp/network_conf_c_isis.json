@@ -1,0 +1,176 @@
+{
+  "targets": [
+    {
+      "pod": "hc-0",
+      "actions": [
+        {
+          "type": "set_default_route",
+          "gateway": "172.18.1.1"
+        }
+      ]
+    },
+    {
+      "pod": "hc-1",
+      "actions": [
+        {
+          "type": "set_default_route",
+          "gateway": "172.18.2.1"
+        }
+      ]
+    },
+    {
+      "pod": "sc-0",
+      "actions": [
+        {
+          "type": "setup_bridge",
+          "bridge": "br0",
+          "ifaces": [
+            "eth1",
+            "eth2"
+          ]
+        }
+      ]
+    },
+    {
+      "pod": "sc-1",
+      "actions": [
+        {
+          "type": "setup_bridge",
+          "bridge": "br0",
+          "ifaces": [
+            "eth1",
+            "eth2"
+          ]
+        }
+      ]
+    },
+    {
+      "pod": "rc-0",
+      "actions": [
+        {
+          "type": "isis_set_router",
+          "net": "49.0003.0000.0000.0001.00",
+          "level": "level-2"
+        },
+        {
+          "type": "isis_add_interface",
+          "iface": "eth3"
+        },
+        {
+          "type": "isis_add_interface",
+          "iface": "eth4"
+        },
+        {
+          "type": "isis_set_network_type",
+          "iface": "eth3",
+          "network_type": "point-to-point"
+        },
+        {
+          "type": "isis_set_network_type",
+          "iface": "eth4",
+          "network_type": "point-to-point"
+        }
+      ]
+    },
+    {
+      "pod": "rc-1",
+      "actions": [
+        {
+          "type": "isis_set_router",
+          "net": "49.0003.0000.0000.0002.00",
+          "level": "level-2"
+        },
+        {
+          "type": "isis_add_interface",
+          "iface": "eth1"
+        },
+        {
+          "type": "isis_add_interface",
+          "iface": "eth2"
+        },
+        {
+          "type": "isis_add_interface",
+          "iface": "eth3"
+        },
+        {
+          "type": "isis_passive_interface",
+          "iface": "eth1"
+        },
+        {
+          "type": "isis_set_network_type",
+          "iface": "eth2",
+          "network_type": "point-to-point"
+        },
+        {
+          "type": "isis_set_network_type",
+          "iface": "eth3",
+          "network_type": "point-to-point"
+        }
+      ]
+    },
+    {
+      "pod": "rc-2",
+      "actions": [
+        {
+          "type": "isis_set_router",
+          "net": "49.0003.0000.0000.0003.00",
+          "level": "level-2"
+        },
+        {
+          "type": "isis_add_interface",
+          "iface": "eth1"
+        },
+        {
+          "type": "isis_add_interface",
+          "iface": "eth2"
+        },
+        {
+          "type": "isis_set_network_type",
+          "iface": "eth1",
+          "network_type": "point-to-point"
+        },
+        {
+          "type": "isis_set_network_type",
+          "iface": "eth2",
+          "network_type": "point-to-point"
+        }
+      ]
+    },
+    {
+      "pod": "rc-3",
+      "actions": [
+        {
+          "type": "isis_set_router",
+          "net": "49.0003.0000.0000.0004.00",
+          "level": "level-2"
+        },
+        {
+          "type": "isis_add_interface",
+          "iface": "eth1"
+        },
+        {
+          "type": "isis_add_interface",
+          "iface": "eth2"
+        },
+        {
+          "type": "isis_add_interface",
+          "iface": "eth3"
+        },
+        {
+          "type": "isis_passive_interface",
+          "iface": "eth1"
+        },
+        {
+          "type": "isis_set_network_type",
+          "iface": "eth2",
+          "network_type": "point-to-point"
+        },
+        {
+          "type": "isis_set_network_type",
+          "iface": "eth3",
+          "network_type": "point-to-point"
+        }
+      ]
+    }
+  ]
+}

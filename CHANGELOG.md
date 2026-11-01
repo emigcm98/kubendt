@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - The node panel has a State tab with the inspections of the node, one collapsible section per read grouped by capability, read when opened and on demand. The Driver tab is now Config: the node's history grouped by the capability of each action, with a delete per capability, and the driver's reference folded underneath.
 - A driver declares the images it was tried with (`knownImages` in `GET /drivers`) and a deploy or modify warns with `image_untested` on a node running any other. The node panel lists them in the driver reference and marks an untested image in the summary.
 - The node menu offers the capture with a submenu of the node's interfaces, in link order, as the link menu does per end.
+- Example 9, four organizations in an eBGP ring on 32 nodes: A on RIPv2, B on OSPFv2, C on IS-IS over IPv4 and D IPv6-only on IS-IS with NAT64 at its border.
 
 ## [1.7.0] - 2026-10-25
 

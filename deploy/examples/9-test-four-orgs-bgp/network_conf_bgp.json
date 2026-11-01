@@ -1,0 +1,112 @@
+{
+  "targets": [
+    {
+      "pod": "ra-0",
+      "actions": [
+        {
+          "type": "bgp_set_router",
+          "as": 65001,
+          "router_id": "172.16.0.1"
+        },
+        {
+          "type": "bgp_add_neighbor",
+          "neighbor": "172.31.0.2",
+          "remote_as": 65002
+        },
+        {
+          "type": "bgp_add_neighbor",
+          "neighbor": "172.31.0.13",
+          "remote_as": 65004
+        },
+        {
+          "type": "bgp_redistribute",
+          "redistribute": "rip"
+        },
+        {
+          "type": "rip_redistribute",
+          "redistribute": "bgp"
+        }
+      ]
+    },
+    {
+      "pod": "rb-0",
+      "actions": [
+        {
+          "type": "bgp_set_router",
+          "as": 65002,
+          "router_id": "172.17.0.1"
+        },
+        {
+          "type": "bgp_add_neighbor",
+          "neighbor": "172.31.0.1",
+          "remote_as": 65001
+        },
+        {
+          "type": "bgp_add_neighbor",
+          "neighbor": "172.31.0.6",
+          "remote_as": 65003
+        },
+        {
+          "type": "bgp_redistribute",
+          "redistribute": "ospf"
+        },
+        {
+          "type": "ospf_redistribute",
+          "redistribute": "bgp"
+        }
+      ]
+    },
+    {
+      "pod": "rc-0",
+      "actions": [
+        {
+          "type": "bgp_set_router",
+          "as": 65003,
+          "router_id": "172.18.0.1"
+        },
+        {
+          "type": "bgp_add_neighbor",
+          "neighbor": "172.31.0.5",
+          "remote_as": 65002
+        },
+        {
+          "type": "bgp_add_neighbor",
+          "neighbor": "172.31.0.10",
+          "remote_as": 65004
+        },
+        {
+          "type": "bgp_redistribute",
+          "redistribute": "isis"
+        },
+        {
+          "type": "isis_redistribute",
+          "redistribute": "bgp"
+        }
+      ]
+    },
+    {
+      "pod": "rd-0",
+      "actions": [
+        {
+          "type": "bgp_set_router",
+          "as": 65004,
+          "router_id": "172.19.0.254"
+        },
+        {
+          "type": "bgp_add_neighbor",
+          "neighbor": "172.31.0.9",
+          "remote_as": 65003
+        },
+        {
+          "type": "bgp_add_neighbor",
+          "neighbor": "172.31.0.14",
+          "remote_as": 65001
+        },
+        {
+          "type": "bgp_add_network",
+          "cidr": "172.19.0.0/24"
+        }
+      ]
+    }
+  ]
+}
