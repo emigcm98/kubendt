@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Changed
 
 - The node panel's Summary names the runtime as `container` or `VM (QEMU/KVM)`, with a note on what that means for the driver and the tools, instead of `k8s linux host-based`.
+- The Linux switch and router drivers also declare `ubuntu:26.04` among the images they were tried with.
 
 ## [1.7.0] - 2026-10-25
 
