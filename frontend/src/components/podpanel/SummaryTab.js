@@ -8,6 +8,7 @@ import { imageKnown } from './images';
 const SummaryTab = ({
   pod,
   runtimeLabel,
+  runtimeNote,
   driverDisplay,
   driverCaps,
   driverKnownImages,
@@ -40,7 +41,9 @@ const SummaryTab = ({
     </div>
     <div className="pod-line">
       <span className="pod-label">Runtime:</span>
-      <span className="pod-value">{runtimeLabel}</span>
+      <span className="pod-value" title={runtimeNote}>
+        {runtimeLabel}
+      </span>
     </div>
     {driverCaps?.some((cap) => !cap.universal) && (
       <div className="pod-line">
