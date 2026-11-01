@@ -131,7 +131,12 @@ const PodInfoPanel = ({
   });
 
   const displayName = pod.replicaCount > 1 ? pod.name : pod.baseName;
-  const runtimeLabel = pod?.runtime === 'qemu' ? 'qemu-based' : 'k8s linux host-based';
+  // What the node runs on, and what that means for the driver and the tools.
+  const isVM = pod?.runtime === 'qemu';
+  const runtimeLabel = isVM ? 'VM (QEMU/KVM)' : 'container';
+  const runtimeNote = isVM
+    ? 'A guest VM booted by QEMU/KVM inside the pod: the driver configures it through the guest, the tools work on the pod side of its tap interfaces'
+    : 'A Linux container: the driver configures it with kubectl exec and the tools run in its network namespace';
   const driverDisplay = pod?.driver || '—';
 
   const handleOpenFile = (fileName) => {
@@ -653,6 +658,7 @@ const PodInfoPanel = ({
             <SummaryTab
               pod={pod}
               runtimeLabel={runtimeLabel}
+              runtimeNote={runtimeNote}
               driverDisplay={driverDisplay}
               driverCaps={driverCaps}
               driverKnownImages={driverKnownImages}

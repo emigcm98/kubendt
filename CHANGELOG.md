@@ -19,6 +19,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - The node menu offers the capture with a submenu of the node's interfaces, in link order, as the link menu does per end.
 - Example 9, four organizations in an eBGP ring on 32 nodes: A on RIPv2, B on OSPFv2, C on IS-IS over IPv4 and D IPv6-only on IS-IS with NAT64 at its border.
 
+### Changed
+
+- The node panel's Summary names the runtime as `container` or `VM (QEMU/KVM)`, with a note on what that means for the driver and the tools, instead of `k8s linux host-based`.
+
 ## [1.7.0] - 2026-10-25
 
 ### Added
