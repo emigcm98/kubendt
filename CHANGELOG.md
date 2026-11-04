@@ -15,12 +15,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `SwitchCapable` and `VLANCapable` on the Linux and FRR routers, and the VLAN actions accept the bridge device itself (`self` rules), so a bridge on a router with a trunk on `br0` and `br0.10` subinterfaces is an SVI routing between its VLANs. The OVS VLAN inspection lists a bridge's internal port when it has VLAN settings.
 - `STPCapable` on the switches and on the Linux and FRR routers: `stp_enable` (classic STP on the Linux bridge, RSTP by default or STP on Open vSwitch), `stp_disable`, `stp_set_bridge_priority` and `stp_set_port` for cost and priority, with `stp_bridges` and `stp_ports` inspections showing the root, the root port and each port's role and state. An `ip` call with bridge options runs through the toolbox on busybox images, as `bridge` does.
 - `OpenFlowCapable` on the Open vSwitch driver: `set_controller` with the OpenFlow versions to offer, `remove_controller`, `set_fail_mode` (secure or standalone), and `add_flow` and `delete_flow` for flows installed by hand, with `openflow_bridges` (controller, connection, fail mode, datapath id) and `openflow_flows` inspections.
+- An Extreme EXOS (Switch Engine) switch as a QEMU guest, a simple lab switch with a real CLI next to VyOS: the image folder `deploy/custom_images/qemu/exos-switch/`, built by hand and `EXOSSwitchDriver` with link and bridging actions, the port states and the MAC table.
 
 ### Fixed
 
 - The DNS actions that rewrite `resolv.conf` read it whole before writing: piping it into `tee` on itself could truncate it first and leave an empty file with no error.
 - The MTU pass of a deploy retries a node whose container was restarting when it tried to write, waiting for it to be Ready again, instead of leaving the default MTU behind a warning.
 - After a deploy whose nodes were still restarting the graph stayed on the placeholders until a page reload. It now draws what the cluster has, with each node's state, and a forced refresh waits for the one in flight instead of being dropped.
+- A restart whose pod is not Ready in time no longer replays its history against a node still coming up, which pruned it; the wait for Ready covers a driver's readiness budget when it is longer than the default.
 
 ## [1.8.0] - 2026-11-01
 

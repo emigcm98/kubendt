@@ -3,6 +3,7 @@ package helpers
 import (
 	"context"
 	"fmt"
+	drivers_meta "kubendt/drivers/meta"
 	"log"
 	"sort"
 	"strings"
@@ -17,8 +18,28 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 )
 
-// podReadyTimeout bounds every wait for pods to become Ready.
+// podReadyTimeout bounds every wait for pods to become Ready, unless a
+// driver's readiness probe is allowed longer: a guest VM declares how long
+// its boot may take, and the wait covers that with a margin.
 const podReadyTimeout = 180 * time.Second
+
+func readyTimeoutFor(namespace string, podNames []string) time.Duration {
+	timeout := podReadyTimeout
+	for _, name := range podNames {
+		drv, err := GetDriverForPod(namespace, name)
+		if err != nil {
+			continue
+		}
+		if p, ok := drv.(drivers_meta.ReadinessProbeProvider); ok {
+			spec := p.ReadinessProbeCommands()
+			budget := time.Duration(spec.InitialDelaySeconds+spec.PeriodSeconds*spec.FailureThreshold)*time.Second + 30*time.Second
+			if budget > timeout {
+				timeout = budget
+			}
+		}
+	}
+	return timeout
+}
 
 // PodNamesForNodes expands node specs into the pod names their StatefulSets produce.
 func PodNamesForNodes(nodes []types.NodeSpec) []string {
@@ -71,7 +92,7 @@ func WaitForPodsReadyTimeline(namespace string, podNames []string, requestStart 
 		return timelinesOf(trackers), nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), podReadyTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), readyTimeoutFor(namespace, podNames))
 	defer cancel()
 
 	pending := make(map[string]string, len(podNames)) // pod name -> last known reason

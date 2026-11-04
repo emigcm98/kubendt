@@ -30,6 +30,7 @@ var plannedDrivers = []string{
 	"LinuxRouterDriver",
 	"FRRRouterDriver",
 	"VyOSRouterDriver",
+	"EXOSSwitchDriver",
 }
 
 // plan is what one action resolves to on one driver: the executor and the

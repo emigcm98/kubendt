@@ -1,0 +1,158 @@
+{
+  "add_dns_nameserver": { "unsupported": true },
+  "add_dns_search": { "unsupported": true },
+  "add_flow": { "unsupported": true },
+  "add_interface_to_bridge": {
+    "executor": "exos_api",
+    "commands": [
+      ["configure vlan br0 add ports 1 untagged"]
+    ]
+  },
+  "add_qdisc": {
+    "executor": "tc_universal",
+    "commands": [
+      ["tc","qdisc","replace","dev","1","root","noqueue"],
+      ["tc","qdisc","replace","dev","1","root","netem","delay","50ms","5ms","loss","1%","rate","10mbit"]
+    ]
+  },
+  "add_static_route": { "unsupported": true },
+  "add_vlan_subinterface": { "unsupported": true },
+  "bgp_add_neighbor": { "unsupported": true },
+  "bgp_add_network": { "unsupported": true },
+  "bgp_redistribute": { "unsupported": true },
+  "bgp_remove_neighbor": { "unsupported": true },
+  "bgp_remove_network": { "unsupported": true },
+  "bgp_remove_redistribute": { "unsupported": true },
+  "bgp_remove_router": { "unsupported": true },
+  "bgp_set_router": { "unsupported": true },
+  "clear_dns": { "unsupported": true },
+  "custom": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","echo hello"]
+    ]
+  },
+  "del_qdisc": {
+    "executor": "tc_universal",
+    "commands": [
+      ["tc","qdisc","replace","dev","1","root","noqueue"],
+      ["tc","qdisc","del","dev","1","root"]
+    ]
+  },
+  "delete_flow": { "unsupported": true },
+  "disable_dnat": { "unsupported": true },
+  "disable_snat": { "unsupported": true },
+  "enable_dnat": { "unsupported": true },
+  "enable_snat": { "unsupported": true },
+  "isis_add_interface": { "unsupported": true },
+  "isis_passive_interface": { "unsupported": true },
+  "isis_redistribute": { "unsupported": true },
+  "isis_remove_interface": { "unsupported": true },
+  "isis_remove_metric": { "unsupported": true },
+  "isis_remove_network_type": { "unsupported": true },
+  "isis_remove_passive_interface": { "unsupported": true },
+  "isis_remove_redistribute": { "unsupported": true },
+  "isis_remove_router": { "unsupported": true },
+  "isis_set_metric": { "unsupported": true },
+  "isis_set_network_type": { "unsupported": true },
+  "isis_set_router": { "unsupported": true },
+  "link_down": {
+    "executor": "exos_api",
+    "commands": [
+      ["disable ports 1"]
+    ]
+  },
+  "link_up": {
+    "executor": "exos_api",
+    "commands": [
+      ["enable ports 1"]
+    ]
+  },
+  "nat64_disable": { "unsupported": true },
+  "nat64_enable": { "unsupported": true },
+  "ospf6_add_interface": { "unsupported": true },
+  "ospf6_originate_default": { "unsupported": true },
+  "ospf6_passive_interface": { "unsupported": true },
+  "ospf6_redistribute": { "unsupported": true },
+  "ospf6_remove_interface": { "unsupported": true },
+  "ospf6_remove_originate_default": { "unsupported": true },
+  "ospf6_remove_passive_interface": { "unsupported": true },
+  "ospf6_remove_redistribute": { "unsupported": true },
+  "ospf6_remove_router_id": { "unsupported": true },
+  "ospf6_set_router_id": { "unsupported": true },
+  "ospf_add_area_range": { "unsupported": true },
+  "ospf_add_network": { "unsupported": true },
+  "ospf_mtu_ignore": { "unsupported": true },
+  "ospf_no_passive": { "unsupported": true },
+  "ospf_originate_default": { "unsupported": true },
+  "ospf_passive_default": { "unsupported": true },
+  "ospf_redistribute": { "unsupported": true },
+  "ospf_remove_area_range": { "unsupported": true },
+  "ospf_remove_area_type": { "unsupported": true },
+  "ospf_remove_authentication": { "unsupported": true },
+  "ospf_remove_cost": { "unsupported": true },
+  "ospf_remove_mtu_ignore": { "unsupported": true },
+  "ospf_remove_network": { "unsupported": true },
+  "ospf_remove_network_type": { "unsupported": true },
+  "ospf_remove_no_passive": { "unsupported": true },
+  "ospf_remove_originate_default": { "unsupported": true },
+  "ospf_remove_passive_default": { "unsupported": true },
+  "ospf_remove_priority": { "unsupported": true },
+  "ospf_remove_redistribute": { "unsupported": true },
+  "ospf_remove_router_id": { "unsupported": true },
+  "ospf_remove_timers": { "unsupported": true },
+  "ospf_set_area_type": { "unsupported": true },
+  "ospf_set_authentication": { "unsupported": true },
+  "ospf_set_cost": { "unsupported": true },
+  "ospf_set_network_type": { "unsupported": true },
+  "ospf_set_priority": { "unsupported": true },
+  "ospf_set_router_id": { "unsupported": true },
+  "ospf_set_timers": { "unsupported": true },
+  "remove_controller": { "unsupported": true },
+  "remove_default_route": { "unsupported": true },
+  "remove_dns_nameserver": { "unsupported": true },
+  "remove_dns_search": { "unsupported": true },
+  "remove_interface_from_bridge": {
+    "executor": "exos_api",
+    "commands": [
+      ["configure vlan br0 delete ports 1"]
+    ]
+  },
+  "remove_ip": { "unsupported": true },
+  "remove_static_route": { "unsupported": true },
+  "remove_vlan_subinterface": { "unsupported": true },
+  "replace_ip": { "unsupported": true },
+  "rip_add_network": { "unsupported": true },
+  "rip_passive_interface": { "unsupported": true },
+  "rip_redistribute": { "unsupported": true },
+  "rip_remove_network": { "unsupported": true },
+  "rip_remove_passive_interface": { "unsupported": true },
+  "rip_remove_redistribute": { "unsupported": true },
+  "rip_remove_timers": { "unsupported": true },
+  "rip_set_timers": { "unsupported": true },
+  "set_controller": { "unsupported": true },
+  "set_default_route": { "unsupported": true },
+  "set_dns": { "unsupported": true },
+  "set_fail_mode": { "unsupported": true },
+  "set_ip": { "unsupported": true },
+  "setup_bridge": {
+    "executor": "exos_api",
+    "commands": [
+      ["create vlan br0"],
+      ["configure vlan br0 add ports 1,2 untagged"]
+    ]
+  },
+  "stp_disable": { "unsupported": true },
+  "stp_enable": { "unsupported": true },
+  "stp_set_bridge_priority": { "unsupported": true },
+  "stp_set_port": { "unsupported": true },
+  "teardown_bridge": {
+    "executor": "exos_api",
+    "commands": [
+      ["delete vlan br0"]
+    ]
+  },
+  "vlan_clear_port": { "unsupported": true },
+  "vlan_set_access": { "unsupported": true },
+  "vlan_set_trunk": { "unsupported": true }
+}

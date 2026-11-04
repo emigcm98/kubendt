@@ -1,0 +1,19 @@
+# EXOS switch node: Extreme's Switch Engine VM under QEMU/KVM in a pod. The
+# exos.qcow2 is Extreme's image as published, fetched and verified by
+# build-exos-qcow2.sh; the entrypoint wires the pod's interfaces to the
+# VM's ports and exposes the HTTP API on loopback for the backend.
+FROM ubuntu:22.04
+RUN apt update && apt install -y \
+    qemu-system-x86 \
+    qemu-utils \
+    iproute2 \
+    iputils-ping \
+    curl \
+    jq \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY exos.qcow2      /exos.qcow2
+COPY entrypoint.sh   /entrypoint.sh
+COPY startup.xsf.tpl /startup.xsf.tpl
+RUN chmod +x /entrypoint.sh
+CMD ["/entrypoint.sh"]
