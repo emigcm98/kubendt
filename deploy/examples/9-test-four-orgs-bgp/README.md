@@ -15,7 +15,7 @@ Nodes deployed:
 | Node | Driver | Image | Replicas | Role |
 | --- | --- | --- | --- | --- |
 | `ra` | `FRRRouterDriver` | `quay.io/frrouting/frr:10.7.1` | 4 | Organization A routers, RIPv2. `ra-0` is A's border router |
-| `sa` | `OpenVSwitchDriver` | `globocom/openvswitch:latest` | 2 | Organization A switches, one per LAN |
+| `sa` | `OpenVSwitchDriver` | `ghcr.io/emigcm98/kubendt-ovs:3.7.1` | 2 | Organization A switches, one per LAN |
 | `ha` | `HostDriver` | `alpine:3.24.2` | 2 | Organization A hosts, one per LAN |
 | `rb`, `sb`, `hb` | as above | as above | 4, 2, 2 | Organization B, OSPFv2 in area 0. `rb-0` is B's border router |
 | `rc`, `sc`, `hc` | as above | as above | 4, 2, 2 | Organization C, IS-IS level 2 over IPv4. `rc-0` is C's border router |
@@ -220,4 +220,4 @@ Create a namespace (e.g. `four-orgs` or any name you prefer).
 - If `hd-0` cannot reach `64:ff9b::172.16.1.10`, check in this order: `ip -6 route` on `rd-2` holds `64:ff9b::/96` by IS-IS (the `kernel` redistribution on `rd-0`), `show ip bgp 172.19.0.0/24` on `ra-0` has the pool, and `tayga` is running on `rd-0` (`pgrep tayga` in its toolbox). The platform starts tayga with `wkpf-strict no`, so private IPv4 addresses behind the well known prefix are translated, which a stock tayga refuses.
 - The hosts of D resolve nothing: no DNS64 here. Use addresses, `64:ff9b::` followed by the IPv4 one.
 
-> Last reviewed: 1 Nov 2026
+> Last reviewed: 4 Nov 2026

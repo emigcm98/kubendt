@@ -30,8 +30,8 @@ Nodes deployed:
 | `edge-router` | `FRRRouterDriver` | `quay.io/frrouting/frr:10.7.1` | 1 | Edge router: OSPF (originates the default route), SNAT on `eth0`, external uplink with DNAT on `eth1` |
 | `svc-router` | `FRRRouterDriver` | `quay.io/frrouting/frr:10.7.1` | 1 | Services router, OSPF |
 | `room-router` | `FRRRouterDriver` | `quay.io/frrouting/frr:10.7.1` | 1 | User rooms router, OSPF |
-| `core-sw` | `OpenVSwitchDriver` | `globocom/openvswitch:latest` | 1 | Core switch, Open vSwitch |
-| `dist-sw` | `OpenVSwitchDriver` | `globocom/openvswitch:latest` | 1 | Distribution switch, Open vSwitch |
+| `core-sw` | `OpenVSwitchDriver` | `ghcr.io/emigcm98/kubendt-ovs:3.7.1` | 1 | Core switch, Open vSwitch |
+| `dist-sw` | `OpenVSwitchDriver` | `ghcr.io/emigcm98/kubendt-ovs:3.7.1` | 1 | Distribution switch, Open vSwitch |
 | `dmz-sw` | `LinuxSwitchDriver` | `alpine:3.24.2` | 1 | DMZ switch (Linux bridge) |
 | `svc-sw` | `LinuxSwitchDriver` | `alpine:3.24.2` | 1 | Services switch (Linux bridge) |
 | `room-sw` | `LinuxSwitchDriver` | `alpine:3.24.2` | 2 | Room switches (Linux bridge), one per room |
@@ -413,3 +413,5 @@ To shape a whole link, name one end in a `links` section and the backend finds t
 - **iperf3 external DNAT fails**: check that the DNAT rule appears in `iptables -t nat -L PREROUTING` on `edge-router-0`. Also confirm `iperf-server-0` has a default route via `10.0.255.254`.
 - **`web-internal` returns default nginx page**: the file `web_internal/index_internal.html` may have been created after the node was started. Restart `web-internal-0` to re-mount the file.
 - **Internet access not working**: verify the SNAT rule on `edge-router-0 eth0` is active (`iptables -t nat -L POSTROUTING`) and that pods in the cluster can reach the internet at all; the external IP on `eth1` only matters for the DNAT tests.
+
+> Last reviewed: 4 Nov 2026

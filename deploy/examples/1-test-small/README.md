@@ -20,7 +20,7 @@ Nodes deployed:
 | `pc` | `HostDriver` | `alpine:3.24.2` | 4 | Alpine hosts, two per LAN; mount `test.sh` and carry `ENV1`/`ENV2` |
 | `server` | `HostDriver` | `alpine:3.24.2` | 1 | Alpine host behind the OVS switch; mounts the Secret-backed `secret.env` |
 | `sw` | `LinuxSwitchDriver` | `alpine:3.24.2` | 2 | Linux bridge switches, one per LAN |
-| `ovs` | `OpenVSwitchDriver` | `globocom/openvswitch:latest` | 1 | Open vSwitch in front of `server` |
+| `ovs` | `OpenVSwitchDriver` | `ghcr.io/emigcm98/kubendt-ovs:3.7.1` | 1 | Open vSwitch in front of `server` |
 | `r1` | `FRRRouterDriver` | `quay.io/frrouting/frr:10.7.1` | 1 | FRR router joining the three segments, SNAT on `eth0` |
 
 Nodes without a `driver` in the topology JSON get the default of their type: `HostDriver` for hosts and `LinuxSwitchDriver` for switches.
@@ -213,3 +213,5 @@ Open the info panel of any `pc-*` and go to the last tab, `Files/Vars`. It summa
 - Script `/mnt/test.sh` should be executed with `sh`, as it is mounted with read-only permissions.
 - If a target name in `network_conf.json` is ambiguous (multi-replica), use the explicit `-N` pod name.
 - If `cat /etc/kubendt/secret.env` on `server-0` is missing, the topology was imported before the file existed. Create it, mark sensitive, then redeploy or restart `server-0`.
+
+> Last reviewed: 4 Nov 2026

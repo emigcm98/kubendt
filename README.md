@@ -8,7 +8,7 @@
    <a href="https://doi.org/10.5281/zenodo.21276320"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.21276320.svg" alt="DOI" /></a>
 </p>
 
-> Last reviewed: 1 Nov 2026
+> Last reviewed: 4 Nov 2026
 
 **KubeNDT** is a platform for deploying and operating virtual network topologies on Kubernetes.
 
@@ -211,7 +211,7 @@ The VyOS image is built once with `build-vyos-qcow2.sh` and imported on the work
 
 ---
 
-Example images are pinned to version tags (FRR from `quay.io/frrouting/frr`, where the project publishes it). `globocom/openvswitch`, `networkstatic/iperf3` and `docker_open5gs` have no version tags and keep their moving tag. A driver declares the images it was tried with, the node panel lists them, and a deploy warns, never refuses, on any other.
+Example images are pinned to version tags (FRR from `quay.io/frrouting/frr`, where the project publishes it; Open vSwitch from `ghcr.io/emigcm98/kubendt-ovs`, built in [deploy/custom_images/](deploy/custom_images/) and tagged by the Open vSwitch version, since upstream publishes no maintained image). `networkstatic/iperf3` and `docker_open5gs` have no version tags and keep their moving tag. A driver declares the images it was tried with, the node panel lists them, and a deploy warns, never refuses, on any other.
 
 The measurement scripts behind the published evaluation, and the regression that runs the nine examples end to end, live in [experiments/](experiments/). They need a cluster and are not run in CI.
 
