@@ -25,6 +25,14 @@
       ["sh","-c","{ vtysh -c 'show running-config' | grep -qxF 'ip route 10.1.0.0/16 10.0.0.254 eth1' || { vtysh -c 'show running-config' | grep '^ip route 10\\.1\\.0\\.0/16 ' | while read -r l; do vtysh -c 'configure terminal' -c \"no $l\"; done \u0026\u0026 vtysh -c 'configure terminal' -c 'ip route 10.1.0.0/16 10.0.0.254 eth1'; }; }"]
     ]
   },
+  "add_vlan_subinterface": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","ip link show eth1.10 \u003e/dev/null 2\u003e\u00261 || ip link add link eth1 name eth1.10 type vlan id 10"],
+      ["ip","link","set","eth1.10","up"],
+      ["ip","addr","replace","10.0.10.1/24","dev","eth1.10"]
+    ]
+  },
   "bgp_add_neighbor": {
     "executor": "kubectl",
     "commands": [
@@ -469,6 +477,12 @@
     "executor": "kubectl",
     "commands": [
       ["vtysh","-c","configure terminal","-c","no ip route 10.1.0.0/16 10.0.0.254 eth1"]
+    ]
+  },
+  "remove_vlan_subinterface": {
+    "executor": "kubectl",
+    "commands": [
+      ["ip","link","del","eth1.10"]
     ]
   },
   "replace_ip": {

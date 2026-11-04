@@ -10,6 +10,7 @@ type HostDriver struct {
 	drivers_meta.Meta
 	capabilities.L2Base
 	capabilities.L3Base
+	capabilities.SubinterfaceBase
 }
 
 func NewHostDriver() *HostDriver {
@@ -20,3 +21,4 @@ func NewHostDriver() *HostDriver {
 
 var _ capabilities.L2Capable = (*HostDriver)(nil)
 var _ capabilities.L3Capable = (*HostDriver)(nil)
+var _ capabilities.SubinterfaceCapable = (*HostDriver)(nil)

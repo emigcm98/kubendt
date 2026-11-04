@@ -25,6 +25,14 @@
       ["ip","route","replace","10.1.0.0/16","via","10.0.0.254","dev","eth1"]
     ]
   },
+  "add_vlan_subinterface": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","ip link show eth1.10 \u003e/dev/null 2\u003e\u00261 || ip link add link eth1 name eth1.10 type vlan id 10"],
+      ["ip","link","set","eth1.10","up"],
+      ["ip","addr","replace","10.0.10.1/24","dev","eth1.10"]
+    ]
+  },
   "bgp_add_neighbor": { "unsupported": true },
   "bgp_add_network": { "unsupported": true },
   "bgp_redistribute": { "unsupported": true },
@@ -179,6 +187,12 @@
     "executor": "kubectl",
     "commands": [
       ["ip","route","del","10.1.0.0/16","via","10.0.0.254","dev","eth1"]
+    ]
+  },
+  "remove_vlan_subinterface": {
+    "executor": "kubectl",
+    "commands": [
+      ["ip","link","del","eth1.10"]
     ]
   },
   "replace_ip": {

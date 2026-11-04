@@ -15,6 +15,7 @@
     ]
   },
   "add_static_route": { "unsupported": true },
+  "add_vlan_subinterface": { "unsupported": true },
   "bgp_add_neighbor": { "unsupported": true },
   "bgp_add_network": { "unsupported": true },
   "bgp_redistribute": { "unsupported": true },
@@ -116,6 +117,7 @@
   },
   "remove_ip": { "unsupported": true },
   "remove_static_route": { "unsupported": true },
+  "remove_vlan_subinterface": { "unsupported": true },
   "replace_ip": { "unsupported": true },
   "rip_add_network": { "unsupported": true },
   "rip_passive_interface": { "unsupported": true },

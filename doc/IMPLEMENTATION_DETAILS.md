@@ -50,6 +50,7 @@ Registry Pattern:
 - `NATCapable`: EnableSNAT, DisableSNAT, EnableDNAT, DisableDNAT
 - `SwitchCapable`: SetupBridge, TeardownBridge, Add/RemoveInterfaceToBridge
 - `VLANCapable`: VLANSetAccess, VLANSetTrunk, VLANClearPort
+- `SubinterfaceCapable`: AddVLANSubinterface, RemoveVLANSubinterface
 - `OSPFCapable`: OSPFAddNetwork, OSPFRemoveNetwork, OSPFSetRouterID, OSPFRemoveRouterID, OSPFPassiveDefault, OSPFRemovePassiveDefault, OSPFNoPassive, OSPFRemoveNoPassive, OSPFOriginateDefault, OSPFRemoveOriginateDefault, OSPFMTUIgnore, OSPFRemoveMTUIgnore
 
 **Capability Bases** (default implementations):
