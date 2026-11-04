@@ -535,7 +535,7 @@ func setLinkMTUs(namespace string, eff int, ends []mtuEnd, current map[string]ma
 			for i, it := range todo {
 				keys[i] = it.key()
 			}
-			stdout, stderr, err := ExecNetns(namespace, podName, []string{"sh", "-c", setScript(todo)})
+			stdout, stderr, err := execWhenRunning(namespace, podName, []string{"sh", "-c", setScript(todo)})
 			if err != nil {
 				podWarnings = append(podWarnings, types.Warning{
 					Node:   podName,
@@ -713,4 +713,55 @@ func forEachPod(byPod map[string][]mtuEnd, fn func(pod string, ends []mtuEnd)) {
 		}(pod, ends)
 	}
 	wg.Wait()
+}
+
+// execWhenRunning runs argv in the pod and, when the exec lands on a container
+// that is restarting at that moment (an application that exits until a peer
+// answers, as the Open5GS functions do), waits for the pod to be Ready again
+// and tries once more, within a bound. The netns outlives the container, so
+// what the script writes holds once it runs.
+func execWhenRunning(namespace, podName string, argv []string) (string, string, error) {
+	deadline := time.Now().Add(execRetryWindow)
+	for {
+		stdout, stderr, err := ExecNetns(namespace, podName, argv)
+		if err == nil || !containerRestarting(err) {
+			return stdout, stderr, err
+		}
+		log.Printf("⏳ %s/%s: container restarting, retrying the link write once it is Ready", namespace, podName)
+		if !waitPodReadyUntil(namespace, podName, deadline) {
+			return stdout, stderr, err
+		}
+	}
+}
+
+// execRetryWindow bounds the retries of one pod's write while its container
+// restarts; after it the warning stands and the restart warning says why.
+const execRetryWindow = 30 * time.Second
+
+// containerRestarting tells the kubelet errors of an exec that found no running
+// container from everything else (a missing binary, a script failure).
+func containerRestarting(err error) bool {
+	if err == nil {
+		return false
+	}
+	s := err.Error()
+	return strings.Contains(s, "container not found") || strings.Contains(s, "is not running") || strings.Contains(s, "is waiting to start")
+}
+
+// waitPodReadyUntil polls the pod every second until it is Ready or the
+// deadline passes. A pod that is gone ends the wait as well.
+func waitPodReadyUntil(namespace, podName string, deadline time.Time) bool {
+	for {
+		time.Sleep(time.Second)
+		if time.Now().After(deadline) {
+			return false
+		}
+		pod, err := kubeclient.Clientset.CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
+		if err != nil {
+			return false
+		}
+		if ready, _ := isPodReady(pod); ready {
+			return true
+		}
+	}
 }

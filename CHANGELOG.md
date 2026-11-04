@@ -14,6 +14,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Fixed
 
 - The DNS actions that rewrite `resolv.conf` read it whole before writing: piping it into `tee` on itself could truncate it first and leave an empty file with no error.
+- The MTU pass of a deploy retries a node whose container was restarting when it tried to write, waiting for it to be Ready again, instead of leaving the default MTU behind a warning.
+- After a deploy whose nodes were still restarting the graph stayed on the placeholders until a page reload. It now draws what the cluster has, with each node's state, and a forced refresh waits for the one in flight instead of being dropped.
 
 ## [1.8.0] - 2026-11-01
 

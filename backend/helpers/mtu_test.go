@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"errors"
 	"reflect"
 	"strings"
 	"testing"
@@ -339,5 +340,22 @@ func TestGuestNeedsMTUWithOverride(t *testing.T) {
 	entries[0]["mtu"] = "1450"
 	if !guestNeedsMTU(entries, ends, 1450) {
 		t.Fatalf("an overridden interface at the platform value needs the commit")
+	}
+}
+
+func TestContainerRestarting(t *testing.T) {
+	cases := map[string]bool{
+		`Internal error occurred: unable to upgrade connection: container not found ("udm")`: true,
+		"container \"amf\" in pod \"amf-0\" is waiting to start: CrashLoopBackOff":           true,
+		"command terminated with exit code 1":                                                false,
+		"executable file not found in $PATH":                                                 false,
+	}
+	for msg, want := range cases {
+		if got := containerRestarting(errors.New(msg)); got != want {
+			t.Errorf("containerRestarting(%q) = %v, want %v", msg, got, want)
+		}
+	}
+	if containerRestarting(nil) {
+		t.Error("containerRestarting(nil) = true")
 	}
 }
