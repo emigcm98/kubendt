@@ -10,8 +10,8 @@ import (
 func TestInspectionsPerDriver(t *testing.T) {
 	want := map[string]map[string][]string{
 		"HostDriver":        {"L3Capable": {"neighbors", "routes"}},
-		"LinuxSwitchDriver": {"SwitchCapable": {"bridge_fdb"}},
-		"OpenVSwitchDriver": {"SwitchCapable": {"bridge_fdb"}},
+		"LinuxSwitchDriver": {"SwitchCapable": {"bridge_fdb"}, "VLANCapable": {"vlan_ports"}},
+		"OpenVSwitchDriver": {"SwitchCapable": {"bridge_fdb"}, "VLANCapable": {"vlan_ports"}},
 		"LinuxRouterDriver": {"L3Capable": {"neighbors", "routes"}, "NATCapable": {"nat_rules"}},
 		"FRRRouterDriver":   {"L3Capable": {"neighbors", "routes"}, "NATCapable": {"nat_rules"}, "OSPFCapable": {"ospf_interfaces", "ospf_neighbors"}, "OSPF6Capable": {"ospf6_neighbors"}, "RIPCapable": {"rip_routes"}, "BGPCapable": {"bgp_summary"}, "ISISCapable": {"isis_neighbors"}},
 		"VyOSRouterDriver":  {"L3Capable": {"neighbors", "routes"}, "NATCapable": {"nat_rules"}, "OSPFCapable": {"ospf_interfaces", "ospf_neighbors"}, "OSPF6Capable": {"ospf6_neighbors"}, "RIPCapable": {"rip_routes"}, "BGPCapable": {"bgp_summary"}, "ISISCapable": {"isis_neighbors"}},

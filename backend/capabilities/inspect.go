@@ -29,6 +29,10 @@ type FDBInspector interface {
 	BridgeFDB(namespace, pod string) (Rows, error)
 }
 
+type VLANInspector interface {
+	VLANPorts(namespace, pod string) (Rows, error)
+}
+
 type OSPFInspector interface {
 	OSPFNeighbors(namespace, pod string) (Rows, error)
 	OSPFInterfaces(namespace, pod string) (Rows, error)
@@ -94,6 +98,9 @@ func init() {
 	actions.RegisterInspections[FDBInspector]("SwitchCapable",
 		actions.Inspection[FDBInspector]{ID: "bridge_fdb", Label: "MAC table", Columns: cols("bridge", "Bridge", "mac", "MAC", "interface", "Interface", "vlan", "VLAN", "flags", "Flags"),
 			Run: func(c FDBInspector, ns, pod string) (Rows, error) { return c.BridgeFDB(ns, pod) }})
+	actions.RegisterInspections[VLANInspector]("VLANCapable",
+		actions.Inspection[VLANInspector]{ID: "vlan_ports", Label: "VLAN ports", Columns: append(cols("port", "Port", "mode", "Mode", "vlans", "VLANs"), actions.Column{Name: "native", Label: "Native", Description: "The VLAN of untagged frames, the PVID"}),
+			Run: func(c VLANInspector, ns, pod string) (Rows, error) { return c.VLANPorts(ns, pod) }})
 	actions.RegisterInspections[OSPFInspector]("OSPFCapable",
 		actions.Inspection[OSPFInspector]{ID: "ospf_neighbors", Label: "OSPF neighbors", Columns: cols("neighbor", "Neighbor", "address", "Address", "interface", "Interface", "state", "State", "role", "Role", "priority", "Priority", "dead_time", "Dead time"),
 			Run: func(c OSPFInspector, ns, pod string) (Rows, error) { return c.OSPFNeighbors(ns, pod) }},

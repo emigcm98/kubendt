@@ -3068,6 +3068,10 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 2
                 },
+                "native_vlan": {
+                    "type": "integer",
+                    "example": 99
+                },
                 "neighbor": {
                     "type": "string",
                     "example": "10.0.0.2"
@@ -3137,6 +3141,16 @@ const docTemplate = `{
                 "update_source": {
                     "type": "string",
                     "example": "eth1"
+                },
+                "vlan": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "vlans": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
                 }
             }
         },

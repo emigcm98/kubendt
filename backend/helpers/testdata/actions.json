@@ -92,5 +92,8 @@
   {"type": "set_dns", "dns_servers": ["10.0.0.53", "10.0.0.54"], "dns_search": ["lab.local"]},
   {"type": "set_ip", "iface": "eth1", "cidr": "10.0.0.1/24"},
   {"type": "setup_bridge", "bridge": "br0", "ifaces": ["eth1", "eth2"]},
-  {"type": "teardown_bridge", "bridge": "br0"}
+  {"type": "teardown_bridge", "bridge": "br0"},
+  {"type": "vlan_clear_port", "iface": "eth1"},
+  {"type": "vlan_set_access", "iface": "eth1", "vlan": 10},
+  {"type": "vlan_set_trunk", "iface": "eth1", "vlans": [10, 20], "native_vlan": 99}
 ]

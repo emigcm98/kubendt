@@ -214,5 +214,8 @@
     ]
   },
   "setup_bridge": { "unsupported": true },
-  "teardown_bridge": { "unsupported": true }
+  "teardown_bridge": { "unsupported": true },
+  "vlan_clear_port": { "unsupported": true },
+  "vlan_set_access": { "unsupported": true },
+  "vlan_set_trunk": { "unsupported": true }
 }

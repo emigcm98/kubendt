@@ -15,12 +15,14 @@ import (
 // what differs is one more container on the pod. The choice is per pod and
 // per tool class and stays while the pod lives; a recreated pod runs the same
 // image, so it is kept across restarts too, the toolbox re-injected on demand.
+// bridge is a class of its own because busybox ships ip without it.
 
 type toolClass string
 
 const (
 	toolNone     toolClass = ""         // files of the pod, vtysh, custom: the pod itself
-	toolNetns    toolClass = "netns"    // ip, bridge, tc
+	toolNetns    toolClass = "netns"    // ip, tc
+	toolBridge   toolClass = "bridge"   // bridge, and the ip calls of the same script
 	toolIptables toolClass = "iptables" // iptables, ip6tables
 	toolTayga    toolClass = "tayga"    // tayga, the NAT64 translator
 )
@@ -31,7 +33,8 @@ var toolInToolbox sync.Map // "namespace/pod/class" -> bool
 // the start or right after a shell operator. "no ip route" inside a vtysh
 // argument is not one.
 var (
-	netnsToolRe    = regexp.MustCompile(`(?:^|[;&|({!]\s*)(ip|bridge|tc)(?:\s|$)`)
+	netnsToolRe    = regexp.MustCompile(`(?:^|[;&|({!]\s*)(ip|tc)(?:\s|$)`)
+	bridgeToolRe   = regexp.MustCompile(`(?:^|[;&|({!]\s*)bridge(?:\s|$)`)
 	iptablesToolRe = regexp.MustCompile(`(?:^|[;&|({!]\s*)(iptables|ip6tables)(?:\s|$)`)
 	taygaToolRe    = regexp.MustCompile(`(?:^|[;&|({!]\s*)tayga(?:\s|$)`)
 )
@@ -51,6 +54,8 @@ func toolClassOf(argv []string) toolClass {
 		return toolTayga
 	case iptablesToolRe.MatchString(text):
 		return toolIptables
+	case bridgeToolRe.MatchString(text):
+		return toolBridge
 	case netnsToolRe.MatchString(text):
 		return toolNetns
 	}
@@ -67,6 +72,10 @@ func toolClassOfRows(rows [][]string) toolClass {
 			return toolTayga
 		case toolIptables:
 			class = toolIptables
+		case toolBridge:
+			if class != toolIptables {
+				class = toolBridge
+			}
 		case toolNetns:
 			if class == toolNone {
 				class = toolNetns
@@ -82,6 +91,8 @@ func toolProbe(class toolClass) string {
 		return "tayga"
 	case toolIptables:
 		return "iptables"
+	case toolBridge:
+		return "bridge"
 	}
 	return "ip"
 }

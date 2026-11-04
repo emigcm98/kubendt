@@ -37,6 +37,7 @@ Drivers encode node behavior and can combine capability bases:
 - `L2Capable`
 - `L3Capable`
 - `SwitchCapable`
+- `VLANCapable`
 - `NATCapable`
 - `OSPFCapable`
 

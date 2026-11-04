@@ -30,6 +30,7 @@ const (
 	KindNumber     Kind = "number"   // a non-negative integer, the action checks its range
 	KindIPList     Kind = "ip_list"
 	KindDomainList Kind = "domain_list" // DNS names, letters, digits, dots and hyphens
+	KindNumberList Kind = "number_list" // non-negative integers, the action checks their range
 )
 
 // Param is one field of ActionEntry an action reads, by its JSON name.
@@ -91,6 +92,9 @@ var (
 	Level         = Param{Name: "level", Kind: KindText, Required: false}
 	Prefix        = Param{Name: "prefix", Kind: KindCIDR, Required: false}
 	Pool          = Param{Name: "pool", Kind: KindCIDR, Required: true}
+	VLAN          = Param{Name: "vlan", Kind: KindNumber, Required: true}
+	VLANs         = Param{Name: "vlans", Kind: KindNumberList, Required: true}
+	NativeVLAN    = Param{Name: "native_vlan", Kind: KindNumber, Required: false}
 )
 
 // ProtectedInterface is the pod's cluster interface. An action on it would
@@ -215,6 +219,12 @@ func checkKind(k Kind, v reflect.Value) error {
 		}
 		if n.Int() < 0 {
 			return fmt.Errorf("must not be negative, got %d", n.Int())
+		}
+	case KindNumberList:
+		for i := 0; i < v.Len(); i++ {
+			if n := v.Index(i).Int(); n < 0 {
+				return fmt.Errorf("must not hold negative numbers, got %d", n)
+			}
 		}
 	}
 	return nil
