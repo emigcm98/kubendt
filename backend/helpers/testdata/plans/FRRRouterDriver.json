@@ -11,6 +11,7 @@
       ["sh","-c","if grep -q '^search ' /etc/resolv.conf; then grep -q '^search .* lab.local' /etc/resolv.conf || { c=$(sed 's/^search .*/\u0026 lab.local/' /etc/resolv.conf); printf '%s\\n' \"$c\" \u003e /etc/resolv.conf; }; else echo 'search lab.local' | tee -a /etc/resolv.conf \u003e /dev/null; fi"]
     ]
   },
+  "add_flow": { "unsupported": true },
   "add_interface_to_bridge": {
     "executor": "kubectl",
     "commands": [
@@ -105,6 +106,7 @@
       ["tc","qdisc","del","dev","eth1","root"]
     ]
   },
+  "delete_flow": { "unsupported": true },
   "disable_dnat": {
     "executor": "kubectl",
     "commands": [
@@ -453,6 +455,7 @@
       ["vtysh","-c","configure terminal","-c","interface eth2","-c","ip ospf hello-interval 5","-c","ip ospf dead-interval 20"]
     ]
   },
+  "remove_controller": { "unsupported": true },
   "remove_default_route": {
     "executor": "kubectl",
     "commands": [
@@ -549,6 +552,7 @@
       ["vtysh","-c","configure terminal","-c","router rip","-c","timers basic 10 60 40"]
     ]
   },
+  "set_controller": { "unsupported": true },
   "set_default_route": {
     "executor": "kubectl",
     "commands": [
@@ -561,6 +565,7 @@
       ["sh","-c","[ -f /etc/resolv.conf.kubendt ] || cp /etc/resolv.conf /etc/resolv.conf.kubendt; printf 'nameserver 10.0.0.53\\nnameserver 10.0.0.54\\nsearch lab.local\\n' \u003e /etc/resolv.conf"]
     ]
   },
+  "set_fail_mode": { "unsupported": true },
   "set_ip": {
     "executor": "kubectl",
     "commands": [

@@ -96,6 +96,10 @@ var (
 	VLANs         = Param{Name: "vlans", Kind: KindNumberList, Required: true}
 	NativeVLAN    = Param{Name: "native_vlan", Kind: KindNumber, Required: false}
 	Mode          = Param{Name: "mode", Kind: KindText, Required: false}
+	FailMode      = Param{Name: "mode", Kind: KindText, Required: true}
+	Controller    = Param{Name: "controller", Kind: KindText, Required: true}
+	Protocols     = Param{Name: "protocols", Kind: KindText, Required: false}
+	Flow          = Param{Name: "flow", Kind: KindText, Required: true}
 )
 
 // ProtectedInterface is the pod's cluster interface. An action on it would

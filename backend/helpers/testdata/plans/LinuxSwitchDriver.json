@@ -1,6 +1,7 @@
 {
   "add_dns_nameserver": { "unsupported": true },
   "add_dns_search": { "unsupported": true },
+  "add_flow": { "unsupported": true },
   "add_interface_to_bridge": {
     "executor": "kubectl",
     "commands": [
@@ -38,6 +39,7 @@
       ["tc","qdisc","del","dev","eth1","root"]
     ]
   },
+  "delete_flow": { "unsupported": true },
   "disable_dnat": { "unsupported": true },
   "disable_snat": { "unsupported": true },
   "enable_dnat": { "unsupported": true },
@@ -106,6 +108,7 @@
   "ospf_set_priority": { "unsupported": true },
   "ospf_set_router_id": { "unsupported": true },
   "ospf_set_timers": { "unsupported": true },
+  "remove_controller": { "unsupported": true },
   "remove_default_route": { "unsupported": true },
   "remove_dns_nameserver": { "unsupported": true },
   "remove_dns_search": { "unsupported": true },
@@ -127,8 +130,10 @@
   "rip_remove_redistribute": { "unsupported": true },
   "rip_remove_timers": { "unsupported": true },
   "rip_set_timers": { "unsupported": true },
+  "set_controller": { "unsupported": true },
   "set_default_route": { "unsupported": true },
   "set_dns": { "unsupported": true },
+  "set_fail_mode": { "unsupported": true },
   "set_ip": { "unsupported": true },
   "setup_bridge": {
     "executor": "kubectl",

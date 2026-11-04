@@ -52,6 +52,7 @@ Registry Pattern:
 - `VLANCapable`: VLANSetAccess, VLANSetTrunk, VLANClearPort
 - `SubinterfaceCapable`: AddVLANSubinterface, RemoveVLANSubinterface
 - `STPCapable`: STPEnable, STPDisable, STPSetBridgePriority, STPSetPort
+- `OpenFlowCapable`: SetController, RemoveController, SetFailMode, AddFlow, DeleteFlow (Open vSwitch only)
 - `OSPFCapable`: OSPFAddNetwork, OSPFRemoveNetwork, OSPFSetRouterID, OSPFRemoveRouterID, OSPFPassiveDefault, OSPFRemovePassiveDefault, OSPFNoPassive, OSPFRemoveNoPassive, OSPFOriginateDefault, OSPFRemoveOriginateDefault, OSPFMTUIgnore, OSPFRemoveMTUIgnore
 
 **Capability Bases** (default implementations):

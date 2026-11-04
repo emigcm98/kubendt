@@ -21,6 +21,7 @@ KubeNDT implements network topology management for Kubernetes through five inter
   - `VLANCapable`: Access and trunk ports (`bridge vlan` on Linux, `tag` and `trunks` on OVS)
   - `SubinterfaceCapable`: 802.1Q subinterfaces on hosts and routers (`ip link type vlan`, VyOS `vif`)
   - `STPCapable`: spanning tree on a bridge (classic STP on Linux, STP or RSTP on OVS), bridge priority, port cost and priority
+  - `OpenFlowCapable`: the OpenFlow side of Open vSwitch, its controller, fail mode and flows installed by hand
   - The Linux and FRR routers also offer `SwitchCapable` and `VLANCapable`: a bridge with VLAN rules on the bridge device itself and `br0.10` subinterfaces is an SVI
   - `OSPFCapable`: OSPF routing protocol (FRR vtysh, configures running process directly)
 - **Traffic control** is not a driver capability. It runs on any pod through the pod's own `tc`, falling back to an ephemeral toolbox container for images without it, so every node can be shaped

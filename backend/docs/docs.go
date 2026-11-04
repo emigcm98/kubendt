@@ -2981,6 +2981,10 @@ const docTemplate = `{
                     "type": "string",
                     "example": "ip route show"
                 },
+                "controller": {
+                    "type": "string",
+                    "example": "tcp:10.0.100.1:6653"
+                },
                 "cost": {
                     "description": "OSPF interface parameters. Priority 0 means never the DR, so a pointer\ntells it apart from unset. Intervals are seconds.",
                     "type": "integer",
@@ -3033,6 +3037,10 @@ const docTemplate = `{
                     "description": "Family picks IPv4 or IPv6 for an action that carries no address to\ntell them apart (remove_default_route); 4 when empty.",
                     "type": "string",
                     "example": "6"
+                },
+                "flow": {
+                    "type": "string",
+                    "example": "priority=100,in_port=1,actions=drop"
                 },
                 "gateway": {
                     "type": "string",
@@ -3113,6 +3121,10 @@ const docTemplate = `{
                 "protocol": {
                     "type": "string",
                     "example": "tcp"
+                },
+                "protocols": {
+                    "type": "string",
+                    "example": "OpenFlow13"
                 },
                 "redistribute": {
                     "description": "RIP: the route source to redistribute and the protocol timers.",

@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `SubinterfaceCapable` on hosts and routers: `add_vlan_subinterface` and `remove_vlan_subinterface` hang `eth1.10` off a trunk, with an address if given, as a vlan link on Linux and FRR and as `vif 10` under the parent on VyOS, whose other interface actions accept the dotted name too and whose UI interface list shows the vifs.
 - `SwitchCapable` and `VLANCapable` on the Linux and FRR routers, and the VLAN actions accept the bridge device itself (`self` rules), so a bridge on a router with a trunk on `br0` and `br0.10` subinterfaces is an SVI routing between its VLANs. The OVS VLAN inspection lists a bridge's internal port when it has VLAN settings.
 - `STPCapable` on the switches and on the Linux and FRR routers: `stp_enable` (classic STP on the Linux bridge, RSTP by default or STP on Open vSwitch), `stp_disable`, `stp_set_bridge_priority` and `stp_set_port` for cost and priority, with `stp_bridges` and `stp_ports` inspections showing the root, the root port and each port's role and state. An `ip` call with bridge options runs through the toolbox on busybox images, as `bridge` does.
+- `OpenFlowCapable` on the Open vSwitch driver: `set_controller` with the OpenFlow versions to offer, `remove_controller`, `set_fail_mode` (secure or standalone), and `add_flow` and `delete_flow` for flows installed by hand, with `openflow_bridges` (controller, connection, fail mode, datapath id) and `openflow_flows` inspections.
 
 ### Fixed
 
