@@ -198,6 +198,10 @@
     ]
   },
   "setup_bridge": { "unsupported": true },
+  "stp_disable": { "unsupported": true },
+  "stp_enable": { "unsupported": true },
+  "stp_set_bridge_priority": { "unsupported": true },
+  "stp_set_port": { "unsupported": true },
   "teardown_bridge": { "unsupported": true },
   "vlan_clear_port": { "unsupported": true },
   "vlan_set_access": { "unsupported": true },

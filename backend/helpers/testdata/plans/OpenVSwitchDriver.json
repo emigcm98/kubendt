@@ -139,6 +139,30 @@
       ["ovs-vsctl","--may-exist","add-port","br0","eth2","--","--id=@q","create","qos","type=linux-noop","--","set","port","eth2","qos=@q"]
     ]
   },
+  "stp_disable": {
+    "executor": "kubectl",
+    "commands": [
+      ["ovs-vsctl","set","bridge","br0","stp_enable=false","rstp_enable=false"]
+    ]
+  },
+  "stp_enable": {
+    "executor": "kubectl",
+    "commands": [
+      ["ovs-vsctl","set","bridge","br0","stp_enable=true","rstp_enable=false"]
+    ]
+  },
+  "stp_set_bridge_priority": {
+    "executor": "kubectl",
+    "commands": [
+      ["ovs-vsctl","set","bridge","br0","other_config:stp-priority=4096","other_config:rstp-priority=4096"]
+    ]
+  },
+  "stp_set_port": {
+    "executor": "kubectl",
+    "commands": [
+      ["ovs-vsctl","set","port","eth1","other_config:stp-path-cost=50","other_config:rstp-path-cost=50","other_config:stp-port-priority=64","other_config:rstp-port-priority=64"]
+    ]
+  },
   "teardown_bridge": {
     "executor": "kubectl",
     "commands": [

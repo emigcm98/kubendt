@@ -576,6 +576,30 @@
       ["ip","link","set","eth2","master","br0"]
     ]
   },
+  "stp_disable": {
+    "executor": "kubectl",
+    "commands": [
+      ["ip","link","set","br0","type","bridge","stp_state","0"]
+    ]
+  },
+  "stp_enable": {
+    "executor": "kubectl",
+    "commands": [
+      ["ip","link","set","br0","type","bridge","stp_state","1"]
+    ]
+  },
+  "stp_set_bridge_priority": {
+    "executor": "kubectl",
+    "commands": [
+      ["ip","link","set","br0","type","bridge","priority","4096"]
+    ]
+  },
+  "stp_set_port": {
+    "executor": "kubectl",
+    "commands": [
+      ["bridge","link","set","dev","eth1","cost","50","priority","64"]
+    ]
+  },
   "teardown_bridge": {
     "executor": "kubectl",
     "commands": [

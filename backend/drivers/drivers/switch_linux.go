@@ -10,6 +10,7 @@ type LinuxSwitchDriver struct {
 	capabilities.L2Base
 	capabilities.SwitchBase
 	capabilities.VLANBase
+	capabilities.STPBase
 }
 
 func NewLinuxSwitchDriver() *LinuxSwitchDriver {
@@ -21,6 +22,7 @@ func NewLinuxSwitchDriver() *LinuxSwitchDriver {
 var _ capabilities.L2Capable = (*LinuxSwitchDriver)(nil)
 var _ capabilities.SwitchCapable = (*LinuxSwitchDriver)(nil)
 var _ capabilities.VLANCapable = (*LinuxSwitchDriver)(nil)
+var _ capabilities.STPCapable = (*LinuxSwitchDriver)(nil)
 
 var _ drivers_meta.KnownImagesProvider = (*LinuxSwitchDriver)(nil)
 

@@ -179,6 +179,122 @@ func ovsScalar(v any) string {
 	return ""
 }
 
+var _ capabilities.STPCapable = (*OpenVSwitchDriver)(nil)
+
+// RSTP first, the default: it converges in seconds, which a lab notices.
+func (OpenVSwitchDriver) STPModes() []string { return []string{"rstp", "stp"} }
+
+func (OpenVSwitchDriver) STPEnable(bridge, mode string) [][]string {
+	if mode == "stp" {
+		return [][]string{{"ovs-vsctl", "set", "bridge", bridge, "stp_enable=true", "rstp_enable=false"}}
+	}
+	return [][]string{{"ovs-vsctl", "set", "bridge", bridge, "rstp_enable=true", "stp_enable=false"}}
+}
+
+func (OpenVSwitchDriver) STPDisable(bridge string) [][]string {
+	return [][]string{{"ovs-vsctl", "set", "bridge", bridge, "stp_enable=false", "rstp_enable=false"}}
+}
+
+// Both flavours take the same numbers, set for whichever runs.
+func (OpenVSwitchDriver) STPSetBridgePriority(bridge string, priority int) [][]string {
+	p := strconv.Itoa(priority)
+	return [][]string{{"ovs-vsctl", "set", "bridge", bridge, "other_config:stp-priority=" + p, "other_config:rstp-priority=" + p}}
+}
+
+func (OpenVSwitchDriver) STPSetPort(port string, cost, priority int) [][]string {
+	args := []string{"ovs-vsctl", "set", "port", port}
+	if cost > 0 {
+		c := strconv.Itoa(cost)
+		args = append(args, "other_config:stp-path-cost="+c, "other_config:rstp-path-cost="+c)
+	}
+	if priority >= 0 {
+		p := strconv.Itoa(priority)
+		args = append(args, "other_config:stp-port-priority="+p, "other_config:rstp-port-priority="+p)
+	}
+	return [][]string{args}
+}
+
+var _ capabilities.STPInspector = (*OpenVSwitchDriver)(nil)
+
+// ovsSTPScript prints each bridge with its mode and, when one runs, the
+// text of ovs-appctl stp/show or rstp/show, which share one layout.
+const ovsSTPScript = `for b in $(ovs-vsctl list-br); do m=off; [ "$(ovs-vsctl get bridge $b rstp_enable)" = true ] && m=rstp; [ "$(ovs-vsctl get bridge $b stp_enable)" = true ] && m=stp; echo "=== $b $m"; [ $m = off ] || ovs-appctl $m/show $b; done`
+
+func (OpenVSwitchDriver) STPBridges(namespace, pod string) (capabilities.Rows, error) {
+	out, err := executor.ExecAndGet(namespace, pod, []string{"sh", "-c", ovsSTPScript})
+	if err != nil {
+		return nil, err
+	}
+	bridges, _ := parseOVSSTP(string(out))
+	return bridges, nil
+}
+
+func (OpenVSwitchDriver) STPPorts(namespace, pod string) (capabilities.Rows, error) {
+	out, err := executor.ExecAndGet(namespace, pod, []string{"sh", "-c", ovsSTPScript})
+	if err != nil {
+		return nil, err
+	}
+	_, ports := parseOVSSTP(string(out))
+	return ports, nil
+}
+
+// parseOVSSTP reads the blocks of ovsSTPScript: a Root ID and a Bridge ID
+// block with priority and system id, "This bridge is the root" when it is,
+// and a port table of name, role, state, cost and priority.number.
+func parseOVSSTP(text string) (bridges, ports capabilities.Rows) {
+	var cur map[string]string
+	var ids []string
+	var prio string
+	inTable := false
+	flush := func() {
+		if cur == nil {
+			return
+		}
+		switch len(ids) {
+		case 1:
+			cur["bridge_id"] = ids[0]
+		default:
+			if len(ids) >= 2 {
+				cur["root_id"], cur["bridge_id"] = ids[0], ids[1]
+			}
+		}
+		cur["priority"] = strings.SplitN(cur["bridge_id"], ".", 2)[0]
+		if cur["root"] == "yes" {
+			cur["root_id"] = cur["bridge_id"]
+		}
+		bridges = append(bridges, cur)
+	}
+	for _, line := range strings.Split(text, "\n") {
+		f := strings.Fields(line)
+		if len(f) == 0 {
+			continue
+		}
+		switch {
+		case f[0] == "===" && len(f) == 3:
+			flush()
+			cur = map[string]string{"bridge": f[1], "mode": f[2], "priority": "", "bridge_id": "", "root_id": "", "root": "no", "root_port": ""}
+			ids, prio, inTable = nil, "", false
+		case cur == nil:
+		case f[0] == "stp-priority" && len(f) == 2:
+			prio = f[1]
+		case f[0] == "stp-system-id" && len(f) == 2:
+			ids = append(ids, prio+"."+f[1])
+		case strings.Contains(line, "This bridge is the root"):
+			cur["root"] = "yes"
+		case f[0] == "Interface":
+			inTable = true
+		case inTable && len(f) >= 5 && !strings.HasPrefix(f[0], "-"):
+			role, state := strings.ToLower(f[1]), strings.ToLower(f[2])
+			if role == "root" {
+				cur["root_port"] = f[0]
+			}
+			ports = append(ports, map[string]string{"bridge": cur["bridge"], "port": f[0], "role": role, "state": state, "cost": f[3], "priority": strings.SplitN(f[4], ".", 2)[0]})
+		}
+	}
+	flush()
+	return bridges, ports
+}
+
 var _ capabilities.FDBInspector = (*OpenVSwitchDriver)(nil)
 
 // BridgeFDB reads every bridge's learned table from ovs-appctl, whose text
