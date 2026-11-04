@@ -36,12 +36,12 @@ func TestVLANBaseCommands(t *testing.T) {
 		t.Fatalf("one sh -c expected, got %v", cmds)
 	}
 	script := cmds[0][2]
-	for _, want := range []string{"vlan_filtering 1", "bridge vlan del dev eth3 vid 1-4094", "bridge vlan add dev eth3 vid 10;", "bridge vlan add dev eth3 vid 20;", "bridge vlan add dev eth3 vid 99 pvid untagged"} {
+	for _, want := range []string{"vlan_filtering 1", "s=self", "bridge vlan del dev eth3 vid 1-4094 $s", "bridge vlan add dev eth3 vid 10 $s;", "bridge vlan add dev eth3 vid 20 $s;", "bridge vlan add dev eth3 vid 99 pvid untagged $s"} {
 		if !containsStr(script, want) {
 			t.Errorf("trunk script lacks %q: %s", want, script)
 		}
 	}
-	if containsStr(script, "vid 99;") {
+	if containsStr(script, "vid 99 $s;") {
 		t.Errorf("the native VLAN must not be added tagged too: %s", script)
 	}
 }

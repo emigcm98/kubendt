@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `set_dns` and `clear_dns` on every L3 node: the first replaces the resolver with the given nameservers and search domains, keeping the file kubelet wrote so the second can put it back; VyOS maps them to `system name-server` and `system domain-search`.
 - `VLANCapable` on both switch drivers: `vlan_set_access`, `vlan_set_trunk` with an allowed list and an optional native VLAN, and `vlan_clear_port`, through `bridge vlan` with filtering turned on by the first rule on the Linux bridge and `tag`, `trunks` and `vlan_mode` on Open vSwitch, plus a `vlan_ports` inspection with the port to VLAN table. `bridge` is a toolbox tool class of its own, since busybox ships `ip` without it.
 - `SubinterfaceCapable` on hosts and routers: `add_vlan_subinterface` and `remove_vlan_subinterface` hang `eth1.10` off a trunk, with an address if given, as a vlan link on Linux and FRR and as `vif 10` under the parent on VyOS, whose other interface actions accept the dotted name too and whose UI interface list shows the vifs.
+- `SwitchCapable` and `VLANCapable` on the Linux and FRR routers, and the VLAN actions accept the bridge device itself (`self` rules), so a bridge on a router with a trunk on `br0` and `br0.10` subinterfaces is an SVI routing between its VLANs. The OVS VLAN inspection lists a bridge's internal port when it has VLAN settings.
 
 ### Fixed
 

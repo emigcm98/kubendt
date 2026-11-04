@@ -103,8 +103,9 @@ func (OpenVSwitchDriver) VLANClearPort(port string) [][]string {
 
 var _ capabilities.VLANInspector = (*OpenVSwitchDriver)(nil)
 
-// VLANPorts reads tag, trunks and vlan_mode of every port but the bridges'
-// own internal ones, from ovsdb's JSON, where a set of one value comes bare.
+// VLANPorts reads tag, trunks and vlan_mode of every port from ovsdb's JSON,
+// where a set of one value comes bare; a bridge's own internal port is
+// listed only when it has VLAN settings, as the SVI's uplink.
 func (OpenVSwitchDriver) VLANPorts(namespace, pod string) (capabilities.Rows, error) {
 	out, err := executor.ExecAndGet(namespace, pod, []string{"sh", "-c", "ovs-vsctl list-br; echo ---; ovs-vsctl --format=json --columns=name,vlan_mode,tag,trunks list Port"})
 	if err != nil {
@@ -131,10 +132,10 @@ func parseOVSVLANPorts(out string) (capabilities.Rows, error) {
 			continue
 		}
 		name := ovsScalar(r[0])
-		if bridges[name] {
+		mode, tag, trunks := ovsScalar(r[1]), ovsScalar(r[2]), strings.Join(ovsSet(r[3]), ",")
+		if bridges[name] && mode == "" && tag == "" && trunks == "" {
 			continue
 		}
-		mode, tag, trunks := ovsScalar(r[1]), ovsScalar(r[2]), strings.Join(ovsSet(r[3]), ",")
 		vlans, native := trunks, ""
 		switch {
 		case mode == "access" || (mode == "" && tag != ""):
