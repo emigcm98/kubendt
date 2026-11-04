@@ -60,6 +60,31 @@ func (VyOSRouterDriver) Runtime() string {
 	return drivers_meta.RuntimeQEMU
 }
 
+// vyosIfacePath is the config path of a pod interface: `ethernet eth1`, or
+// `ethernet eth1 vif 10` for the subinterface eth1.10, which VyOS names
+// that way everywhere else (protocols, operational commands).
+func vyosIfacePath(iface string) string {
+	if parent, vif, ok := strings.Cut(iface, "."); ok {
+		return "ethernet " + parent + " vif " + vif
+	}
+	return "ethernet " + iface
+}
+
+var _ capabilities.SubinterfaceCapable = (*VyOSRouterDriver)(nil)
+
+func (VyOSRouterDriver) AddVLANSubinterface(parent string, vlan int, cidr string) [][]string {
+	path := "interfaces ethernet " + parent + " vif " + strconv.Itoa(vlan)
+	cmds := [][]string{{"set " + path}}
+	if cidr != "" {
+		cmds = append(cmds, []string{"set " + path + " address " + cidr})
+	}
+	return cmds
+}
+
+func (VyOSRouterDriver) RemoveVLANSubinterface(parent string, vlan int) [][]string {
+	return [][]string{{"delete interfaces ethernet " + parent + " vif " + strconv.Itoa(vlan)}}
+}
+
 // vyosIfaceNameRe enforces VyOS' ethernet config schema: only ethN names.
 var vyosIfaceNameRe = regexp.MustCompile(`^eth\d+$`)
 
@@ -117,7 +142,7 @@ func (VyOSRouterDriver) Devices() []string { return []string{"/dev/kvm"} }
 // GuestMTUCommands sets the MTU of a guest interface through the API; the
 // pod's ethN and tapN are set by the platform itself.
 func (VyOSRouterDriver) GuestMTUCommands(iface string, mtu int) [][]string {
-	return [][]string{{"set interfaces ethernet " + iface + " mtu " + strconv.Itoa(mtu)}}
+	return [][]string{{"set interfaces " + vyosIfacePath(iface) + " mtu " + strconv.Itoa(mtu)}}
 }
 
 // Shells: the VyOS CLI, an ssh session into the guest over the same channel
@@ -249,29 +274,29 @@ func vyosSNATInterfaceFromConfig(cfg map[string]interface{}) string {
 
 // LinkDown returns the VyOS configure-mode commands to disable an interface.
 func (VyOSRouterDriver) LinkDown(iface string) [][]string {
-	return [][]string{{"set interfaces ethernet " + iface + " disable"}}
+	return [][]string{{"set interfaces " + vyosIfacePath(iface) + " disable"}}
 }
 
 // LinkUp returns the VyOS configure-mode commands to enable an interface.
 func (VyOSRouterDriver) LinkUp(iface string) [][]string {
-	return [][]string{{"delete interfaces ethernet " + iface + " disable"}}
+	return [][]string{{"delete interfaces " + vyosIfacePath(iface) + " disable"}}
 }
 
 // ─── L3 ──────────────────────────────────────────────────────────────────────
 
 func (VyOSRouterDriver) SetIP(iface, cidr string) [][]string {
-	return [][]string{{"set interfaces ethernet " + iface + " address " + cidr}}
+	return [][]string{{"set interfaces " + vyosIfacePath(iface) + " address " + cidr}}
 }
 
 func (VyOSRouterDriver) ReplaceIP(iface, cidr string) [][]string {
 	return [][]string{
-		{"delete interfaces ethernet " + iface + " address"},
-		{"set interfaces ethernet " + iface + " address " + cidr},
+		{"delete interfaces " + vyosIfacePath(iface) + " address"},
+		{"set interfaces " + vyosIfacePath(iface) + " address " + cidr},
 	}
 }
 
 func (VyOSRouterDriver) RemoveIP(iface, cidr string) [][]string {
-	return [][]string{{"delete interfaces ethernet " + iface + " address " + cidr}}
+	return [][]string{{"delete interfaces " + vyosIfacePath(iface) + " address " + cidr}}
 }
 
 func (VyOSRouterDriver) SetDefaultRoute(gateway string) [][]string {
@@ -1049,6 +1074,9 @@ func (d *VyOSRouterDriver) GetEffectiveInterfaces(namespace, podName string) ([]
 			continue
 		}
 		result = append(result, vyosInterfaceEntry(iface, node))
+		for vif, vifNode := range vyosVifs(node) {
+			result = append(result, vyosInterfaceEntry(iface+"."+vif, vifNode))
+		}
 	}
 
 	sort.Slice(result, func(i, j int) bool {
@@ -1100,8 +1128,27 @@ func (d *VyOSRouterDriver) GetEffectiveInterfaceStates(namespace, podName string
 		}
 		_, disabled := node["disable"]
 		states[iface] = !disabled
+		for vif, vifNode := range vyosVifs(node) {
+			_, vifDisabled := vifNode["disable"]
+			states[iface+"."+vif] = !disabled && !vifDisabled
+		}
 	}
 	return states, nil
+}
+
+// vyosVifs lists the subinterfaces configured under an ethernet node.
+func vyosVifs(node map[string]interface{}) map[string]map[string]interface{} {
+	out := map[string]map[string]interface{}{}
+	vifs, ok := node["vif"].(map[string]interface{})
+	if !ok {
+		return out
+	}
+	for id, raw := range vifs {
+		if vifNode, ok := raw.(map[string]interface{}); ok {
+			out[id] = vifNode
+		}
+	}
+	return out
 }
 
 var _ drivers_meta.KnownImagesProvider = (*VyOSRouterDriver)(nil)

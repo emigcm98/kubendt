@@ -25,6 +25,13 @@
       ["set protocols static route 10.1.0.0/16 next-hop 10.0.0.254"]
     ]
   },
+  "add_vlan_subinterface": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["set interfaces ethernet eth1 vif 10"],
+      ["set interfaces ethernet eth1 vif 10 address 10.0.10.1/24"]
+    ]
+  },
   "bgp_add_neighbor": {
     "executor": "vyos_api_apply",
     "commands": [
@@ -487,6 +494,12 @@
     "executor": "vyos_api_apply",
     "commands": [
       ["delete protocols static route 10.1.0.0/16 next-hop 10.0.0.254"]
+    ]
+  },
+  "remove_vlan_subinterface": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["delete interfaces ethernet eth1 vif 10"]
     ]
   },
   "replace_ip": {
