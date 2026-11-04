@@ -26,6 +26,10 @@ type L3Capable interface {
 	RemoveDNSNameserver(server string) [][]string
 	AddDNSSearch(domain string) [][]string
 	RemoveDNSSearch(domain string) [][]string
+	// SetDNS replaces the resolver with these nameservers and search domains;
+	// ClearDNS puts back what the node started with.
+	SetDNS(servers, search []string) [][]string
+	ClearDNS() [][]string
 }
 
 func init() {
@@ -70,5 +74,11 @@ func init() {
 			Run: func(c L3Capable, a types.ActionEntry) ([][]string, error) { return c.AddDNSSearch(a.DNSDomain), nil }},
 		actions.Action[L3Capable]{Type: "remove_dns_search", Label: "Remove DNS search domain", Params: actions.P(actions.DNSDomain), State: "dns_search", Key: keySearch, Clears: true,
 			Run: func(c L3Capable, a types.ActionEntry) ([][]string, error) { return c.RemoveDNSSearch(a.DNSDomain), nil }},
+		actions.Action[L3Capable]{Type: "set_dns", Label: "Set DNS resolver", Params: actions.P(actions.DNSServers, actions.DNSSearch), State: "dns",
+			Run: func(c L3Capable, a types.ActionEntry) ([][]string, error) {
+				return c.SetDNS(a.DNSServers, a.DNSSearch), nil
+			}},
+		actions.Action[L3Capable]{Type: "clear_dns", Label: "Clear DNS resolver", State: "dns", Clears: true, ClearsAlso: []string{"dns_nameserver", "dns_search"},
+			Run: func(c L3Capable, a types.ActionEntry) ([][]string, error) { return c.ClearDNS(), nil }},
 	)
 }

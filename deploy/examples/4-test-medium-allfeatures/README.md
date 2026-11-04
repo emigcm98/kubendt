@@ -69,7 +69,7 @@ Network segments:
 | `room-router0.kubendt.local` | `192.168.0.1`   |
 | `room-router1.kubendt.local` | `192.168.1.1`   |
 
-All `user-*` nodes are configured with `add_dns_nameserver 192.168.10.15` and `add_dns_search kubendt.local`, so short names like `web-internal` resolve directly.
+All `user-*` nodes get the lab resolver with `set_dns` (nameserver `192.168.10.15`, search `kubendt.local`), which replaces the cluster DNS kubelet wrote. Appending the nameserver instead would resolve the lab zone on musl images only, which ask every server at once; on glibc the cluster DNS answers first with NXDOMAIN and that is final. Short names like `web-internal` resolve directly.
 
 ## Files In This Folder
 

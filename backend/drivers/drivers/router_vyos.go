@@ -321,6 +321,21 @@ func (VyOSRouterDriver) RemoveDNSSearch(domain string) [][]string {
 	return [][]string{{"delete system domain-search " + domain}}
 }
 
+func (VyOSRouterDriver) SetDNS(servers, search []string) [][]string {
+	cmds := [][]string{{"delete system name-server"}, {"delete system domain-search"}}
+	for _, s := range servers {
+		cmds = append(cmds, []string{"set system name-server " + s})
+	}
+	for _, d := range search {
+		cmds = append(cmds, []string{"set system domain-search " + d})
+	}
+	return cmds
+}
+
+func (VyOSRouterDriver) ClearDNS() [][]string {
+	return [][]string{{"delete system name-server"}, {"delete system domain-search"}}
+}
+
 // ─── OSPFv3 ──────────────────────────────────────────────────────────────────
 
 func (VyOSRouterDriver) OSPF6SetRouterID(routerID string) [][]string {

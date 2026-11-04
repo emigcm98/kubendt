@@ -291,6 +291,13 @@ def ex4():
         ok, det, w = retry(contains(ex.ns, "user-0", "nslookup web-internal 2>&1", "Address"), 90); ex.check("user-0 nslookup web-internal", ok, det, w)
         ok, det, w = retry(contains(ex.ns, "user-0", "wget -qO- http://web-internal.kubendt.local 2>&1", "<"), 60); ex.check("user-0 wget web-internal (mounted page)", ok, det, w)
         ok, det, w = retry(contains(ex.ns, "user-0", "wget -qO- http://web-public.kubendt.local 2>&1", "<"), 60); ex.check("user-0 wget web-public", ok, det, w)
+        # set_dns replaces kubelet's resolver instead of appending to it, so the
+        # file holds the lab nameserver alone; clear_dns puts kubelet's back.
+        rc, out = kexec(ex.ns, "user-0", "grep -c ^nameserver /etc/resolv.conf"); ex.check("user-0 resolv.conf holds the lab nameserver alone (set_dns)", out.strip() == "1", out[-80:])
+        st, r = api("POST", f"/network/configure/{ex.ns}", body={"targets": [{"pod": "user-0", "actions": [{"type": "clear_dns"}]}]})
+        ok, det, w = retry(contains(ex.ns, "user-0", "cat /etc/resolv.conf", "cluster.local"), 10); ex.check("user-0 clear_dns puts kubelet's resolv.conf back", st == 200 and ok, det, w)
+        st, r = api("POST", f"/network/configure/{ex.ns}", body={"targets": [{"pod": "user-0", "actions": [{"type": "set_dns", "dns_servers": ["192.168.10.15"], "dns_search": ["kubendt.local"]}]}]})
+        ok, det, w = retry(contains(ex.ns, "user-0", "nslookup web-internal 2>&1", "Address"), 30); ex.check("user-0 resolves again after set_dns", st == 200 and ok, det, w)
         # The iperf-server node runs its own server on 5201, so the client goes alone.
         iperf_check(ex, "user-0 iperf3 to iperf-server-1 (server=none)", f"/iperf/run/{ex.ns}/user-0?dest=192.168.10.10&duration=3&server=none")
         # README step 13: shaping on user-0 eth1 applied and read back through the API,

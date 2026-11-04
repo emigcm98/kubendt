@@ -1,6 +1,9 @@
 package capabilities
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 type L3Base struct{}
 
@@ -69,10 +72,12 @@ func (L3Base) AddDNSNameserver(server string) [][]string {
 	return [][]string{{"sh", "-c", cmd}}
 }
 
+// The rewrites below read resolv.conf whole into a variable before the
+// redirect truncates it: a pipe into tee on the same file races and can
+// leave it empty. No rename, the file is a bind mount of kubelet's.
 func (L3Base) RemoveDNSNameserver(server string) [][]string {
-	// tee for idempotency: only removes if exists, keeping other nameservers intact
 	cmd := fmt.Sprintf(
-		"cat /etc/resolv.conf | grep -v '^nameserver %s$' | tee /etc/resolv.conf > /dev/null",
+		"c=$(grep -v '^nameserver %s$' /etc/resolv.conf); printf '%%s\\n' \"$c\" > /etc/resolv.conf",
 		server,
 	)
 	return [][]string{{"sh", "-c", cmd}}
@@ -83,7 +88,7 @@ func (L3Base) AddDNSSearch(domain string) [][]string {
 	cmd := fmt.Sprintf(
 		"if grep -q '^search ' /etc/resolv.conf; then "+
 			"grep -q '^search .* %s' /etc/resolv.conf || "+
-			"(cat /etc/resolv.conf | sed 's/^search .*/& %s/' | tee /etc/resolv.conf > /dev/null); "+
+			"{ c=$(sed 's/^search .*/& %s/' /etc/resolv.conf); printf '%%s\\n' \"$c\" > /etc/resolv.conf; }; "+
 			"else echo 'search %s' | tee -a /etc/resolv.conf > /dev/null; fi",
 		domain, domain, domain,
 	)
@@ -93,8 +98,29 @@ func (L3Base) AddDNSSearch(domain string) [][]string {
 func (L3Base) RemoveDNSSearch(domain string) [][]string {
 	// Removes domain from search line (keeping other domains)
 	cmd := fmt.Sprintf(
-		"cat /etc/resolv.conf | sed 's/^search \\(.*\\) %s /search \\1 /' | sed 's/^search \\(.*\\) %s$/search \\1/' | sed 's/ *$//' | tee /etc/resolv.conf > /dev/null",
+		"c=$(sed 's/^search \\(.*\\) %s /search \\1 /' /etc/resolv.conf | sed 's/^search \\(.*\\) %s$/search \\1/' | sed 's/ *$//'); printf '%%s\\n' \"$c\" > /etc/resolv.conf",
 		domain, domain,
 	)
+	return [][]string{{"sh", "-c", cmd}}
+}
+
+// resolvBackup is kubelet's resolv.conf, kept the first time set_dns
+// replaces it so clear_dns can put it back.
+const resolvBackup = "/etc/resolv.conf.kubendt"
+
+func (L3Base) SetDNS(servers, search []string) [][]string {
+	content := ""
+	for _, s := range servers {
+		content += "nameserver " + s + "\\n"
+	}
+	if len(search) > 0 {
+		content += "search " + strings.Join(search, " ") + "\\n"
+	}
+	cmd := fmt.Sprintf("[ -f %s ] || cp /etc/resolv.conf %s; printf '%s' > /etc/resolv.conf", resolvBackup, resolvBackup, content)
+	return [][]string{{"sh", "-c", cmd}}
+}
+
+func (L3Base) ClearDNS() [][]string {
+	cmd := fmt.Sprintf("if [ -f %s ]; then cat %s > /etc/resolv.conf; fi", resolvBackup, resolvBackup)
 	return [][]string{{"sh", "-c", cmd}}
 }

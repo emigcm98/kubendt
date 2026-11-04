@@ -25,6 +25,8 @@ func (l3stub) AddDNSNameserver(string) [][]string                  { return nil 
 func (l3stub) RemoveDNSNameserver(string) [][]string               { return nil }
 func (l3stub) AddDNSSearch(string) [][]string                      { return nil }
 func (l3stub) RemoveDNSSearch(string) [][]string                   { return nil }
+func (l3stub) SetDNS([]string, []string) [][]string                { return nil }
+func (l3stub) ClearDNS() [][]string                                { return nil }
 
 type switchstub struct{}
 

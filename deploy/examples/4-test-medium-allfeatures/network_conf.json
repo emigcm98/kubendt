@@ -208,12 +208,9 @@
           "gateway": "192.168.0.1"
         },
         {
-          "type": "add_dns_nameserver",
-          "dns_server": "192.168.10.15"
-        },
-        {
-          "type": "add_dns_search",
-          "dns_domain": "kubendt.local"
+          "type": "set_dns",
+          "dns_servers": ["192.168.10.15"],
+          "dns_search": ["kubendt.local"]
         }
       ]
     },
@@ -225,12 +222,9 @@
           "gateway": "192.168.0.1"
         },
         {
-          "type": "add_dns_nameserver",
-          "dns_server": "192.168.10.15"
-        },
-        {
-          "type": "add_dns_search",
-          "dns_domain": "kubendt.local"
+          "type": "set_dns",
+          "dns_servers": ["192.168.10.15"],
+          "dns_search": ["kubendt.local"]
         }
       ]
     },
@@ -242,12 +236,9 @@
           "gateway": "192.168.1.1"
         },
         {
-          "type": "add_dns_nameserver",
-          "dns_server": "192.168.10.15"
-        },
-        {
-          "type": "add_dns_search",
-          "dns_domain": "kubendt.local"
+          "type": "set_dns",
+          "dns_servers": ["192.168.10.15"],
+          "dns_search": ["kubendt.local"]
         }
       ]
     },
@@ -259,12 +250,9 @@
           "gateway": "192.168.1.1"
         },
         {
-          "type": "add_dns_nameserver",
-          "dns_server": "192.168.10.15"
-        },
-        {
-          "type": "add_dns_search",
-          "dns_domain": "kubendt.local"
+          "type": "set_dns",
+          "dns_servers": ["192.168.10.15"],
+          "dns_search": ["kubendt.local"]
         }
       ]
     }

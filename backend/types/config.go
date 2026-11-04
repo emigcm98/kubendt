@@ -71,8 +71,10 @@ type ActionEntry struct {
 	Protocol     string `json:"protocol,omitempty" example:"tcp"`
 
 	// DNS
-	DNSServer string `json:"dns_server,omitempty" example:"8.8.8.8"`
-	DNSDomain string `json:"dns_domain,omitempty" example:"example.local"`
+	DNSServer  string   `json:"dns_server,omitempty" example:"8.8.8.8"`
+	DNSDomain  string   `json:"dns_domain,omitempty" example:"example.local"`
+	DNSServers []string `json:"dns_servers,omitempty"`
+	DNSSearch  []string `json:"dns_search,omitempty"`
 
 	// TC / Qdisc
 	TCParams *TCParamEntry `json:"tcparams,omitempty"`
