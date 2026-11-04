@@ -4,7 +4,7 @@
   "add_interface_to_bridge": {
     "executor": "kubectl",
     "commands": [
-      ["ovs-vsctl","--may-exist","add-port","br0","eth1"]
+      ["ovs-vsctl","--may-exist","add-port","br0","eth1","--","--id=@q","create","qos","type=linux-noop","--","set","port","eth1","qos=@q"]
     ]
   },
   "add_qdisc": {
@@ -131,8 +131,8 @@
     "commands": [
       ["sh","-c","ovs-vsctl br-exists br0 || ovs-vsctl add-br br0"],
       ["ip","link","set","br0","up"],
-      ["ovs-vsctl","--may-exist","add-port","br0","eth1"],
-      ["ovs-vsctl","--may-exist","add-port","br0","eth2"]
+      ["ovs-vsctl","--may-exist","add-port","br0","eth1","--","--id=@q","create","qos","type=linux-noop","--","set","port","eth1","qos=@q"],
+      ["ovs-vsctl","--may-exist","add-port","br0","eth2","--","--id=@q","create","qos","type=linux-noop","--","set","port","eth2","qos=@q"]
     ]
   },
   "teardown_bridge": {

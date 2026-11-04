@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- An Open vSwitch image of our own, `ghcr.io/emigcm98/kubendt-ovs`: Alpine's package under tini, built and published by Open vSwitch version on every change to its folder. The driver lists it first among its tried images and the examples run on it, in place of a third-party `latest` last built in 2018. The driver attaches ports with a `linux-noop` QoS, since OVS 3.x replaces the qdisc of a port without one on attach and that wiped the netem of the link attributes.
+
 ## [1.8.0] - 2026-11-01
 
 ### Added

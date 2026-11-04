@@ -44,7 +44,7 @@
     },
     {
       "name": "ovs",
-      "image": "globocom/openvswitch:latest",
+      "image": "ghcr.io/emigcm98/kubendt-ovs:3.7.1",
       "driver": "OpenVSwitchDriver",
       "type": "switch",
       "replicas": 1

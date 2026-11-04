@@ -44,9 +44,16 @@ func (OpenVSwitchDriver) SetupBridge(bridge string, ifaces []string) [][]string 
 		{"ip", "link", "set", bridge, "up"},
 	}
 	for _, iface := range ifaces {
-		cmds = append(cmds, []string{"ovs-vsctl", "--may-exist", "add-port", bridge, iface})
+		cmds = append(cmds, ovsAddPort(bridge, iface))
 	}
 	return cmds
+}
+
+// ovsAddPort attaches the interface with a linux-noop QoS, which tells OVS
+// to leave its qdisc alone: since 3.x a port with no QoS has its qdisc
+// replaced on attach, which wiped the netem of the link attributes.
+func ovsAddPort(bridge, iface string) []string {
+	return []string{"ovs-vsctl", "--may-exist", "add-port", bridge, iface, "--", "--id=@q", "create", "qos", "type=linux-noop", "--", "set", "port", iface, "qos=@q"}
 }
 
 func (OpenVSwitchDriver) TeardownBridge(bridge string) [][]string {
@@ -56,9 +63,7 @@ func (OpenVSwitchDriver) TeardownBridge(bridge string) [][]string {
 }
 
 func (OpenVSwitchDriver) AddInterfaceToBridge(iface, bridge string) [][]string {
-	return [][]string{
-		{"ovs-vsctl", "--may-exist", "add-port", bridge, iface},
-	}
+	return [][]string{ovsAddPort(bridge, iface)}
 }
 
 func (OpenVSwitchDriver) RemoveInterfaceFromBridge(iface, bridge string) [][]string {
@@ -89,8 +94,8 @@ func (OpenVSwitchDriver) BridgeFDB(namespace, pod string) (capabilities.Rows, er
 
 var _ drivers_meta.KnownImagesProvider = (*OpenVSwitchDriver)(nil)
 
-// KnownImages names the moving tag: upstream publishes no version tag and
-// `latest` has not moved since 2018.
+// KnownImages: our own image, tagged by the Open vSwitch version, and the
+// third-party one the examples ran on until 1.8.0, which still works.
 func (OpenVSwitchDriver) KnownImages() []string {
-	return []string{"globocom/openvswitch:latest"}
+	return []string{"ghcr.io/emigcm98/kubendt-ovs:3.7.1", "globocom/openvswitch:latest"}
 }

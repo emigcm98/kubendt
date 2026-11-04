@@ -15,10 +15,10 @@ Nodes deployed:
 | Node | Driver | Image | Replicas | Role |
 | --- | --- | --- | --- | --- |
 | `ra` | `FRRRouterDriver` | `quay.io/frrouting/frr:10.7.1` | 6 | Organization A routers, RIPv2. `ra-0` to `ra-5` are RA1 to RA6 in the diagram; `ra-1` (RA2) is A's border router |
-| `sa` | `OpenVSwitchDriver` | `globocom/openvswitch:latest` | 3 | Organization A switches, one per LAN (A1, A5, A6) |
+| `sa` | `OpenVSwitchDriver` | `ghcr.io/emigcm98/kubendt-ovs:3.7.1` | 3 | Organization A switches, one per LAN (A1, A5, A6) |
 | `ha` | `HostDriver` | `alpine:3.24.2` | 3 | Organization A hosts, one per LAN |
 | `rb` | `FRRRouterDriver` | `quay.io/frrouting/frr:10.7.1` | 6 | Organization B routers, OSPFv2. `rb-0` to `rb-5` are RB1 to RB6; `rb-0` (RB1) is B's border router, `rb-1` (RB2) and `rb-2` (RB3) are the ABRs |
-| `sb` | `OpenVSwitchDriver` | `globocom/openvswitch:latest` | 5 | Organization B switches, one per LAN (B2, B3, B4, B5, B6) |
+| `sb` | `OpenVSwitchDriver` | `ghcr.io/emigcm98/kubendt-ovs:3.7.1` | 5 | Organization B switches, one per LAN (B2, B3, B4, B5, B6) |
 | `hb` | `HostDriver` | `alpine:3.24.2` | 4 | Organization B hosts, on LANs B2, B4, B5 and B6 |
 
 The replicas of a node share image and driver; the configuration files give each one its role. The diagram names the routers from 1 and Kubernetes numbers replicas from 0, so `ra-3` is RA4 and `rb-2` is RB3; the tables below name both.
@@ -216,3 +216,5 @@ Capture on the RB1-RB3 link (`rb-0 eth3`) from the link's menu and filter `ospf`
 - If a stub area router keeps external routes, every router of the area has to set the area type, not only the ABR: a mismatch in the E-bit keeps the adjacency down and the table stale.
 - The range summaries carry the last address of their block as Link State ID in `show ip ospf database summary` (`172.22.16.127` for `172.22.16.64/26`): the driver sets them that way on purpose, see the troubleshooting guide. Do not add a range to this network once it has converged: the other ABR already announced the covered subnets and FRR's ospfd crashes when it re-summarizes them (FRR 9.1 to 10.7.1). Ranges go with the network statements, as here.
 - If RIP on `ra-3` never shows B's prefixes, check `rb-0` has `rip_add_network 172.22.50.196/30` and `rip_redistribute ospf` applied (`show running-config` under `router rip`) and wait one update.
+
+> Last reviewed: 4 Nov 2026

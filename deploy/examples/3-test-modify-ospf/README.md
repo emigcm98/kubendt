@@ -31,7 +31,7 @@ Nodes deployed (initial topology):
 | --- | --- | --- | --- | --- |
 | `ubuntu-host` | `HostDriver` | `ubuntu:26.04` | 1 | Host on LAN A |
 | `alpine-host` | `HostDriver` | `alpine:3.24.2` | 1 | Host on LAN B; scaled to 3 replicas in phase 2 |
-| `switch` | `OpenVSwitchDriver` | `globocom/openvswitch:latest` | 2 | Open vSwitch switches: `switch-0` for LAN A, `switch-1` for LAN B |
+| `switch` | `OpenVSwitchDriver` | `ghcr.io/emigcm98/kubendt-ovs:3.7.1` | 2 | Open vSwitch switches: `switch-0` for LAN A, `switch-1` for LAN B |
 | `frr-router` | `FRRRouterDriver` | `quay.io/frrouting/frr:10.7.1` (container) | 1 | LAN A gateway, OSPF over the transit link |
 | `vyos-router` | `VyOSRouterDriver` | `localhost/vyos-router:dev` (QEMU VM) | 1 | LAN B gateway, OSPF over the transit link |
 
@@ -184,3 +184,5 @@ No manual reconfiguration is required in either case. The switch ports facing th
 - If a freshly scaled or added host has no default route, confirm that the corresponding `network_conf-phaseN.json` was applied AFTER the modify request. Operations targeting a pod that does not yet exist are skipped.
 - If `alpine-host-1` or `alpine-host-2` does not get an IP on `eth1`, verify that the corresponding link entry exists in `modify-phase2-scaleup.json` and that `switch-1` bridge includes the new interface.
 - If after deleting a router pod the OSPF neighbor never returns to `Full`, check the KubeNDT backend logs for replay results. The expected sequence after restart is: IP assignment on `eth1` and `eth2`, then the `ospf_*` actions on both LAN and transit subnets.
+
+> Last reviewed: 4 Nov 2026

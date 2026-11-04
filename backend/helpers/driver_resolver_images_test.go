@@ -12,7 +12,7 @@ import (
 func TestResolveDriversWarnsOnUntestedImage(t *testing.T) {
 	drivers_base.RegisterAllDrivers()
 	nodes := []types.NodeSpec{
-		{Name: "ovs", Type: "switch", Driver: "OpenVSwitchDriver", Image: "globocom/openvswitch:latest"},
+		{Name: "ovs", Type: "switch", Driver: "OpenVSwitchDriver", Image: "ghcr.io/emigcm98/kubendt-ovs:3.7.1"},
 		{Name: "ovs-other", Type: "switch", Driver: "OpenVSwitchDriver", Image: "globocom/openvswitch:2.17"},
 		{Name: "r", Type: "router", Driver: "FRRRouterDriver", Image: "quay.io/frrouting/frr:9.1.0"},
 		{Name: "h", Type: "host", Image: "mongo:8.0"},

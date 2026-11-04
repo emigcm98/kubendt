@@ -8,7 +8,7 @@
         },
         {
             "name": "sa",
-            "image": "globocom/openvswitch:latest",
+            "image": "ghcr.io/emigcm98/kubendt-ovs:3.7.1",
             "type": "switch",
             "driver": "OpenVSwitchDriver",
             "replicas": 3
@@ -28,7 +28,7 @@
         },
         {
             "name": "sb",
-            "image": "globocom/openvswitch:latest",
+            "image": "ghcr.io/emigcm98/kubendt-ovs:3.7.1",
             "type": "switch",
             "driver": "OpenVSwitchDriver",
             "replicas": 5

@@ -92,13 +92,13 @@
     },
     {
       "name": "core-sw",
-      "image": "globocom/openvswitch:latest",
+      "image": "ghcr.io/emigcm98/kubendt-ovs:3.7.1",
       "type": "switch",
       "driver": "OpenVSwitchDriver"
     },
     {
       "name": "dist-sw",
-      "image": "globocom/openvswitch:latest",
+      "image": "ghcr.io/emigcm98/kubendt-ovs:3.7.1",
       "type": "switch",
       "driver": "OpenVSwitchDriver"
     },
