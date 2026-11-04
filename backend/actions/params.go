@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"reflect"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -16,17 +17,19 @@ import (
 type Kind string
 
 const (
-	KindIface     Kind = "iface"
-	KindIfaceList Kind = "iface_list"
-	KindCIDR      Kind = "cidr" // an address with a prefix length, or a bare address
-	KindIP        Kind = "ip"
-	KindPort      Kind = "port"
-	KindText      Kind = "text"
-	KindObject    Kind = "object"   // a nested spec the action validates itself
-	KindCommand   Kind = "command"  // a string or an argv array
-	KindExecutor  Kind = "executor" // the name of a registered executor
-	KindFamily    Kind = "family"   // "4" or "6"
-	KindNumber    Kind = "number"   // a non-negative integer, the action checks its range
+	KindIface      Kind = "iface"
+	KindIfaceList  Kind = "iface_list"
+	KindCIDR       Kind = "cidr" // an address with a prefix length, or a bare address
+	KindIP         Kind = "ip"
+	KindPort       Kind = "port"
+	KindText       Kind = "text"
+	KindObject     Kind = "object"   // a nested spec the action validates itself
+	KindCommand    Kind = "command"  // a string or an argv array
+	KindExecutor   Kind = "executor" // the name of a registered executor
+	KindFamily     Kind = "family"   // "4" or "6"
+	KindNumber     Kind = "number"   // a non-negative integer, the action checks its range
+	KindIPList     Kind = "ip_list"
+	KindDomainList Kind = "domain_list" // DNS names, letters, digits, dots and hyphens
 )
 
 // Param is one field of ActionEntry an action reads, by its JSON name.
@@ -60,6 +63,8 @@ var (
 	Protocol      = Param{Name: "protocol", Kind: KindText, Required: true}
 	DNSServer     = Param{Name: "dns_server", Kind: KindIP, Required: true}
 	DNSDomain     = Param{Name: "dns_domain", Kind: KindText, Required: true}
+	DNSServers    = Param{Name: "dns_servers", Kind: KindIPList, Required: true}
+	DNSSearch     = Param{Name: "dns_search", Kind: KindDomainList, Required: false}
 	TCParams      = Param{Name: "tcparams", Kind: KindObject, Required: true}
 	OSPFArea      = Param{Name: "ospf_area", Kind: KindText, Required: true}
 	RouterID      = Param{Name: "router_id", Kind: KindIP, Required: true}
@@ -158,6 +163,8 @@ func (d *Descriptor) Validate(a types.ActionEntry) error {
 	return nil
 }
 
+var domainRe = regexp.MustCompile(`^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)*$`)
+
 func checkKind(k Kind, v reflect.Value) error {
 	switch k {
 	case KindIface:
@@ -176,6 +183,18 @@ func checkKind(k Kind, v reflect.Value) error {
 	case KindIP:
 		if net.ParseIP(v.String()) == nil {
 			return fmt.Errorf("must be an IP address, got %q", v.String())
+		}
+	case KindIPList:
+		for i := 0; i < v.Len(); i++ {
+			if net.ParseIP(v.Index(i).String()) == nil {
+				return fmt.Errorf("must be IP addresses, got %q", v.Index(i).String())
+			}
+		}
+	case KindDomainList:
+		for i := 0; i < v.Len(); i++ {
+			if !domainRe.MatchString(v.Index(i).String()) {
+				return fmt.Errorf("must be DNS names, got %q", v.Index(i).String())
+			}
 		}
 	case KindPort:
 		if n := v.Int(); n < 1 || n > 65535 {

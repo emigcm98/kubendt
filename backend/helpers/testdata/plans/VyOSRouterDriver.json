@@ -77,6 +77,13 @@
       ["set protocols bgp parameters router-id 10.255.0.1"]
     ]
   },
+  "clear_dns": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["delete system name-server"],
+      ["delete system domain-search"]
+    ]
+  },
   "custom": {
     "executor": "kubectl",
     "commands": [
@@ -543,6 +550,16 @@
     "executor": "vyos_api_apply",
     "commands": [
       ["set protocols static route 0.0.0.0/0 next-hop 10.0.0.254"]
+    ]
+  },
+  "set_dns": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["delete system name-server"],
+      ["delete system domain-search"],
+      ["set system name-server 10.0.0.53"],
+      ["set system name-server 10.0.0.54"],
+      ["set system domain-search lab.local"]
     ]
   },
   "set_ip": {

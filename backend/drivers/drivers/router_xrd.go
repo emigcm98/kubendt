@@ -121,6 +121,21 @@ func (XRDRouterDriver) RemoveDNSSearch(domain string) [][]string {
 	return [][]string{{"no domain list " + domain}}
 }
 
+func (XRDRouterDriver) SetDNS(servers, search []string) [][]string {
+	var cmds [][]string
+	for _, s := range servers {
+		cmds = append(cmds, []string{"domain name-server " + s})
+	}
+	for _, d := range search {
+		cmds = append(cmds, []string{"domain list " + d})
+	}
+	return cmds
+}
+
+func (XRDRouterDriver) ClearDNS() [][]string {
+	return [][]string{{"no domain name-server"}, {"no domain list"}}
+}
+
 // GuestInterface maps a pod interface to the XR name the entrypoint recorded
 // at boot (eth1 to GigabitEthernet0/0/0/0), so actions address the guest.
 func (d *XRDRouterDriver) GuestInterface(namespace, podName, podInterface string) (string, error) {

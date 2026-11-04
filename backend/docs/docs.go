@@ -2998,10 +2998,22 @@ const docTemplate = `{
                     "type": "string",
                     "example": "example.local"
                 },
+                "dns_search": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "dns_server": {
                     "description": "DNS",
                     "type": "string",
                     "example": "8.8.8.8"
+                },
+                "dns_servers": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "dst_cidr": {
                     "type": "string",

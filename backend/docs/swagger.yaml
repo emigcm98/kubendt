@@ -77,10 +77,18 @@ definitions:
       dns_domain:
         example: example.local
         type: string
+      dns_search:
+        items:
+          type: string
+        type: array
       dns_server:
         description: DNS
         example: 8.8.8.8
         type: string
+      dns_servers:
+        items:
+          type: string
+        type: array
       dst_cidr:
         example: 10.0.0.0/8
         type: string

@@ -12,6 +12,7 @@
   {"type": "bgp_remove_redistribute", "redistribute": "rip", "family": "6"},
   {"type": "bgp_remove_router"},
   {"type": "bgp_set_router", "as": 65001, "router_id": "10.255.0.1"},
+  {"type": "clear_dns"},
   {"type": "custom", "command": "echo hello"},
   {"type": "del_qdisc", "iface": "eth1"},
   {"type": "disable_dnat", "iface": "eth1", "externalPort": 8080, "internalIP": "10.0.0.5", "internalPort": 80, "protocol": "tcp"},
@@ -88,6 +89,7 @@
   {"type": "rip_remove_timers"},
   {"type": "rip_set_timers", "timers": {"update": 10, "timeout": 60, "garbage": 40}},
   {"type": "set_default_route", "gateway": "10.0.0.254"},
+  {"type": "set_dns", "dns_servers": ["10.0.0.53", "10.0.0.54"], "dns_search": ["lab.local"]},
   {"type": "set_ip", "iface": "eth1", "cidr": "10.0.0.1/24"},
   {"type": "setup_bridge", "bridge": "br0", "ifaces": ["eth1", "eth2"]},
   {"type": "teardown_bridge", "bridge": "br0"}

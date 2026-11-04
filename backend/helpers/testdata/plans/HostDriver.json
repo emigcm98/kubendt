@@ -8,7 +8,7 @@
   "add_dns_search": {
     "executor": "kubectl",
     "commands": [
-      ["sh","-c","if grep -q '^search ' /etc/resolv.conf; then grep -q '^search .* lab.local' /etc/resolv.conf || (cat /etc/resolv.conf | sed 's/^search .*/\u0026 lab.local/' | tee /etc/resolv.conf \u003e /dev/null); else echo 'search lab.local' | tee -a /etc/resolv.conf \u003e /dev/null; fi"]
+      ["sh","-c","if grep -q '^search ' /etc/resolv.conf; then grep -q '^search .* lab.local' /etc/resolv.conf || { c=$(sed 's/^search .*/\u0026 lab.local/' /etc/resolv.conf); printf '%s\\n' \"$c\" \u003e /etc/resolv.conf; }; else echo 'search lab.local' | tee -a /etc/resolv.conf \u003e /dev/null; fi"]
     ]
   },
   "add_interface_to_bridge": { "unsupported": true },
@@ -33,6 +33,12 @@
   "bgp_remove_redistribute": { "unsupported": true },
   "bgp_remove_router": { "unsupported": true },
   "bgp_set_router": { "unsupported": true },
+  "clear_dns": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","if [ -f /etc/resolv.conf.kubendt ]; then cat /etc/resolv.conf.kubendt \u003e /etc/resolv.conf; fi"]
+    ]
+  },
   "custom": {
     "executor": "kubectl",
     "commands": [
@@ -123,13 +129,13 @@
   "remove_dns_nameserver": {
     "executor": "kubectl",
     "commands": [
-      ["sh","-c","cat /etc/resolv.conf | grep -v '^nameserver 8.8.8.8$' | tee /etc/resolv.conf \u003e /dev/null"]
+      ["sh","-c","c=$(grep -v '^nameserver 8.8.8.8$' /etc/resolv.conf); printf '%s\\n' \"$c\" \u003e /etc/resolv.conf"]
     ]
   },
   "remove_dns_search": {
     "executor": "kubectl",
     "commands": [
-      ["sh","-c","cat /etc/resolv.conf | sed 's/^search \\(.*\\) lab.local /search \\1 /' | sed 's/^search \\(.*\\) lab.local$/search \\1/' | sed 's/ *$//' | tee /etc/resolv.conf \u003e /dev/null"]
+      ["sh","-c","c=$(sed 's/^search \\(.*\\) lab.local /search \\1 /' /etc/resolv.conf | sed 's/^search \\(.*\\) lab.local$/search \\1/' | sed 's/ *$//'); printf '%s\\n' \"$c\" \u003e /etc/resolv.conf"]
     ]
   },
   "remove_interface_from_bridge": { "unsupported": true },
@@ -163,6 +169,12 @@
     "executor": "kubectl",
     "commands": [
       ["ip","route","replace","default","via","10.0.0.254"]
+    ]
+  },
+  "set_dns": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","[ -f /etc/resolv.conf.kubendt ] || cp /etc/resolv.conf /etc/resolv.conf.kubendt; printf 'nameserver 10.0.0.53\\nnameserver 10.0.0.54\\nsearch lab.local\\n' \u003e /etc/resolv.conf"]
     ]
   },
   "set_ip": {
