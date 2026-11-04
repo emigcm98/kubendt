@@ -10,6 +10,7 @@ func RegisterAllDrivers() {
 	drivers_registry.Register(drivers.NewHostDriver)
 	drivers_registry.Register(drivers.NewLinuxSwitchDriver)
 	drivers_registry.Register(drivers.NewOpenVSwitchDriver)
+	drivers_registry.Register(drivers.NewEXOSSwitchDriver)
 	drivers_registry.Register(drivers.NewLinuxRouterDriver)
 	drivers_registry.Register(drivers.NewFRRRouterDriver)
 	drivers_registry.Register(drivers.NewVyOSRouterDriver)

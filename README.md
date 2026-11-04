@@ -192,7 +192,7 @@ KubeNDT ships **9 reference deployments** in `deploy/examples/`, numbered in the
 | [8-test-two-orgs-rip-ospf](deploy/examples/8-test-two-orgs-rip-ospf/) | [8-README](deploy/examples/8-test-two-orgs-rip-ospf/README.md) | Two organizations on 27 nodes: A on RIPv2 over a six router mesh, B on OSPFv2 in four areas with DR and BDR, stub and totally stubby areas, summarization and MD5, and a border router redistributing between them | Nothing | ⭐⭐⭐ |
 | [9-test-four-orgs-bgp](deploy/examples/9-test-four-orgs-bgp/) | [9-README](deploy/examples/9-test-four-orgs-bgp/README.md) | Four organizations on 32 nodes joined in an eBGP ring: RIPv2, OSPFv2 in one area, IS-IS over IPv4, and an IPv6-only one on IS-IS that reaches the others through NAT64 at its border | Nothing | ⭐⭐⭐⭐ |
 
-The VyOS image is built once with `build-vyos-qcow2.sh` and imported on the workers, see [deploy/custom_images/qemu/vyos-router/](deploy/custom_images/qemu/vyos-router/). The external uplink is a second interface of a pod on the host network the workers hang from. The examples label it "External Network" and their READMEs say which steps need it.
+The VyOS image is built once with `build-vyos-qcow2.sh` and imported on the workers, see [deploy/custom_images/qemu/vyos-router/](deploy/custom_images/qemu/vyos-router/); the EXOS switch image the same way with `build-exos-qcow2.sh`, see [deploy/custom_images/qemu/exos-switch/](deploy/custom_images/qemu/exos-switch/). The external uplink is a second interface of a pod on the host network the workers hang from. The examples label it "External Network" and their READMEs say which steps need it.
 
 **Each example includes:**
 
@@ -226,8 +226,8 @@ KubeNDT is actively developed. The following limitations are known:
 
 ### Virtual Machine Drivers
 
-- **Status**: Only **VyOS** has a functional QEMU-based driver implementation (L2, L3 and NAT). Other virtual routing platforms (Cisco CSR1000v, Juniper vMX, etc.) are not yet supported.
-- **Path Forward**: If you want to try a QEMU-based image, follow the [VyOS QEMU image guide](deploy/custom_images/qemu/vyos-router/README-vyos.md) to create images and drivers for other platforms.
+- **Status**: Two QEMU guests have drivers, **VyOS** as a router (L2, L3, NAT and the routing protocols) and **Extreme EXOS** as a switch (L2 and bridging, the layer 2 capabilities to follow). Other virtual platforms (Cisco CSR1000v, Juniper vMX, etc.) are not supported.
+- **Path Forward**: If you want to try a QEMU-based image, follow the [VyOS QEMU image guide](deploy/custom_images/qemu/vyos-router/README-vyos.md) to create images and drivers for other platforms; the [EXOS guide](deploy/custom_images/qemu/exos-switch/README-exos.md) is the shorter second example.
 
 ### Stateful Pod Configuration
 

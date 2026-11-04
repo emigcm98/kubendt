@@ -152,7 +152,11 @@ func RestartPod(c *gin.Context) {
 	// After manual restart, run only soft-heal nudges (no hard heal / extra restarts).
 	timelines, waitErr := helpers.WaitForPodsReadyTimeline(namespace, []string{podName}, requestStart)
 	if waitErr != nil {
-		log.Printf("⚠️ Pod '%s' restarted but not fully ready before the soft heal: %v", podName, waitErr)
+		// A replay against a node still coming up fails and prunes the very
+		// history it should restore, so it waits for the next restart.
+		log.Printf("⚠️ Pod '%s' restarted but not Ready in time, its configuration was not replayed: %v", podName, waitErr)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("pod %s restarted but was not Ready in time, so its configuration was not replayed; restart it again once it is Ready: %v", podName, waitErr)})
+		return
 	}
 	waitDur := time.Since(waitAt)
 	podRestartDur := time.Since(startedAt)
