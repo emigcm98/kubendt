@@ -22,7 +22,7 @@ type toolClass string
 const (
 	toolNone     toolClass = ""         // files of the pod, vtysh, custom: the pod itself
 	toolNetns    toolClass = "netns"    // ip, tc
-	toolBridge   toolClass = "bridge"   // bridge, and the ip calls of the same script
+	toolBridge   toolClass = "bridge"   // bridge, ip with bridge options, and the ip calls of the same script
 	toolIptables toolClass = "iptables" // iptables, ip6tables
 	toolTayga    toolClass = "tayga"    // tayga, the NAT64 translator
 )
@@ -33,8 +33,12 @@ var toolInToolbox sync.Map // "namespace/pod/class" -> bool
 // the start or right after a shell operator. "no ip route" inside a vtysh
 // argument is not one.
 var (
-	netnsToolRe    = regexp.MustCompile(`(?:^|[;&|({!]\s*)(ip|tc)(?:\s|$)`)
-	bridgeToolRe   = regexp.MustCompile(`(?:^|[;&|({!]\s*)bridge(?:\s|$)`)
+	netnsToolRe = regexp.MustCompile(`(?:^|[;&|({!]\s*)(ip|tc)(?:\s|$)`)
+	// An ip call with bridge options (`type bridge stp_state 1`, `type
+	// bridge_slave cost 10`) needs iproute2's ip, which ships next to the
+	// bridge tool, so it is of that class too; a bare `type bridge` is not,
+	// busybox creates a bridge fine.
+	bridgeToolRe   = regexp.MustCompile(`(?:^|[;&|({!]\s*)bridge(?:\s|$)|\btype bridge_slave\b|\btype bridge\s+\S`)
 	iptablesToolRe = regexp.MustCompile(`(?:^|[;&|({!]\s*)(iptables|ip6tables)(?:\s|$)`)
 	taygaToolRe    = regexp.MustCompile(`(?:^|[;&|({!]\s*)tayga(?:\s|$)`)
 )
@@ -45,7 +49,7 @@ func toolClassOf(argv []string) toolClass {
 	if len(argv) == 0 {
 		return toolNone
 	}
-	text := argv[0]
+	text := strings.Join(argv, " ")
 	if (argv[0] == "sh" || argv[0] == "bash") && len(argv) >= 3 && argv[1] == "-c" {
 		text = argv[2]
 	}

@@ -3064,6 +3064,10 @@ const docTemplate = `{
                     "type": "string",
                     "example": "level-2"
                 },
+                "mode": {
+                    "type": "string",
+                    "example": "rstp"
+                },
                 "multihop": {
                     "type": "integer",
                     "example": 2

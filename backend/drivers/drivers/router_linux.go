@@ -12,6 +12,7 @@ type LinuxRouterDriver struct {
 	capabilities.SubinterfaceBase
 	capabilities.SwitchBase
 	capabilities.VLANBase
+	capabilities.STPBase
 	capabilities.NATBase
 	capabilities.NAT64Base
 }
@@ -28,6 +29,7 @@ var _ capabilities.L3Capable = (*LinuxRouterDriver)(nil)
 var _ capabilities.SubinterfaceCapable = (*LinuxRouterDriver)(nil)
 var _ capabilities.SwitchCapable = (*LinuxRouterDriver)(nil)
 var _ capabilities.VLANCapable = (*LinuxRouterDriver)(nil)
+var _ capabilities.STPCapable = (*LinuxRouterDriver)(nil)
 var _ capabilities.NATCapable = (*LinuxRouterDriver)(nil)
 var _ capabilities.NAT64Capable = (*LinuxRouterDriver)(nil)
 
