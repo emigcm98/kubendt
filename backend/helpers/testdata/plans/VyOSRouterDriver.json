@@ -11,6 +11,7 @@
       ["set system domain-search lab.local"]
     ]
   },
+  "add_flow": { "unsupported": true },
   "add_interface_to_bridge": { "unsupported": true },
   "add_qdisc": {
     "executor": "tc_universal",
@@ -104,6 +105,7 @@
       ["tc","qdisc","del","dev","eth1","root"]
     ]
   },
+  "delete_flow": { "unsupported": true },
   "disable_dnat": {
     "executor": "vyos_api_apply",
     "commands": [
@@ -465,6 +467,7 @@
       ["set protocols ospf interface eth2 dead-interval 20"]
     ]
   },
+  "remove_controller": { "unsupported": true },
   "remove_default_route": {
     "executor": "vyos_api_apply",
     "commands": [
@@ -559,6 +562,7 @@
       ["set protocols rip timers garbage-collection 40"]
     ]
   },
+  "set_controller": { "unsupported": true },
   "set_default_route": {
     "executor": "vyos_api_apply",
     "commands": [
@@ -575,6 +579,7 @@
       ["set system domain-search lab.local"]
     ]
   },
+  "set_fail_mode": { "unsupported": true },
   "set_ip": {
     "executor": "vyos_api_apply",
     "commands": [

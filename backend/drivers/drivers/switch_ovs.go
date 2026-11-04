@@ -295,6 +295,172 @@ func parseOVSSTP(text string) (bridges, ports capabilities.Rows) {
 	return bridges, ports
 }
 
+var _ capabilities.OpenFlowCapable = (*OpenVSwitchDriver)(nil)
+
+// ofVersions lets ovs-ofctl speak whatever the bridge offers, since its own
+// default is OpenFlow 1.0 alone.
+const ofVersions = "OpenFlow10,OpenFlow11,OpenFlow12,OpenFlow13,OpenFlow14,OpenFlow15"
+
+func ofctl(args ...string) []string { return append([]string{"ovs-ofctl", "-O", ofVersions}, args...) }
+
+func (OpenVSwitchDriver) SetController(bridge, target, protocols string) [][]string {
+	cmd := []string{"ovs-vsctl", "set-controller", bridge, target}
+	if protocols != "" {
+		cmd = append(cmd, "--", "set", "bridge", bridge, "protocols="+protocols)
+	}
+	return [][]string{cmd}
+}
+
+func (OpenVSwitchDriver) RemoveController(bridge string) [][]string {
+	return [][]string{{"ovs-vsctl", "del-controller", bridge}}
+}
+
+func (OpenVSwitchDriver) SetFailMode(bridge, mode string) [][]string {
+	return [][]string{{"ovs-vsctl", "set-fail-mode", bridge, mode}}
+}
+
+func (OpenVSwitchDriver) AddFlow(bridge, flow string) [][]string {
+	return [][]string{ofctl("add-flow", bridge, flow)}
+}
+
+// DeleteFlow is strict: the match and priority as given, not every flow the
+// match covers.
+func (OpenVSwitchDriver) DeleteFlow(bridge, match string) [][]string {
+	return [][]string{ofctl("--strict", "del-flows", bridge, match)}
+}
+
+var _ capabilities.OpenFlowInspector = (*OpenVSwitchDriver)(nil)
+
+// OpenFlowBridges joins the Bridge and Controller tables of ovsdb.
+func (OpenVSwitchDriver) OpenFlowBridges(namespace, pod string) (capabilities.Rows, error) {
+	out, err := executor.ExecAndGet(namespace, pod, []string{"sh", "-c", "ovs-vsctl --format=json --columns=name,controller,fail_mode,protocols,datapath_id list Bridge; echo ---; ovs-vsctl --format=json --columns=_uuid,target,is_connected list Controller"})
+	if err != nil {
+		return nil, err
+	}
+	return parseOVSOpenFlowBridges(string(out))
+}
+
+func parseOVSOpenFlowBridges(out string) (capabilities.Rows, error) {
+	bridgesText, controllersText, _ := strings.Cut(out, "---\n")
+	var bridges, controllers struct {
+		Data [][]any `json:"data"`
+	}
+	if err := json.Unmarshal([]byte(bridgesText), &bridges); err != nil {
+		return nil, fmt.Errorf("ovs-vsctl list Bridge: %w", err)
+	}
+	if err := json.Unmarshal([]byte(controllersText), &controllers); err != nil {
+		return nil, fmt.Errorf("ovs-vsctl list Controller: %w", err)
+	}
+	type ctl struct {
+		target    string
+		connected bool
+	}
+	byUUID := map[string]ctl{}
+	for _, r := range controllers.Data {
+		if len(r) < 3 {
+			continue
+		}
+		connected, _ := r[2].(bool)
+		byUUID[ovsUUID(r[0])] = ctl{target: ovsScalar(r[1]), connected: connected}
+	}
+	var rows capabilities.Rows
+	for _, r := range bridges.Data {
+		if len(r) < 5 {
+			continue
+		}
+		var targets []string
+		connected := ""
+		for _, u := range ovsUUIDs(r[1]) {
+			c := byUUID[u]
+			targets = append(targets, c.target)
+			if connected == "" {
+				connected = "no"
+			}
+			if c.connected {
+				connected = "yes"
+			}
+		}
+		failMode := ovsScalar(r[2])
+		if failMode == "" {
+			failMode = "standalone"
+		}
+		rows = append(rows, map[string]string{"bridge": ovsScalar(r[0]), "controller": strings.Join(targets, ","), "connected": connected, "fail_mode": failMode, "protocols": strings.Join(ovsSet(r[3]), ","), "datapath_id": ovsScalar(r[4])})
+	}
+	sort.Slice(rows, func(i, j int) bool { return rows[i]["bridge"] < rows[j]["bridge"] })
+	return rows, nil
+}
+
+// ovsUUID reads ["uuid", "<id>"]; ovsUUIDs a bare one or a set of them.
+func ovsUUID(v any) string {
+	if arr, ok := v.([]any); ok && len(arr) == 2 && arr[0] == "uuid" {
+		s, _ := arr[1].(string)
+		return s
+	}
+	return ""
+}
+
+func ovsUUIDs(v any) []string {
+	if u := ovsUUID(v); u != "" {
+		return []string{u}
+	}
+	if arr, ok := v.([]any); ok && len(arr) == 2 && arr[0] == "set" {
+		inner, _ := arr[1].([]any)
+		out := make([]string, 0, len(inner))
+		for _, x := range inner {
+			if u := ovsUUID(x); u != "" {
+				out = append(out, u)
+			}
+		}
+		return out
+	}
+	return nil
+}
+
+func (OpenVSwitchDriver) OpenFlowFlows(namespace, pod string) (capabilities.Rows, error) {
+	out, err := executor.ExecAndGet(namespace, pod, []string{"sh", "-c", "for b in $(ovs-vsctl list-br); do ovs-ofctl -O " + ofVersions + " dump-flows $b | sed \"s/^ */$b /\"; done"})
+	if err != nil {
+		return nil, err
+	}
+	return parseOVSFlows(string(out)), nil
+}
+
+var flowStatKeys = map[string]bool{"cookie": true, "duration": true, "table": true, "n_packets": true, "n_bytes": true, "idle_age": true, "hard_age": true, "idle_timeout": true, "hard_timeout": true, "importance": true, "send_flow_rem": true, "reset_counts": true}
+
+// parseOVSFlows reads dump-flows lines prefixed with their bridge: the
+// statistics come first as `key=value, ` pairs, the match last, then
+// ` actions=`. The priority is lifted out of the match into its column.
+func parseOVSFlows(text string) capabilities.Rows {
+	var rows capabilities.Rows
+	for _, line := range strings.Split(text, "\n") {
+		bridge, rest, ok := strings.Cut(line, " ")
+		if !ok || !strings.Contains(rest, "actions=") {
+			continue
+		}
+		left, actions, _ := strings.Cut(rest, " actions=")
+		stats := map[string]string{}
+		var match []string
+		for _, tok := range strings.Split(left, ", ") {
+			k, v, _ := strings.Cut(tok, "=")
+			if flowStatKeys[k] && !strings.Contains(tok, ",") {
+				stats[k] = v
+			} else if tok != "" {
+				match = append(match, tok)
+			}
+		}
+		priority := "32768"
+		var keep []string
+		for _, item := range strings.Split(strings.Join(match, ","), ",") {
+			if v, ok := strings.CutPrefix(item, "priority="); ok {
+				priority = v
+			} else if item != "" {
+				keep = append(keep, item)
+			}
+		}
+		rows = append(rows, map[string]string{"bridge": bridge, "table": stats["table"], "priority": priority, "match": strings.Join(keep, ","), "actions": actions, "packets": stats["n_packets"]})
+	}
+	return rows
+}
+
 var _ capabilities.FDBInspector = (*OpenVSwitchDriver)(nil)
 
 // BridgeFDB reads every bridge's learned table from ovs-appctl, whose text

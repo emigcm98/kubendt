@@ -1,6 +1,12 @@
 {
   "add_dns_nameserver": { "unsupported": true },
   "add_dns_search": { "unsupported": true },
+  "add_flow": {
+    "executor": "kubectl",
+    "commands": [
+      ["ovs-ofctl","-O","OpenFlow10,OpenFlow11,OpenFlow12,OpenFlow13,OpenFlow14,OpenFlow15","add-flow","br0","priority=100,in_port=1,actions=drop"]
+    ]
+  },
   "add_interface_to_bridge": {
     "executor": "kubectl",
     "commands": [
@@ -36,6 +42,12 @@
     "commands": [
       ["tc","qdisc","replace","dev","eth1","root","noqueue"],
       ["tc","qdisc","del","dev","eth1","root"]
+    ]
+  },
+  "delete_flow": {
+    "executor": "kubectl",
+    "commands": [
+      ["ovs-ofctl","-O","OpenFlow10,OpenFlow11,OpenFlow12,OpenFlow13,OpenFlow14,OpenFlow15","--strict","del-flows","br0","priority=100,in_port=1"]
     ]
   },
   "disable_dnat": { "unsupported": true },
@@ -106,6 +118,12 @@
   "ospf_set_priority": { "unsupported": true },
   "ospf_set_router_id": { "unsupported": true },
   "ospf_set_timers": { "unsupported": true },
+  "remove_controller": {
+    "executor": "kubectl",
+    "commands": [
+      ["ovs-vsctl","del-controller","br0"]
+    ]
+  },
   "remove_default_route": { "unsupported": true },
   "remove_dns_nameserver": { "unsupported": true },
   "remove_dns_search": { "unsupported": true },
@@ -127,8 +145,20 @@
   "rip_remove_redistribute": { "unsupported": true },
   "rip_remove_timers": { "unsupported": true },
   "rip_set_timers": { "unsupported": true },
+  "set_controller": {
+    "executor": "kubectl",
+    "commands": [
+      ["ovs-vsctl","set-controller","br0","tcp:10.0.100.1:6653","--","set","bridge","br0","protocols=OpenFlow13"]
+    ]
+  },
   "set_default_route": { "unsupported": true },
   "set_dns": { "unsupported": true },
+  "set_fail_mode": {
+    "executor": "kubectl",
+    "commands": [
+      ["ovs-vsctl","set-fail-mode","br0","secure"]
+    ]
+  },
   "set_ip": { "unsupported": true },
   "setup_bridge": {
     "executor": "kubectl",

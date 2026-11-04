@@ -67,6 +67,9 @@ type ActionEntry struct {
 	VLANs      []int          `json:"vlans,omitempty"`
 	NativeVLAN int            `json:"native_vlan,omitempty" example:"99"`
 	Mode       string         `json:"mode,omitempty" example:"rstp"`
+	Controller string         `json:"controller,omitempty" example:"tcp:10.0.100.1:6653"`
+	Protocols  string         `json:"protocols,omitempty" example:"OpenFlow13"`
+	Flow       string         `json:"flow,omitempty" example:"priority=100,in_port=1,actions=drop"`
 	Options    *ActionOptions `json:"options,omitempty"`
 	// NAT
 	ExternalPort int    `json:"externalPort,omitempty" example:"8080"`
