@@ -60,10 +60,13 @@ type ActionEntry struct {
 	Device  string `json:"device,omitempty" example:"/dev/net/tun"`
 	// Family picks IPv4 or IPv6 for an action that carries no address to
 	// tell them apart (remove_default_route); 4 when empty.
-	Family  string         `json:"family,omitempty" example:"6"`
-	Bridge  string         `json:"bridge,omitempty" example:"br0"`
-	Ifaces  []string       `json:"ifaces,omitempty"`
-	Options *ActionOptions `json:"options,omitempty"`
+	Family     string         `json:"family,omitempty" example:"6"`
+	Bridge     string         `json:"bridge,omitempty" example:"br0"`
+	Ifaces     []string       `json:"ifaces,omitempty"`
+	VLAN       int            `json:"vlan,omitempty" example:"10"`
+	VLANs      []int          `json:"vlans,omitempty"`
+	NativeVLAN int            `json:"native_vlan,omitempty" example:"99"`
+	Options    *ActionOptions `json:"options,omitempty"`
 	// NAT
 	ExternalPort int    `json:"externalPort,omitempty" example:"8080"`
 	InternalIP   string `json:"internalIP,omitempty" example:"10.0.0.5"`

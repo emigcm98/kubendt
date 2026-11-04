@@ -49,6 +49,7 @@ Registry Pattern:
 - `L3Capable`: SetIP, ReplaceIP, RemoveIP, SetDefaultRoute, RemoveDefaultRoute, Add/RemoveStaticRoute, Add/RemoveDNSNameserver, Add/RemoveDNSSearch
 - `NATCapable`: EnableSNAT, DisableSNAT, EnableDNAT, DisableDNAT
 - `SwitchCapable`: SetupBridge, TeardownBridge, Add/RemoveInterfaceToBridge
+- `VLANCapable`: VLANSetAccess, VLANSetTrunk, VLANClearPort
 - `OSPFCapable`: OSPFAddNetwork, OSPFRemoveNetwork, OSPFSetRouterID, OSPFRemoveRouterID, OSPFPassiveDefault, OSPFRemovePassiveDefault, OSPFNoPassive, OSPFRemoveNoPassive, OSPFOriginateDefault, OSPFRemoveOriginateDefault, OSPFMTUIgnore, OSPFRemoveMTUIgnore
 
 **Capability Bases** (default implementations):

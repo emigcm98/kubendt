@@ -142,5 +142,23 @@
     "commands": [
       ["ovs-vsctl","del-br","br0"]
     ]
+  },
+  "vlan_clear_port": {
+    "executor": "kubectl",
+    "commands": [
+      ["ovs-vsctl","clear","port","eth1","tag","trunks","vlan_mode"]
+    ]
+  },
+  "vlan_set_access": {
+    "executor": "kubectl",
+    "commands": [
+      ["ovs-vsctl","set","port","eth1","vlan_mode=access","tag=10","--","clear","port","eth1","trunks"]
+    ]
+  },
+  "vlan_set_trunk": {
+    "executor": "kubectl",
+    "commands": [
+      ["ovs-vsctl","set","port","eth1","vlan_mode=native-untagged","tag=99","trunks=10,20"]
+    ]
   }
 }

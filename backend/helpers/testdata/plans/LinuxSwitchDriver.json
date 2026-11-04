@@ -143,5 +143,23 @@
       ["ip","link","set","br0","down"],
       ["ip","link","del","br0","type","bridge"]
     ]
+  },
+  "vlan_clear_port": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","bridge vlan del dev eth1 vid 1-4094; bridge vlan add dev eth1 vid 1 pvid untagged"]
+    ]
+  },
+  "vlan_set_access": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","b=$(ip link show eth1 | sed -n 's/.* master \\([^ ]*\\).*/\\1/p' | head -1); [ -n \"$b\" ] \u0026\u0026 ip link set \"$b\" type bridge vlan_filtering 1; bridge vlan del dev eth1 vid 1-4094; bridge vlan add dev eth1 vid 10 pvid untagged"]
+    ]
+  },
+  "vlan_set_trunk": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","b=$(ip link show eth1 | sed -n 's/.* master \\([^ ]*\\).*/\\1/p' | head -1); [ -n \"$b\" ] \u0026\u0026 ip link set \"$b\" type bridge vlan_filtering 1; bridge vlan del dev eth1 vid 1-4094; bridge vlan add dev eth1 vid 10; bridge vlan add dev eth1 vid 20; bridge vlan add dev eth1 vid 99 pvid untagged"]
+    ]
   }
 }

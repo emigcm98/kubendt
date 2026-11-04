@@ -8,7 +8,7 @@ func TestToolClassOf(t *testing.T) {
 		want toolClass
 	}{
 		{[]string{"ip", "addr", "replace", "10.0.0.1/24", "dev", "eth1"}, toolNetns},
-		{[]string{"bridge", "link"}, toolNetns},
+		{[]string{"bridge", "link"}, toolBridge},
 		{[]string{"sh", "-c", "! ip -o addr show dev eth1 | grep -qF ' 10.0.0.1/24 ' || ip addr del 10.0.0.1/24 dev eth1"}, toolNetns},
 		{[]string{"sh", "-c", "ip link set dev eth1 mtu 1450; ip addr replace fd00::1/64 dev eth1"}, toolNetns},
 		{[]string{"sh", "-c", "iptables -t nat -C POSTROUTING -o eth0 -j MASQUERADE || iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE"}, toolIptables},

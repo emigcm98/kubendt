@@ -18,6 +18,7 @@ KubeNDT implements network topology management for Kubernetes through five inter
   - `L3Capable`: IP operations (address, routing, DNS)
   - `NATCapable`: NAT rules (SNAT/DNAT via iptables)
   - `SwitchCapable`: Bridge operations (brctl)
+  - `VLANCapable`: Access and trunk ports (`bridge vlan` on Linux, `tag` and `trunks` on OVS)
   - `OSPFCapable`: OSPF routing protocol (FRR vtysh, configures running process directly)
 - **Traffic control** is not a driver capability. It runs on any pod through the pod's own `tc`, falling back to an ephemeral toolbox container for images without it, so every node can be shaped
 - **Action registry**: every action is declared once next to its capability (`actions.Register`), and dispatch, validation and `GET /drivers` derive from it
