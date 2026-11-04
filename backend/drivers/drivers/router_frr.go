@@ -16,6 +16,8 @@ type FRRRouterDriver struct {
 	capabilities.L2Base
 	capabilities.L3Base
 	capabilities.SubinterfaceBase
+	capabilities.SwitchBase
+	capabilities.VLANBase
 	capabilities.NATBase
 	capabilities.NAT64Base
 }
@@ -29,6 +31,8 @@ func NewFRRRouterDriver() *FRRRouterDriver {
 var _ capabilities.L2Capable = (*FRRRouterDriver)(nil)
 var _ capabilities.L3Capable = (*FRRRouterDriver)(nil)
 var _ capabilities.SubinterfaceCapable = (*FRRRouterDriver)(nil)
+var _ capabilities.SwitchCapable = (*FRRRouterDriver)(nil)
+var _ capabilities.VLANCapable = (*FRRRouterDriver)(nil)
 var _ capabilities.DefaultRoute6Remover = (*FRRRouterDriver)(nil)
 var _ capabilities.NATCapable = (*FRRRouterDriver)(nil)
 var _ capabilities.NAT64Capable = (*FRRRouterDriver)(nil)

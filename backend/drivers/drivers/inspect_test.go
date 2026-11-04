@@ -12,8 +12,8 @@ func TestInspectionsPerDriver(t *testing.T) {
 		"HostDriver":        {"L3Capable": {"neighbors", "routes"}},
 		"LinuxSwitchDriver": {"SwitchCapable": {"bridge_fdb"}, "VLANCapable": {"vlan_ports"}},
 		"OpenVSwitchDriver": {"SwitchCapable": {"bridge_fdb"}, "VLANCapable": {"vlan_ports"}},
-		"LinuxRouterDriver": {"L3Capable": {"neighbors", "routes"}, "NATCapable": {"nat_rules"}},
-		"FRRRouterDriver":   {"L3Capable": {"neighbors", "routes"}, "NATCapable": {"nat_rules"}, "OSPFCapable": {"ospf_interfaces", "ospf_neighbors"}, "OSPF6Capable": {"ospf6_neighbors"}, "RIPCapable": {"rip_routes"}, "BGPCapable": {"bgp_summary"}, "ISISCapable": {"isis_neighbors"}},
+		"LinuxRouterDriver": {"L3Capable": {"neighbors", "routes"}, "NATCapable": {"nat_rules"}, "SwitchCapable": {"bridge_fdb"}, "VLANCapable": {"vlan_ports"}},
+		"FRRRouterDriver":   {"L3Capable": {"neighbors", "routes"}, "NATCapable": {"nat_rules"}, "SwitchCapable": {"bridge_fdb"}, "VLANCapable": {"vlan_ports"}, "OSPFCapable": {"ospf_interfaces", "ospf_neighbors"}, "OSPF6Capable": {"ospf6_neighbors"}, "RIPCapable": {"rip_routes"}, "BGPCapable": {"bgp_summary"}, "ISISCapable": {"isis_neighbors"}},
 		"VyOSRouterDriver":  {"L3Capable": {"neighbors", "routes"}, "NATCapable": {"nat_rules"}, "OSPFCapable": {"ospf_interfaces", "ospf_neighbors"}, "OSPF6Capable": {"ospf6_neighbors"}, "RIPCapable": {"rip_routes"}, "BGPCapable": {"bgp_summary"}, "ISISCapable": {"isis_neighbors"}},
 	}
 	drivers := map[string]any{

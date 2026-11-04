@@ -70,7 +70,8 @@ func customOn(execName, command string, capture bool) types.ActionEntry {
 }
 
 func TestPlanActions(t *testing.T) {
-	driver := loadDriver(t, "FRRRouterDriver")
+	// A host: it has L3 and no switching, so setup_bridge is the unsupported one.
+	driver := loadDriver(t, "HostDriver")
 	plans := helpers.PlanActions("ns", "pod", driver, nil, []types.ActionEntry{
 		{Type: "set_ip", Iface: "eth1", CIDR: "10.0.0.1/24"},
 		{Type: "set_ip", Iface: "eth1"},
