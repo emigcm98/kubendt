@@ -2,7 +2,6 @@ package helpers
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	stderrors "errors"
 	"fmt"
@@ -17,8 +16,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/tools/remotecommand"
 )
 
 // Sentinel errors from CreateNamespace, so handlers can map them to precise
@@ -297,41 +294,18 @@ func GetInterfacesInNamespace(namespace string) (map[string]map[string]interface
 				intfStates = r.states
 			}
 
-			// Fallback to ip a if the driver returned nothing
+			// Fallback to ip a when the driver returned nothing. Through
+			// ExecNetns, so an image without iproute2 (mongo in example 5)
+			// answers from the toolbox instead of showing every port down.
 			if len(intfStates) == 0 {
-				intfReq := kubeclient.Clientset.CoreV1().RESTClient().
-					Post().
-					Resource("pods").
-					Name(podName).
-					Namespace(namespace).
-					SubResource("exec").
-					VersionedParams(&v1.PodExecOptions{
-						Command: []string{"ip", "a"},
-						Stdin:   false,
-						Stdout:  true,
-						Stderr:  true,
-						TTY:     false,
-					}, scheme.ParameterCodec)
-
-				intfExec, err := kubeclient.NewExecutor("POST", intfReq.URL())
+				stdout, _, err := ExecNetns(namespace, podName, []string{"ip", "a"})
 				if err != nil {
-					log.Printf("❌ Executor failed for pod %s: %v", podName, err)
-					<-natCh // drenar canal antes de salir
-					return
-				}
-
-				var stdout, stderr bytes.Buffer
-				err = intfExec.StreamWithContext(context.TODO(), remotecommand.StreamOptions{
-					Stdout: &stdout,
-					Stderr: &stderr,
-				})
-				if err != nil {
-					log.Printf("❌ Exec failed for pod %s: %v", podName, err)
+					log.Printf("❌ ip a failed for pod %s: %v", podName, err)
 					<-natCh
 					return
 				}
 
-				scanner := bufio.NewScanner(strings.NewReader(stdout.String()))
+				scanner := bufio.NewScanner(strings.NewReader(stdout))
 				var currentIntf string
 				var isUp bool
 

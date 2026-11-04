@@ -1269,6 +1269,7 @@ const NetworkGraph = ({
   const showError = (title, details, note = '') => setDeploymentError({ title, details, note });
   const topologyVersionRef = useRef(null); // Track current topology version
   const topologyFetchInFlightRef = useRef(false);
+  const topologyFetchPromiseRef = useRef(Promise.resolve());
   const lastTopologyFetchAtRef = useRef(0);
   const clearingTopologyRef = useRef(false);
   const modifyingTopologyRef = useRef(false);
@@ -1583,6 +1584,8 @@ const NetworkGraph = ({
       if (res.ok) {
         removeRestartingPod(podName);
         flashRestartSuccess(podName);
+        // The restart is over, whatever state the pod shows; draw it.
+        isDeployingRef.current = false;
         await fetchTopology(true);
         setTimeout(() => {
           fetchTopology(true);
@@ -1779,11 +1782,14 @@ const NetworkGraph = ({
   };
 
   const fetchTopology = async (force = false) => {
-    const now = Date.now();
-
-    if (topologyFetchInFlightRef.current) {
-      return;
+    // A forced fetch (after an operation, the refresh button) waits for the
+    // one in flight and runs after it, since that one may predate the
+    // operation and would be the last thing drawn. Background ones drop.
+    while (topologyFetchInFlightRef.current) {
+      if (!force) return;
+      await topologyFetchPromiseRef.current;
     }
+    const now = Date.now();
 
     // Don't let background refreshes touch the graph while the import
     // force-layout animation is playing (the backend has no pods yet, a
@@ -1808,6 +1814,10 @@ const NetworkGraph = ({
 
     topologyFetchInFlightRef.current = true;
     lastTopologyFetchAtRef.current = now;
+    let settle;
+    topologyFetchPromiseRef.current = new Promise((resolve) => {
+      settle = resolve;
+    });
 
     try {
       const [topologyRes, podsRes, ipRes, linksRes] = await Promise.all([
@@ -1991,21 +2001,6 @@ const NetworkGraph = ({
         sessionStorage.removeItem(cacheKey);
       }
 
-      if (isDeployingRef.current) {
-        const expectedNames = new Set(expandedPods.map((p) => p.name));
-        const allReady = Array.from(expectedNames).every(
-          (name) => podStatusMap[name] === 'Running' || podStatusMap[name] === 'Succeeded'
-        );
-
-        if (!allReady) {
-          // Still mid-deployment: don't render anything or change positions
-          return;
-        }
-
-        // Ya estable: desbloqueamos refrescos
-        isDeployingRef.current = false;
-      }
-
       // A refresh rebuilds the node objects; the multi-selection lives on them
       // (React Flow's `selected`), so carry it over or it vanishes mid-use.
       setNodes((prev) => {
@@ -2023,6 +2018,7 @@ const NetworkGraph = ({
       setInitialLoading(false); // Also disable on error
     } finally {
       topologyFetchInFlightRef.current = false;
+      settle();
     }
   };
 
@@ -2481,6 +2477,9 @@ const NetworkGraph = ({
     } catch (err) {
       showError('Deployment Error', err.message || 'Deployment failed.');
     } finally {
+      // The deploy is over either way: let the refreshes run again, a node
+      // that is still restarting shows as such on the graph.
+      isDeployingRef.current = false;
       setImporting(false);
     }
   };
