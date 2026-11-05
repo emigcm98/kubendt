@@ -153,8 +153,11 @@ func RestartPod(c *gin.Context) {
 	timelines, waitErr := helpers.WaitForPodsReadyTimeline(namespace, []string{podName}, requestStart)
 	if waitErr != nil {
 		// A replay against a node still coming up fails and prunes the very
-		// history it should restore, so it waits for the next restart.
+		// history it should restore, so it waits for the next restart. The
+		// neighbours' ends were recreated with the pod whatever its state, so
+		// they get their wiring back now, or a QEMU peer's links stay dead.
 		log.Printf("⚠️ Pod '%s' restarted but not Ready in time, its configuration was not replayed: %v", podName, waitErr)
+		helpers.ReapplyPeerInterfaceState(namespace, []string{podName})
 		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("pod %s restarted but was not Ready in time, so its configuration was not replayed; restart it again once it is Ready: %v", podName, waitErr)})
 		return
 	}

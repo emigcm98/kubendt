@@ -8,7 +8,7 @@
    <a href="https://doi.org/10.5281/zenodo.21276320"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.21276320.svg" alt="DOI" /></a>
 </p>
 
-> Last reviewed: 4 Nov 2026
+> Last reviewed: 5 Nov 2026
 
 **KubeNDT** is a platform for deploying and operating virtual network topologies on Kubernetes.
 
@@ -226,7 +226,7 @@ KubeNDT is actively developed. The following limitations are known:
 
 ### Virtual Machine Drivers
 
-- **Status**: Two QEMU guests have drivers, **VyOS** as a router (L2, L3, NAT and the routing protocols) and **Extreme EXOS** as a switch (L2 and bridging, the layer 2 capabilities to follow). Other virtual platforms (Cisco CSR1000v, Juniper vMX, etc.) are not supported.
+- **Status**: Two QEMU guests have drivers, **VyOS** as a router (L2, L3, NAT and the routing protocols) and **Extreme EXOS** as a simple lab switch (L2, bridging, VLANs and spanning tree). Other virtual platforms (Cisco CSR1000v, Juniper vMX, etc.) are not supported.
 - **Path Forward**: If you want to try a QEMU-based image, follow the [VyOS QEMU image guide](deploy/custom_images/qemu/vyos-router/README-vyos.md) to create images and drivers for other platforms; the [EXOS guide](deploy/custom_images/qemu/exos-switch/README-exos.md) is the shorter second example.
 
 ### Stateful Pod Configuration

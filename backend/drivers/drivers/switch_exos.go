@@ -40,6 +40,10 @@ func NewEXOSSwitchDriver() *EXOSSwitchDriver {
 
 var _ capabilities.L2Capable = (*EXOSSwitchDriver)(nil)
 var _ capabilities.SwitchCapable = (*EXOSSwitchDriver)(nil)
+var _ capabilities.VLANCapable = (*EXOSSwitchDriver)(nil)
+var _ capabilities.VLANInspector = (*EXOSSwitchDriver)(nil)
+var _ capabilities.STPCapable = (*EXOSSwitchDriver)(nil)
+var _ capabilities.STPInspector = (*EXOSSwitchDriver)(nil)
 var _ drivers_meta.RuntimeProvider = (*EXOSSwitchDriver)(nil)
 var _ drivers_meta.DeviceProvider = (*EXOSSwitchDriver)(nil)
 var _ drivers_meta.ReadinessProbeProvider = (*EXOSSwitchDriver)(nil)
@@ -140,15 +144,19 @@ func (EXOSSwitchDriver) GuestInterface(namespace, podName, podInterface string) 
 	return port, nil
 }
 
-// ReadinessProbeCommands makes the pod Ready once the API answers and the
-// switch reports itself operational, about ninety seconds after boot.
+// ReadinessProbeCommands makes the pod Ready once the entrypoint has sent
+// its startup lines (the flag) and the API answers that the switch is
+// operational, some ninety seconds after boot most times; one boot in four or
+// five stalls 150 s and the entrypoint reboots the guest, so the budget is
+// nine minutes, two of those in a row, and the deploy's wait follows it
+// rather than rolling a slow switch back.
 func (EXOSSwitchDriver) ReadinessProbeCommands() drivers_meta.ReadinessProbeSpec {
 	return drivers_meta.ReadinessProbeSpec{
-		Command:             []string{"sh", "-c", "exos_show 'show switch' | grep -q OPERATIONAL"},
+		Command:             []string{"sh", "-c", "test -f /run/exos/ready && exos_show 'show switch' | grep -q OPERATIONAL"},
 		InitialDelaySeconds: 40,
 		PeriodSeconds:       5,
 		TimeoutSeconds:      8,
-		FailureThreshold:    24,
+		FailureThreshold:    100,
 	}
 }
 
@@ -210,7 +218,9 @@ func exosObjects(body, key string) ([]map[string]any, error) {
 			Message string `json:"message"`
 		} `json:"error"`
 	}
-	if err := json.Unmarshal([]byte(body), &reply); err != nil {
+	dec := json.NewDecoder(strings.NewReader(body))
+	dec.UseNumber()
+	if err := dec.Decode(&reply); err != nil {
 		return nil, fmt.Errorf("exos api: %w", err)
 	}
 	if reply.Error != nil {
@@ -223,6 +233,32 @@ func exosObjects(body, key string) ([]map[string]any, error) {
 		}
 	}
 	return out, nil
+}
+
+// exosNum reads a number of a reply, decoded as json.Number; exosStr the
+// text of any scalar, a bridge id among them, whose digits a float would
+// have lost.
+func exosNum(v any) float64 {
+	switch x := v.(type) {
+	case json.Number:
+		f, _ := x.Float64()
+		return f
+	case float64:
+		return x
+	}
+	return 0
+}
+
+func exosStr(v any) string {
+	switch x := v.(type) {
+	case json.Number:
+		return x.String()
+	case string:
+		return x
+	case float64:
+		return strconv.FormatFloat(x, 'f', -1, 64)
+	}
+	return ""
 }
 
 type exosPort struct {
@@ -241,10 +277,8 @@ func exosPorts(namespace, pod string) ([]exosPort, error) {
 	}
 	var ports []exosPort
 	for _, o := range objs {
-		n, _ := o["port"].(float64)
 		flags, _ := o["flags"].(string)
-		link, _ := o["linkState"].(float64)
-		ports = append(ports, exosPort{number: int(n), enabled: strings.HasPrefix(flags, "E"), link: link == 1})
+		ports = append(ports, exosPort{number: int(exosNum(o["port"])), enabled: strings.HasPrefix(flags, "E"), link: exosNum(o["linkState"]) == 1})
 	}
 	sort.Slice(ports, func(i, j int) bool { return ports[i].number < ports[j].number })
 	return ports, nil
@@ -316,8 +350,8 @@ func (EXOSSwitchDriver) BridgeFDB(namespace, pod string) (capabilities.Rows, err
 func exosFDBRows(objs []map[string]any, ifaceOf func(port string) string) capabilities.Rows {
 	var rows capabilities.Rows
 	for _, o := range objs {
-		port, _ := o["port_list"].(float64)
-		vlan, _ := o["vlan_id"].(float64)
+		port := exosNum(o["port_list"])
+		vlan := exosNum(o["vlan_id"])
 		name, _ := o["vlan_name"].(string)
 		mac, _ := o["mac_addr"].(string)
 		flag, _ := o["flag"].(string)
@@ -328,5 +362,250 @@ func exosFDBRows(objs []map[string]any, ifaceOf func(port string) string) capabi
 		rows = append(rows, map[string]string{"bridge": name, "mac": mac, "interface": ifaceOf(strconv.Itoa(int(port))), "vlan": vid, "flags": strings.Join(strings.Fields(flag), " ")})
 	}
 	sort.Slice(rows, func(i, j int) bool { return rows[i]["interface"]+rows[i]["mac"] < rows[j]["interface"]+rows[j]["mac"] })
+	return rows
+}
+
+// --- VLANs: a VLAN per tag, named v<tag>; a port's membership is rewritten
+// whole through the wrapper's @clear-port, since EXOS has no command that
+// takes a port out of every VLAN, and "-create" may find the VLAN there.
+
+func exosVLAN(vlan int) string { return "v" + strconv.Itoa(vlan) }
+
+func (EXOSSwitchDriver) VLANSetAccess(port string, vlan int) [][]string {
+	v := exosVLAN(vlan)
+	return [][]string{{"@clear-port " + port}, {"-create vlan " + v + " tag " + strconv.Itoa(vlan)}, {"configure vlan " + v + " add ports " + port + " untagged"}}
+}
+
+func (EXOSSwitchDriver) VLANSetTrunk(port string, vlans []int, native int) [][]string {
+	cmds := [][]string{{"@clear-port " + port}}
+	for _, vlan := range vlans {
+		if vlan == native {
+			continue
+		}
+		v := exosVLAN(vlan)
+		cmds = append(cmds, []string{"-create vlan " + v + " tag " + strconv.Itoa(vlan)}, []string{"configure vlan " + v + " add ports " + port + " tagged"})
+	}
+	if native != 0 {
+		v := exosVLAN(native)
+		cmds = append(cmds, []string{"-create vlan " + v + " tag " + strconv.Itoa(native)}, []string{"configure vlan " + v + " add ports " + port + " untagged"})
+	}
+	return cmds
+}
+
+func (EXOSSwitchDriver) VLANClearPort(port string) [][]string {
+	return [][]string{{"@clear-port " + port}, {"configure vlan Default add ports " + port + " untagged"}}
+}
+
+// VLANPorts reads `show ports vlan`: one object per port and VLAN with
+// tagStatus 0 for untagged, 1 for tagged. A VLAN with an internal tag (a
+// bridge made with setup_bridge, or Default's 4095 sibling) shows its name.
+func (EXOSSwitchDriver) VLANPorts(namespace, pod string) (capabilities.Rows, error) {
+	objs, err := exosShow(namespace, pod, "show ports vlan", "show_ports_info_detail_vlans")
+	if err != nil {
+		return nil, err
+	}
+	m, err := exosPortMapFor(namespace, pod)
+	if err != nil {
+		return nil, err
+	}
+	return exosVLANRows(objs, m), nil
+}
+
+func exosVLANRows(objs []map[string]any, m *exosPortMap) capabilities.Rows {
+	type membership struct {
+		tagged []string
+		native string
+	}
+	ports := map[int]*membership{}
+	var order []int
+	for _, o := range objs {
+		n := int(exosNum(o["port"]))
+		if ports[n] == nil {
+			ports[n] = &membership{}
+			order = append(order, n)
+		}
+		id := int(exosNum(o["vlanId"]))
+		name, _ := o["vlanName"].(string)
+		label := strconv.Itoa(id)
+		if id >= 4094 {
+			label = name
+		}
+		if exosNum(o["tagStatus"]) == 1 {
+			ports[n].tagged = append(ports[n].tagged, label)
+		} else {
+			ports[n].native = label
+		}
+	}
+	sort.Ints(order)
+	var rows capabilities.Rows
+	for _, n := range order {
+		iface, ok := m.byPort[strconv.Itoa(n)]
+		if !ok {
+			continue
+		}
+		p := ports[n]
+		mode, vlans := "trunk", strings.Join(p.tagged, ",")
+		switch {
+		case len(p.tagged) == 0 && p.native == "":
+			mode = "none"
+		case len(p.tagged) == 0:
+			mode, vlans = "access", p.native
+		}
+		rows = append(rows, map[string]string{"port": iface, "mode": mode, "vlans": vlans, "native": p.native})
+	}
+	return rows
+}
+
+// --- spanning tree: the one domain s0, which the bridge (a VLAN) joins;
+// its mode is the domain's, so the last enable sets it for every VLAN in it.
+
+func (EXOSSwitchDriver) STPModes() []string { return []string{"rstp", "stp"} }
+
+// exosSTPVLAN is the VLAN a spanning tree action names: a bridge of
+// setup_bridge by its name, a VLAN of the VLAN actions by its tag.
+func exosSTPVLAN(bridge string) string {
+	if n, err := strconv.Atoi(bridge); err == nil {
+		return exosVLAN(n)
+	}
+	return bridge
+}
+
+func (EXOSSwitchDriver) STPEnable(bridge, mode string) [][]string {
+	exosMode := "dot1w"
+	if mode == "stp" {
+		exosMode = "dot1d"
+	}
+	return [][]string{{"-disable stpd s0"}, {"configure stpd s0 mode " + exosMode}, {"enable stpd s0 auto-bind vlan " + exosSTPVLAN(bridge)}, {"enable stpd s0"}}
+}
+
+func (EXOSSwitchDriver) STPDisable(bridge string) [][]string {
+	v := exosSTPVLAN(bridge)
+	return [][]string{{"-disable stpd s0 auto-bind vlan " + v}, {"-configure stpd s0 delete vlan " + v + " ports all"}}
+}
+
+func (EXOSSwitchDriver) STPSetBridgePriority(bridge string, priority int) [][]string {
+	return [][]string{{"configure stpd s0 priority " + strconv.Itoa(priority)}}
+}
+
+func (EXOSSwitchDriver) STPSetPort(port string, cost, priority int) [][]string {
+	var cmds [][]string
+	if cost > 0 {
+		cmds = append(cmds, []string{"configure stpd s0 ports cost " + strconv.Itoa(cost) + " " + port})
+	}
+	if priority >= 0 {
+		cmds = append(cmds, []string{"configure stpd s0 ports port-priority " + strconv.Itoa(priority) + " " + port})
+	}
+	return cmds
+}
+
+var exosSTPModes = map[string]string{"1": "stp", "2": "rstp", "3": "mstp"}
+
+// exosBridgeID formats the id EXOS prints as digits, priority then MAC,
+// into priority.mac.
+func exosBridgeID(v any) string {
+	s := exosStr(v)
+	if len(s) != 16 {
+		return s
+	}
+	mac := s[4:]
+	var pairs []string
+	for i := 0; i+2 <= len(mac); i += 2 {
+		pairs = append(pairs, mac[i:i+2])
+	}
+	return s[:4] + "." + strings.Join(pairs, ":")
+}
+
+func (d EXOSSwitchDriver) STPBridges(namespace, pod string) (capabilities.Rows, error) {
+	out, err := executor.ExecAndGet(namespace, pod, []string{"exos_show", "show stpd s0"})
+	if err != nil {
+		return nil, err
+	}
+	ports, err := d.STPPorts(namespace, pod)
+	if err != nil {
+		return nil, err
+	}
+	return exosSTPBridgeRows(string(out), ports)
+}
+
+func exosSTPBridgeRows(body string, ports capabilities.Rows) (capabilities.Rows, error) {
+	row := map[string]string{"bridge": "s0", "mode": "off", "priority": "", "bridge_id": "", "root_id": "", "root": "no", "root_port": ""}
+	if objs, err := exosObjects(body, "stp_domain_enable"); err != nil {
+		return nil, err
+	} else if len(objs) > 0 && exosNum(objs[0]["stpd_enabled"]) == 1 {
+		row["mode"] = exosSTPModes[exosStr(objs[0]["protocol_mode"])]
+	}
+	if objs, _ := exosObjects(body, "stp_domain"); len(objs) > 0 {
+		row["priority"] = exosStr(objs[0]["priority"])
+	}
+	if objs, _ := exosObjects(body, "stp_domain_stats"); len(objs) > 0 {
+		row["bridge_id"] = exosBridgeID(objs[0]["bridge_id"])
+		row["root_id"] = exosBridgeID(objs[0]["designated_root"])
+		if row["bridge_id"] == row["root_id"] {
+			row["root"] = "yes"
+		}
+	}
+	for _, p := range ports {
+		if p["role"] == "root" {
+			row["root_port"] = p["port"]
+		}
+	}
+	return capabilities.Rows{row}, nil
+}
+
+// STPPorts parses the table of `show stpd s0 ports`: port, mode, state,
+// cost, flags (the role letter second), priority, port id, bridge. The
+// JSON next to it has the same facts as enum numbers nobody documents.
+func (EXOSSwitchDriver) STPPorts(namespace, pod string) (capabilities.Rows, error) {
+	out, err := executor.ExecAndGet(namespace, pod, []string{"exos_show", "show stpd s0 ports"})
+	if err != nil {
+		return nil, err
+	}
+	m, err := exosPortMapFor(namespace, pod)
+	if err != nil {
+		return nil, err
+	}
+	text, err := exosCLIText(string(out))
+	if err != nil {
+		return nil, err
+	}
+	return exosSTPPortRows(text, m), nil
+}
+
+// exosCLIText joins the CLIoutput pieces of a reply.
+func exosCLIText(body string) (string, error) {
+	var reply struct {
+		Result []map[string]any `json:"result"`
+	}
+	if err := json.Unmarshal([]byte(body), &reply); err != nil {
+		return "", fmt.Errorf("exos api: %w", err)
+	}
+	var b strings.Builder
+	for _, r := range reply.Result {
+		if s, ok := r["CLIoutput"].(string); ok {
+			b.WriteString(s)
+		}
+	}
+	return b.String(), nil
+}
+
+var exosSTPRoles = map[byte]string{'R': "root", 'D': "designated", 'A': "alternate", 'B': "backup", 'M': "master"}
+
+func exosSTPPortRows(text string, m *exosPortMap) capabilities.Rows {
+	var rows capabilities.Rows
+	for _, line := range strings.Split(text, "\n") {
+		f := strings.Fields(line)
+		if len(f) < 6 || !strings.HasPrefix(f[1], "802.") {
+			continue
+		}
+		iface, ok := m.byPort[f[0]]
+		if !ok {
+			continue
+		}
+		role := ""
+		if len(f[4]) > 1 {
+			role = exosSTPRoles[f[4][1]]
+		}
+		rows = append(rows, map[string]string{"bridge": "s0", "port": iface, "role": role, "state": strings.ToLower(f[2]), "cost": f[3], "priority": f[5]})
+	}
 	return rows
 }

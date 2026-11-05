@@ -117,6 +117,20 @@ var execTimeout = func() time.Duration {
 	return 30 * time.Second
 }()
 
+// execDeadlines are the executors allowed longer than the global deadline:
+// a guest whose API takes seconds per command runs a batch of actions as
+// one exec of many commands. The global one still applies when larger.
+var execDeadlines = map[string]time.Duration{}
+
+func SetExecDeadline(executorName string, d time.Duration) { execDeadlines[executorName] = d }
+
+func execDeadlineFor(executorName string) time.Duration {
+	if d, ok := execDeadlines[executorName]; ok && d > execTimeout {
+		return d
+	}
+	return execTimeout
+}
+
 func execViaKubectl(podName, namespace, container string, prefix []string, command []string, executorName string) (string, error) {
 	if len(command) == 0 {
 		return "", fmt.Errorf("empty command for executor %q", executorName)
@@ -129,7 +143,8 @@ func execViaKubectl(podName, namespace, container string, prefix []string, comma
 	cmdText := strings.Join(effectiveCommand, " ")
 	startedAt := time.Now()
 
-	ctx, cancel := context.WithTimeout(context.Background(), execTimeout)
+	deadline := execDeadlineFor(executorName)
+	ctx, cancel := context.WithTimeout(context.Background(), deadline)
 	defer cancel()
 
 	req := kubeclient.Clientset.CoreV1().RESTClient().
@@ -178,12 +193,12 @@ func execViaKubectl(podName, namespace, container string, prefix []string, comma
 	// Surface execs that succeed but eat most of the deadline. Helps catch
 	// gradual slowdowns (busy API server, slow guest after boot, growing
 	// commit fanout) before they start tripping the timeout.
-	if duration > (execTimeout*7)/10 {
+	if duration > (deadline*7)/10 {
 		log.Printf("⚠️ Slow exec executor='%s' pod='%s' ns='%s' took=%s (%.0f%% of %s deadline) cmd=%q",
 			executorName, podName, namespace,
 			duration.Round(time.Millisecond),
-			float64(duration)/float64(execTimeout)*100,
-			execTimeout,
+			float64(duration)/float64(deadline)*100,
+			deadline,
 			cmdText)
 	}
 
