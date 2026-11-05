@@ -8,6 +8,7 @@ import (
 
 func RegisterAllDrivers() {
 	drivers_registry.Register(drivers.NewHostDriver)
+	drivers_registry.Register(drivers.NewFaucetControllerDriver)
 	drivers_registry.Register(drivers.NewLinuxSwitchDriver)
 	drivers_registry.Register(drivers.NewOpenVSwitchDriver)
 	drivers_registry.Register(drivers.NewEXOSSwitchDriver)

@@ -31,6 +31,7 @@
   "bgp_remove_router": { "unsupported": true },
   "bgp_set_router": { "unsupported": true },
   "clear_dns": { "unsupported": true },
+  "controller_apply_config": { "unsupported": true },
   "custom": {
     "executor": "kubectl",
     "commands": [
@@ -149,6 +150,12 @@
     "executor": "kubectl",
     "commands": [
       ["ovs-vsctl","set-controller","br0","tcp:10.0.100.1:6653","--","set","bridge","br0","protocols=OpenFlow13"]
+    ]
+  },
+  "set_datapath_id": {
+    "executor": "kubectl",
+    "commands": [
+      ["ovs-vsctl","set","bridge","br0","other_config:datapath-id=0000000000000001"]
     ]
   },
   "set_default_route": { "unsupported": true },

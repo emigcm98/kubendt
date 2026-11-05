@@ -48,6 +48,7 @@
       ["sh","-c","if [ -f /etc/resolv.conf.kubendt ]; then cat /etc/resolv.conf.kubendt \u003e /etc/resolv.conf; fi"]
     ]
   },
+  "controller_apply_config": { "unsupported": true },
   "custom": {
     "executor": "kubectl",
     "commands": [
@@ -183,6 +184,7 @@
   "rip_remove_timers": { "unsupported": true },
   "rip_set_timers": { "unsupported": true },
   "set_controller": { "unsupported": true },
+  "set_datapath_id": { "unsupported": true },
   "set_default_route": {
     "executor": "kubectl",
     "commands": [

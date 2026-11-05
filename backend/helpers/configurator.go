@@ -101,6 +101,10 @@ func GetDriverForListedPod(pod *v1.Pod) (interface{}, error) {
 	return drv, nil
 }
 
+// ReadActionFile reads the file a file parameter names from the namespace's
+// file manager. A variable so the plan tests can hand over a fixed content.
+var ReadActionFile = GetFileContent
+
 // ResolveDriverExecutionPlanForPod resolves the executor and the commands of
 // one action on one pod. The action is looked up in the registry, validated
 // and checked against the driver's capabilities before anything is built, so
@@ -120,6 +124,14 @@ func ResolveDriverExecutionPlanForPod(namespace, podName string, driver interfac
 		name, typ := driverNameType(driver)
 		return "", nil, fmt.Errorf("node '%s' (type %s, driver %s) does not support %s operations, so action %q cannot be applied",
 			podName, typ, name, strings.TrimSuffix(desc.Capability, "Capable"), action.Type)
+	}
+
+	if p, ok := desc.FileParam(); ok {
+		data, err := ReadActionFile(namespace, action.File)
+		if err != nil {
+			return "", nil, fmt.Errorf("%s: %w", p.Name, err)
+		}
+		action.FileContent = string(data)
 	}
 
 	if mapper, ok := driver.(drivers_meta.GuestInterfaceMapper); ok {

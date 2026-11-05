@@ -2990,6 +2990,10 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 100
                 },
+                "datapath_id": {
+                    "type": "string",
+                    "example": "0x1"
+                },
                 "dead_interval": {
                     "type": "integer",
                     "example": 40
@@ -3037,6 +3041,11 @@ const docTemplate = `{
                     "description": "Family picks IPv4 or IPv6 for an action that carries no address to\ntell them apart (remove_default_route); 4 when empty.",
                     "type": "string",
                     "example": "6"
+                },
+                "file": {
+                    "description": "File names a file of the namespace's file manager; the planner reads\nit into FileContent when the action runs, so history keeps the name.",
+                    "type": "string",
+                    "example": "faucet.yaml"
                 },
                 "flow": {
                     "type": "string",

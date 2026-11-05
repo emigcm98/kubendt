@@ -92,6 +92,7 @@
       ["delete system domain-search"]
     ]
   },
+  "controller_apply_config": { "unsupported": true },
   "custom": {
     "executor": "kubectl",
     "commands": [
@@ -563,6 +564,7 @@
     ]
   },
   "set_controller": { "unsupported": true },
+  "set_datapath_id": { "unsupported": true },
   "set_default_route": {
     "executor": "vyos_api_apply",
     "commands": [

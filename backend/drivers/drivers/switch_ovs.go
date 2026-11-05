@@ -319,6 +319,10 @@ func (OpenVSwitchDriver) SetFailMode(bridge, mode string) [][]string {
 	return [][]string{{"ovs-vsctl", "set-fail-mode", bridge, mode}}
 }
 
+func (OpenVSwitchDriver) SetDatapathID(bridge, id string) [][]string {
+	return [][]string{{"ovs-vsctl", "set", "bridge", bridge, "other_config:datapath-id=" + id}}
+}
+
 func (OpenVSwitchDriver) AddFlow(bridge, flow string) [][]string {
 	return [][]string{ofctl("add-flow", bridge, flow)}
 }
