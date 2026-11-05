@@ -93,6 +93,7 @@
       ["sh","-c","if [ -f /etc/resolv.conf.kubendt ]; then cat /etc/resolv.conf.kubendt \u003e /etc/resolv.conf; fi"]
     ]
   },
+  "controller_apply_config": { "unsupported": true },
   "custom": {
     "executor": "kubectl",
     "commands": [
@@ -553,6 +554,7 @@
     ]
   },
   "set_controller": { "unsupported": true },
+  "set_datapath_id": { "unsupported": true },
   "set_default_route": {
     "executor": "kubectl",
     "commands": [

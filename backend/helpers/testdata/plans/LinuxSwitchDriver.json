@@ -26,6 +26,7 @@
   "bgp_remove_router": { "unsupported": true },
   "bgp_set_router": { "unsupported": true },
   "clear_dns": { "unsupported": true },
+  "controller_apply_config": { "unsupported": true },
   "custom": {
     "executor": "kubectl",
     "commands": [
@@ -131,6 +132,7 @@
   "rip_remove_timers": { "unsupported": true },
   "rip_set_timers": { "unsupported": true },
   "set_controller": { "unsupported": true },
+  "set_datapath_id": { "unsupported": true },
   "set_default_route": { "unsupported": true },
   "set_dns": { "unsupported": true },
   "set_fail_mode": { "unsupported": true },

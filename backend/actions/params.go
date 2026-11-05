@@ -31,6 +31,7 @@ const (
 	KindIPList     Kind = "ip_list"
 	KindDomainList Kind = "domain_list" // DNS names, letters, digits, dots and hyphens
 	KindNumberList Kind = "number_list" // non-negative integers, the action checks their range
+	KindFile       Kind = "file"        // a file of the namespace's file manager, its content reaches the action in FileContent
 )
 
 // Param is one field of ActionEntry an action reads, by its JSON name.
@@ -100,6 +101,8 @@ var (
 	Controller    = Param{Name: "controller", Kind: KindText, Required: true}
 	Protocols     = Param{Name: "protocols", Kind: KindText, Required: false}
 	Flow          = Param{Name: "flow", Kind: KindText, Required: true}
+	ConfigFile    = Param{Name: "file", Kind: KindFile, Required: true}
+	DatapathID    = Param{Name: "datapath_id", Kind: KindText, Required: true}
 )
 
 // ProtectedInterface is the pod's cluster interface. An action on it would
@@ -231,8 +234,24 @@ func checkKind(k Kind, v reflect.Value) error {
 				return fmt.Errorf("must not hold negative numbers, got %d", n)
 			}
 		}
+	case KindFile:
+		s := v.String()
+		if strings.HasPrefix(s, "/") || strings.Contains(s, "..") || strings.ContainsAny(s, "\n\r\x00") {
+			return fmt.Errorf("must name a file of the namespace's file manager, got %q", s)
+		}
 	}
 	return nil
+}
+
+// FileParam is the file parameter of the action, if it takes one: the
+// planner reads that file before the action runs.
+func (d *Descriptor) FileParam() (Param, bool) {
+	for _, p := range d.Params {
+		if p.Kind == KindFile {
+			return p, true
+		}
+	}
+	return Param{}, false
 }
 
 // MapInterfaces returns the action with every interface param passed through

@@ -25,6 +25,7 @@ var update = flag.Bool("update", false, "rewrite the expected plans under testda
 // interface map from the pod for every interface action is left out.
 var plannedDrivers = []string{
 	"HostDriver",
+	"FaucetControllerDriver",
 	"LinuxSwitchDriver",
 	"OpenVSwitchDriver",
 	"LinuxRouterDriver",
@@ -163,6 +164,12 @@ func rows(p plan) string {
 func TestActionPlans(t *testing.T) {
 	fixtures := loadFixtures(t)
 	types := knownActionTypes()
+	// A file parameter resolves to this content, the plan test has no file
+	// manager behind it.
+	helpers.ReadActionFile = func(namespace, file string) ([]byte, error) {
+		return []byte("vlans:\n  office:\n    vid: 10\n"), nil
+	}
+	t.Cleanup(func() { helpers.ReadActionFile = helpers.GetFileContent })
 
 	for _, driverName := range plannedDrivers {
 		driver := loadDriver(t, driverName)

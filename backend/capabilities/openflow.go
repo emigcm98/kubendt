@@ -17,6 +17,9 @@ type OpenFlowCapable interface {
 	SetController(bridge, target, protocols string) [][]string
 	RemoveController(bridge string) [][]string
 	SetFailMode(bridge, mode string) [][]string
+	// SetDatapathID fixes the id the bridge presents to its controller, so
+	// a controller's configuration can name it; id is up to 16 hex digits.
+	SetDatapathID(bridge, id string) [][]string
 	AddFlow(bridge, flow string) [][]string
 	// DeleteFlow takes the match of the flow, priority included, as add_flow
 	// got it without its actions.
@@ -32,7 +35,15 @@ var (
 	controllerTargetRe = regexp.MustCompile(`^(tcp|ssl):(\[[0-9A-Fa-f:.]+\]|[^\s\[\]:]+)(:\d{1,5})?$`)
 	protocolsRe        = regexp.MustCompile(`^OpenFlow1[0-5](,OpenFlow1[0-5])*$`)
 	flowActionsRe      = regexp.MustCompile(`[, ]*actions=.*$`)
+	datapathIDRe       = regexp.MustCompile(`^(0x)?[0-9A-Fa-f]{1,16}$`)
 )
+
+// DatapathID is the id as a switch stores it: 16 lowercase hex digits, no
+// prefix, what a controller's configuration gives as 0x1 among others.
+func DatapathID(id string) string {
+	id = strings.ToLower(strings.TrimPrefix(strings.ToLower(id), "0x"))
+	return strings.Repeat("0", 16-len(id)) + id
+}
 
 // FlowMatch is the flow spec without its actions, what identifies a flow in
 // the table and what del-flows takes.
@@ -70,6 +81,13 @@ func init() {
 					return nil, fmt.Errorf("mode must be secure or standalone, got %q", a.Mode)
 				}
 				return c.SetFailMode(a.Bridge, a.Mode), nil
+			}},
+		actions.Action[OpenFlowCapable]{Type: "set_datapath_id", Label: "Set datapath id", Params: actions.P(actions.Bridge, actions.DatapathID), State: "openflow_datapath_id", Key: keyBridge,
+			Run: func(c OpenFlowCapable, a types.ActionEntry) ([][]string, error) {
+				if !datapathIDRe.MatchString(a.DatapathID) {
+					return nil, fmt.Errorf("datapath_id must be up to 16 hex digits, got %q", a.DatapathID)
+				}
+				return c.SetDatapathID(a.Bridge, DatapathID(a.DatapathID)), nil
 			}},
 		actions.Action[OpenFlowCapable]{Type: "add_flow", Label: "Add flow", Params: actions.P(actions.Bridge, actions.Flow), State: "openflow_flow", Key: keyFlow,
 			Run: func(c OpenFlowCapable, a types.ActionEntry) ([][]string, error) {

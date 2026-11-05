@@ -71,6 +71,9 @@ definitions:
           tells it apart from unset. Intervals are seconds.
         example: 100
         type: integer
+      datapath_id:
+        example: "0x1"
+        type: string
       dead_interval:
         example: 40
         type: integer
@@ -111,6 +114,12 @@ definitions:
           Family picks IPv4 or IPv6 for an action that carries no address to
           tell them apart (remove_default_route); 4 when empty.
         example: "6"
+        type: string
+      file:
+        description: |-
+          File names a file of the namespace's file manager; the planner reads
+          it into FileContent when the action runs, so history keeps the name.
+        example: faucet.yaml
         type: string
       flow:
         example: priority=100,in_port=1,actions=drop
