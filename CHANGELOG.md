@@ -16,13 +16,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `STPCapable` on the switches and on the Linux and FRR routers: `stp_enable` (classic STP on the Linux bridge, RSTP by default or STP on Open vSwitch), `stp_disable`, `stp_set_bridge_priority` and `stp_set_port` for cost and priority, with `stp_bridges` and `stp_ports` inspections showing the root, the root port and each port's role and state. An `ip` call with bridge options runs through the toolbox on busybox images, as `bridge` does.
 - `OpenFlowCapable` on the Open vSwitch driver: `set_controller` with the OpenFlow versions to offer, `remove_controller`, `set_fail_mode` (secure or standalone), and `add_flow` and `delete_flow` for flows installed by hand, with `openflow_bridges` (controller, connection, fail mode, datapath id) and `openflow_flows` inspections.
 - An Extreme EXOS (Switch Engine) switch as a QEMU guest, a simple lab switch with a real CLI next to VyOS: the image folder `deploy/custom_images/qemu/exos-switch/`, built by hand and `EXOSSwitchDriver` with link and bridging actions, the port states and the MAC table.
+- `VLANCapable` and `STPCapable` on the EXOS switch, with the `vlan_ports`, `stp_bridges` and `stp_ports` inspections: a VLAN per tag, and the one spanning tree domain `s0` that a bridge joins, RSTP by default. The image runs the guest on two vCPUs, names it after its pod and turns its auto-provision off with an address on the Default VLAN.
+
+### Changed
+
+- An executor may declare a longer exec deadline than the global thirty seconds. The EXOS API gets four minutes.
 
 ### Fixed
 
 - The DNS actions that rewrite `resolv.conf` read it whole before writing: piping it into `tee` on itself could truncate it first and leave an empty file with no error.
 - The MTU pass of a deploy retries a node whose container was restarting when it tried to write, waiting for it to be Ready again, instead of leaving the default MTU behind a warning.
 - After a deploy whose nodes were still restarting the graph stayed on the placeholders until a page reload. It now draws what the cluster has, with each node's state, and a forced refresh waits for the one in flight instead of being dropped.
-- A restart whose pod is not Ready in time no longer replays its history against a node still coming up, which pruned it; the wait for Ready covers a driver's readiness budget when it is longer than the default.
+- A restart whose pod is not Ready in time no longer replays its history against a node still coming up, which pruned it. The wait for Ready covers a driver's readiness budget when it is longer than the default, and the neighbours' ends are re-wired in that case too.
+- Two EXOS switches shared a bridge id, since their guests got the same management MAC. It now derives from the pod's own MAC.
+- An EXOS guest that gave up loading its configuration at boot could stay dead at the login prompt. The pod now reboots it on the same taps, and the readiness budget covers two such boots.
 
 ## [1.8.0] - 2026-11-01
 

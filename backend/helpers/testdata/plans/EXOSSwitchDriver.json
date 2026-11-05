@@ -142,17 +142,66 @@
       ["configure vlan br0 add ports 1,2 untagged"]
     ]
   },
-  "stp_disable": { "unsupported": true },
-  "stp_enable": { "unsupported": true },
-  "stp_set_bridge_priority": { "unsupported": true },
-  "stp_set_port": { "unsupported": true },
+  "stp_disable": {
+    "executor": "exos_api",
+    "commands": [
+      ["-disable stpd s0 auto-bind vlan br0"],
+      ["-configure stpd s0 delete vlan br0 ports all"]
+    ]
+  },
+  "stp_enable": {
+    "executor": "exos_api",
+    "commands": [
+      ["-disable stpd s0"],
+      ["configure stpd s0 mode dot1d"],
+      ["enable stpd s0 auto-bind vlan br0"],
+      ["enable stpd s0"]
+    ]
+  },
+  "stp_set_bridge_priority": {
+    "executor": "exos_api",
+    "commands": [
+      ["configure stpd s0 priority 4096"]
+    ]
+  },
+  "stp_set_port": {
+    "executor": "exos_api",
+    "commands": [
+      ["configure stpd s0 ports cost 50 1"],
+      ["configure stpd s0 ports port-priority 64 1"]
+    ]
+  },
   "teardown_bridge": {
     "executor": "exos_api",
     "commands": [
       ["delete vlan br0"]
     ]
   },
-  "vlan_clear_port": { "unsupported": true },
-  "vlan_set_access": { "unsupported": true },
-  "vlan_set_trunk": { "unsupported": true }
+  "vlan_clear_port": {
+    "executor": "exos_api",
+    "commands": [
+      ["@clear-port 1"],
+      ["configure vlan Default add ports 1 untagged"]
+    ]
+  },
+  "vlan_set_access": {
+    "executor": "exos_api",
+    "commands": [
+      ["@clear-port 1"],
+      ["-create vlan v10 tag 10"],
+      ["configure vlan v10 add ports 1 untagged"]
+    ]
+  },
+  "vlan_set_trunk": {
+    "executor": "exos_api",
+    "commands": [
+      ["@clear-port 1"],
+      ["-create vlan v10 tag 10"],
+      ["configure vlan v10 add ports 1 tagged"],
+      ["-create vlan v20 tag 20"],
+      ["configure vlan v20 add ports 1 tagged"],
+      ["-create vlan v99 tag 99"],
+      ["configure vlan v99 add ports 1 untagged"]
+    ]
+  }
 }
