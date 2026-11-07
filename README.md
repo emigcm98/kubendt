@@ -55,11 +55,12 @@ KubeNDT bundles a small set of third-party SVG icons in its frontend. See [ATTRI
 
 ### Advanced Networking Features
 
-- **Layer 2 operations**: Interface management, bridge creation, VLAN configuration
+- **Layer 2 operations**: Interface management, bridge creation, VLAN access and trunk ports, VLAN subinterfaces and SVIs, spanning tree (STP on a Linux bridge, STP or RSTP on Open vSwitch)
 - **Layer 3 operations**: IP address assignment, static routing, default gateway configuration, IPv4 and IPv6 alike (a link carries one family on both ends)
 - **Routing protocols**: OSPFv2, OSPFv3, RIP (RIPv2 and RIPng), BGP and IS-IS as driver actions on FRR and VyOS routers, the rest of FRRouting reachable through its console
 - **Traffic control (QoS)**: Rate limiting, traffic shaping, netem (network emulation)
-- **Live reads per node**: routing table, ARP and NDP, NAT rules, MAC tables, OSPF, OSPFv3, RIP, BGP and IS-IS state, through one endpoint for every driver
+- **OpenFlow and SDN**: an Open vSwitch under a controller (`set_controller`, fail mode, datapath id, static flows) and a Faucet controller as a node, its configuration applied from the file manager and reloaded live
+- **Live reads per node**: routing table, ARP and NDP, NAT rules, MAC tables, VLAN ports, spanning tree, OpenFlow flows, OSPF, OSPFv3, RIP, BGP and IS-IS state, and a controller's datapaths and learned hosts, through one endpoint for every driver
 - **NAT/Port forwarding**: Source NAT (SNAT) and Destination NAT (DNAT) for both families, and NAT64 for IPv6-only hosts reaching IPv4
 - **Network diagnostics**: Real-time interface status, IP address tracking, traffic analysis
 - **Live packet capture**: Wireshark-like per-interface capture streamed to the dashboard, with `.pcap` export
