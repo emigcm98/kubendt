@@ -1,0 +1,15 @@
+{
+  "targets": [
+    {
+      "pod": "r1-0",
+      "actions": [
+        {"type": "add_vlan_subinterface", "iface": "eth1", "vlan": 10, "cidr": "10.0.10.1/24"},
+        {"type": "add_vlan_subinterface", "iface": "eth1", "vlan": 20, "cidr": "10.0.20.1/24"}
+      ]
+    },
+    {"pod": "h1-0", "actions": [{"type": "set_default_route", "gateway": "10.0.10.1"}]},
+    {"pod": "h3-0", "actions": [{"type": "set_default_route", "gateway": "10.0.10.1"}]},
+    {"pod": "h2-0", "actions": [{"type": "set_default_route", "gateway": "10.0.20.1"}]},
+    {"pod": "h4-0", "actions": [{"type": "set_default_route", "gateway": "10.0.20.1"}]}
+  ]
+}

@@ -482,7 +482,37 @@ def ex9():
             ok, det, w = retry(ping(ex.ns, "hd-0", "64:ff9b::172.16.1.10"), 150); ex.check("hd-0 ping ha-0 through NAT64 after the restart", ok, det, w)
     teardown(ex); return ex
 
-ALL = {"1": ex1, "2": ex2, "3": ex3, "4": ex4, "5": ex5, "6": ex6, "7": ex7, "8": ex8, "9": ex9}
+def ex10():
+    d = f"{EX}/10-test-layer2-sdn"; ex = Example("10-test-layer2-sdn", "layer2-sdn"); setup(ex)
+    if deploy(ex, f"{d}/topology-network-test-layer2-sdn.json"):
+        # Bridges and classic spanning tree on the triangle, the root chosen by priority.
+        configure(ex, f"{d}/network_conf_switches.json", label="configure (bridges and spanning tree)")
+        ok, det, w = retry(inspect_has(ex.ns, "sw1-0", "stp_bridges", "root", "yes"), 60); ex.check("sw1 is the spanning tree root", ok, det, w)
+        ok, det, w = retry(inspect_count(ex.ns, "sw3-0", "stp_ports", "state", "blocking", 1), 90); ex.check("sw3 blocks one port of the triangle", ok, det, w)
+        ok, det, w = retry(inspect_has(ex.ns, "sw3-0", "stp_ports", "role", "root"), 30); ex.check("sw3 has a root port", ok, det, w)
+        # VLANs: each one sees itself across the trunks and nothing of the other.
+        configure(ex, f"{d}/network_conf_vlans.json", label="configure (vlans)")
+        ok, det, w = retry(inspect_count(ex.ns, "sw1-0", "vlan_ports", "mode", "trunk", 3), 30); ex.check("sw1 has three trunks", ok, det, w)
+        ok, det, w = retry(inspect_has(ex.ns, "sw1-0", "vlan_ports", "vlans", "10,20"), 30); ex.check("sw1 trunks carry VLANs 10 and 20", ok, det, w)
+        ok, det, w = retry(ping(ex.ns, "h1-0", "10.0.10.13"), 60); ex.check("h1 ping h3 (VLAN 10 across the trunk)", ok, det, w)
+        ok, det, w = retry(ping(ex.ns, "h2-0", "10.0.20.14"), 60); ex.check("h2 ping h4 (VLAN 20 across the trunk)", ok, det, w)
+        ok, det = ping(ex.ns, "h1-0", "10.0.20.12", count=2)(); ex.check("h1 cannot ping h2 (VLAN 10 to 20, no router yet)", not ok, det)
+        ok, det, w = retry(inspect_has(ex.ns, "sw1-0", "bridge_fdb", "vlan", "20"), 30); ex.check("sw1 FDB holds MACs with their VLAN", ok, det, w)
+        # Router on a stick, then the SVI takes over as the hosts' gateway.
+        configure(ex, f"{d}/network_conf_router.json", label="configure (router on a stick)")
+        ok, det, w = retry(ping(ex.ns, "h1-0", "10.0.20.12"), 60); ex.check("h1 ping h2 through r1", ok, det, w)
+        ok, det, w = retry(contains(ex.ns, "h1-0", "traceroute -n -m 3 -w 1 10.0.20.14", "10.0.10.1 "), 30); ex.check("the first hop from h1 is r1 (10.0.10.1)", ok, det, w)
+        configure(ex, f"{d}/network_conf_svi.json", label="configure (svi on sw3)")
+        ok, det, w = retry(inspect_has(ex.ns, "sw3-0", "vlan_ports", "port", "br0"), 30); ex.check("sw3's bridge itself is a trunk (SVI)", ok, det, w)
+        ok, det, w = retry(contains(ex.ns, "h1-0", "traceroute -n -m 3 -w 1 10.0.20.14", "10.0.10.254"), 60); ex.check("the first hop from h1 is now sw3 (10.0.10.254)", ok, det, w)
+        ok, det, w = retry(ping(ex.ns, "h3-0", "10.0.20.12"), 60); ex.check("h3 ping h2 through the SVI", ok, det, w)
+        if restart(ex, "sw1-0"):
+            ok, det, w = retry(inspect_has(ex.ns, "sw1-0", "stp_bridges", "root", "yes"), 120); ex.check("sw1 is root again after the restart (replay)", ok, det, w)
+            ok, det, w = retry(ping(ex.ns, "h1-0", "10.0.10.13"), 120); ex.check("h1 ping h3 after the restart", ok, det, w)
+            ok, det, w = retry(ping(ex.ns, "h1-0", "10.0.20.12"), 60); ex.check("h1 ping h2 through the SVI after the restart", ok, det, w)
+    teardown(ex); return ex
+
+ALL = {"1": ex1, "2": ex2, "3": ex3, "4": ex4, "5": ex5, "6": ex6, "7": ex7, "8": ex8, "9": ex9, "10": ex10}
 
 
 def main():

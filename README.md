@@ -8,7 +8,7 @@
    <a href="https://doi.org/10.5281/zenodo.21276320"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.21276320.svg" alt="DOI" /></a>
 </p>
 
-> Last reviewed: 5 Nov 2026
+> Last reviewed: 7 Nov 2026
 
 **KubeNDT** is a platform for deploying and operating virtual network topologies on Kubernetes.
 
@@ -191,6 +191,7 @@ KubeNDT ships **9 reference deployments** in `deploy/examples/`, numbered in the
 | [7-test-dual-stack](deploy/examples/7-test-dual-stack/) | [7-README](deploy/examples/7-test-dual-stack/README.md) | Dual stack: FRR with OSPFv2 for IPv4 and OSPFv3 for IPv6, an IPv6-only host next to dual stack ones, and the trace and throughput tools over IPv6 | Nothing | ⭐⭐ |
 | [8-test-two-orgs-rip-ospf](deploy/examples/8-test-two-orgs-rip-ospf/) | [8-README](deploy/examples/8-test-two-orgs-rip-ospf/README.md) | Two organizations on 27 nodes: A on RIPv2 over a six router mesh, B on OSPFv2 in four areas with DR and BDR, stub and totally stubby areas, summarization and MD5, and a border router redistributing between them | Nothing | ⭐⭐⭐ |
 | [9-test-four-orgs-bgp](deploy/examples/9-test-four-orgs-bgp/) | [9-README](deploy/examples/9-test-four-orgs-bgp/README.md) | Four organizations on 32 nodes joined in an eBGP ring: RIPv2, OSPFv2 in one area, IS-IS over IPv4, and an IPv6-only one on IS-IS that reaches the others through NAT64 at its border | Nothing | ⭐⭐⭐⭐ |
+| [10-test-layer2-sdn](deploy/examples/10-test-layer2-sdn/) | [10-README](deploy/examples/10-test-layer2-sdn/README.md) | One site at layer 2: VLANs across OVS and Linux switches in a triangle, classic spanning tree with a chosen root, a router on a stick and an SVI, with the management network of an SDN controller ready for its second part | Nothing | ⭐⭐⭐ |
 
 The VyOS image is built once with `build-vyos-qcow2.sh` and imported on the workers, see [deploy/custom_images/qemu/vyos-router/](deploy/custom_images/qemu/vyos-router/); the EXOS switch image the same way with `build-exos-qcow2.sh`, see [deploy/custom_images/qemu/exos-switch/](deploy/custom_images/qemu/exos-switch/). The external uplink is a second interface of a pod on the host network the workers hang from. The examples label it "External Network" and their READMEs say which steps need it.
 

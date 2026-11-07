@@ -1,0 +1,39 @@
+{
+  "targets": [
+    {
+      "pod": "sw1-0",
+      "actions": [
+        {"type": "setup_bridge", "bridge": "br0", "ifaces": ["eth1", "eth2", "eth3", "eth4", "eth5"]},
+        {"type": "stp_enable", "bridge": "br0", "mode": "stp"},
+        {"type": "stp_set_bridge_priority", "bridge": "br0", "priority": 4096},
+        {"type": "stp_set_port", "iface": "eth3", "cost": 10},
+        {"type": "stp_set_port", "iface": "eth4", "cost": 10}
+      ]
+    },
+    {
+      "pod": "sw2-0",
+      "actions": [
+        {"type": "setup_bridge", "bridge": "br0", "ifaces": ["eth1", "eth2", "eth3", "eth4"]},
+        {"type": "stp_enable", "bridge": "br0", "mode": "stp"},
+        {"type": "stp_set_bridge_priority", "bridge": "br0", "priority": 8192},
+        {"type": "stp_set_port", "iface": "eth3", "cost": 10},
+        {"type": "stp_set_port", "iface": "eth4", "cost": 10}
+      ]
+    },
+    {
+      "pod": "sw3-0",
+      "actions": [
+        {"type": "setup_bridge", "bridge": "br0", "ifaces": ["eth1", "eth2"]},
+        {"type": "stp_enable", "bridge": "br0", "mode": "stp"},
+        {"type": "stp_set_port", "iface": "eth1", "cost": 100},
+        {"type": "stp_set_port", "iface": "eth2", "cost": 10}
+      ]
+    },
+    {
+      "pod": "mgmt-0",
+      "actions": [
+        {"type": "setup_bridge", "bridge": "br0", "ifaces": ["eth1", "eth2", "eth3"]}
+      ]
+    }
+  ]
+}

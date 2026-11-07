@@ -82,8 +82,8 @@ func TestValidateLinkIPCapabilities(t *testing.T) {
 	drivers.RegisterAllDrivers()
 
 	nodes := []types.NodeSpec{
-		{Name: "sw1", Type: "switch"}, // default driver: L2-only switch
-		{Name: "r1", Type: "router"},  // default driver: L3-capable
+		{Name: "sw1", Type: "switch", Driver: "OpenVSwitchDriver"}, // an L2-only switch, the Linux one routes
+		{Name: "r1", Type: "router"},                               // default driver: L3-capable
 	}
 
 	// IP on a switch endpoint must be rejected.
