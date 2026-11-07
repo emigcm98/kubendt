@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-11-07
+
 ### Added
 
 - An Open vSwitch image of our own, `ghcr.io/emigcm98/kubendt-ovs`: Alpine's package under tini, built and published by Open vSwitch version on every change to its folder. The driver lists it first among its tried images and the examples run on it, in place of a third-party `latest` last built in 2018. The driver attaches ports with a `linux-noop` QoS, since OVS 3.x replaces the qdisc of a port without one on attach and that wiped the netem of the link attributes.
@@ -310,7 +312,8 @@ Initial public release. KubeNDT deploys and operates virtual network topologies 
 - Health, readiness and version endpoints, and Swagger docs at `/swagger`.
 - Container images published to GHCR and a Docker Compose deployment.
 
-[Unreleased]: https://github.com/emigcm98/kubendt/compare/v1.8.0...HEAD
+[Unreleased]: https://github.com/emigcm98/kubendt/compare/v1.9.0...HEAD
+[1.9.0]: https://github.com/emigcm98/kubendt/compare/v1.8.0...v1.9.0
 [1.8.0]: https://github.com/emigcm98/kubendt/compare/v1.7.0...v1.8.0
 [1.7.0]: https://github.com/emigcm98/kubendt/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/emigcm98/kubendt/compare/v1.5.0...v1.6.0
