@@ -46,7 +46,7 @@ func TestParseOVSFlows(t *testing.T) {
 	rows := parseOVSFlows(ovsFlowsSample)
 	want := capabilities.Rows{
 		{"bridge": "br0", "table": "0", "priority": "100", "match": "in_port=1", "actions": "drop", "packets": "3"},
-		{"bridge": "br0", "table": "0", "priority": "0", "match": "", "actions": "NORMAL", "packets": "14"},
+		{"bridge": "br0", "table": "0", "priority": "0", "match": "any", "actions": "NORMAL", "packets": "14"},
 		{"bridge": "br0", "table": "0", "priority": "1", "match": "in_port=2,dl_src=aa:41:80:55:a1:83,dl_dst=4e:07:1f:09:0c:02", "actions": "output:1", "packets": "2"},
 	}
 	if !reflect.DeepEqual(rows, want) {

@@ -6,8 +6,6 @@ import (
 	"regexp"
 	"strings"
 
-	caps "kubendt/capabilities"
-	drivers_registry "kubendt/drivers/registry"
 	"kubendt/types"
 )
 
@@ -77,73 +75,6 @@ func validateContainerPath(kind, p string) error {
 	for _, seg := range strings.Split(p, "/") {
 		if seg == ".." {
 			return fmt.Errorf("%s %q must not contain '..'", kind, p)
-		}
-	}
-	return nil
-}
-
-// driverInstanceForNode returns a fresh driver instance for a node, resolving
-// the type default when the node declares no explicit driver.
-func driverInstanceForNode(n types.NodeSpec) (any, error) {
-	name := strings.TrimSpace(n.Driver)
-	if name == "" {
-		def, err := drivers_registry.ResolveDefaultForType(n.Type)
-		if err != nil {
-			return nil, err
-		}
-		name = def
-	}
-	return drivers_registry.NewByName(name)
-}
-
-// ValidateLinkIPCapabilities rejects a link that assigns an IP to a node whose
-// driver has no L3 support (e.g. a pure L2 switch). Link IPs are written to the
-// meshnet CRD and applied by the pod, bypassing the driver, so this gate has to
-// run at the deploy/modify boundary. "external" endpoints and nodes absent from
-// `nodes` are skipped.
-func ValidateLinkIPCapabilities(links []types.LinkSpec, nodes []types.NodeSpec) error {
-	byName := make(map[string]types.NodeSpec, len(nodes))
-	for _, n := range nodes {
-		byName[n.Name] = n
-	}
-
-	l3Memo := make(map[string]bool)
-	// supportsL3 reports (l3ok, known); known=false when the node isn't in the
-	// provided set (external uplink or an endpoint we can't resolve here).
-	supportsL3 := func(nodeName string) (bool, bool) {
-		if nodeName == "" || nodeName == externalNodeName {
-			return false, false
-		}
-		n, known := byName[nodeName]
-		if !known {
-			return false, false
-		}
-		if v, seen := l3Memo[nodeName]; seen {
-			return v, true
-		}
-		v := false
-		if inst, err := driverInstanceForNode(n); err == nil {
-			_, v = inst.(caps.L3Capable)
-		}
-		l3Memo[nodeName] = v
-		return v, true
-	}
-
-	reject := func(idx int, nodeName, ip string) error {
-		return fmt.Errorf("link[%d]: node '%s' (type %s) has no L3 support and cannot be assigned the IP %q; use an L2 link (no IP) or a router/host",
-			idx, nodeName, byName[nodeName].Type, ip)
-	}
-
-	for i, link := range links {
-		if !link.LocalIP.Empty() {
-			if ok, known := supportsL3(link.Node); known && !ok {
-				return reject(i, link.Node, link.LocalIP.String())
-			}
-		}
-		if !link.PeerIP.Empty() {
-			if ok, known := supportsL3(link.PeerNode); known && !ok {
-				return reject(i, link.PeerNode, link.PeerIP.String())
-			}
 		}
 	}
 	return nil

@@ -2,6 +2,7 @@ package drivers
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	"kubendt/capabilities"
@@ -22,5 +23,16 @@ func TestParseOVSVLANPorts(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got %v\nwant %v", got, want)
+	}
+}
+
+func TestOVSAddPortRequestsOfport(t *testing.T) {
+	cases := map[string]string{"eth3": "3", "swp12": "12", "net1": "1", "eth0": "", "tap": "", "eth70000": ""}
+	for iface, want := range cases {
+		cmd := strings.Join(ovsAddPort("br0", iface), " ")
+		has := strings.Contains(cmd, "ofport_request=")
+		if (want != "") != has || (want != "" && !strings.HasSuffix(cmd, "ofport_request="+want)) {
+			t.Errorf("%s: got %q, want request %q", iface, cmd, want)
+		}
 	}
 }

@@ -1,0 +1,38 @@
+vlans:
+  vlan10:
+    vid: 10
+  vlan20:
+    vid: 20
+dps:
+  sw1:
+    dp_id: 0x1
+    hardware: "Open vSwitch"
+    interfaces:
+      1:
+        description: h1
+        native_vlan: vlan10
+      2:
+        description: h2
+        native_vlan: vlan20
+      3:
+        description: trunk to sw2
+        tagged_vlans: [vlan10, vlan20]
+      4:
+        description: trunk to sw3
+        tagged_vlans: [vlan10, vlan20]
+      5:
+        description: r1
+        tagged_vlans: [vlan10, vlan20]
+  sw2:
+    dp_id: 0x2
+    hardware: "Open vSwitch"
+    interfaces:
+      1:
+        description: h3
+        native_vlan: vlan10
+      2:
+        description: h4
+        native_vlan: vlan20
+      3:
+        description: trunk to sw1
+        tagged_vlans: [vlan10, vlan20]

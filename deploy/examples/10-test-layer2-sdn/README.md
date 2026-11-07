@@ -1,10 +1,11 @@
 # 10-test-layer2-sdn
 
-One site at layer 2: three switches in a triangle with two VLANs across their trunks, spanning tree breaking the loop, and the two ways to route between the VLANs, a router on a stick and an SVI on a layer 3 switch. A management network with an SDN controller is already in the topology for the second part of this example, where the two Open vSwitch switches are handed to the controller.
+One site at layer 2: three switches in a triangle with two VLANs across their trunks, spanning tree breaking the loop, and the two ways to route between the VLANs, a router on a stick and an SVI on a layer 3 switch. Then the second part: the two Open vSwitch switches are handed to a Faucet controller over a management network, which runs the same VLANs from a YAML in the file manager, applies an ACL live and keeps the switches forwarding while it restarts.
 
 - VLANs on three switches of two kinds, Open vSwitch and a Linux bridge, with access ports for the hosts and 802.1Q trunks between the switches
 - Classic spanning tree across both kinds, a root chosen by priority and the port it blocks read from the State tab
 - Inter-VLAN routing twice: FRR subinterfaces on one trunk (router on a stick), then VLAN interfaces on the Linux bridge itself (an SVI), with the hosts' gateway moved from one to the other
+- The OVS pair under Faucet: the VLANs from its YAML, the datapaths, ports and learned hosts read from the controller, an ACL that cuts a host applied by a reload, fail mode secure through a controller restart, and the OpenFlow session in a capture on the management link
 
 ## Topology Overview
 
@@ -19,8 +20,8 @@ Nodes deployed:
 | `sw1`, `sw2` | `OpenVSwitchDriver` | `ghcr.io/emigcm98/kubendt-ovs:3.7.1` | Access switches; `sw1` is the spanning tree root |
 | `sw3` | `LinuxSwitchDriver` | `ubuntu:26.04` | A Linux bridge closing the triangle, the layer 3 switch of the SVI step |
 | `r1` | `FRRRouterDriver` | `quay.io/frrouting/frr:10.7.1` | The router on a stick, one trunk into `sw1` |
-| `mgmt` | `LinuxSwitchDriver` | `ubuntu:26.04` | The management switch, for the second part |
-| `ctrl` | `FaucetControllerDriver` | `faucet/faucet:1.10.12` | The SDN controller, idle in this part |
+| `mgmt` | `LinuxSwitchDriver` | `ubuntu:26.04` | The management switch, out of band |
+| `ctrl` | `FaucetControllerDriver` | `faucet/faucet:1.10.12` | The Faucet controller, in charge of `sw1` and `sw2` in the second part |
 
 VLANs and addresses:
 
@@ -50,8 +51,12 @@ The three switches form a loop: `sw1` to `sw2`, `sw2` to `sw3`, `sw3` to `sw1`. 
 - `network_conf_vlans.json`: access ports for the hosts, the trunks between the switches and toward the router
 - `network_conf_router.json`: the two subinterfaces of `r1` and the hosts' default route toward them
 - `network_conf_svi.json`: the two VLAN interfaces on `sw3`'s bridge and the hosts' default route moved to them
+- `faucet.yaml`: the controller's configuration, the two datapaths with the VLANs of the first part on the same ports
+- `faucet-acl.yaml`: the same with an ACL on `sw1`'s first port that drops `h1`'s IPv4
+- `network_conf_sdn.json`: spanning tree and the port VLANs off the OVS pair, their datapath ids, fail mode and controller, and `faucet.yaml` applied on `ctrl`
+- `network_conf_acl.json`: `faucet-acl.yaml` applied on `ctrl`
 
-Apply them in that order. After the first two the hosts of a VLAN see each other and nothing of the other VLAN; the third routes between the VLANs through `r1`; the fourth does the same through `sw3` instead.
+Apply them in that order. After the first two the hosts of a VLAN see each other and nothing of the other VLAN; the third routes between the VLANs through `r1`; the fourth does the same through `sw3` instead. The second part uploads the two YAML files to the file manager first, then `network_conf_sdn.json` hands the OVS pair to Faucet and `network_conf_acl.json` cuts `h1`.
 
 ## Notable Characteristics
 
@@ -60,7 +65,11 @@ Apply them in that order. After the first two the hosts of a VLAN see each other
 - `sw3` is a plain `LinuxSwitchDriver`, like `mgmt`: the Linux switch carries the layer 3 and subinterface capabilities, so giving its bridge VLAN interfaces with addresses makes it a layer 3 switch without changing the driver.
 - VLAN filtering on the Linux bridge comes with its first rule: `vlan_set_trunk` on `sw3 eth1` turns `vlan_filtering` on, and the bridge device itself is a port like the others, which is what the SVI step uses: `vlan_set_trunk` on `br0` lets the tagged frames of 10 and 20 reach the bridge's own interfaces `br0.10` and `br0.20`.
 - The hosts keep one default route; the router and the SVI steps each `set_default_route` to their gateway, so the second replaces the first and a trace shows which box routes.
-- The management network is ordinary links with addresses on the switch pods' `eth9`, left out of the bridges. The controller does nothing yet.
+- The management network is ordinary links with addresses on the switch pods' `eth9`, left out of the bridges, and it is where the OpenFlow session runs, so a capture on `mgmt-ctrl` shows it.
+- Faucet runs no spanning tree, so the triangle's third side is closed by configuration: `sw2`'s port toward `sw3` is not in `faucet.yaml`, and an OpenFlow switch drops what its controller said nothing about. `sw3` keeps its classic spanning tree and reaches the rest through `sw1` only.
+- The OVS ports' own VLAN settings are cleared before the handover (`vlan_clear_port`), as spanning tree is: under a controller the switch does nothing by itself, the VLANs are the `native_vlan` and `tagged_vlans` of the YAML. Its `interfaces` are OpenFlow port numbers, which the OVS driver takes from the interface name, `eth3` is port 3, so a neighbour's restart does not renumber them. **Datapath ports** on `ctrl` shows them.
+- The controller's configuration is a file of the namespace's file manager: `controller_apply_config` reads it when it runs, writes it into the pod and Faucet reloads on a signal, so a restart of `ctrl` replays the last file applied. The datapath ids are set by hand (`set_datapath_id`) so the YAML can name them.
+- `set_controller` takes several targets separated by spaces, so a bridge can keep a second controller. This example uses one.
 
 ## Step-By-Step (UI)
 
@@ -98,7 +107,7 @@ Create a namespace (e.g. `layer2-sdn` or any name you prefer).
 ### 5. Router on a stick
 
 - Load `network_conf_router.json`.
-- Panel of `r1`, tab **Interfaces**: `eth1.10` and `eth1.20` with their addresses.
+- Panel of `r1`, tab **State**, **Routes**: `10.0.10.0/24` connected on `eth1.10` and `10.0.20.0/24` on `eth1.20`, the two subinterfaces. They are not links, so the Links tab does not list them; `ip addr` in the terminal shows them with their addresses.
 - From `h1`, reach `h2` in the other VLAN, and see the router on the way:
 
   ```bash
@@ -111,20 +120,45 @@ Create a namespace (e.g. `layer2-sdn` or any name you prefer).
 ### 6. An SVI instead
 
 - Load `network_conf_svi.json`.
-- Panel of `sw3`, **Interfaces**: `br0.10` and `br0.20`, the bridge's own VLAN interfaces. **VLAN ports** now lists `br0` itself as a trunk.
+- Panel of `sw3`, **State**: **Routes** shows `10.0.10.0/24` on `br0.10` and `10.0.20.0/24` on `br0.20`, the bridge's own VLAN interfaces, and **VLAN ports** now lists `br0` itself as a trunk.
 - The same trace from `h1` now shows `10.0.10.254`: `sw3` routes, `r1` is idle though still there.
+
+### 7. Hand the OVS pair to Faucet
+
+- Open **File Manager** and upload `faucet.yaml` and `faucet-acl.yaml` to the namespace.
+- Load `network_conf_sdn.json`: spanning tree and the port VLANs come off `sw1` and `sw2`, each gets its datapath id, fail mode `secure` and the controller at `10.0.100.1`, and `ctrl` applies `faucet.yaml`.
+- Panel of `sw1`, **State**, **OpenFlow bridges**: controller `tcp:10.0.100.1:6653`, connected `yes`, DPID `0000000000000001`. **OpenFlow flows** lists the tables Faucet installed, `push_vlan` and `pop_vlan` among their actions.
+- Panel of `ctrl`, **State**: **Datapaths** shows `sw1` and `sw2` up, **Datapath ports** their ports, and **Learned hosts** fills as the hosts talk. From `h1`, the same pings as before:
+
+  ```bash
+  ping -c 3 10.0.10.13
+  ping -c 3 10.0.20.12
+  ```
+
+  The VLANs and the SVI on `sw3` work the same, now by Faucet's flows on `sw1` and `sw2`.
+
+- Capture on the link `mgmt-ctrl` from its menu: the OpenFlow session on port 6653, packet-in and flow-mod messages while a host starts talking.
+
+### 8. An ACL, live
+
+- Load `network_conf_acl.json`: `ctrl` applies `faucet-acl.yaml`, the same file with an ACL on `sw1`'s port 1 that drops IPv4 from `10.0.10.11`. From `h1`, `ping -c 3 10.0.10.13` fails while `h2`'s pings go on. Faucet reloaded, no switch was touched.
+- On `ctrl`'s panel, **Apply controller configuration** with `faucet.yaml` lifts it.
 
 ## Experiments
 
 - **The storm.** Take `sw3` out of spanning tree (`stp_disable` on `br0` through **Load network conf** or the panel), then from `h1` ask for an address nobody has, `ping -c 1 10.0.10.99`, and watch the counters of any trunk from the interface menu: that one ARP request goes round the triangle forever and the counters climb by tens of thousands a second (the hosts' own IPv6 multicast often starts it before you do). `stp_enable` again and it stops once the ports are back in listening. A few seconds are enough, the loop runs at the speed of the links.
 - **Failover.** Disable `sw1 eth4` (the `sw3-sw1` trunk) from the interface menu: `sw3`'s blocked port toward `sw2` takes over after the forward delay, and `h1` still reaches `h2` through the SVI, now over `sw2`. Enable it back and the tree returns to its first shape.
-- **Restart a switch.** Restart `sw1` from its menu: its bridge, VLANs and spanning tree are replayed, the root comes back where it was, and the pings pass again some ten seconds after.
+- **Restart a switch.** Restart `sw1` from its menu: its bridge, VLANs and spanning tree are replayed, the root comes back where it was, and the pings pass again some ten seconds after. Under Faucet the replay carries the datapath id, the fail mode and the controller instead, and the controller pushes its flows again once the switch connects.
+- **The controller goes away.** Restart `ctrl` from its menu while `h1` pings `h3`: the pings go on. Fail mode `secure` keeps the flows the switches have, they only stop learning until the controller is back; **OpenFlow bridges** reads connected `no` meanwhile and `yes` once Faucet listens again with the last YAML replayed. Set the fail mode to `standalone` on `sw1` (**Set fail mode** on its panel) and restart `ctrl` again: without a controller the switch falls back to a flat learning switch, `h1` still reaches `h3` but untagged, and the SVI on `sw3` no longer answers since its trunk expects tags.
 
 ## Troubleshooting
 
 - The hosts of a VLAN do not see each other right after the VLAN step: spanning tree is still in listening or learning on a port of the path, thirty seconds in classic STP. The State tab of the switch shows the port's state.
 - Both VLANs see each other after the VLAN step: a trunk is missing a VLAN or an access port got the wrong tag; **VLAN ports** on each switch shows what each port carries.
-- `traceroute` from a host stops at the first hop: the default route points at a gateway of the other step, or `r1` has no subinterface for that VLAN; `ip route` on the host and **Interfaces** on the router tell which.
+- `traceroute` from a host stops at the first hop: the default route points at a gateway of the other step, or `r1` has no subinterface for that VLAN; `ip route` on the host and **Routes** on the router tell which.
 - `br0.10` on `sw3` gets no traffic: `br0` itself is not a trunk of VLAN 10, the `vlan_set_trunk` on the bridge device in `network_conf_svi.json` is what lets the tagged frames reach it.
+- **Datapaths** on `ctrl` shows a switch down or missing: its datapath id is not the one in the YAML (`set_datapath_id` wrote `0x1` and `0x2`), or the switch cannot reach `10.0.100.1` over the management link. Faucet says why in the pod's logs.
+- `controller_apply_config` fails with "not valid YAML": the file in the file manager has a tab or an indentation slip. Faucet keeps the previous one.
+- The hosts lose each other for a few seconds right after `network_conf_sdn.json`: Faucet installs its tables when the switches connect, and the hosts are learned again as they talk.
 
 > Last reviewed: 7 Nov 2026

@@ -132,8 +132,8 @@ def deploy(ex, topo_path, label="deploy"):
         ex.check("every image is one its driver was tried with", not untested, untested)
     return ok
 
-def configure(ex, conf_path, label="configure"):
-    st, r = api("POST", f"/network/configure/{ex.ns}", body=json.load(open(conf_path)))
+def configure(ex, conf_path=None, label="configure", body=None):
+    st, r = api("POST", f"/network/configure/{ex.ns}", body=body if body is not None else json.load(open(conf_path)))
     fails = [a for a in (r.get("action_results") or []) if a.get("status") not in ("ok", "success", "OK", "SUCCESS", "done", "applied")] if isinstance(r, dict) else []
     failures = r.get("failures", None) if isinstance(r, dict) else None
     ok = st == 200 and (failures == 0)
@@ -510,6 +510,33 @@ def ex10():
             ok, det, w = retry(inspect_has(ex.ns, "sw1-0", "stp_bridges", "root", "yes"), 120); ex.check("sw1 is root again after the restart (replay)", ok, det, w)
             ok, det, w = retry(ping(ex.ns, "h1-0", "10.0.10.13"), 120); ex.check("h1 ping h3 after the restart", ok, det, w)
             ok, det, w = retry(ping(ex.ns, "h1-0", "10.0.20.12"), 60); ex.check("h1 ping h2 through the SVI after the restart", ok, det, w)
+        # Second part: the OVS pair handed to Faucet, the VLANs now in its YAML from the file manager.
+        for f in ("faucet.yaml", "faucet-acl.yaml"):
+            ok, r = upload(ex.ns, f, f"{d}/{f}"); ex.check(f"upload {f}", ok, r if not ok else "")
+        configure(ex, f"{d}/network_conf_sdn.json", label="configure (faucet takes the ovs pair)")
+        ok, det, w = retry(inspect_has(ex.ns, "sw1-0", "openflow_bridges", "connected", "yes"), 90); ex.check("sw1 is connected to the controller", ok, det, w)
+        ok, det, w = retry(inspect_count(ex.ns, "ctrl-0", "datapaths", "status", "up", 2), 90); ex.check("the controller sees both datapaths up", ok, det, w)
+        ok, det, w = retry(ping(ex.ns, "h1-0", "10.0.10.13"), 90); ex.check("h1 ping h3 under faucet (VLAN 10)", ok, det, w)
+        ok, det, w = retry(ping(ex.ns, "h2-0", "10.0.20.14"), 60); ex.check("h2 ping h4 under faucet (VLAN 20)", ok, det, w)
+        ok, det, w = retry(ping(ex.ns, "h1-0", "10.0.20.12"), 60); ex.check("h1 ping h2 through the SVI under faucet", ok, det, w)
+        ok, det, w = retry(inspect_has(ex.ns, "ctrl-0", "learned_hosts", "vlan", "20"), 30); ex.check("the controller learned hosts of VLAN 20", ok, det, w)
+        ok, det, w = retry(inspect_has(ex.ns, "sw1-0", "openflow_flows", "actions", "pop_vlan"), 30); ex.check("sw1 carries faucet's flows", ok, det, w)
+        # An ACL applied live cuts h1, the first file back lifts it.
+        def cut(ns, pod, ip):
+            def f():
+                ok, det = ping(ns, pod, ip, count=2)()
+                return not ok, det
+            return f
+        configure(ex, f"{d}/network_conf_acl.json", label="configure (acl cuts h1)")
+        ok, det, w = retry(cut(ex.ns, "h1-0", "10.0.10.13"), 30); ex.check("h1 cannot ping h3 with the acl", ok, det, w)
+        configure(ex, label="configure (acl lifted)", body={"targets": [{"pod": "ctrl-0", "actions": [{"type": "controller_apply_config", "file": "faucet.yaml"}]}]})
+        ok, det, w = retry(ping(ex.ns, "h1-0", "10.0.10.13"), 60); ex.check("h1 ping h3 with the acl lifted", ok, det, w)
+        if restart(ex, "ctrl-0"):
+            ok, det, w = retry(inspect_count(ex.ns, "ctrl-0", "datapaths", "status", "up", 2), 180); ex.check("both datapaths back after the controller restart (replay)", ok, det, w)
+            ok, det, w = retry(ping(ex.ns, "h1-0", "10.0.10.13"), 60); ex.check("h1 ping h3 after the controller restart", ok, det, w)
+        if restart(ex, "sw1-0"):
+            ok, det, w = retry(inspect_has(ex.ns, "sw1-0", "openflow_bridges", "connected", "yes"), 120); ex.check("sw1 is back on the controller after its restart (replay)", ok, det, w)
+            ok, det, w = retry(ping(ex.ns, "h1-0", "10.0.10.13"), 120); ex.check("h1 ping h3 after the switch restart under faucet", ok, det, w)
     teardown(ex); return ex
 
 ALL = {"1": ex1, "2": ex2, "3": ex3, "4": ex4, "5": ex5, "6": ex6, "7": ex7, "8": ex8, "9": ex9, "10": ex10}

@@ -1,0 +1,99 @@
+{
+  "targets": [
+    {
+      "pod": "sw1-0",
+      "actions": [
+        {
+          "type": "stp_disable",
+          "bridge": "br0"
+        },
+        {
+          "type": "vlan_clear_port",
+          "iface": "eth1"
+        },
+        {
+          "type": "vlan_clear_port",
+          "iface": "eth2"
+        },
+        {
+          "type": "vlan_clear_port",
+          "iface": "eth3"
+        },
+        {
+          "type": "vlan_clear_port",
+          "iface": "eth4"
+        },
+        {
+          "type": "vlan_clear_port",
+          "iface": "eth5"
+        },
+        {
+          "type": "set_datapath_id",
+          "bridge": "br0",
+          "datapath_id": "0x1"
+        },
+        {
+          "type": "set_fail_mode",
+          "bridge": "br0",
+          "mode": "secure"
+        },
+        {
+          "type": "set_controller",
+          "bridge": "br0",
+          "controller": "tcp:10.0.100.1:6653",
+          "protocols": "OpenFlow13"
+        }
+      ]
+    },
+    {
+      "pod": "sw2-0",
+      "actions": [
+        {
+          "type": "stp_disable",
+          "bridge": "br0"
+        },
+        {
+          "type": "vlan_clear_port",
+          "iface": "eth1"
+        },
+        {
+          "type": "vlan_clear_port",
+          "iface": "eth2"
+        },
+        {
+          "type": "vlan_clear_port",
+          "iface": "eth3"
+        },
+        {
+          "type": "vlan_clear_port",
+          "iface": "eth4"
+        },
+        {
+          "type": "set_datapath_id",
+          "bridge": "br0",
+          "datapath_id": "0x2"
+        },
+        {
+          "type": "set_fail_mode",
+          "bridge": "br0",
+          "mode": "secure"
+        },
+        {
+          "type": "set_controller",
+          "bridge": "br0",
+          "controller": "tcp:10.0.100.1:6653",
+          "protocols": "OpenFlow13"
+        }
+      ]
+    },
+    {
+      "pod": "ctrl-0",
+      "actions": [
+        {
+          "type": "controller_apply_config",
+          "file": "faucet.yaml"
+        }
+      ]
+    }
+  ]
+}
