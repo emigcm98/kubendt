@@ -14,7 +14,8 @@ import (
 // by hand, which make the switch programmable with no controller at all.
 // The controller as a node is a capability of its own.
 type OpenFlowCapable interface {
-	SetController(bridge, target, protocols string) [][]string
+	// SetController points the bridge at one or more controllers at once.
+	SetController(bridge string, targets []string, protocols string) [][]string
 	RemoveController(bridge string) [][]string
 	SetFailMode(bridge, mode string) [][]string
 	// SetDatapathID fixes the id the bridge presents to its controller, so
@@ -45,6 +46,12 @@ func DatapathID(id string) string {
 	return strings.Repeat("0", 16-len(id)) + id
 }
 
+// ControllerTargets splits the controller param, several targets separated
+// by spaces or commas, so a bridge can keep a second controller.
+func ControllerTargets(controller string) []string {
+	return strings.FieldsFunc(controller, func(r rune) bool { return r == ',' || r == ' ' || r == '\t' || r == '\n' })
+}
+
 // FlowMatch is the flow spec without its actions, what identifies a flow in
 // the table and what del-flows takes.
 func FlowMatch(flow string) string { return flowActionsRe.ReplaceAllString(flow, "") }
@@ -63,13 +70,19 @@ func init() {
 		actions.Capability{ID: "OpenFlowCapable", Label: "OpenFlow", Description: "The controller of a bridge, its fail mode and flows installed by hand."},
 		actions.Action[OpenFlowCapable]{Type: "set_controller", Label: "Set controller", Params: actions.P(actions.Bridge, actions.Controller, actions.Protocols), State: "openflow_controller", Key: keyBridge,
 			Run: func(c OpenFlowCapable, a types.ActionEntry) ([][]string, error) {
-				if !controllerTargetRe.MatchString(a.Controller) {
-					return nil, fmt.Errorf("controller must be tcp:<host>[:port] or ssl:<host>[:port], got %q", a.Controller)
+				targets := ControllerTargets(a.Controller)
+				if len(targets) == 0 {
+					return nil, fmt.Errorf("controller must name at least one target")
+				}
+				for _, t := range targets {
+					if !controllerTargetRe.MatchString(t) {
+						return nil, fmt.Errorf("controller must be tcp:<host>[:port] or ssl:<host>[:port], got %q", t)
+					}
 				}
 				if a.Protocols != "" && !protocolsRe.MatchString(a.Protocols) {
 					return nil, fmt.Errorf("protocols must list OpenFlow10 to OpenFlow15 separated by commas, got %q", a.Protocols)
 				}
-				return c.SetController(a.Bridge, a.Controller, a.Protocols), nil
+				return c.SetController(a.Bridge, targets, a.Protocols), nil
 			}},
 		actions.Action[OpenFlowCapable]{Type: "remove_controller", Label: "Remove controller", Params: actions.P(actions.Bridge), State: "openflow_controller", Key: keyBridge, Clears: true,
 			Run: func(c OpenFlowCapable, a types.ActionEntry) ([][]string, error) {
@@ -110,6 +123,7 @@ func init() {
 	actions.RegisterInspections[OpenFlowInspector]("OpenFlowCapable",
 		actions.Inspection[OpenFlowInspector]{ID: "openflow_bridges", Label: "OpenFlow bridges", Columns: append(cols("bridge", "Bridge", "controller", "Controller", "connected", "Connected", "fail_mode", "Fail mode", "protocols", "Protocols"), actions.Column{Name: "datapath_id", Label: "DPID", Description: "The datapath id the controller sees"}),
 			Run: func(c OpenFlowInspector, ns, pod string) (Rows, error) { return c.OpenFlowBridges(ns, pod) }},
-		actions.Inspection[OpenFlowInspector]{ID: "openflow_flows", Label: "OpenFlow flows", Columns: cols("bridge", "Bridge", "table", "Table", "priority", "Priority", "match", "Match", "actions", "Actions", "packets", "Packets"),
+		// The match heads each flow's card, since the bridge is br0 on every one.
+		actions.Inspection[OpenFlowInspector]{ID: "openflow_flows", Label: "OpenFlow flows", Columns: cols("match", "Match", "table", "Table", "priority", "Priority", "actions", "Actions", "packets", "Packets", "bridge", "Bridge"),
 			Run: func(c OpenFlowInspector, ns, pod string) (Rows, error) { return c.OpenFlowFlows(ns, pod) }})
 }

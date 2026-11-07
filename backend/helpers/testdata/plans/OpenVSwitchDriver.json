@@ -10,7 +10,7 @@
   "add_interface_to_bridge": {
     "executor": "kubectl",
     "commands": [
-      ["ovs-vsctl","--may-exist","add-port","br0","eth1","--","--id=@q","create","qos","type=linux-noop","--","set","port","eth1","qos=@q"]
+      ["ovs-vsctl","--may-exist","add-port","br0","eth1","--","--id=@q","create","qos","type=linux-noop","--","set","port","eth1","qos=@q","--","set","interface","eth1","ofport_request=1"]
     ]
   },
   "add_qdisc": {
@@ -149,7 +149,7 @@
   "set_controller": {
     "executor": "kubectl",
     "commands": [
-      ["ovs-vsctl","set-controller","br0","tcp:10.0.100.1:6653","--","set","bridge","br0","protocols=OpenFlow13"]
+      ["ovs-vsctl","set-controller","br0","tcp:10.0.100.1:6653","tcp:10.0.100.2:6653","--","set","bridge","br0","protocols=OpenFlow13"]
     ]
   },
   "set_datapath_id": {
@@ -172,8 +172,8 @@
     "commands": [
       ["sh","-c","ovs-vsctl br-exists br0 || ovs-vsctl add-br br0"],
       ["ip","link","set","br0","up"],
-      ["ovs-vsctl","--may-exist","add-port","br0","eth1","--","--id=@q","create","qos","type=linux-noop","--","set","port","eth1","qos=@q"],
-      ["ovs-vsctl","--may-exist","add-port","br0","eth2","--","--id=@q","create","qos","type=linux-noop","--","set","port","eth2","qos=@q"]
+      ["ovs-vsctl","--may-exist","add-port","br0","eth1","--","--id=@q","create","qos","type=linux-noop","--","set","port","eth1","qos=@q","--","set","interface","eth1","ofport_request=1"],
+      ["ovs-vsctl","--may-exist","add-port","br0","eth2","--","--id=@q","create","qos","type=linux-noop","--","set","port","eth2","qos=@q","--","set","interface","eth2","ofport_request=2"]
     ]
   },
   "stp_disable": {

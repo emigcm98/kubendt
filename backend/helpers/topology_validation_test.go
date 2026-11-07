@@ -4,7 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	drivers "kubendt/drivers"
 	"kubendt/types"
 )
 
@@ -75,40 +74,5 @@ func TestValidateNodeInputsEnvAndImage(t *testing.T) {
 		Env: map[string]string{"MY_VAR": "1", "_ok2": "y"},
 	}}); err != nil {
 		t.Errorf("expected valid node to pass, got: %v", err)
-	}
-}
-
-func TestValidateLinkIPCapabilities(t *testing.T) {
-	drivers.RegisterAllDrivers()
-
-	nodes := []types.NodeSpec{
-		{Name: "sw1", Type: "switch", Driver: "OpenVSwitchDriver"}, // an L2-only switch, the Linux one routes
-		{Name: "r1", Type: "router"},                               // default driver: L3-capable
-	}
-
-	// IP on a switch endpoint must be rejected.
-	swLink := []types.LinkSpec{{Node: "sw1", PeerNode: "r1", LocalIP: types.Addrs{"10.0.0.1/24"}}}
-	if err := ValidateLinkIPCapabilities(swLink, nodes); err == nil {
-		t.Error("expected IP on a switch to be rejected")
-	} else if !strings.Contains(err.Error(), "no L3 support") {
-		t.Errorf("unexpected error: %v", err)
-	}
-
-	// IP on the peer side that is a switch must also be rejected.
-	peerLink := []types.LinkSpec{{Node: "r1", PeerNode: "sw1", PeerIP: types.Addrs{"10.0.0.2/24"}}}
-	if err := ValidateLinkIPCapabilities(peerLink, nodes); err == nil {
-		t.Error("expected IP on peer switch to be rejected")
-	}
-
-	// IP between two routers is fine.
-	okLink := []types.LinkSpec{{Node: "r1", PeerNode: "r1", LocalIP: types.Addrs{"10.0.0.1/24"}, PeerIP: types.Addrs{"10.0.0.2/24"}}}
-	if err := ValidateLinkIPCapabilities(okLink, nodes); err != nil {
-		t.Errorf("expected router-router IP link to pass, got: %v", err)
-	}
-
-	// L2-only link to a switch (no IP) is fine.
-	l2Link := []types.LinkSpec{{Node: "sw1", PeerNode: "r1"}}
-	if err := ValidateLinkIPCapabilities(l2Link, nodes); err != nil {
-		t.Errorf("expected L2-only switch link to pass, got: %v", err)
 	}
 }

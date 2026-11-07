@@ -18,12 +18,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - An Extreme EXOS (Switch Engine) switch as a QEMU guest, a simple lab switch with a real CLI next to VyOS: the image folder `deploy/custom_images/qemu/exos-switch/`, built by hand and `EXOSSwitchDriver` with link and bridging actions, the port states and the MAC table.
 - `VLANCapable` and `STPCapable` on the EXOS switch, with the `vlan_ports`, `stp_bridges` and `stp_ports` inspections: a VLAN per tag, and the one spanning tree domain `s0` that a bridge joins, RSTP by default. The image runs the guest on two vCPUs, names it after its pod and turns its auto-provision off with an address on the Default VLAN.
 - `FaucetControllerDriver`, an SDN controller as a host node on the official `faucet/faucet` image, with `SDNControllerCapable`: `controller_apply_config` takes a `faucet.yaml` from the file manager by name, writes it into the pod and reloads Faucet, and the `datapaths`, `datapath_ports` and `learned_hosts` inspections read its metrics. An action parameter of kind `file` names a file of the namespace, read when the action runs.
-- Example 10, `10-test-layer2-sdn`: one site at layer 2 with two VLANs across three switches in a triangle (two OVS and a Linux bridge), classic spanning tree with a chosen root, a router on a stick on FRR and an SVI on the Linux bridge, with the management network of an SDN controller in place for its second part.
+- Example 10, `10-test-layer2-sdn`: one site at layer 2 with two VLANs across three switches in a triangle (two OVS and a Linux bridge), classic spanning tree with a chosen root, a router on a stick on FRR and an SVI on the Linux bridge. Then the two OVS switches handed to Faucet over a management network, the VLANs from its YAML in the file manager, an ACL applied by a reload, fail mode secure through a controller restart and the OpenFlow session in a capture.
 
 ### Changed
 
 - An executor may declare a longer exec deadline than the global thirty seconds. The EXOS API gets four minutes.
 - `LinuxSwitchDriver` carries the layer 3 and VLAN subinterface capabilities, so a Linux bridge with addresses on its VLAN interfaces is a layer 3 switch without turning it into a router.
+- `set_controller` takes several targets separated by spaces or commas, so a bridge can keep a second controller.
+- A link may carry an address on a switch whose driver has no layer 3 actions, as a management address does. The check that rejected it only saw links written with the node name.
+- The OpenFlow flows cards are headed by the flow's match, with the bridge as a field, and a table-miss flow reads `any`.
 
 ### Fixed
 
@@ -34,6 +37,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Two EXOS switches shared a bridge id, since their guests got the same management MAC. It now derives from the pod's own MAC.
 - An EXOS guest that gave up loading its configuration at boot could stay dead at the login prompt. The pod now reboots it on the same taps, and the readiness budget covers two such boots.
 - `stp_disable` on a Linux bridge left its ports in their last state, so a blocked port stayed blocked. It bounces the ports that were not forwarding now.
+- The OVS driver pins each port's OpenFlow number to the one in its name, `eth3` is port 3, since a neighbour's restart renumbered it and the controller's configuration no longer matched.
+- A long value in a State card, as a flow's actions, wraps instead of running past the card's edge.
+
 
 ## [1.8.0] - 2026-11-01
 

@@ -1,0 +1,13 @@
+{
+  "targets": [
+    {
+      "pod": "ctrl-0",
+      "actions": [
+        {
+          "type": "controller_apply_config",
+          "file": "faucet-acl.yaml"
+        }
+      ]
+    }
+  ]
+}

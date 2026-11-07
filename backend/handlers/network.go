@@ -129,13 +129,6 @@ func ModifyNetwork(c *gin.Context) {
 		validationNodes := make([]types.NodeSpec, 0, len(preExistingNodes)+len(request.Add.Nodes))
 		validationNodes = append(validationNodes, preExistingNodes...)
 		validationNodes = append(validationNodes, request.Add.Nodes...)
-		// A link IP requires an L3-capable endpoint (checked against existing +
-		// newly-added nodes), so an IP toward a switch is rejected here too.
-		if err := helpers.ValidateLinkIPCapabilities(request.Add.Links, validationNodes); err != nil {
-			log.Printf("ℹ️ modify pre-validation rejected request after %s: %v", time.Since(preValStart), err)
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
 		if err := helpers.ValidateLinkInterfaceNamesForDrivers(request.Add.Links, validationNodes); err != nil {
 			log.Printf("ℹ️ modify pre-validation rejected request after %s: %v", time.Since(preValStart), err)
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -827,11 +820,6 @@ func DeployNetwork(c *gin.Context) {
 		return
 	}
 	if err := helpers.ValidateLinkAttributes(request.Links); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	// A link IP requires an L3-capable endpoint; reject e.g. an IP on a switch.
-	if err := helpers.ValidateLinkIPCapabilities(request.Links, request.Nodes); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}

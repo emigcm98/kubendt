@@ -94,7 +94,7 @@
   {"type": "rip_remove_redistribute", "redistribute": "ospf", "family": "6"},
   {"type": "rip_remove_timers"},
   {"type": "rip_set_timers", "timers": {"update": 10, "timeout": 60, "garbage": 40}},
-  {"type": "set_controller", "bridge": "br0", "controller": "tcp:10.0.100.1:6653", "protocols": "OpenFlow13"},
+  {"type": "set_controller", "bridge": "br0", "controller": "tcp:10.0.100.1:6653 tcp:10.0.100.2:6653", "protocols": "OpenFlow13"},
   {"type": "set_datapath_id", "bridge": "br0", "datapath_id": "0x1"},
   {"type": "set_default_route", "gateway": "10.0.0.254"},
   {"type": "set_dns", "dns_servers": ["10.0.0.53", "10.0.0.54"], "dns_search": ["lab.local"]},

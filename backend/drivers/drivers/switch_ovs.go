@@ -3,6 +3,7 @@ package drivers
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -56,9 +57,32 @@ func (OpenVSwitchDriver) SetupBridge(bridge string, ifaces []string) [][]string 
 
 // ovsAddPort attaches the interface with a linux-noop QoS, which tells OVS
 // to leave its qdisc alone: since 3.x a port with no QoS has its qdisc
-// replaced on attach, which wiped the netem of the link attributes.
+// replaced on attach, which wiped the netem of the link attributes. The
+// OpenFlow port number is the one in the name, eth3 is port 3: a neighbour's
+// restart recreates the veth and OVS would hand it a new number otherwise,
+// which a controller's configuration no longer matches.
 func ovsAddPort(bridge, iface string) []string {
-	return []string{"ovs-vsctl", "--may-exist", "add-port", bridge, iface, "--", "--id=@q", "create", "qos", "type=linux-noop", "--", "set", "port", iface, "qos=@q"}
+	cmd := []string{"ovs-vsctl", "--may-exist", "add-port", bridge, iface, "--", "--id=@q", "create", "qos", "type=linux-noop", "--", "set", "port", iface, "qos=@q"}
+	if n := ofportFromName(iface); n != "" {
+		cmd = append(cmd, "--", "set", "interface", iface, "ofport_request="+n)
+	}
+	return cmd
+}
+
+var ifaceNumberRe = regexp.MustCompile(`([0-9]+)$`)
+
+// ofportFromName is the trailing number of the interface name within what
+// OVS accepts for a request, or empty.
+func ofportFromName(iface string) string {
+	m := ifaceNumberRe.FindStringSubmatch(iface)
+	if m == nil {
+		return ""
+	}
+	n, err := strconv.Atoi(m[1])
+	if err != nil || n < 1 || n > 65279 {
+		return ""
+	}
+	return strconv.Itoa(n)
 }
 
 func (OpenVSwitchDriver) TeardownBridge(bridge string) [][]string {
@@ -303,8 +327,8 @@ const ofVersions = "OpenFlow10,OpenFlow11,OpenFlow12,OpenFlow13,OpenFlow14,OpenF
 
 func ofctl(args ...string) []string { return append([]string{"ovs-ofctl", "-O", ofVersions}, args...) }
 
-func (OpenVSwitchDriver) SetController(bridge, target, protocols string) [][]string {
-	cmd := []string{"ovs-vsctl", "set-controller", bridge, target}
+func (OpenVSwitchDriver) SetController(bridge string, targets []string, protocols string) [][]string {
+	cmd := append([]string{"ovs-vsctl", "set-controller", bridge}, targets...)
 	if protocols != "" {
 		cmd = append(cmd, "--", "set", "bridge", bridge, "protocols="+protocols)
 	}
@@ -460,7 +484,11 @@ func parseOVSFlows(text string) capabilities.Rows {
 				keep = append(keep, item)
 			}
 		}
-		rows = append(rows, map[string]string{"bridge": bridge, "table": stats["table"], "priority": priority, "match": strings.Join(keep, ","), "actions": actions, "packets": stats["n_packets"]})
+		spec := strings.Join(keep, ",")
+		if spec == "" {
+			spec = "any"
+		}
+		rows = append(rows, map[string]string{"bridge": bridge, "table": stats["table"], "priority": priority, "match": spec, "actions": actions, "packets": stats["n_packets"]})
 	}
 	return rows
 }

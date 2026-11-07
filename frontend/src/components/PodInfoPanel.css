@@ -1539,7 +1539,8 @@
 .state-field {
   font-size: 0.76rem;
   color: var(--text-body);
-  white-space: nowrap;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .state-field em {
   font-style: normal;
