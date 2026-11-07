@@ -33,7 +33,7 @@ Registry Pattern:
 
 - `HostDriver` (type: host), basic IP manipulation
 - `HostDriver` (type: host), L2, L3, TC with ReplaceIP override
-- `LinuxSwitchDriver` (type: switch), Linux bridge operations
+- `LinuxSwitchDriver` (type: switch), Linux bridge operations, routing on its VLAN interfaces too
 - `OpenVSwitchDriver` (type: switch), OVS-specific operations
 - `LinuxRouterDriver` (type: router), IP routing + TC
 - `FRRRouterDriver` (type: router), FRR router with OSPF capability via vtysh

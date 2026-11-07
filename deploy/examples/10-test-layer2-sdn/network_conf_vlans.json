@@ -1,0 +1,30 @@
+{
+  "targets": [
+    {
+      "pod": "sw1-0",
+      "actions": [
+        {"type": "vlan_set_access", "iface": "eth1", "vlan": 10},
+        {"type": "vlan_set_access", "iface": "eth2", "vlan": 20},
+        {"type": "vlan_set_trunk", "iface": "eth3", "vlans": [10, 20]},
+        {"type": "vlan_set_trunk", "iface": "eth4", "vlans": [10, 20]},
+        {"type": "vlan_set_trunk", "iface": "eth5", "vlans": [10, 20]}
+      ]
+    },
+    {
+      "pod": "sw2-0",
+      "actions": [
+        {"type": "vlan_set_access", "iface": "eth1", "vlan": 10},
+        {"type": "vlan_set_access", "iface": "eth2", "vlan": 20},
+        {"type": "vlan_set_trunk", "iface": "eth3", "vlans": [10, 20]},
+        {"type": "vlan_set_trunk", "iface": "eth4", "vlans": [10, 20]}
+      ]
+    },
+    {
+      "pod": "sw3-0",
+      "actions": [
+        {"type": "vlan_set_trunk", "iface": "eth1", "vlans": [10, 20]},
+        {"type": "vlan_set_trunk", "iface": "eth2", "vlans": [10, 20]}
+      ]
+    }
+  ]
+}

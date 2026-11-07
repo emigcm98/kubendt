@@ -17,8 +17,14 @@ func (STPBase) STPEnable(bridge, mode string) [][]string {
 	return [][]string{{"ip", "link", "set", bridge, "type", "bridge", "stp_state", "1"}}
 }
 
+// STPDisable also bounces the ports that are not forwarding: the kernel
+// keeps a port's state when STP stops and puts a state set by hand back
+// from its stale tree, while a port coming up starts designated, so
+// forwarding at once with STP off.
 func (STPBase) STPDisable(bridge string) [][]string {
-	return [][]string{{"ip", "link", "set", bridge, "type", "bridge", "stp_state", "0"}}
+	return [][]string{{"sh", "-c", "ip link set " + bridge + " type bridge stp_state 0 && " +
+		"for p in /sys/class/net/" + bridge + "/brif/*; do [ -e \"$p\" ] || continue; " +
+		"[ \"$(cat \"$p/state\")\" = 3 ] || { d=${p##*/}; ip link set dev \"$d\" down && ip link set dev \"$d\" up; }; done; true"}}
 }
 
 func (STPBase) STPSetBridgePriority(bridge string, priority int) [][]string {

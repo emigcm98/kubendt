@@ -1,6 +1,16 @@
 {
-  "add_dns_nameserver": { "unsupported": true },
-  "add_dns_search": { "unsupported": true },
+  "add_dns_nameserver": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","grep -q '^nameserver 8.8.8.8$' /etc/resolv.conf || echo 'nameserver 8.8.8.8' | tee -a /etc/resolv.conf \u003e /dev/null"]
+    ]
+  },
+  "add_dns_search": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","if grep -q '^search ' /etc/resolv.conf; then grep -q '^search .* lab.local' /etc/resolv.conf || { c=$(sed 's/^search .*/\u0026 lab.local/' /etc/resolv.conf); printf '%s\\n' \"$c\" \u003e /etc/resolv.conf; }; else echo 'search lab.local' | tee -a /etc/resolv.conf \u003e /dev/null; fi"]
+    ]
+  },
   "add_flow": { "unsupported": true },
   "add_interface_to_bridge": {
     "executor": "kubectl",
@@ -15,8 +25,20 @@
       ["tc","qdisc","replace","dev","eth1","root","netem","delay","50ms","5ms","loss","1%","rate","10mbit"]
     ]
   },
-  "add_static_route": { "unsupported": true },
-  "add_vlan_subinterface": { "unsupported": true },
+  "add_static_route": {
+    "executor": "kubectl",
+    "commands": [
+      ["ip","route","replace","10.1.0.0/16","via","10.0.0.254","dev","eth1"]
+    ]
+  },
+  "add_vlan_subinterface": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","ip link show eth1.10 \u003e/dev/null 2\u003e\u00261 || ip link add link eth1 name eth1.10 type vlan id 10"],
+      ["ip","link","set","eth1.10","up"],
+      ["ip","addr","replace","10.0.10.1/24","dev","eth1.10"]
+    ]
+  },
   "bgp_add_neighbor": { "unsupported": true },
   "bgp_add_network": { "unsupported": true },
   "bgp_redistribute": { "unsupported": true },
@@ -25,7 +47,12 @@
   "bgp_remove_redistribute": { "unsupported": true },
   "bgp_remove_router": { "unsupported": true },
   "bgp_set_router": { "unsupported": true },
-  "clear_dns": { "unsupported": true },
+  "clear_dns": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","if [ -f /etc/resolv.conf.kubendt ]; then cat /etc/resolv.conf.kubendt \u003e /etc/resolv.conf; fi"]
+    ]
+  },
   "controller_apply_config": { "unsupported": true },
   "custom": {
     "executor": "kubectl",
@@ -110,19 +137,54 @@
   "ospf_set_router_id": { "unsupported": true },
   "ospf_set_timers": { "unsupported": true },
   "remove_controller": { "unsupported": true },
-  "remove_default_route": { "unsupported": true },
-  "remove_dns_nameserver": { "unsupported": true },
-  "remove_dns_search": { "unsupported": true },
+  "remove_default_route": {
+    "executor": "kubectl",
+    "commands": [
+      ["ip","route","del","default"]
+    ]
+  },
+  "remove_dns_nameserver": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","c=$(grep -v '^nameserver 8.8.8.8$' /etc/resolv.conf); printf '%s\\n' \"$c\" \u003e /etc/resolv.conf"]
+    ]
+  },
+  "remove_dns_search": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","c=$(sed 's/^search \\(.*\\) lab.local /search \\1 /' /etc/resolv.conf | sed 's/^search \\(.*\\) lab.local$/search \\1/' | sed 's/ *$//'); printf '%s\\n' \"$c\" \u003e /etc/resolv.conf"]
+    ]
+  },
   "remove_interface_from_bridge": {
     "executor": "kubectl",
     "commands": [
       ["ip","link","set","eth1","nomaster"]
     ]
   },
-  "remove_ip": { "unsupported": true },
-  "remove_static_route": { "unsupported": true },
-  "remove_vlan_subinterface": { "unsupported": true },
-  "replace_ip": { "unsupported": true },
+  "remove_ip": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","! ip -o addr show dev eth1 | grep -qF ' 10.0.0.1/24 ' || ip addr del 10.0.0.1/24 dev eth1"]
+    ]
+  },
+  "remove_static_route": {
+    "executor": "kubectl",
+    "commands": [
+      ["ip","route","del","10.1.0.0/16","via","10.0.0.254","dev","eth1"]
+    ]
+  },
+  "remove_vlan_subinterface": {
+    "executor": "kubectl",
+    "commands": [
+      ["ip","link","del","eth1.10"]
+    ]
+  },
+  "replace_ip": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","ip -o addr show dev eth1 | grep -q ' 10.0.0.1/24 ' || { ip addr flush dev eth1; ip addr add 10.0.0.1/24 dev eth1; }"]
+    ]
+  },
   "rip_add_network": { "unsupported": true },
   "rip_passive_interface": { "unsupported": true },
   "rip_redistribute": { "unsupported": true },
@@ -133,10 +195,25 @@
   "rip_set_timers": { "unsupported": true },
   "set_controller": { "unsupported": true },
   "set_datapath_id": { "unsupported": true },
-  "set_default_route": { "unsupported": true },
-  "set_dns": { "unsupported": true },
+  "set_default_route": {
+    "executor": "kubectl",
+    "commands": [
+      ["ip","route","replace","default","via","10.0.0.254"]
+    ]
+  },
+  "set_dns": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","[ -f /etc/resolv.conf.kubendt ] || cp /etc/resolv.conf /etc/resolv.conf.kubendt; printf 'nameserver 10.0.0.53\\nnameserver 10.0.0.54\\nsearch lab.local\\n' \u003e /etc/resolv.conf"]
+    ]
+  },
   "set_fail_mode": { "unsupported": true },
-  "set_ip": { "unsupported": true },
+  "set_ip": {
+    "executor": "kubectl",
+    "commands": [
+      ["ip","addr","replace","10.0.0.1/24","dev","eth1"]
+    ]
+  },
   "setup_bridge": {
     "executor": "kubectl",
     "commands": [
@@ -149,7 +226,7 @@
   "stp_disable": {
     "executor": "kubectl",
     "commands": [
-      ["ip","link","set","br0","type","bridge","stp_state","0"]
+      ["sh","-c","ip link set br0 type bridge stp_state 0 \u0026\u0026 for p in /sys/class/net/br0/brif/*; do [ -e \"$p\" ] || continue; [ \"$(cat \"$p/state\")\" = 3 ] || { d=${p##*/}; ip link set dev \"$d\" down \u0026\u0026 ip link set dev \"$d\" up; }; done; true"]
     ]
   },
   "stp_enable": {

@@ -1,0 +1,161 @@
+{
+    "nodes": [
+        {
+            "name": "h1",
+            "image": "alpine:3.24.2",
+            "type": "host"
+        },
+        {
+            "name": "h2",
+            "image": "alpine:3.24.2",
+            "type": "host"
+        },
+        {
+            "name": "h3",
+            "image": "alpine:3.24.2",
+            "type": "host"
+        },
+        {
+            "name": "h4",
+            "image": "alpine:3.24.2",
+            "type": "host"
+        },
+        {
+            "name": "sw1",
+            "image": "ghcr.io/emigcm98/kubendt-ovs:3.7.1",
+            "type": "switch",
+            "driver": "OpenVSwitchDriver"
+        },
+        {
+            "name": "sw2",
+            "image": "ghcr.io/emigcm98/kubendt-ovs:3.7.1",
+            "type": "switch",
+            "driver": "OpenVSwitchDriver"
+        },
+        {
+            "name": "sw3",
+            "image": "ubuntu:26.04",
+            "type": "switch",
+            "driver": "LinuxSwitchDriver"
+        },
+        {
+            "name": "r1",
+            "image": "quay.io/frrouting/frr:10.7.1",
+            "type": "router",
+            "driver": "FRRRouterDriver"
+        },
+        {
+            "name": "mgmt",
+            "image": "ubuntu:26.04",
+            "type": "switch",
+            "driver": "LinuxSwitchDriver"
+        },
+        {
+            "name": "ctrl",
+            "image": "faucet/faucet:1.10.12",
+            "type": "host",
+            "driver": "FaucetControllerDriver"
+        }
+    ],
+    "links": [
+        {
+            "node": "h1-0",
+            "localIntf": "eth1",
+            "localIp": "10.0.10.11/24",
+            "peerNode": "sw1-0",
+            "peerIntf": "eth1",
+            "peerIp": "",
+            "name": "h1-sw1"
+        },
+        {
+            "node": "h2-0",
+            "localIntf": "eth1",
+            "localIp": "10.0.20.12/24",
+            "peerNode": "sw1-0",
+            "peerIntf": "eth2",
+            "peerIp": "",
+            "name": "h2-sw1"
+        },
+        {
+            "node": "h3-0",
+            "localIntf": "eth1",
+            "localIp": "10.0.10.13/24",
+            "peerNode": "sw2-0",
+            "peerIntf": "eth1",
+            "peerIp": "",
+            "name": "h3-sw2"
+        },
+        {
+            "node": "h4-0",
+            "localIntf": "eth1",
+            "localIp": "10.0.20.14/24",
+            "peerNode": "sw2-0",
+            "peerIntf": "eth2",
+            "peerIp": "",
+            "name": "h4-sw2"
+        },
+        {
+            "node": "sw1-0",
+            "localIntf": "eth3",
+            "localIp": "",
+            "peerNode": "sw2-0",
+            "peerIntf": "eth3",
+            "peerIp": "",
+            "name": "trunk-sw1-sw2"
+        },
+        {
+            "node": "sw2-0",
+            "localIntf": "eth4",
+            "localIp": "",
+            "peerNode": "sw3-0",
+            "peerIntf": "eth1",
+            "peerIp": "",
+            "name": "trunk-sw2-sw3"
+        },
+        {
+            "node": "sw3-0",
+            "localIntf": "eth2",
+            "localIp": "",
+            "peerNode": "sw1-0",
+            "peerIntf": "eth4",
+            "peerIp": "",
+            "name": "trunk-sw3-sw1"
+        },
+        {
+            "node": "r1-0",
+            "localIntf": "eth1",
+            "localIp": "",
+            "peerNode": "sw1-0",
+            "peerIntf": "eth5",
+            "peerIp": "",
+            "name": "r1-sw1"
+        },
+        {
+            "node": "sw1-0",
+            "localIntf": "eth9",
+            "localIp": "10.0.100.11/24",
+            "peerNode": "mgmt-0",
+            "peerIntf": "eth1",
+            "peerIp": "",
+            "name": "mgmt-sw1"
+        },
+        {
+            "node": "sw2-0",
+            "localIntf": "eth9",
+            "localIp": "10.0.100.12/24",
+            "peerNode": "mgmt-0",
+            "peerIntf": "eth2",
+            "peerIp": "",
+            "name": "mgmt-sw2"
+        },
+        {
+            "node": "ctrl-0",
+            "localIntf": "eth1",
+            "localIp": "10.0.100.1/24",
+            "peerNode": "mgmt-0",
+            "peerIntf": "eth3",
+            "peerIp": "",
+            "name": "mgmt-ctrl"
+        }
+    ]
+}
