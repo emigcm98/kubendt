@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- A BMv2 image of our own, `ghcr.io/emigcm98/kubendt-p4`: bmv2 1.15.8 built for forwarding (Release, without the logging macros, the event logger and the debugger) on Ubuntu 24.04 with iproute2 and ethtool, published by bmv2 version on every change to its folder.
+
 ## [1.9.0] - 2026-11-07
 
 ### Added
