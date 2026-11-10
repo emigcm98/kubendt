@@ -13,13 +13,14 @@ func TestInspectionsPerDriver(t *testing.T) {
 		"FaucetControllerDriver": {"L3Capable": {"neighbors", "routes"}, "SDNControllerCapable": {"datapath_ports", "datapaths", "learned_hosts"}},
 		"LinuxSwitchDriver":      {"L3Capable": {"neighbors", "routes"}, "SwitchCapable": {"bridge_fdb"}, "VLANCapable": {"vlan_ports"}, "STPCapable": {"stp_bridges", "stp_ports"}},
 		"OpenVSwitchDriver":      {"SwitchCapable": {"bridge_fdb"}, "VLANCapable": {"vlan_ports"}, "STPCapable": {"stp_bridges", "stp_ports"}, "OpenFlowCapable": {"openflow_bridges", "openflow_flows"}},
+		"P4SwitchDriver":         {"P4Capable": {"p4_entries", "p4_ports", "p4_tables"}},
 		"LinuxRouterDriver":      {"L3Capable": {"neighbors", "routes"}, "NATCapable": {"nat_rules"}, "SwitchCapable": {"bridge_fdb"}, "VLANCapable": {"vlan_ports"}, "STPCapable": {"stp_bridges", "stp_ports"}},
 		"FRRRouterDriver":        {"L3Capable": {"neighbors", "routes"}, "NATCapable": {"nat_rules"}, "SwitchCapable": {"bridge_fdb"}, "VLANCapable": {"vlan_ports"}, "STPCapable": {"stp_bridges", "stp_ports"}, "OSPFCapable": {"ospf_interfaces", "ospf_neighbors"}, "OSPF6Capable": {"ospf6_neighbors"}, "RIPCapable": {"rip_routes"}, "BGPCapable": {"bgp_summary"}, "ISISCapable": {"isis_neighbors"}},
 		"VyOSRouterDriver":       {"L3Capable": {"neighbors", "routes"}, "NATCapable": {"nat_rules"}, "OSPFCapable": {"ospf_interfaces", "ospf_neighbors"}, "OSPF6Capable": {"ospf6_neighbors"}, "RIPCapable": {"rip_routes"}, "BGPCapable": {"bgp_summary"}, "ISISCapable": {"isis_neighbors"}},
 		"EXOSSwitchDriver":       {"SwitchCapable": {"bridge_fdb"}, "VLANCapable": {"vlan_ports"}, "STPCapable": {"stp_bridges", "stp_ports"}},
 	}
 	drivers := map[string]any{
-		"HostDriver": NewHostDriver(), "FaucetControllerDriver": NewFaucetControllerDriver(), "LinuxSwitchDriver": NewLinuxSwitchDriver(), "OpenVSwitchDriver": NewOpenVSwitchDriver(),
+		"HostDriver": NewHostDriver(), "FaucetControllerDriver": NewFaucetControllerDriver(), "LinuxSwitchDriver": NewLinuxSwitchDriver(), "OpenVSwitchDriver": NewOpenVSwitchDriver(), "P4SwitchDriver": NewP4SwitchDriver(),
 		"LinuxRouterDriver": NewLinuxRouterDriver(), "FRRRouterDriver": NewFRRRouterDriver(), "VyOSRouterDriver": NewVyOSRouterDriver(), "EXOSSwitchDriver": NewEXOSSwitchDriver(),
 	}
 	for name, drv := range drivers {

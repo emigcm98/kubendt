@@ -28,6 +28,7 @@ var plannedDrivers = []string{
 	"FaucetControllerDriver",
 	"LinuxSwitchDriver",
 	"OpenVSwitchDriver",
+	"P4SwitchDriver",
 	"LinuxRouterDriver",
 	"FRRRouterDriver",
 	"VyOSRouterDriver",
@@ -167,6 +168,9 @@ func TestActionPlans(t *testing.T) {
 	// A file parameter resolves to this content, the plan test has no file
 	// manager behind it.
 	helpers.ReadActionFile = func(namespace, file string) ([]byte, error) {
+		if strings.HasSuffix(file, ".json") {
+			return []byte(`{"program": "basic"}`), nil
+		}
 		return []byte("vlans:\n  office:\n    vid: 10\n"), nil
 	}
 	t.Cleanup(func() { helpers.ReadActionFile = helpers.GetFileContent })

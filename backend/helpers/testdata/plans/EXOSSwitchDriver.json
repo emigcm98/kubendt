@@ -69,6 +69,7 @@
       ["enable ports 1"]
     ]
   },
+  "load_program": { "unsupported": true },
   "nat64_disable": { "unsupported": true },
   "nat64_enable": { "unsupported": true },
   "ospf6_add_interface": { "unsupported": true },
@@ -173,6 +174,9 @@
       ["configure stpd s0 ports port-priority 64 1"]
     ]
   },
+  "table_add": { "unsupported": true },
+  "table_delete": { "unsupported": true },
+  "table_set_default": { "unsupported": true },
   "teardown_bridge": {
     "executor": "exos_api",
     "commands": [

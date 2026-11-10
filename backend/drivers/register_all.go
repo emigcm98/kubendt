@@ -11,6 +11,7 @@ func RegisterAllDrivers() {
 	drivers_registry.Register(drivers.NewFaucetControllerDriver)
 	drivers_registry.Register(drivers.NewLinuxSwitchDriver)
 	drivers_registry.Register(drivers.NewOpenVSwitchDriver)
+	drivers_registry.Register(drivers.NewP4SwitchDriver)
 	drivers_registry.Register(drivers.NewEXOSSwitchDriver)
 	drivers_registry.Register(drivers.NewLinuxRouterDriver)
 	drivers_registry.Register(drivers.NewFRRRouterDriver)

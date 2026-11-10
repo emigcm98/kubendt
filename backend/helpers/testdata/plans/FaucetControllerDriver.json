@@ -96,6 +96,7 @@
       ["ip","link","set","eth1","up"]
     ]
   },
+  "load_program": { "unsupported": true },
   "nat64_disable": { "unsupported": true },
   "nat64_enable": { "unsupported": true },
   "ospf6_add_interface": { "unsupported": true },
@@ -214,6 +215,9 @@
   "stp_enable": { "unsupported": true },
   "stp_set_bridge_priority": { "unsupported": true },
   "stp_set_port": { "unsupported": true },
+  "table_add": { "unsupported": true },
+  "table_delete": { "unsupported": true },
+  "table_set_default": { "unsupported": true },
   "teardown_bridge": { "unsupported": true },
   "vlan_clear_port": { "unsupported": true },
   "vlan_set_access": { "unsupported": true },

@@ -2946,6 +2946,10 @@ const docTemplate = `{
         "types.ActionEntry": {
             "type": "object",
             "properties": {
+                "action": {
+                    "type": "string",
+                    "example": "MyIngress.ipv4_forward"
+                },
                 "area_type": {
                     "description": "OSPF areas and authentication. AreaType is stub, totally-stub, nssa or\ntotally-nssa (the Cisco names; FRR says stub no-summary). AuthType is\nplain (a key of up to 8 characters) or md5 (up to 16, with a key id).",
                     "type": "string",
@@ -3081,6 +3085,10 @@ const docTemplate = `{
                     "type": "string",
                     "example": "level-2"
                 },
+                "match": {
+                    "type": "string",
+                    "example": "10.0.2.2/32"
+                },
                 "mode": {
                     "type": "string",
                     "example": "rstp"
@@ -3113,6 +3121,10 @@ const docTemplate = `{
                     "description": "OSPF",
                     "type": "string",
                     "example": "0"
+                },
+                "params": {
+                    "type": "string",
+                    "example": "08:00:00:00:02:22 2"
                 },
                 "pool": {
                     "type": "string",
@@ -3147,6 +3159,11 @@ const docTemplate = `{
                 "router_id": {
                     "type": "string",
                     "example": "10.0.255.1"
+                },
+                "table": {
+                    "description": "P4: a table, one of its actions, the match fields and the action's\nparameters as simple_switch_CLI takes them, values separated by spaces.",
+                    "type": "string",
+                    "example": "MyIngress.ipv4_lpm"
                 },
                 "tcparams": {
                     "description": "TC / Qdisc",

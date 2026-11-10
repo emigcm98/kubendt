@@ -224,6 +224,7 @@
       ["delete interfaces ethernet eth1 disable"]
     ]
   },
+  "load_program": { "unsupported": true },
   "nat64_disable": {
     "executor": "vyos_api_apply",
     "commands": [
@@ -593,6 +594,9 @@
   "stp_enable": { "unsupported": true },
   "stp_set_bridge_priority": { "unsupported": true },
   "stp_set_port": { "unsupported": true },
+  "table_add": { "unsupported": true },
+  "table_delete": { "unsupported": true },
+  "table_set_default": { "unsupported": true },
   "teardown_bridge": { "unsupported": true },
   "vlan_clear_port": { "unsupported": true },
   "vlan_set_access": { "unsupported": true },

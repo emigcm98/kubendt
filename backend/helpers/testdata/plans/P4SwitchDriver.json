@@ -1,0 +1,191 @@
+{
+  "add_dns_nameserver": { "unsupported": true },
+  "add_dns_search": { "unsupported": true },
+  "add_flow": { "unsupported": true },
+  "add_interface_to_bridge": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","ethtool -K eth1 tso off gso off gro off tx off rx off sg off \u003e/dev/null 2\u003e\u00261; true"],
+      ["sh","-c","printf 'port_remove 1\\n' | simple_switch_CLI --thrift-port 9090 \u003e/dev/null 2\u003e\u00261; true"],
+      ["sh","-c","out=$(printf '%s\\n' 'port_add eth1 1' | simple_switch_CLI --thrift-port 9090 2\u003e\u00261); printf '%s\\n' \"$out\" | grep -v 'Obtaining JSON\\|^Done$\\|Control utility'; ! printf '%s\\n' \"$out\" | grep -q 'Invalid \\|Error\\|Could not connect'"]
+    ]
+  },
+  "add_qdisc": {
+    "executor": "tc_universal",
+    "commands": [
+      ["tc","qdisc","replace","dev","eth1","root","noqueue"],
+      ["tc","qdisc","replace","dev","eth1","root","netem","delay","50ms","5ms","loss","1%","rate","10mbit"]
+    ]
+  },
+  "add_static_route": { "unsupported": true },
+  "add_vlan_subinterface": { "unsupported": true },
+  "bgp_add_neighbor": { "unsupported": true },
+  "bgp_add_network": { "unsupported": true },
+  "bgp_redistribute": { "unsupported": true },
+  "bgp_remove_neighbor": { "unsupported": true },
+  "bgp_remove_network": { "unsupported": true },
+  "bgp_remove_redistribute": { "unsupported": true },
+  "bgp_remove_router": { "unsupported": true },
+  "bgp_set_router": { "unsupported": true },
+  "clear_dns": { "unsupported": true },
+  "controller_apply_config": { "unsupported": true },
+  "custom": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","echo hello"]
+    ]
+  },
+  "del_qdisc": {
+    "executor": "tc_universal",
+    "commands": [
+      ["tc","qdisc","replace","dev","eth1","root","noqueue"],
+      ["tc","qdisc","del","dev","eth1","root"]
+    ]
+  },
+  "delete_flow": { "unsupported": true },
+  "disable_dnat": { "unsupported": true },
+  "disable_snat": { "unsupported": true },
+  "enable_dnat": { "unsupported": true },
+  "enable_snat": { "unsupported": true },
+  "isis_add_interface": { "unsupported": true },
+  "isis_passive_interface": { "unsupported": true },
+  "isis_redistribute": { "unsupported": true },
+  "isis_remove_interface": { "unsupported": true },
+  "isis_remove_metric": { "unsupported": true },
+  "isis_remove_network_type": { "unsupported": true },
+  "isis_remove_passive_interface": { "unsupported": true },
+  "isis_remove_redistribute": { "unsupported": true },
+  "isis_remove_router": { "unsupported": true },
+  "isis_set_metric": { "unsupported": true },
+  "isis_set_network_type": { "unsupported": true },
+  "isis_set_router": { "unsupported": true },
+  "link_down": {
+    "executor": "kubectl",
+    "commands": [
+      ["ip","link","set","eth1","down"]
+    ]
+  },
+  "link_up": {
+    "executor": "kubectl",
+    "commands": [
+      ["ip","link","set","eth1","up"]
+    ]
+  },
+  "load_program": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","mkdir -p /run/kubendt \u0026\u0026 printf '%s\\n' '{\"program\": \"basic\"}' \u003e /run/kubendt/program.json"],
+      ["sh","-c","out=$(printf '%s\\n' 'load_new_config_file /run/kubendt/program.json\nswap_configs' | simple_switch_CLI --thrift-port 9090 2\u003e\u00261); printf '%s\\n' \"$out\" | grep -v 'Obtaining JSON\\|^Done$\\|Control utility'; ! printf '%s\\n' \"$out\" | grep -q 'Invalid \\|Error\\|Could not connect'"]
+    ]
+  },
+  "nat64_disable": { "unsupported": true },
+  "nat64_enable": { "unsupported": true },
+  "ospf6_add_interface": { "unsupported": true },
+  "ospf6_originate_default": { "unsupported": true },
+  "ospf6_passive_interface": { "unsupported": true },
+  "ospf6_redistribute": { "unsupported": true },
+  "ospf6_remove_interface": { "unsupported": true },
+  "ospf6_remove_originate_default": { "unsupported": true },
+  "ospf6_remove_passive_interface": { "unsupported": true },
+  "ospf6_remove_redistribute": { "unsupported": true },
+  "ospf6_remove_router_id": { "unsupported": true },
+  "ospf6_set_router_id": { "unsupported": true },
+  "ospf_add_area_range": { "unsupported": true },
+  "ospf_add_network": { "unsupported": true },
+  "ospf_mtu_ignore": { "unsupported": true },
+  "ospf_no_passive": { "unsupported": true },
+  "ospf_originate_default": { "unsupported": true },
+  "ospf_passive_default": { "unsupported": true },
+  "ospf_redistribute": { "unsupported": true },
+  "ospf_remove_area_range": { "unsupported": true },
+  "ospf_remove_area_type": { "unsupported": true },
+  "ospf_remove_authentication": { "unsupported": true },
+  "ospf_remove_cost": { "unsupported": true },
+  "ospf_remove_mtu_ignore": { "unsupported": true },
+  "ospf_remove_network": { "unsupported": true },
+  "ospf_remove_network_type": { "unsupported": true },
+  "ospf_remove_no_passive": { "unsupported": true },
+  "ospf_remove_originate_default": { "unsupported": true },
+  "ospf_remove_passive_default": { "unsupported": true },
+  "ospf_remove_priority": { "unsupported": true },
+  "ospf_remove_redistribute": { "unsupported": true },
+  "ospf_remove_router_id": { "unsupported": true },
+  "ospf_remove_timers": { "unsupported": true },
+  "ospf_set_area_type": { "unsupported": true },
+  "ospf_set_authentication": { "unsupported": true },
+  "ospf_set_cost": { "unsupported": true },
+  "ospf_set_network_type": { "unsupported": true },
+  "ospf_set_priority": { "unsupported": true },
+  "ospf_set_router_id": { "unsupported": true },
+  "ospf_set_timers": { "unsupported": true },
+  "remove_controller": { "unsupported": true },
+  "remove_default_route": { "unsupported": true },
+  "remove_dns_nameserver": { "unsupported": true },
+  "remove_dns_search": { "unsupported": true },
+  "remove_interface_from_bridge": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","out=$(printf '%s\\n' 'port_remove 1' | simple_switch_CLI --thrift-port 9090 2\u003e\u00261); printf '%s\\n' \"$out\" | grep -v 'Obtaining JSON\\|^Done$\\|Control utility'; ! printf '%s\\n' \"$out\" | grep -q 'Invalid \\|Error\\|Could not connect'"]
+    ]
+  },
+  "remove_ip": { "unsupported": true },
+  "remove_static_route": { "unsupported": true },
+  "remove_vlan_subinterface": { "unsupported": true },
+  "replace_ip": { "unsupported": true },
+  "rip_add_network": { "unsupported": true },
+  "rip_passive_interface": { "unsupported": true },
+  "rip_redistribute": { "unsupported": true },
+  "rip_remove_network": { "unsupported": true },
+  "rip_remove_passive_interface": { "unsupported": true },
+  "rip_remove_redistribute": { "unsupported": true },
+  "rip_remove_timers": { "unsupported": true },
+  "rip_set_timers": { "unsupported": true },
+  "set_controller": { "unsupported": true },
+  "set_datapath_id": { "unsupported": true },
+  "set_default_route": { "unsupported": true },
+  "set_dns": { "unsupported": true },
+  "set_fail_mode": { "unsupported": true },
+  "set_ip": { "unsupported": true },
+  "setup_bridge": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","ethtool -K eth1 tso off gso off gro off tx off rx off sg off \u003e/dev/null 2\u003e\u00261; true"],
+      ["sh","-c","printf 'port_remove 1\\n' | simple_switch_CLI --thrift-port 9090 \u003e/dev/null 2\u003e\u00261; true"],
+      ["sh","-c","out=$(printf '%s\\n' 'port_add eth1 1' | simple_switch_CLI --thrift-port 9090 2\u003e\u00261); printf '%s\\n' \"$out\" | grep -v 'Obtaining JSON\\|^Done$\\|Control utility'; ! printf '%s\\n' \"$out\" | grep -q 'Invalid \\|Error\\|Could not connect'"],
+      ["sh","-c","ethtool -K eth2 tso off gso off gro off tx off rx off sg off \u003e/dev/null 2\u003e\u00261; true"],
+      ["sh","-c","printf 'port_remove 2\\n' | simple_switch_CLI --thrift-port 9090 \u003e/dev/null 2\u003e\u00261; true"],
+      ["sh","-c","out=$(printf '%s\\n' 'port_add eth2 2' | simple_switch_CLI --thrift-port 9090 2\u003e\u00261); printf '%s\\n' \"$out\" | grep -v 'Obtaining JSON\\|^Done$\\|Control utility'; ! printf '%s\\n' \"$out\" | grep -q 'Invalid \\|Error\\|Could not connect'"]
+    ]
+  },
+  "stp_disable": { "unsupported": true },
+  "stp_enable": { "unsupported": true },
+  "stp_set_bridge_priority": { "unsupported": true },
+  "stp_set_port": { "unsupported": true },
+  "table_add": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","out=$(printf '%s\\n' 'table_add MyIngress.ipv4_lpm MyIngress.ipv4_forward 10.0.2.2/32 =\u003e 08:00:00:00:02:22 2' | simple_switch_CLI --thrift-port 9090 2\u003e\u00261); printf '%s\\n' \"$out\" | grep -v 'Obtaining JSON\\|^Done$\\|Control utility'; ! printf '%s\\n' \"$out\" | grep -q 'Invalid \\|Error\\|Could not connect'"]
+    ]
+  },
+  "table_delete": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","h=$(printf 'table_dump_entry_from_key MyIngress.ipv4_lpm 10.0.2.2/32\\n' | simple_switch_CLI --thrift-port 9090 2\u003e\u00261 | sed -n 's/^.*Dumping entry 0x\\([0-9a-fA-F]*\\).*/\\1/p' | head -1); [ -n \"$h\" ] || { echo 'no entry for 10.0.2.2/32 in MyIngress.ipv4_lpm' \u003e\u00262; exit 1; }; out=$(printf 'table_delete MyIngress.ipv4_lpm %s\\n' \"$((0x$h))\" | simple_switch_CLI --thrift-port 9090 2\u003e\u00261); printf '%s\\n' \"$out\" | grep -v 'Obtaining JSON\\|^Done$\\|Control utility'; ! printf '%s\\n' \"$out\" | grep -q 'Invalid \\|Error\\|Could not connect'"]
+    ]
+  },
+  "table_set_default": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","out=$(printf '%s\\n' 'table_set_default MyIngress.ipv4_lpm MyIngress.drop' | simple_switch_CLI --thrift-port 9090 2\u003e\u00261); printf '%s\\n' \"$out\" | grep -v 'Obtaining JSON\\|^Done$\\|Control utility'; ! printf '%s\\n' \"$out\" | grep -q 'Invalid \\|Error\\|Could not connect'"]
+    ]
+  },
+  "teardown_bridge": {
+    "executor": "kubectl",
+    "commands": [
+      ["sh","-c","for p in $(printf 'show_ports\\n' | simple_switch_CLI --thrift-port 9090 2\u003e/dev/null | awk '/^ +[0-9]+ +/{print $1}'); do printf 'port_remove %s\\n' \"$p\"; done | simple_switch_CLI --thrift-port 9090 \u003e/dev/null 2\u003e\u00261; true"]
+    ]
+  },
+  "vlan_clear_port": { "unsupported": true },
+  "vlan_set_access": { "unsupported": true },
+  "vlan_set_trunk": { "unsupported": true }
+}

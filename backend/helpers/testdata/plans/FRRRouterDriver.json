@@ -216,6 +216,7 @@
       ["ip","link","set","eth1","up"]
     ]
   },
+  "load_program": { "unsupported": true },
   "nat64_disable": {
     "executor": "kubectl",
     "commands": [
@@ -607,6 +608,9 @@
       ["bridge","link","set","dev","eth1","cost","50","priority","64"]
     ]
   },
+  "table_add": { "unsupported": true },
+  "table_delete": { "unsupported": true },
+  "table_set_default": { "unsupported": true },
   "teardown_bridge": {
     "executor": "kubectl",
     "commands": [
