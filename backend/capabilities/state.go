@@ -27,6 +27,8 @@ func keyDefaultRouteFamily(a types.ActionEntry) string {
 
 func keyStaticRoute(a types.ActionEntry) string { return a.DstCIDR + " " + a.Gateway + " " + a.Device }
 
+func keyStaticNeighbor(a types.ActionEntry) string { return a.Iface + " " + a.Neighbor }
+
 func keyNameserver(a types.ActionEntry) string { return a.DNSServer }
 
 func keySearch(a types.ActionEntry) string { return a.DNSDomain }

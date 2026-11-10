@@ -35,10 +35,11 @@ var toolInToolbox sync.Map // "namespace/pod/class" -> bool
 var (
 	netnsToolRe = regexp.MustCompile(`(?:^|[;&|({!]\s*)(ip|tc)(?:\s|$)`)
 	// An ip call with bridge options (`type bridge stp_state 1`, `type
-	// bridge_slave cost 10`) needs iproute2's ip, which ships next to the
-	// bridge tool, so it is of that class too; a bare `type bridge` is not,
-	// busybox creates a bridge fine.
-	bridgeToolRe   = regexp.MustCompile(`(?:^|[;&|({!]\s*)bridge(?:\s|$)|\btype bridge_slave\b|\btype bridge\s+\S`)
+	// bridge_slave cost 10`) or a neighbour write (busybox's `ip neigh` only
+	// shows and flushes) needs iproute2's ip, which ships next to the bridge
+	// tool, so it is of that class too; a bare `type bridge` is not, busybox
+	// creates a bridge fine.
+	bridgeToolRe   = regexp.MustCompile(`(?:^|[;&|({!]\s*)bridge(?:\s|$)|\btype bridge_slave\b|\btype bridge\s+\S|\bneigh\s+(?:add|del|change|replace)\b`)
 	iptablesToolRe = regexp.MustCompile(`(?:^|[;&|({!]\s*)(iptables|ip6tables)(?:\s|$)`)
 	taygaToolRe    = regexp.MustCompile(`(?:^|[;&|({!]\s*)tayga(?:\s|$)`)
 )

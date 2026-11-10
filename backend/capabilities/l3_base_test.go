@@ -70,6 +70,16 @@ func TestL3BaseCommands(t *testing.T) {
 			l3.RemoveStaticRoute("192.168.1.0/24", "10.0.0.254", ""),
 			[][]string{{"ip", "route", "del", "192.168.1.0/24", "via", "10.0.0.254"}},
 		},
+		{
+			"AddStaticNeighbor",
+			l3.AddStaticNeighbor("eth1", "10.0.1.254", "08:00:00:00:00:fe"),
+			[][]string{{"ip", "neigh", "replace", "10.0.1.254", "lladdr", "08:00:00:00:00:fe", "dev", "eth1", "nud", "permanent"}},
+		},
+		{
+			"RemoveStaticNeighbor",
+			l3.RemoveStaticNeighbor("eth1", "10.0.1.254"),
+			[][]string{{"ip", "neigh", "del", "10.0.1.254", "dev", "eth1"}},
+		},
 	}
 
 	for _, c := range cases {

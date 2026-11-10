@@ -67,6 +67,19 @@ func (XRDRouterDriver) LinkDown(iface string) [][]string {
 	return [][]string{{"interface " + iface, "shutdown"}}
 }
 
+func (XRDRouterDriver) SetMAC(iface, mac string) [][]string {
+	return [][]string{{"interface " + iface, " mac-address " + xrMAC(mac)}}
+}
+
+// xrMAC writes a MAC the IOS XR way, three groups of four hex digits.
+func xrMAC(mac string) string {
+	hex := strings.ToLower(strings.NewReplacer(":", "", "-", "", ".", "").Replace(mac))
+	if len(hex) != 12 {
+		return mac
+	}
+	return hex[0:4] + "." + hex[4:8] + "." + hex[8:12]
+}
+
 // ─── L3 ──────────────────────────────────────────────────────────────────────
 //
 // IOS-XR does not accept CIDR in "ipv4 address", it requires IP + dotted-decimal mask.
@@ -103,6 +116,15 @@ func (XRDRouterDriver) AddStaticRoute(dstCIDR, via, dev string) [][]string {
 
 func (XRDRouterDriver) RemoveStaticRoute(dstCIDR, via, dev string) [][]string {
 	return [][]string{{"router static", "address-family ipv4 unicast", " no " + dstCIDR, "!"}}
+}
+
+// IOS XR keys a static ARP entry by address, not by interface.
+func (XRDRouterDriver) AddStaticNeighbor(iface, address, mac string) [][]string {
+	return [][]string{{"arp " + address + " " + xrMAC(mac) + " arpa"}}
+}
+
+func (XRDRouterDriver) RemoveStaticNeighbor(iface, address string) [][]string {
+	return [][]string{{"no arp " + address}}
 }
 
 func (XRDRouterDriver) AddDNSNameserver(server string) [][]string {

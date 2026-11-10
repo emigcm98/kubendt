@@ -233,3 +233,22 @@ func TestVyOSVtyshArgvQuotesTheCommand(t *testing.T) {
 		t.Errorf("argv: %v", got)
 	}
 }
+
+func TestVyOSMACAndStaticNeighbor(t *testing.T) {
+	var d VyOSRouterDriver
+	cases := []struct {
+		name string
+		got  [][]string
+		want [][]string
+	}{
+		{"mac", d.SetMAC("eth1", "02:00:00:00:01:01"), [][]string{{"set interfaces ethernet eth1 mac 02:00:00:00:01:01"}}},
+		{"mac on a vif", d.SetMAC("eth1.10", "02:00:00:00:01:0a"), [][]string{{"set interfaces ethernet eth1 vif 10 mac 02:00:00:00:01:0a"}}},
+		{"static arp", d.AddStaticNeighbor("eth1", "10.0.1.2", "08:00:00:00:01:11"), [][]string{{"set protocols static arp interface eth1 address 10.0.1.2 mac 08:00:00:00:01:11"}}},
+		{"remove static arp", d.RemoveStaticNeighbor("eth1", "10.0.1.2"), [][]string{{"delete protocols static arp interface eth1 address 10.0.1.2"}}},
+	}
+	for _, c := range cases {
+		if !reflect.DeepEqual(c.got, c.want) {
+			t.Errorf("%s:\n got  %v\n want %v", c.name, c.got, c.want)
+		}
+	}
+}

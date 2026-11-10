@@ -15,6 +15,7 @@
       ["tc","qdisc","replace","dev","1","root","netem","delay","50ms","5ms","loss","1%","rate","10mbit"]
     ]
   },
+  "add_static_neighbor": { "unsupported": true },
   "add_static_route": { "unsupported": true },
   "add_vlan_subinterface": { "unsupported": true },
   "bgp_add_neighbor": { "unsupported": true },
@@ -121,6 +122,7 @@
     ]
   },
   "remove_ip": { "unsupported": true },
+  "remove_static_neighbor": { "unsupported": true },
   "remove_static_route": { "unsupported": true },
   "remove_vlan_subinterface": { "unsupported": true },
   "replace_ip": { "unsupported": true },
@@ -138,6 +140,7 @@
   "set_dns": { "unsupported": true },
   "set_fail_mode": { "unsupported": true },
   "set_ip": { "unsupported": true },
+  "set_mac": { "unsupported": true },
   "setup_bridge": {
     "executor": "exos_api",
     "commands": [

@@ -8,7 +8,7 @@
    <a href="https://doi.org/10.5281/zenodo.21276320"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.21276320.svg" alt="DOI" /></a>
 </p>
 
-> Last reviewed: 7 Nov 2026
+> Last reviewed: 10 Nov 2026
 
 **KubeNDT** is a platform for deploying and operating virtual network topologies on Kubernetes.
 
@@ -55,8 +55,8 @@ KubeNDT bundles a small set of third-party SVG icons in its frontend. See [ATTRI
 
 ### Advanced Networking Features
 
-- **Layer 2 operations**: Interface management, bridge creation, VLAN access and trunk ports, VLAN subinterfaces and SVIs, spanning tree (STP on a Linux bridge, STP or RSTP on Open vSwitch)
-- **Layer 3 operations**: IP address assignment, static routing, default gateway configuration, IPv4 and IPv6 alike (a link carries one family on both ends)
+- **Layer 2 operations**: Interface management and MAC addresses, bridge creation, VLAN access and trunk ports, VLAN subinterfaces and SVIs, spanning tree (STP on a Linux bridge, STP or RSTP on Open vSwitch)
+- **Layer 3 operations**: IP address assignment, static routing, default gateway configuration, static ARP and NDP entries, DNS resolver, IPv4 and IPv6 alike (a link carries one family on both ends)
 - **Routing protocols**: OSPFv2, OSPFv3, RIP (RIPv2 and RIPng), BGP and IS-IS as driver actions on FRR and VyOS routers, the rest of FRRouting reachable through its console
 - **Traffic control (QoS)**: Rate limiting, traffic shaping, netem (network emulation)
 - **OpenFlow and SDN**: an Open vSwitch under a controller (`set_controller`, fail mode, datapath id, static flows) and a Faucet controller as a node, its configuration applied from the file manager and reloaded live

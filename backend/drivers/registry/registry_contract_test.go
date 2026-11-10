@@ -21,6 +21,8 @@ func (l3stub) SetDefaultRoute(string) [][]string                   { return nil 
 func (l3stub) RemoveDefaultRoute() [][]string                      { return nil }
 func (l3stub) AddStaticRoute(string, string, string) [][]string    { return nil }
 func (l3stub) RemoveStaticRoute(string, string, string) [][]string { return nil }
+func (l3stub) AddStaticNeighbor(string, string, string) [][]string { return nil }
+func (l3stub) RemoveStaticNeighbor(string, string) [][]string      { return nil }
 func (l3stub) AddDNSNameserver(string) [][]string                  { return nil }
 func (l3stub) RemoveDNSNameserver(string) [][]string               { return nil }
 func (l3stub) AddDNSSearch(string) [][]string                      { return nil }

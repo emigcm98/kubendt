@@ -63,6 +63,16 @@ func (L3Base) RemoveStaticRoute(dstCIDR, via, dev string) [][]string {
 	return [][]string{cmd}
 }
 
+// replace, so a replay does not fail on an entry already there, and
+// permanent, so the kernel never ages it out or probes it.
+func (L3Base) AddStaticNeighbor(iface, address, mac string) [][]string {
+	return [][]string{{"ip", "neigh", "replace", address, "lladdr", mac, "dev", iface, "nud", "permanent"}}
+}
+
+func (L3Base) RemoveStaticNeighbor(iface, address string) [][]string {
+	return [][]string{{"ip", "neigh", "del", address, "dev", iface}}
+}
+
 func (L3Base) AddDNSNameserver(server string) [][]string {
 	// Idempotent: only adds if missing (uses tee instead of sed -i)
 	cmd := fmt.Sprintf(
