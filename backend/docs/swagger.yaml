@@ -41,7 +41,7 @@ definitions:
         description: |-
           BGP: the local AS of bgp_set_router, a neighbour by address with its
           AS, the interface or address the session binds to, and the TTL an
-          eBGP session may cross.
+          eBGP session may cross. Neighbor is also a static neighbour's address.
         example: 65001
         type: integer
       auth_key:
@@ -148,6 +148,12 @@ definitions:
         type: integer
       level:
         example: level-2
+        type: string
+      mac:
+        description: |-
+          MAC is the address set_mac gives an interface, or the one a static
+          neighbor (add_static_neighbor, keyed by iface and neighbor) resolves to.
+        example: "02:00:00:00:01:01"
         type: string
       match:
         example: 10.0.2.2/32

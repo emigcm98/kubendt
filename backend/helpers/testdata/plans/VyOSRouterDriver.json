@@ -20,6 +20,12 @@
       ["tc","qdisc","replace","dev","eth1","root","netem","delay","50ms","5ms","loss","1%","rate","10mbit"]
     ]
   },
+  "add_static_neighbor": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["set protocols static arp interface eth1 address 10.0.1.254 mac 08:00:00:00:00:fe"]
+    ]
+  },
   "add_static_route": {
     "executor": "vyos_api_apply",
     "commands": [
@@ -495,6 +501,12 @@
       ["delete interfaces ethernet eth1 address 10.0.0.1/24"]
     ]
   },
+  "remove_static_neighbor": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["delete protocols static arp interface eth1 address 10.0.1.254"]
+    ]
+  },
   "remove_static_route": {
     "executor": "vyos_api_apply",
     "commands": [
@@ -587,6 +599,12 @@
     "executor": "vyos_api_apply",
     "commands": [
       ["set interfaces ethernet eth1 address 10.0.0.1/24"]
+    ]
+  },
+  "set_mac": {
+    "executor": "vyos_api_apply",
+    "commands": [
+      ["set interfaces ethernet eth1 mac 08:00:00:00:01:11"]
     ]
   },
   "setup_bridge": { "unsupported": true },

@@ -6,3 +6,7 @@ func (L2Base) LinkUp(iface string) [][]string { return [][]string{{"ip", "link",
 func (L2Base) LinkDown(iface string) [][]string {
 	return [][]string{{"ip", "link", "set", iface, "down"}}
 }
+
+func (L2Base) SetMAC(iface, mac string) [][]string {
+	return [][]string{{"ip", "link", "set", iface, "address", mac}}
+}

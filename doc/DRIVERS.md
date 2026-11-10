@@ -66,7 +66,7 @@ What each one feeds:
 - **GuestInterface** renames interface parameters before an action runs, for a dataplane that calls `eth1` something else.
 - **KnownImages** are the references, by tag or digest, the driver was tried with: a node on any other deploys with an `image_untested` warning that names them, never a refusal, since another image may well work. A host declares none.
 
-Two more sit next to a capability rather than in `drivers/meta`: `GuestMTUSetter` (`GuestMTUCommands(iface, mtu)`), which the MTU pass uses to set a VM guest's interface, and `DefaultRoute6Remover` (`RemoveDefaultRoute6()`), which `remove_default_route` with `family: 6` needs; `L3Base` has the latter, so a driver embedding it gets it for free.
+Three more sit next to a capability rather than in `drivers/meta`: `GuestMTUSetter` (`GuestMTUCommands(iface, mtu)`), which the MTU pass uses to set a VM guest's interface, `DefaultRoute6Remover` (`RemoveDefaultRoute6()`), which `remove_default_route` with `family: 6` needs, and `MACSetter` (`SetMAC(iface, mac)`), which `set_mac` needs; `L3Base` has the second and `L2Base` the third, so a driver embedding them gets them for free, and a driver without one fails the action with a message instead of leaving it out (EXOS has no MAC per port).
 
 ## Inspections
 

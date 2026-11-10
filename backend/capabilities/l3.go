@@ -22,6 +22,10 @@ type L3Capable interface {
 	RemoveDefaultRoute() [][]string
 	AddStaticRoute(dstCIDR, via, dev string) [][]string
 	RemoveStaticRoute(dstCIDR, via, dev string) [][]string
+	// A static neighbor maps an address on the interface to a MAC, for a
+	// next hop that answers no ARP or NDP.
+	AddStaticNeighbor(iface, address, mac string) [][]string
+	RemoveStaticNeighbor(iface, address string) [][]string
 	AddDNSNameserver(server string) [][]string
 	RemoveDNSNameserver(server string) [][]string
 	AddDNSSearch(domain string) [][]string
@@ -61,6 +65,14 @@ func init() {
 		actions.Action[L3Capable]{Type: "remove_static_route", Label: "Remove static route", Params: actions.P(actions.DstCIDR, actions.Gateway, actions.Device.Optional()), State: "static_route", Key: keyStaticRoute, Clears: true,
 			Run: func(c L3Capable, a types.ActionEntry) ([][]string, error) {
 				return c.RemoveStaticRoute(a.DstCIDR, a.Gateway, a.Device), nil
+			}},
+		actions.Action[L3Capable]{Type: "add_static_neighbor", Label: "Add static neighbor", Params: actions.P(actions.Iface, actions.Neighbor, actions.MAC), State: "static_neighbor", Key: keyStaticNeighbor,
+			Run: func(c L3Capable, a types.ActionEntry) ([][]string, error) {
+				return c.AddStaticNeighbor(a.Iface, a.Neighbor, a.MAC), nil
+			}},
+		actions.Action[L3Capable]{Type: "remove_static_neighbor", Label: "Remove static neighbor", Params: actions.P(actions.Iface, actions.Neighbor), State: "static_neighbor", Key: keyStaticNeighbor, Clears: true,
+			Run: func(c L3Capable, a types.ActionEntry) ([][]string, error) {
+				return c.RemoveStaticNeighbor(a.Iface, a.Neighbor), nil
 			}},
 		actions.Action[L3Capable]{Type: "add_dns_nameserver", Label: "Add DNS nameserver", Params: actions.P(actions.DNSServer), State: "dns_nameserver", Key: keyNameserver,
 			Run: func(c L3Capable, a types.ActionEntry) ([][]string, error) {

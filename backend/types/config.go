@@ -58,6 +58,9 @@ type ActionEntry struct {
 	Gateway string `json:"gateway,omitempty" example:"192.168.1.254"`
 	DstCIDR string `json:"dst_cidr,omitempty" example:"10.0.0.0/8"`
 	Device  string `json:"device,omitempty" example:"/dev/net/tun"`
+	// MAC is the address set_mac gives an interface, or the one a static
+	// neighbor (add_static_neighbor, keyed by iface and neighbor) resolves to.
+	MAC string `json:"mac,omitempty" example:"02:00:00:00:01:01"`
 	// Family picks IPv4 or IPv6 for an action that carries no address to
 	// tell them apart (remove_default_route); 4 when empty.
 	Family     string   `json:"family,omitempty" example:"6"`
@@ -121,7 +124,7 @@ type ActionEntry struct {
 
 	// BGP: the local AS of bgp_set_router, a neighbour by address with its
 	// AS, the interface or address the session binds to, and the TTL an
-	// eBGP session may cross.
+	// eBGP session may cross. Neighbor is also a static neighbour's address.
 	AS           int    `json:"as,omitempty" example:"65001"`
 	RemoteAS     int    `json:"remote_as,omitempty" example:"65002"`
 	Neighbor     string `json:"neighbor,omitempty" example:"10.0.0.2"`

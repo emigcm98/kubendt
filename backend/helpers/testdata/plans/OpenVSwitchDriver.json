@@ -20,6 +20,7 @@
       ["tc","qdisc","replace","dev","eth1","root","netem","delay","50ms","5ms","loss","1%","rate","10mbit"]
     ]
   },
+  "add_static_neighbor": { "unsupported": true },
   "add_static_route": { "unsupported": true },
   "add_vlan_subinterface": { "unsupported": true },
   "bgp_add_neighbor": { "unsupported": true },
@@ -136,6 +137,7 @@
     ]
   },
   "remove_ip": { "unsupported": true },
+  "remove_static_neighbor": { "unsupported": true },
   "remove_static_route": { "unsupported": true },
   "remove_vlan_subinterface": { "unsupported": true },
   "replace_ip": { "unsupported": true },
@@ -168,6 +170,12 @@
     ]
   },
   "set_ip": { "unsupported": true },
+  "set_mac": {
+    "executor": "kubectl",
+    "commands": [
+      ["ip","link","set","eth1","address","08:00:00:00:01:11"]
+    ]
+  },
   "setup_bridge": {
     "executor": "kubectl",
     "commands": [

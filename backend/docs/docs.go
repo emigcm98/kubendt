@@ -2956,7 +2956,7 @@ const docTemplate = `{
                     "example": "stub"
                 },
                 "as": {
-                    "description": "BGP: the local AS of bgp_set_router, a neighbour by address with its\nAS, the interface or address the session binds to, and the TTL an\neBGP session may cross.",
+                    "description": "BGP: the local AS of bgp_set_router, a neighbour by address with its\nAS, the interface or address the session binds to, and the TTL an\neBGP session may cross. Neighbor is also a static neighbour's address.",
                     "type": "integer",
                     "example": 65001
                 },
@@ -3084,6 +3084,11 @@ const docTemplate = `{
                 "level": {
                     "type": "string",
                     "example": "level-2"
+                },
+                "mac": {
+                    "description": "MAC is the address set_mac gives an interface, or the one a static\nneighbor (add_static_neighbor, keyed by iface and neighbor) resolves to.",
+                    "type": "string",
+                    "example": "02:00:00:00:01:01"
                 },
                 "match": {
                     "type": "string",

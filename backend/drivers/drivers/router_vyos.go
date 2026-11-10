@@ -282,6 +282,10 @@ func (VyOSRouterDriver) LinkUp(iface string) [][]string {
 	return [][]string{{"delete interfaces " + vyosIfacePath(iface) + " disable"}}
 }
 
+func (VyOSRouterDriver) SetMAC(iface, mac string) [][]string {
+	return [][]string{{"set interfaces " + vyosIfacePath(iface) + " mac " + mac}}
+}
+
 // ─── L3 ──────────────────────────────────────────────────────────────────────
 
 func (VyOSRouterDriver) SetIP(iface, cidr string) [][]string {
@@ -328,6 +332,15 @@ func (VyOSRouterDriver) AddStaticRoute(dstCIDR, via, dev string) [][]string {
 
 func (VyOSRouterDriver) RemoveStaticRoute(dstCIDR, via, dev string) [][]string {
 	return [][]string{{"delete " + vyosStaticRoute(dstCIDR) + dstCIDR + " next-hop " + via}}
+}
+
+// A static ARP entry hangs off the plain interface name, vifs included.
+func (VyOSRouterDriver) AddStaticNeighbor(iface, address, mac string) [][]string {
+	return [][]string{{"set protocols static arp interface " + iface + " address " + address + " mac " + mac}}
+}
+
+func (VyOSRouterDriver) RemoveStaticNeighbor(iface, address string) [][]string {
+	return [][]string{{"delete protocols static arp interface " + iface + " address " + address}}
 }
 
 func (VyOSRouterDriver) AddDNSNameserver(server string) [][]string {
