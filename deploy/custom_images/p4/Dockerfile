@@ -51,7 +51,5 @@ COPY --from=build /out/py /usr/local/lib/python3.12/dist-packages
 COPY --from=build /out/doc /usr/share/doc
 RUN ldconfig && simple_switch --version && python3 -c "import thrift, bm_runtime, sswitch_runtime"
 
-# The driver starts simple_switch on the pod's ports; the container only has
-# to stay up.
-ENTRYPOINT ["/usr/bin/tini", "--"]
-CMD ["sleep", "infinity"]
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/entrypoint.sh"]

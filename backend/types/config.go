@@ -71,6 +71,12 @@ type ActionEntry struct {
 	Protocols  string   `json:"protocols,omitempty" example:"OpenFlow13"`
 	DatapathID string   `json:"datapath_id,omitempty" example:"0x1"`
 	Flow       string   `json:"flow,omitempty" example:"priority=100,in_port=1,actions=drop"`
+	// P4: a table, one of its actions, the match fields and the action's
+	// parameters as simple_switch_CLI takes them, values separated by spaces.
+	Table  string `json:"table,omitempty" example:"MyIngress.ipv4_lpm"`
+	Action string `json:"action,omitempty" example:"MyIngress.ipv4_forward"`
+	Match  string `json:"match,omitempty" example:"10.0.2.2/32"`
+	Params string `json:"params,omitempty" example:"08:00:00:00:02:22 2"`
 	// File names a file of the namespace's file manager; the planner reads
 	// it into FileContent when the action runs, so history keeps the name.
 	File        string         `json:"file,omitempty" example:"faucet.yaml"`

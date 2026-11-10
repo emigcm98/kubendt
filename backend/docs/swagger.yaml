@@ -27,6 +27,9 @@ definitions:
     type: object
   types.ActionEntry:
     properties:
+      action:
+        example: MyIngress.ipv4_forward
+        type: string
       area_type:
         description: |-
           OSPF areas and authentication. AreaType is stub, totally-stub, nssa or
@@ -146,6 +149,9 @@ definitions:
       level:
         example: level-2
         type: string
+      match:
+        example: 10.0.2.2/32
+        type: string
       mode:
         example: rstp
         type: string
@@ -173,6 +179,9 @@ definitions:
       ospf_area:
         description: OSPF
         example: "0"
+        type: string
+      params:
+        example: 08:00:00:00:02:22 2
         type: string
       pool:
         example: 172.22.19.0/24
@@ -202,6 +211,12 @@ definitions:
         type: integer
       router_id:
         example: 10.0.255.1
+        type: string
+      table:
+        description: |-
+          P4: a table, one of its actions, the match fields and the action's
+          parameters as simple_switch_CLI takes them, values separated by spaces.
+        example: MyIngress.ipv4_lpm
         type: string
       tcparams:
         allOf:

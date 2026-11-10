@@ -63,7 +63,7 @@ func (OpenVSwitchDriver) SetupBridge(bridge string, ifaces []string) [][]string 
 // which a controller's configuration no longer matches.
 func ovsAddPort(bridge, iface string) []string {
 	cmd := []string{"ovs-vsctl", "--may-exist", "add-port", bridge, iface, "--", "--id=@q", "create", "qos", "type=linux-noop", "--", "set", "port", iface, "qos=@q"}
-	if n := ofportFromName(iface); n != "" {
+	if n := portNumberFromName(iface); n != "" {
 		cmd = append(cmd, "--", "set", "interface", iface, "ofport_request="+n)
 	}
 	return cmd
@@ -71,9 +71,9 @@ func ovsAddPort(bridge, iface string) []string {
 
 var ifaceNumberRe = regexp.MustCompile(`([0-9]+)$`)
 
-// ofportFromName is the trailing number of the interface name within what
-// OVS accepts for a request, or empty.
-func ofportFromName(iface string) string {
+// portNumberFromName is the trailing number of the interface name, eth3 is
+// 3, within what OVS and BMv2 accept as a port number, or empty.
+func portNumberFromName(iface string) string {
 	m := ifaceNumberRe.FindStringSubmatch(iface)
 	if m == nil {
 		return ""

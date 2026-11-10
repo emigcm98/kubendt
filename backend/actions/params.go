@@ -103,6 +103,10 @@ var (
 	Flow          = Param{Name: "flow", Kind: KindText, Required: true}
 	ConfigFile    = Param{Name: "file", Kind: KindFile, Required: true}
 	DatapathID    = Param{Name: "datapath_id", Kind: KindText, Required: true}
+	Table         = Param{Name: "table", Kind: KindText, Required: true}
+	P4Action      = Param{Name: "action", Kind: KindText, Required: true}
+	Match         = Param{Name: "match", Kind: KindText, Required: true}
+	ActionParams  = Param{Name: "params", Kind: KindText, Required: false}
 )
 
 // ProtectedInterface is the pod's cluster interface. An action on it would
