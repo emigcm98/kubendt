@@ -135,6 +135,58 @@ func TestP4PortAdd(t *testing.T) {
 	}
 }
 
+const p4McastSample = `Obtaining JSON from switch...
+Done
+Control utility for runtime P4 table manipulation
+RuntimeCmd: ==========
+MC ENTRIES
+**********
+mgrp(1)
+  -> (L1h=0, rid=1) -> (ports=[2, 3], lags=[])
+mgrp(7)
+  -> (L1h=2, rid=7) -> (ports=[1], lags=[])
+  -> (L1h=3, rid=7) -> (ports=[2, 3], lags=[])
+==========
+LAGS
+==========
+RuntimeCmd: 
+`
+
+func TestParseP4MulticastGroups(t *testing.T) {
+	want := capabilities.Rows{
+		{"group": "1", "ports": "2, 3", "handle": "0"},
+		{"group": "7", "ports": "1", "handle": "2"},
+		{"group": "7", "ports": "2, 3", "handle": "3"},
+	}
+	if got := parseP4MulticastGroups(p4McastSample); !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v\nwant %v", got, want)
+	}
+	if got := parseP4MulticastGroups("RuntimeCmd: ==========\nMC ENTRIES\n==========\n"); len(got) != 0 {
+		t.Errorf("no groups, got %v", got)
+	}
+}
+
+func TestP4MulticastGroup(t *testing.T) {
+	var d P4SwitchDriver
+	add := d.AddMulticastGroup(1, []int{2, 3})
+	if len(add) != 1 {
+		t.Fatalf("want one command, got %v", add)
+	}
+	// The group created if new, its nodes dropped, one node with the ports
+	// created and associated by the handle the CLI answers.
+	for _, want := range []string{"mc_mgrp_create 1", "mc_node_dissociate 1 %s", "mc_node_destroy %s", "mc_node_create 1 2 3", "created with handle", "mc_node_associate 1 %s", "grep -q"} {
+		if !strings.Contains(add[0][2], want) {
+			t.Errorf("add lacks %q: %s", want, add[0][2])
+		}
+	}
+	rm := d.RemoveMulticastGroup(1)
+	for _, want := range []string{"grep -qx 'mgrp(1)'", "no multicast group 1", "mc_node_destroy", "mc_mgrp_destroy 1"} {
+		if !strings.Contains(rm[0][2], want) {
+			t.Errorf("remove lacks %q: %s", want, rm[0][2])
+		}
+	}
+}
+
 func TestP4EntryLine(t *testing.T) {
 	cases := []struct {
 		table, action, match, params string

@@ -13,6 +13,7 @@
   },
   "add_flow": { "unsupported": true },
   "add_interface_to_bridge": { "unsupported": true },
+  "add_multicast_group": { "unsupported": true },
   "add_qdisc": {
     "executor": "tc_universal",
     "commands": [
@@ -501,6 +502,7 @@
       ["delete interfaces ethernet eth1 address 10.0.0.1/24"]
     ]
   },
+  "remove_multicast_group": { "unsupported": true },
   "remove_static_neighbor": {
     "executor": "vyos_api_apply",
     "commands": [

@@ -8,6 +8,7 @@
       ["configure vlan br0 add ports 1 untagged"]
     ]
   },
+  "add_multicast_group": { "unsupported": true },
   "add_qdisc": {
     "executor": "tc_universal",
     "commands": [
@@ -122,6 +123,7 @@
     ]
   },
   "remove_ip": { "unsupported": true },
+  "remove_multicast_group": { "unsupported": true },
   "remove_static_neighbor": { "unsupported": true },
   "remove_static_route": { "unsupported": true },
   "remove_vlan_subinterface": { "unsupported": true },

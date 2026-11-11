@@ -89,6 +89,8 @@ var (
 	RemoteAS      = Param{Name: "remote_as", Kind: KindNumber, Required: true}
 	Neighbor      = Param{Name: "neighbor", Kind: KindIP, Required: true}
 	MAC           = Param{Name: "mac", Kind: KindMAC, Required: true}
+	Group         = Param{Name: "group", Kind: KindNumber, Required: true}
+	Ports         = Param{Name: "ports", Kind: KindNumberList, Required: true}
 	UpdateSource  = Param{Name: "update_source", Kind: KindText, Required: false}
 	Multihop      = Param{Name: "multihop", Kind: KindNumber, Required: false}
 	NET           = Param{Name: "net", Kind: KindText, Required: true}

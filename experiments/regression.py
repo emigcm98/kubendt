@@ -595,9 +595,25 @@ def ex11():
             ex.check("sixteen flows spread over both uplinks of s1", rc == 0 and d2 > 200 and d3 > 200, f"rc {rc}, eth2 +{d2}, eth3 +{d3} {err[-120:] if rc else ''}")
         else:
             ex.note("no toolboxes on h1 and h3, the flow spread was not measured")
+        # Third part: the three switches on mcast.p4 with a group each, a tree over the triangle; a host's echoes to 224.1.1.1 reach the other two and never come back round.
+        configure(ex, f"{d}/network_conf_mcast.json", label="configure (mcast.p4 on the three switches and a group each)")
+        ok, det, w = retry(inspect_has(ex.ns, "s1-0", "p4_multicast_groups", "ports", "1, 2, 3"), 30); ex.check("s1 holds group 1 with its three ports", ok, det, w)
+        ok, det, w = retry(inspect_has(ex.ns, "s3-0", "p4_entries", "action", "set_multicast_group"), 30); ex.check("s3 maps 224.0.0.0/4 to the group", ok, det, w)
+        ok, det, w = retry(ping(ex.ns, "h1-0", "10.0.3.3"), 60); ex.check("h1 ping h3 on mcast.p4 (the ecmp entries kept)", ok, det, w)
+        rx = lambda pod: (counters_of(ex.ns, pod).get("eth1") or {}).get("rx_packets", 0)
+        def mcast_from(src, label):
+            before = {h: rx(h) for h in ("h1-0", "h2-0", "h3-0")}
+            C.kubectl(["-n", ex.ns, "exec", src, "--", "ping", "-c", "5", "-W", "1", "224.1.1.1"], 30)  # no replies by design
+            got = {h: rx(h) - before[h] for h in before}
+            others = [h for h in got if h != src]
+            ex.check(label, all(got[h] >= 5 for h in others) and got[src] < 3, ", ".join(f"{h} +{got[h]}" for h in got))
+        mcast_from("h1-0", "h1's five echoes to 224.1.1.1 reach h2 and h3")
+        mcast_from("h3-0", "h3's reach h1 and h2, none comes back to h3")
         if restart(ex, "s1-0"):
-            ok, det, w = retry(inspect_count(ex.ns, "s1-0", "p4_entries", "match", "ecmp_select", 2), 120); ex.check("ecmp.p4 and its entries are back on s1 after the restart (replay)", ok, det, w)
+            ok, det, w = retry(inspect_count(ex.ns, "s1-0", "p4_entries", "match", "ecmp_select", 2), 120); ex.check("mcast.p4 and its entries are back on s1 after the restart (replay)", ok, det, w)
+            ok, det, w = retry(inspect_has(ex.ns, "s1-0", "p4_multicast_groups", "ports", "1, 2, 3"), 60); ex.check("s1's multicast group is back after the restart", ok, det, w)
             ok, det, w = retry(ping(ex.ns, "h1-0", "10.0.3.3"), 120); ex.check("h1 ping h3 after s1's restart", ok, det, w)
+            mcast_from("h1-0", "h1's echoes to 224.1.1.1 reach h2 and h3 after the restart")
     teardown(ex); return ex
 
 ALL = {"1": ex1, "2": ex2, "3": ex3, "4": ex4, "5": ex5, "6": ex6, "7": ex7, "8": ex8, "9": ex9, "10": ex10, "11": ex11}

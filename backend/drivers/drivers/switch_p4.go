@@ -182,7 +182,46 @@ func (P4SwitchDriver) TableSetDefault(table, action, params string) [][]string {
 	return [][]string{p4cli(strings.TrimRight("table_set_default "+table+" "+action+" "+params, " "))}
 }
 
+// mcNodesOf prints the node handles of a group out of mc_dump, for the
+// shell: the group's line, then every node line under it.
+func mcNodesOf(group int) string {
+	return "printf 'mc_dump\\n' | " + p4CLI + " 2>/dev/null | sed 's/^RuntimeCmd: //' | awk -v g='mgrp(" + strconv.Itoa(group) + ")' '/^mgrp\\(/{on=($0==g)} on && /L1h=/{sub(/.*L1h=/, \"\"); sub(/,.*/, \"\"); print}'"
+}
+
+func mcDropNodes(group int) string {
+	g := strconv.Itoa(group)
+	return "for h in $(" + mcNodesOf(group) + "); do printf 'mc_node_dissociate " + g + " %s\\nmc_node_destroy %s\\n' \"$h\" \"$h\" | " + p4CLI + " >/dev/null 2>&1; done"
+}
+
+// AddMulticastGroup makes the group copy to exactly these ports: the group
+// is created if new (the CLI says nothing for one that exists), its nodes
+// are dropped, and one node with the ports is created and associated, its
+// handle read from the CLI's answer. The node's replication id is the
+// group's number, so the egress can tell a copy from a unicast packet.
+func (P4SwitchDriver) AddMulticastGroup(group int, ports []int) [][]string {
+	g := strconv.Itoa(group)
+	ps := make([]string, len(ports))
+	for i, p := range ports {
+		ps[i] = strconv.Itoa(p)
+	}
+	return [][]string{{"sh", "-c",
+		"printf 'mc_mgrp_create " + g + "\\n' | " + p4CLI + " >/dev/null 2>&1; " + mcDropNodes(group) + "; " +
+			"out=$(printf 'mc_node_create " + g + " " + strings.Join(ps, " ") + "\\n' | " + p4CLI + " 2>&1); " +
+			"h=$(printf '%s\\n' \"$out\" | sed -n 's/.*created with handle \\([0-9]*\\).*/\\1/p' | head -1); " +
+			"[ -n \"$h\" ] || { printf '%s\\n' \"$out\" | grep -v '" + p4CLINoiseExpr + "' >&2; exit 1; }; " +
+			p4cliShell("printf 'mc_node_associate "+g+" %s\\n' \"$h\"")}}
+}
+
+func (P4SwitchDriver) RemoveMulticastGroup(group int) [][]string {
+	g := strconv.Itoa(group)
+	return [][]string{{"sh", "-c",
+		"printf 'mc_dump\\n' | " + p4CLI + " 2>/dev/null | sed 's/^RuntimeCmd: //' | grep -qx 'mgrp(" + g + ")' || { echo 'no multicast group " + g + " on the switch' >&2; exit 1; }; " +
+			mcDropNodes(group) + "; " + p4cliShell("printf 'mc_mgrp_destroy "+g+"\\n'")}}
+}
+
 var (
+	p4GroupRe = regexp.MustCompile(`^mgrp\((\d+)\)$`)
+	p4NodeRe  = regexp.MustCompile(`L1h=(\d+),.*ports=\[([^\]]*)\]`)
 	p4PortRe  = regexp.MustCompile(`^\s*(\d+)\s+(\S+)\s+(UP|DOWN)\b`)
 	p4TableRe = regexp.MustCompile(`^(?:RuntimeCmd: )?([A-Za-z_][A-Za-z0-9_.]*)\s+\[(.*)\]\s*$`)
 	p4EntryRe = regexp.MustCompile(`^(?:RuntimeCmd: )?Dumping entry 0x([0-9a-fA-F]+)`)
@@ -204,6 +243,32 @@ func parseP4Ports(text string) capabilities.Rows {
 		if m := p4PortRe.FindStringSubmatch(line); m != nil {
 			// A port on a VXLAN link reads its veth, named after the interface.
 			rows = append(rows, map[string]string{"port": m[1], "iface": strings.TrimSuffix(m[2], "-p4"), "status": strings.ToLower(m[3])})
+		}
+	}
+	return rows
+}
+
+func (P4SwitchDriver) P4MulticastGroups(namespace, pod string) (capabilities.Rows, error) {
+	out, err := executor.ExecAndGet(namespace, pod, p4read("mc_dump"))
+	if err != nil {
+		return nil, err
+	}
+	return parseP4MulticastGroups(string(out)), nil
+}
+
+// parseP4MulticastGroups reads mc_dump: a "mgrp(1)" line, then one line per
+// node with its handle, replication id and ports.
+func parseP4MulticastGroups(text string) capabilities.Rows {
+	rows := capabilities.Rows{}
+	group := ""
+	for _, raw := range strings.Split(text, "\n") {
+		line := strings.TrimPrefix(strings.TrimSpace(raw), "RuntimeCmd: ")
+		if m := p4GroupRe.FindStringSubmatch(line); m != nil {
+			group = m[1]
+			continue
+		}
+		if m := p4NodeRe.FindStringSubmatch(line); m != nil && group != "" {
+			rows = append(rows, map[string]string{"group": group, "ports": strings.TrimSpace(m[2]), "handle": m[1]})
 		}
 	}
 	return rows
