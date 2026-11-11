@@ -13,6 +13,7 @@
       ["ovs-vsctl","--may-exist","add-port","br0","eth1","--","--id=@q","create","qos","type=linux-noop","--","set","port","eth1","qos=@q","--","set","interface","eth1","ofport_request=1"]
     ]
   },
+  "add_multicast_group": { "unsupported": true },
   "add_qdisc": {
     "executor": "tc_universal",
     "commands": [
@@ -137,6 +138,7 @@
     ]
   },
   "remove_ip": { "unsupported": true },
+  "remove_multicast_group": { "unsupported": true },
   "remove_static_neighbor": { "unsupported": true },
   "remove_static_route": { "unsupported": true },
   "remove_vlan_subinterface": { "unsupported": true },

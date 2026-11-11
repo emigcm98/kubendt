@@ -130,6 +130,11 @@ definitions:
       gateway:
         example: 192.168.1.254
         type: string
+      group:
+        description: Group and Ports are a P4 multicast group and the ports it copies
+          to.
+        example: 1
+        type: integer
       hello_interval:
         example: 10
         type: integer
@@ -192,6 +197,10 @@ definitions:
       pool:
         example: 172.22.19.0/24
         type: string
+      ports:
+        items:
+          type: integer
+        type: array
       prefix:
         description: |-
           NAT64: the IPv6 prefix that stands for the IPv4 internet (the well

@@ -3052,6 +3052,11 @@
                     "type": "string",
                     "example": "192.168.1.254"
                 },
+                "group": {
+                    "description": "Group and Ports are a P4 multicast group and the ports it copies to.",
+                    "type": "integer",
+                    "example": 1
+                },
                 "hello_interval": {
                     "type": "integer",
                     "example": 10
@@ -3127,6 +3132,12 @@
                 "pool": {
                     "type": "string",
                     "example": "172.22.19.0/24"
+                },
+                "ports": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
                 },
                 "prefix": {
                     "description": "NAT64: the IPv6 prefix that stands for the IPv4 internet (the well\nknown 64:ff9b::/96 by default) and the IPv4 pool the translator maps\nthe IPv6 hosts onto.",

@@ -13,6 +13,7 @@
   },
   "add_flow": { "unsupported": true },
   "add_interface_to_bridge": { "unsupported": true },
+  "add_multicast_group": { "unsupported": true },
   "add_qdisc": {
     "executor": "tc_universal",
     "commands": [
@@ -169,6 +170,7 @@
       ["sh","-c","! ip -o addr show dev eth1 | grep -qF ' 10.0.0.1/24 ' || ip addr del 10.0.0.1/24 dev eth1"]
     ]
   },
+  "remove_multicast_group": { "unsupported": true },
   "remove_static_neighbor": {
     "executor": "kubectl",
     "commands": [
