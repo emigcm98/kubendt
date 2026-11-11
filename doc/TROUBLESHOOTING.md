@@ -58,10 +58,6 @@ A link between two workers carries the lab's packets inside a VXLAN flow that le
 
 The response says `KUBENDT_LINK_MTU=N does not fit link a:eth1 ↔ b:eth1: worker X carries at most M over VXLAN`, or the same for a link that declares its own `mtu`, and a deploy rolls back. The two pods landed on different workers, so the link is a VXLAN tunnel, and the value asked for is more than the worker's NIC carries minus the 50 bytes of the encapsulation. Lower the variable or the link's `mtu` to what the message names, or raise the underlay: section 11 of the [cluster guide](How-to-deploy-a-K8s-cluster.md) explains the default of 1450 and the jumbo path. When the default itself does not fit, the backend lowers it with a warning in the response instead of failing, so this only happens with a value you set.
 
-## TCP through a P4 switch crawls while pings and UDP are fine
-
-A throughput test through a BMv2 switch gives a few Mbit/s with retransmissions every second, pings and UDP cross normally, and the same switch forwards hundreds of Mbit/s when its neighbours sit on its worker. One of its links crosses workers (the pods' placement in the namespace view), and the worker NIC's receive offload merges the TCP segments arriving through the VXLAN tunnel into frames larger than the MTU, which a switch working through packet sockets cannot send on. Turn GRO off on the worker NICs, section 12 of the [cluster guide](How-to-deploy-a-K8s-cluster.md), or keep the switch and its neighbours on one worker with `nodeName`.
-
 ## An action fails with "'X' is not in the pod's image"
 
 The command behind the action needs a program the image does not ship and the toolbox does not carry, `vtysh` on an image that is not FRR for instance. The netns tools (`ip`, `bridge`, `tc`, `iptables`) never give this: when the image lacks them the action runs from the pod's toolbox. For anything else, add the program to the image or install it at startup through the node's `commands`.

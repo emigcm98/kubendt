@@ -486,31 +486,3 @@ ping -c 3 -M do -s 8972 <other worker>   # 8972 = 9000 - 28
 ```
 
 Then set `KUBENDT_LINK_MTU=8950` and redeploy. Most public clouds do not allow jumbo between nodes and some carry less than 1500 to begin with; the default and the warning handle those.
-
-## 12. Optional: GRO on the worker NICs for P4 switches
-
-Only needed when a P4 switch (BMv2, the `kubendt-p4` image) has links that cross workers and TCP throughput through it matters. Skip it otherwise.
-
-A worker NIC with generic receive offload (GRO, on by default) merges the TCP segments of a flow that arrive together into one frame of several segments and hands that frame up the stack; the kernel splits it again wherever it has to leave through a device that cannot carry it, so a bridge, a router or a host in a pod never notices. It does the same with the segments inside a VXLAN tunnel, which is what a link between two workers is. BMv2 reads and writes its ports through packet sockets, outside the kernel's stack, so it receives the merged frame as it is and cannot send a frame larger than the port's MTU: every merged frame is lost. Pings and UDP cross untouched, while TCP through a switch behind a VXLAN link crawls at a few Mbit/s with constant retransmissions, and the same switch forwards hundreds of Mbit/s over veth links (its neighbours on its own worker). Any dataplane in user space behaves alike.
-
-Turn it off on the NIC the workers talk through, on every worker that runs P4 switches:
-
-```bash
-sudo ethtool -K ens18 gro off
-sudo ethtool -k ens18 | grep generic-receive-offload
-```
-
-The setting does not survive a reboot. On Ubuntu with netplan, an overlay next to the cloud-init file keeps it (netplan 0.104 or later):
-
-```yaml
-# /etc/netplan/60-kubendt-offload.yaml
-network:
-  version: 2
-  ethernets:
-    ens18:
-      generic-receive-offload: false
-```
-
-then `sudo netplan apply`. With NetworkManager, `nmcli connection modify <connection> ethtool.feature-gro off` and bring the connection up again.
-
-What it costs: GRO saves CPU on the receiving side, and that only shows on a TCP flow between two kernel endpoints at several Gbit/s across workers, a host talking to another host with nothing in between. Nothing a software router or switch forwards gets near that rate, so the examples are unaffected. The alternative that leaves the workers alone is to place the switch and its neighbours on one worker with `nodeName` on the nodes of the topology, so its links are veths.

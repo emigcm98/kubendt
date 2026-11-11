@@ -119,6 +119,7 @@ def iperf_check(ex, label, path, server_pod=None):
     if ok and bps < 1e6:
         ex.note(f"{label}: {summary.get('sentBytes', 0)} bytes sent, {summary.get('retransmits')} retransmissions; "
                 "full-size segments dropped on this placement (MTU, PLAN section 7)")
+    return bps if ok else 0
 
 
 def deploy(ex, topo_path, label="deploy"):
@@ -560,7 +561,9 @@ def ex11():
         ok, det, w = retry(ping(ex.ns, "h1-0", "10.0.3.3"), 60); ex.check("h1 ping h3 (s1, s3)", ok, det, w)
         ok, det, w = retry(ping(ex.ns, "h2-0", "10.0.3.3"), 60); ex.check("h2 ping h3 (s2, s3)", ok, det, w)
         ok, det, w = retry(contains(ex.ns, "h1-0", "ping -c 1 -W 2 10.0.3.3", "ttl=62"), 30); ex.check("two P4 hops on the way (ttl 64 to 62)", ok, det, w)
-        iperf_check(ex, "iperf h1 to h3 through two switches", f"/iperf/run/{ex.ns}/h1-0?dest=10.0.3.3&duration=5")
+        bps = iperf_check(ex, "iperf h1 to h3 through two switches", f"/iperf/run/{ex.ns}/h1-0?dest=10.0.3.3&duration=5")
+        # Software numbers, so a low floor; the merged frames of a link across workers used to leave a few Mbit/s.
+        ex.check("TCP crosses two switches at more than 50 Mbit/s", bps > 50e6, f"{bps / 1e6:.1f} Mbit/s")
         # One entry replaced on s1 and h1's traffic to h3 goes round through s2; s1's counters tell which uplink carried it.
         tx = lambda c, i: (c.get(i) or {}).get("tx_packets", 0)
         before = counters_of(ex.ns, "s1-0")

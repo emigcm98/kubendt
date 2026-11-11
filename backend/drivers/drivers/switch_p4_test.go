@@ -17,6 +17,7 @@ RuntimeCmd:   port #       iface name       status  extra info
     1              eth1           UP    
     2              eth2           UP    
     3              eth3         DOWN    
+    4           eth4-p4           UP    
 RuntimeCmd: 
 `
 
@@ -64,6 +65,7 @@ func TestParseP4Ports(t *testing.T) {
 		{"port": "1", "iface": "eth1", "status": "up"},
 		{"port": "2", "iface": "eth2", "status": "up"},
 		{"port": "3", "iface": "eth3", "status": "down"},
+		{"port": "4", "iface": "eth4", "status": "up"},
 	}
 	if got := parseP4Ports(p4PortsSample); !reflect.DeepEqual(got, want) {
 		t.Errorf("got %v\nwant %v", got, want)
@@ -96,13 +98,26 @@ func TestP4PortAdd(t *testing.T) {
 	var d P4SwitchDriver
 	cmds := d.AddInterfaceToBridge("eth3", "sw")
 	if len(cmds) != 3 {
-		t.Fatalf("want offloads, remove and add, got %d commands: %v", len(cmds), cmds)
+		t.Fatalf("want wrap, remove and add, got %d commands: %v", len(cmds), cmds)
 	}
-	if !strings.Contains(cmds[0][2], "ethtool -K eth3") || !strings.Contains(cmds[1][2], "port_remove 3") || !strings.Contains(cmds[2][2], "port_add eth3 3") {
-		t.Errorf("unexpected commands: %v", cmds)
+	wrap := cmds[0][2]
+	// The veth pair and its redirects only for a VXLAN link, the pair of a
+	// previous wiring gone first either way.
+	for _, want := range []string{"ethtool -K eth3 ", "ip link del eth3-tc", "grep -qw vxlan || exit 0", "type veth peer name eth3-p4", "redirect dev eth3-tc", "dev eth3-tc ingress", "redirect dev eth3"} {
+		if !strings.Contains(wrap, want) {
+			t.Errorf("wrap lacks %q: %s", want, wrap)
+		}
+	}
+	if !strings.Contains(cmds[1][2], "port_remove 3") {
+		t.Errorf("unexpected remove: %v", cmds[1])
+	}
+	// The port is the veth when the wrap left one, the interface otherwise.
+	add := cmds[2][2]
+	if !strings.Contains(add, "[ -e /sys/class/net/eth3-p4 ] && p=eth3-p4") || !strings.Contains(add, `printf 'port_add %s 3\n' "$p"`) {
+		t.Errorf("unexpected add: %s", add)
 	}
 	// The CLI exits 0 on its own errors, so the add checks the output itself.
-	if !strings.Contains(cmds[2][2], "grep -q") {
+	if !strings.Contains(add, "grep -q") {
 		t.Errorf("port_add does not check the CLI's output: %v", cmds[2])
 	}
 	if bad := d.AddInterfaceToBridge("tap", "sw"); !strings.Contains(bad[0][2], "exit 1") {
@@ -110,6 +125,13 @@ func TestP4PortAdd(t *testing.T) {
 	}
 	if n := len(d.SetupBridge("sw", []string{"eth1", "eth2"})); n != 6 {
 		t.Errorf("setup_bridge of two ports: want 6 commands, got %d", n)
+	}
+	rm := d.RemoveInterfaceFromBridge("eth3", "sw")
+	if len(rm) != 2 || !strings.Contains(rm[0][2], "port_remove 3") || !strings.Contains(rm[1][2], "ip link del eth3-tc") {
+		t.Errorf("remove must drop the port and its pair: %v", rm)
+	}
+	if down := d.TeardownBridge("sw"); len(down) != 2 || !strings.Contains(down[1][2], "/sys/class/net/*-tc") {
+		t.Errorf("teardown must drop the pairs: %v", down)
 	}
 }
 
