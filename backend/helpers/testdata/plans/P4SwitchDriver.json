@@ -5,9 +5,9 @@
   "add_interface_to_bridge": {
     "executor": "kubectl",
     "commands": [
-      ["sh","-c","ethtool -K eth1 tso off gso off gro off tx off rx off sg off \u003e/dev/null 2\u003e\u00261; true"],
+      ["sh","-c","ethtool -K eth1 tso off gso off gro off tx off rx off sg off \u003e/dev/null 2\u003e\u00261; tc qdisc del dev eth1 ingress 2\u003e/dev/null; ip link del eth1-tc 2\u003e/dev/null; true; ip -d link show eth1 | grep -qw vxlan || exit 0; set -e; mtu=$(cat /sys/class/net/eth1/mtu); ip link add eth1-tc type veth peer name eth1-p4; for d in eth1-tc eth1-p4; do ethtool -K $d tso off gso off gro off tx off rx off sg off \u003e/dev/null 2\u003e\u00261 || true; ip link set $d mtu $mtu promisc on up; done; ip link set eth1 promisc on; tc qdisc add dev eth1 ingress; tc filter add dev eth1 ingress protocol all u32 match u8 0 0 action mirred egress redirect dev eth1-tc; tc qdisc add dev eth1-tc ingress; tc filter add dev eth1-tc ingress protocol all u32 match u8 0 0 action mirred egress redirect dev eth1"],
       ["sh","-c","printf 'port_remove 1\\n' | simple_switch_CLI --thrift-port 9090 \u003e/dev/null 2\u003e\u00261; true"],
-      ["sh","-c","out=$(printf '%s\\n' 'port_add eth1 1' | simple_switch_CLI --thrift-port 9090 2\u003e\u00261); printf '%s\\n' \"$out\" | grep -v 'Obtaining JSON\\|^Done$\\|Control utility'; ! printf '%s\\n' \"$out\" | grep -q 'Invalid \\|Error\\|Could not connect'"]
+      ["sh","-c","p=eth1; [ -e /sys/class/net/eth1-p4 ] \u0026\u0026 p=eth1-p4; out=$(printf 'port_add %s 1\\n' \"$p\" | simple_switch_CLI --thrift-port 9090 2\u003e\u00261); printf '%s\\n' \"$out\" | grep -v 'Obtaining JSON\\|^Done$\\|Control utility'; ! printf '%s\\n' \"$out\" | grep -q 'Invalid \\|Error\\|Could not connect'"]
     ]
   },
   "add_qdisc": {
@@ -126,7 +126,8 @@
   "remove_interface_from_bridge": {
     "executor": "kubectl",
     "commands": [
-      ["sh","-c","out=$(printf '%s\\n' 'port_remove 1' | simple_switch_CLI --thrift-port 9090 2\u003e\u00261); printf '%s\\n' \"$out\" | grep -v 'Obtaining JSON\\|^Done$\\|Control utility'; ! printf '%s\\n' \"$out\" | grep -q 'Invalid \\|Error\\|Could not connect'"]
+      ["sh","-c","out=$(printf '%s\\n' 'port_remove 1' | simple_switch_CLI --thrift-port 9090 2\u003e\u00261); printf '%s\\n' \"$out\" | grep -v 'Obtaining JSON\\|^Done$\\|Control utility'; ! printf '%s\\n' \"$out\" | grep -q 'Invalid \\|Error\\|Could not connect'"],
+      ["sh","-c","tc qdisc del dev eth1 ingress 2\u003e/dev/null; ip link del eth1-tc 2\u003e/dev/null; true"]
     ]
   },
   "remove_ip": { "unsupported": true },
@@ -157,12 +158,12 @@
   "setup_bridge": {
     "executor": "kubectl",
     "commands": [
-      ["sh","-c","ethtool -K eth1 tso off gso off gro off tx off rx off sg off \u003e/dev/null 2\u003e\u00261; true"],
+      ["sh","-c","ethtool -K eth1 tso off gso off gro off tx off rx off sg off \u003e/dev/null 2\u003e\u00261; tc qdisc del dev eth1 ingress 2\u003e/dev/null; ip link del eth1-tc 2\u003e/dev/null; true; ip -d link show eth1 | grep -qw vxlan || exit 0; set -e; mtu=$(cat /sys/class/net/eth1/mtu); ip link add eth1-tc type veth peer name eth1-p4; for d in eth1-tc eth1-p4; do ethtool -K $d tso off gso off gro off tx off rx off sg off \u003e/dev/null 2\u003e\u00261 || true; ip link set $d mtu $mtu promisc on up; done; ip link set eth1 promisc on; tc qdisc add dev eth1 ingress; tc filter add dev eth1 ingress protocol all u32 match u8 0 0 action mirred egress redirect dev eth1-tc; tc qdisc add dev eth1-tc ingress; tc filter add dev eth1-tc ingress protocol all u32 match u8 0 0 action mirred egress redirect dev eth1"],
       ["sh","-c","printf 'port_remove 1\\n' | simple_switch_CLI --thrift-port 9090 \u003e/dev/null 2\u003e\u00261; true"],
-      ["sh","-c","out=$(printf '%s\\n' 'port_add eth1 1' | simple_switch_CLI --thrift-port 9090 2\u003e\u00261); printf '%s\\n' \"$out\" | grep -v 'Obtaining JSON\\|^Done$\\|Control utility'; ! printf '%s\\n' \"$out\" | grep -q 'Invalid \\|Error\\|Could not connect'"],
-      ["sh","-c","ethtool -K eth2 tso off gso off gro off tx off rx off sg off \u003e/dev/null 2\u003e\u00261; true"],
+      ["sh","-c","p=eth1; [ -e /sys/class/net/eth1-p4 ] \u0026\u0026 p=eth1-p4; out=$(printf 'port_add %s 1\\n' \"$p\" | simple_switch_CLI --thrift-port 9090 2\u003e\u00261); printf '%s\\n' \"$out\" | grep -v 'Obtaining JSON\\|^Done$\\|Control utility'; ! printf '%s\\n' \"$out\" | grep -q 'Invalid \\|Error\\|Could not connect'"],
+      ["sh","-c","ethtool -K eth2 tso off gso off gro off tx off rx off sg off \u003e/dev/null 2\u003e\u00261; tc qdisc del dev eth2 ingress 2\u003e/dev/null; ip link del eth2-tc 2\u003e/dev/null; true; ip -d link show eth2 | grep -qw vxlan || exit 0; set -e; mtu=$(cat /sys/class/net/eth2/mtu); ip link add eth2-tc type veth peer name eth2-p4; for d in eth2-tc eth2-p4; do ethtool -K $d tso off gso off gro off tx off rx off sg off \u003e/dev/null 2\u003e\u00261 || true; ip link set $d mtu $mtu promisc on up; done; ip link set eth2 promisc on; tc qdisc add dev eth2 ingress; tc filter add dev eth2 ingress protocol all u32 match u8 0 0 action mirred egress redirect dev eth2-tc; tc qdisc add dev eth2-tc ingress; tc filter add dev eth2-tc ingress protocol all u32 match u8 0 0 action mirred egress redirect dev eth2"],
       ["sh","-c","printf 'port_remove 2\\n' | simple_switch_CLI --thrift-port 9090 \u003e/dev/null 2\u003e\u00261; true"],
-      ["sh","-c","out=$(printf '%s\\n' 'port_add eth2 2' | simple_switch_CLI --thrift-port 9090 2\u003e\u00261); printf '%s\\n' \"$out\" | grep -v 'Obtaining JSON\\|^Done$\\|Control utility'; ! printf '%s\\n' \"$out\" | grep -q 'Invalid \\|Error\\|Could not connect'"]
+      ["sh","-c","p=eth2; [ -e /sys/class/net/eth2-p4 ] \u0026\u0026 p=eth2-p4; out=$(printf 'port_add %s 2\\n' \"$p\" | simple_switch_CLI --thrift-port 9090 2\u003e\u00261); printf '%s\\n' \"$out\" | grep -v 'Obtaining JSON\\|^Done$\\|Control utility'; ! printf '%s\\n' \"$out\" | grep -q 'Invalid \\|Error\\|Could not connect'"]
     ]
   },
   "stp_disable": { "unsupported": true },
@@ -190,7 +191,8 @@
   "teardown_bridge": {
     "executor": "kubectl",
     "commands": [
-      ["sh","-c","for p in $(printf 'show_ports\\n' | simple_switch_CLI --thrift-port 9090 2\u003e/dev/null | awk '/^ +[0-9]+ +/{print $1}'); do printf 'port_remove %s\\n' \"$p\"; done | simple_switch_CLI --thrift-port 9090 \u003e/dev/null 2\u003e\u00261; true"]
+      ["sh","-c","for p in $(printf 'show_ports\\n' | simple_switch_CLI --thrift-port 9090 2\u003e/dev/null | awk '/^ +[0-9]+ +/{print $1}'); do printf 'port_remove %s\\n' \"$p\"; done | simple_switch_CLI --thrift-port 9090 \u003e/dev/null 2\u003e\u00261; true"],
+      ["sh","-c","for t in /sys/class/net/*-tc; do [ -e \"$t\" ] || continue; e=${t##*/}; e=${e%-tc}; tc qdisc del dev $e ingress 2\u003e/dev/null; ip link del $e-tc 2\u003e/dev/null; done; true"]
     ]
   },
   "vlan_clear_port": { "unsupported": true },
