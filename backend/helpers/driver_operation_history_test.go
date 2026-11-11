@@ -186,3 +186,26 @@ func TestRowsOnStatesClearedWith(t *testing.T) {
 		t.Errorf("rows taken down with IS-IS stopping: %v keyed=%v", got, keyed)
 	}
 }
+
+func TestClearsStateOf(t *testing.T) {
+	entry := types.ActionEntry{Type: "table_add", Table: "MyIngress.ipv4_lpm", Action: "MyIngress.ipv4_forward", Match: "10.0.1.1/32", Params: "08:00:00:00:01:11 1"}
+	neighbor := types.ActionEntry{Type: "add_static_neighbor", Iface: "eth1", Neighbor: "10.0.1.10", MAC: "08:00:00:00:01:00"}
+	cases := []struct {
+		name          string
+		prior, action types.ActionEntry
+		want          bool
+	}{
+		{"a program load takes the entries with it", types.ActionEntry{Type: "load_program", File: "ecmp.json"}, entry, true},
+		{"and the table defaults", types.ActionEntry{Type: "load_program", File: "ecmp.json"}, types.ActionEntry{Type: "table_set_default", Table: "MyIngress.ipv4_lpm", Action: "MyIngress.drop"}, true},
+		{"an undo on the same key", types.ActionEntry{Type: "remove_static_neighbor", Iface: "eth1", Neighbor: "10.0.1.10"}, neighbor, true},
+		{"an undo on another key", types.ActionEntry{Type: "remove_static_neighbor", Iface: "eth1", Neighbor: "10.0.1.11"}, neighbor, false},
+		{"a set clears nothing", entry, entry, false},
+		{"clear_dns takes the nameservers", types.ActionEntry{Type: "clear_dns"}, types.ActionEntry{Type: "add_dns_nameserver", DNSServer: "8.8.8.8"}, true},
+		{"an action without state", types.ActionEntry{Type: "load_program", File: "ecmp.json"}, types.ActionEntry{Type: "custom"}, false},
+	}
+	for _, c := range cases {
+		if got := ClearsStateOf(c.prior, c.action); got != c.want {
+			t.Errorf("%s: got %v, want %v", c.name, got, c.want)
+		}
+	}
+}

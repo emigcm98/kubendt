@@ -68,7 +68,6 @@ func p4Priority(a types.ActionEntry) int {
 	return *a.Priority
 }
 
-func keyProgram(types.ActionEntry) string { return "program" }
 func keyTable(a types.ActionEntry) string { return a.Table }
 func keyTableEntry(a types.ActionEntry) string {
 	k := a.Table + " " + a.Match
@@ -81,7 +80,7 @@ func keyTableEntry(a types.ActionEntry) string {
 func init() {
 	actions.Register[P4Capable](
 		actions.Capability{ID: "P4Capable", Label: "P4", Description: "The program a BMv2 switch runs and the entries of its tables."},
-		actions.Action[P4Capable]{Type: "load_program", Label: "Load program", Params: actions.P(actions.ConfigFile), State: "p4_program", Key: keyProgram, ClearsAlso: []string{"p4_table_entry", "p4_table_default"},
+		actions.Action[P4Capable]{Type: "load_program", Label: "Load program", Params: actions.P(actions.ConfigFile), State: "p4_program", ClearsAlso: []string{"p4_table_entry", "p4_table_default"},
 			Run: func(c P4Capable, a types.ActionEntry) ([][]string, error) {
 				if err := checkP4Program(a.FileContent); err != nil {
 					return nil, err

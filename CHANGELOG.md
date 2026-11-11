@@ -11,6 +11,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - A BMv2 image of our own, `ghcr.io/emigcm98/kubendt-p4`: bmv2 1.15.8 built for forwarding (Release, without the logging macros, the event logger and the debugger) on Ubuntu 24.04 with iproute2 and ethtool, published by bmv2 version on every change to its folder.
 - `P4SwitchDriver`, BMv2's `simple_switch` on the `kubendt-p4` image as a switch node: `setup_bridge` gives it the pod's interfaces as ports numbered by name, and `P4Capable` loads a compiled program from the file manager (`load_program`, swapped in place with empty tables) and fills its tables (`table_add`, `table_delete`, `table_set_default`), with the `p4_ports`, `p4_tables` and `p4_entries` inspections. The image starts the switch empty, with swapping enabled.
 - `set_mac` on L2 nodes and `add_static_neighbor` and `remove_static_neighbor` on L3 nodes, an ARP or NDP entry that never ages out. Both name the interface, so a neighbour's restart puts them back and the MACs in a P4 table stay valid.
+- Example 11, `11-test-p4`: three BMv2 switches in a triangle running the tutorials' `basic.p4`, the hosts with fixed MACs and static neighbours as the tutorials' Mininet sets them, the entries from files, a path changed by one entry and a switch restart. Then one switch swaps live to `ecmp.p4`, the same program with equal-cost multipath, and parallel flows spread over its two uplinks.
+- The cluster guide gains an optional step for P4 switches whose links cross workers: the worker NIC's receive offload merges TCP segments into frames the switch cannot send on, so the guide says how to turn it off and what it costs, and the troubleshooting page names the symptom.
+
+### Fixed
+
+- A configure request that undoes a piece of state and sets it again in the same request (a static neighbour removed and added back, a program load followed by its entries) ran the set instead of skipping it as already applied. `load_program` now takes every table entry and default of the switch with it in the history, whatever their key.
 
 
 ## [1.9.0] - 2026-11-07

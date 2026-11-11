@@ -1,0 +1,45 @@
+{
+    "nodes": [
+        {
+            "name": "h1",
+            "image": "alpine:3.24.2",
+            "type": "host"
+        },
+        {
+            "name": "h2",
+            "image": "alpine:3.24.2",
+            "type": "host"
+        },
+        {
+            "name": "h3",
+            "image": "alpine:3.24.2",
+            "type": "host"
+        },
+        {
+            "name": "s1",
+            "image": "ghcr.io/emigcm98/kubendt-p4:1.15.8",
+            "type": "switch",
+            "driver": "P4SwitchDriver"
+        },
+        {
+            "name": "s2",
+            "image": "ghcr.io/emigcm98/kubendt-p4:1.15.8",
+            "type": "switch",
+            "driver": "P4SwitchDriver"
+        },
+        {
+            "name": "s3",
+            "image": "ghcr.io/emigcm98/kubendt-p4:1.15.8",
+            "type": "switch",
+            "driver": "P4SwitchDriver"
+        }
+    ],
+    "links": [
+        {"node": "h1-0", "localIntf": "eth1", "localIp": "10.0.1.1/24", "peerNode": "s1-0", "peerIntf": "eth1", "peerIp": "", "name": "h1-s1"},
+        {"node": "h2-0", "localIntf": "eth1", "localIp": "10.0.2.2/24", "peerNode": "s2-0", "peerIntf": "eth1", "peerIp": "", "name": "h2-s2"},
+        {"node": "h3-0", "localIntf": "eth1", "localIp": "10.0.3.3/24", "peerNode": "s3-0", "peerIntf": "eth1", "peerIp": "", "name": "h3-s3"},
+        {"node": "s1-0", "localIntf": "eth2", "localIp": "", "peerNode": "s2-0", "peerIntf": "eth2", "peerIp": "", "name": "s1-s2"},
+        {"node": "s1-0", "localIntf": "eth3", "localIp": "", "peerNode": "s3-0", "peerIntf": "eth2", "peerIp": "", "name": "s1-s3"},
+        {"node": "s2-0", "localIntf": "eth3", "localIp": "", "peerNode": "s3-0", "peerIntf": "eth3", "peerIp": "", "name": "s2-s3"}
+    ]
+}

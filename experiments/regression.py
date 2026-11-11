@@ -539,7 +539,65 @@ def ex10():
             ok, det, w = retry(ping(ex.ns, "h1-0", "10.0.10.13"), 120); ex.check("h1 ping h3 after the switch restart under faucet", ok, det, w)
     teardown(ex); return ex
 
-ALL = {"1": ex1, "2": ex2, "3": ex3, "4": ex4, "5": ex5, "6": ex6, "7": ex7, "8": ex8, "9": ex9, "10": ex10}
+def counters_of(ns, pod):
+    """Interface counters of a pod, by interface name."""
+    st, r = api("GET", f"/pods/counters/{ns}/{pod}", timeout=60)
+    return (r.get("interfaces") or {}) if st == 200 and isinstance(r, dict) else {}
+
+def ex11():
+    d = f"{EX}/11-test-p4"; ex = Example("11-test-p4", "p4"); setup(ex)
+    upload_dir(ex, f"{d}/files")
+    if deploy(ex, f"{d}/topology-network-test-p4.json"):
+        # The hosts as the tutorials' Mininet sets them: a fixed MAC, a gateway nobody owns and its MAC as a permanent neighbor, since basic.p4 drops ARP.
+        configure(ex, f"{d}/network_conf_hosts.json", label="configure (hosts: macs, gateways, static neighbors)")
+        ok, det, w = retry(inspect_has(ex.ns, "h1-0", "neighbors", "state", "PERMANENT"), 30); ex.check("h1 holds its gateway as a permanent neighbor", ok, det, w)
+        configure(ex, f"{d}/network_conf_switches.json", label="configure (switches: ports, basic.p4, default drop)")
+        ok, det, w = retry(inspect_count(ex.ns, "s1-0", "p4_ports", "status", "up", 3), 30); ex.check("s1 has its three ports up", ok, det, w)
+        ok, det, w = retry(inspect_has(ex.ns, "s3-0", "p4_tables", "table", "ipv4_lpm"), 30); ex.check("s3 runs basic.p4", ok, det, w)
+        configure(ex, f"{d}/network_conf_entries.json", label="configure (the entries of the three switches)")
+        ok, det, w = retry(inspect_count(ex.ns, "s1-0", "p4_entries", "action", "ipv4_forward", 3), 30); ex.check("s1 holds its three entries", ok, det, w)
+        ok, det, w = retry(ping(ex.ns, "h1-0", "10.0.2.2"), 60); ex.check("h1 ping h2 (s1, s2)", ok, det, w)
+        ok, det, w = retry(ping(ex.ns, "h1-0", "10.0.3.3"), 60); ex.check("h1 ping h3 (s1, s3)", ok, det, w)
+        ok, det, w = retry(ping(ex.ns, "h2-0", "10.0.3.3"), 60); ex.check("h2 ping h3 (s2, s3)", ok, det, w)
+        ok, det, w = retry(contains(ex.ns, "h1-0", "ping -c 1 -W 2 10.0.3.3", "ttl=62"), 30); ex.check("two P4 hops on the way (ttl 64 to 62)", ok, det, w)
+        iperf_check(ex, "iperf h1 to h3 through two switches", f"/iperf/run/{ex.ns}/h1-0?dest=10.0.3.3&duration=5")
+        # One entry replaced on s1 and h1's traffic to h3 goes round through s2; s1's counters tell which uplink carried it.
+        tx = lambda c, i: (c.get(i) or {}).get("tx_packets", 0)
+        before = counters_of(ex.ns, "s1-0")
+        configure(ex, f"{d}/network_conf_reroute.json", label="configure (s1 sends 10.0.3.3 through s2)")
+        ok, det, w = retry(inspect_count(ex.ns, "s1-0", "p4_entries", "params", "080000000200, 02", 2), 30); ex.check("two of s1's entries now leave by port 2", ok, det, w)
+        ok, det, w = retry(ping(ex.ns, "h1-0", "10.0.3.3", count=20), 60); ex.check("h1 ping h3 round through s2", ok, det, w)
+        after = counters_of(ex.ns, "s1-0")
+        d2, d3 = tx(after, "eth2") - tx(before, "eth2"), tx(after, "eth3") - tx(before, "eth3")
+        ex.check("s1 sent the pings out of eth2 (toward s2), not eth3", d2 >= 20 and d3 < 10, f"eth2 +{d2}, eth3 +{d3}")
+        if restart(ex, "s2-0"):
+            ok, det, w = retry(inspect_count(ex.ns, "s2-0", "p4_entries", "action", "ipv4_forward", 3), 120); ex.check("s2's program and entries are back after the restart (replay)", ok, det, w)
+            ok, det, w = retry(ping(ex.ns, "h1-0", "10.0.2.2"), 120); ex.check("h1 ping h2 after s2's restart", ok, det, w)
+            ok, det, w = retry(ping(ex.ns, "h1-0", "10.0.3.3"), 60); ex.check("h1 ping h3 through s2 after its restart", ok, det, w)
+        # Second part: s1 alone swaps to ecmp.p4, and 10.0.3.3 becomes a group of two next hops picked by a hash of the flow.
+        configure(ex, f"{d}/network_conf_ecmp.json", label="configure (s1 loads ecmp.p4 and its entries)")
+        ok, det, w = retry(inspect_has(ex.ns, "s1-0", "p4_tables", "table", "ecmp_nhop"), 30); ex.check("s1 runs ecmp.p4", ok, det, w)
+        ok, det, w = retry(inspect_count(ex.ns, "s1-0", "p4_entries", "match", "ecmp_select", 2), 30); ex.check("the group has two next hops", ok, det, w)
+        ok, det, w = retry(ping(ex.ns, "h1-0", "10.0.3.3"), 60); ex.check("h1 ping h3 under ecmp", ok, det, w)
+        ok, det, w = retry(ping(ex.ns, "h1-0", "10.0.2.2"), 30); ex.check("h1 ping h2 under ecmp", ok, det, w)
+        iperf_check(ex, "iperf h1 to h3 under ecmp", f"/iperf/run/{ex.ns}/h1-0?dest=10.0.3.3&duration=3")
+        # Sixteen parallel TCP flows between the toolboxes the test left: every flow hashes to one uplink, the set spreads over both.
+        t1, t3 = toolbox_of(ex.ns, "h1-0"), toolbox_of(ex.ns, "h3-0")
+        if t1 and t3:
+            before = counters_of(ex.ns, "s1-0")
+            C.kubectl(["-n", ex.ns, "exec", "h3-0", "-c", t3, "--", "sh", "-c", "iperf3 -s -1 -p 5202 -D"], 30)
+            rc, out, err = C.kubectl(["-n", ex.ns, "exec", "h1-0", "-c", t1, "--", "sh", "-c", "iperf3 -c 10.0.3.3 -p 5202 -P 16 -t 3 >/dev/null"], 90)
+            after = counters_of(ex.ns, "s1-0")
+            d2, d3 = tx(after, "eth2") - tx(before, "eth2"), tx(after, "eth3") - tx(before, "eth3")
+            ex.check("sixteen flows spread over both uplinks of s1", rc == 0 and d2 > 200 and d3 > 200, f"rc {rc}, eth2 +{d2}, eth3 +{d3} {err[-120:] if rc else ''}")
+        else:
+            ex.note("no toolboxes on h1 and h3, the flow spread was not measured")
+        if restart(ex, "s1-0"):
+            ok, det, w = retry(inspect_count(ex.ns, "s1-0", "p4_entries", "match", "ecmp_select", 2), 120); ex.check("ecmp.p4 and its entries are back on s1 after the restart (replay)", ok, det, w)
+            ok, det, w = retry(ping(ex.ns, "h1-0", "10.0.3.3"), 120); ex.check("h1 ping h3 after s1's restart", ok, det, w)
+    teardown(ex); return ex
+
+ALL = {"1": ex1, "2": ex2, "3": ex3, "4": ex4, "5": ex5, "6": ex6, "7": ex7, "8": ex8, "9": ex9, "10": ex10, "11": ex11}
 
 
 def main():
