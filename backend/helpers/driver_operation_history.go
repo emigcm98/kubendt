@@ -98,6 +98,32 @@ func rowsOnStates(ops []PersistedDriverOperation, states []string, key string, k
 	return out
 }
 
+// ClearsStateOf says whether running prior takes down the state action
+// writes, as saving prior to the history does: its own state and key when it
+// clears, and the states it clears besides, on its key when it is keyed.
+// Configure asks so an action that follows its undo, or a program load, in
+// the same request is not skipped as already applied.
+func ClearsStateOf(prior, action types.ActionEntry) bool {
+	state, key, _, _ := stateOf(action)
+	if state == "" {
+		return false
+	}
+	pState, pKey, pClears, _ := stateOf(prior)
+	if pClears && pState == state && pKey == key {
+		return true
+	}
+	states, keyed := clearedWith(prior)
+	if keyed && pKey != key {
+		return false
+	}
+	for _, s := range states {
+		if s == state {
+			return true
+		}
+	}
+	return false
+}
+
 // supersededAfter says whether another operation on the same state ran after
 // appliedAt with a different payload, so the applied one no longer stands.
 // Histories written before the state rule could hold such pairs.

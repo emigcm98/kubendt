@@ -1,0 +1,13 @@
+{
+  "targets": [
+    {"pod": "s1-0", "actions": [
+      {"type": "load_program", "file": "ecmp.json"},
+      {"type": "table_set_default", "table": "MyIngress.ipv4_lpm", "action": "MyIngress.drop"},
+      {"type": "table_add", "table": "MyIngress.ipv4_lpm", "action": "MyIngress.ipv4_forward", "match": "10.0.1.1/32", "params": "08:00:00:00:01:11 1"},
+      {"type": "table_add", "table": "MyIngress.ipv4_lpm", "action": "MyIngress.ipv4_forward", "match": "10.0.2.2/32", "params": "08:00:00:00:02:00 2"},
+      {"type": "table_add", "table": "MyIngress.ipv4_lpm", "action": "MyIngress.set_ecmp_group", "match": "10.0.3.3/32", "params": "1 2"},
+      {"type": "table_add", "table": "MyIngress.ecmp_nhop", "action": "MyIngress.ipv4_forward", "match": "1 0", "params": "08:00:00:00:03:00 3"},
+      {"type": "table_add", "table": "MyIngress.ecmp_nhop", "action": "MyIngress.ipv4_forward", "match": "1 1", "params": "08:00:00:00:02:00 2"}
+    ]}
+  ]
+}

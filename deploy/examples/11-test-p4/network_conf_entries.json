@@ -1,0 +1,19 @@
+{
+  "targets": [
+    {"pod": "s1-0", "actions": [
+      {"type": "table_add", "table": "MyIngress.ipv4_lpm", "action": "MyIngress.ipv4_forward", "match": "10.0.1.1/32", "params": "08:00:00:00:01:11 1"},
+      {"type": "table_add", "table": "MyIngress.ipv4_lpm", "action": "MyIngress.ipv4_forward", "match": "10.0.2.2/32", "params": "08:00:00:00:02:00 2"},
+      {"type": "table_add", "table": "MyIngress.ipv4_lpm", "action": "MyIngress.ipv4_forward", "match": "10.0.3.3/32", "params": "08:00:00:00:03:00 3"}
+    ]},
+    {"pod": "s2-0", "actions": [
+      {"type": "table_add", "table": "MyIngress.ipv4_lpm", "action": "MyIngress.ipv4_forward", "match": "10.0.2.2/32", "params": "08:00:00:00:02:22 1"},
+      {"type": "table_add", "table": "MyIngress.ipv4_lpm", "action": "MyIngress.ipv4_forward", "match": "10.0.1.1/32", "params": "08:00:00:00:01:00 2"},
+      {"type": "table_add", "table": "MyIngress.ipv4_lpm", "action": "MyIngress.ipv4_forward", "match": "10.0.3.3/32", "params": "08:00:00:00:03:00 3"}
+    ]},
+    {"pod": "s3-0", "actions": [
+      {"type": "table_add", "table": "MyIngress.ipv4_lpm", "action": "MyIngress.ipv4_forward", "match": "10.0.3.3/32", "params": "08:00:00:00:03:33 1"},
+      {"type": "table_add", "table": "MyIngress.ipv4_lpm", "action": "MyIngress.ipv4_forward", "match": "10.0.1.1/32", "params": "08:00:00:00:01:00 2"},
+      {"type": "table_add", "table": "MyIngress.ipv4_lpm", "action": "MyIngress.ipv4_forward", "match": "10.0.2.2/32", "params": "08:00:00:00:02:00 3"}
+    ]}
+  ]
+}

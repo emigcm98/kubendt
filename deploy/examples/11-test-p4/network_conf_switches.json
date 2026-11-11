@@ -1,0 +1,19 @@
+{
+  "targets": [
+    {"pod": "s1-0", "actions": [
+      {"type": "setup_bridge", "bridge": "sw", "ifaces": ["eth1", "eth2", "eth3"]},
+      {"type": "load_program", "file": "basic.json"},
+      {"type": "table_set_default", "table": "MyIngress.ipv4_lpm", "action": "MyIngress.drop"}
+    ]},
+    {"pod": "s2-0", "actions": [
+      {"type": "setup_bridge", "bridge": "sw", "ifaces": ["eth1", "eth2", "eth3"]},
+      {"type": "load_program", "file": "basic.json"},
+      {"type": "table_set_default", "table": "MyIngress.ipv4_lpm", "action": "MyIngress.drop"}
+    ]},
+    {"pod": "s3-0", "actions": [
+      {"type": "setup_bridge", "bridge": "sw", "ifaces": ["eth1", "eth2", "eth3"]},
+      {"type": "load_program", "file": "basic.json"},
+      {"type": "table_set_default", "table": "MyIngress.ipv4_lpm", "action": "MyIngress.drop"}
+    ]}
+  ]
+}

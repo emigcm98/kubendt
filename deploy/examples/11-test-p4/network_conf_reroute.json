@@ -1,0 +1,8 @@
+{
+  "targets": [
+    {"pod": "s1-0", "actions": [
+      {"type": "table_delete", "table": "MyIngress.ipv4_lpm", "match": "10.0.3.3/32"},
+      {"type": "table_add", "table": "MyIngress.ipv4_lpm", "action": "MyIngress.ipv4_forward", "match": "10.0.3.3/32", "params": "08:00:00:00:02:00 2"}
+    ]}
+  ]
+}

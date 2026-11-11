@@ -1,0 +1,19 @@
+{
+  "targets": [
+    {"pod": "h1-0", "actions": [
+      {"type": "set_mac", "iface": "eth1", "mac": "08:00:00:00:01:11"},
+      {"type": "set_default_route", "gateway": "10.0.1.10"},
+      {"type": "add_static_neighbor", "iface": "eth1", "neighbor": "10.0.1.10", "mac": "08:00:00:00:01:00"}
+    ]},
+    {"pod": "h2-0", "actions": [
+      {"type": "set_mac", "iface": "eth1", "mac": "08:00:00:00:02:22"},
+      {"type": "set_default_route", "gateway": "10.0.2.20"},
+      {"type": "add_static_neighbor", "iface": "eth1", "neighbor": "10.0.2.20", "mac": "08:00:00:00:02:00"}
+    ]},
+    {"pod": "h3-0", "actions": [
+      {"type": "set_mac", "iface": "eth1", "mac": "08:00:00:00:03:33"},
+      {"type": "set_default_route", "gateway": "10.0.3.30"},
+      {"type": "add_static_neighbor", "iface": "eth1", "neighbor": "10.0.3.30", "mac": "08:00:00:00:03:00"}
+    ]}
+  ]
+}

@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"runtime"
+	"slices"
 	"sync"
 	"time"
 
@@ -119,6 +120,10 @@ func ConfigureNetwork(c *gin.Context) {
 		}
 
 		plans := helpers.PlanActions(namespace, podName, driver, driverErr, podConfig.Actions)
+		// Earlier actions of this request that will run: one of them may take
+		// down the state a later one writes (an undo, a program load), and
+		// then the later one is not a duplicate of the history.
+		var earlier []types.ActionEntry
 		for i := range plans {
 			p := &plans[i]
 			// A repeatable action (custom) runs every time it is asked for.
@@ -128,9 +133,13 @@ func ConfigureNetwork(c *gin.Context) {
 			alreadyPersisted, existsErr := helpers.DriverOperationAppliedSince(namespace, podName, driverType, p.Action, podCreated)
 			if existsErr != nil {
 				p.Err = existsErr
-			} else if alreadyPersisted {
-				p.Skip = "duplicate operation: already applied to this pod with the same payload"
+				continue
 			}
+			if alreadyPersisted && !slices.ContainsFunc(earlier, func(e types.ActionEntry) bool { return helpers.ClearsStateOf(e, p.Action) }) {
+				p.Skip = "duplicate operation: already applied to this pod with the same payload"
+				continue
+			}
+			earlier = append(earlier, p.Action)
 		}
 
 		outcomes, _ := helpers.RunPlannedActions(namespace, podName, plans, helpers.RunOptions{})
