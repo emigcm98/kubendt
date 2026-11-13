@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Fixed
 
 - A configure request that undoes a piece of state and sets it again in the same request (a static neighbour removed and added back, a program load followed by its entries) ran the set instead of skipping it as already applied. `load_program` now takes every table entry and default of the switch with it in the history, whatever their key.
+- The Swagger of `POST` and `GET /network/positions/{namespace}` described a `positions` wrapper the endpoints never took or returned: the body and the answer are the map of node name to `{x, y}` itself, and the save answers 204.
 
 
 ## [1.9.0] - 2026-11-07

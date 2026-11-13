@@ -388,20 +388,11 @@ type ConfigureNetworkResponse struct {
 	Speedup  float64                 `json:"speedup" example:"6.35"`
 }
 
-// NodePosition holds the x/y canvas coordinates for a node.
+// NodePosition is one node's canvas coordinates; the positions endpoints
+// take and return the map of node name to it, with no wrapper.
 type NodePosition struct {
 	X float64 `json:"x" example:"120.5"`
 	Y float64 `json:"y" example:"340.0"`
-}
-
-// NodePositionsRequest is the body for POST /network/positions/:ns.
-type NodePositionsRequest struct {
-	Positions map[string]NodePosition `json:"positions"`
-}
-
-// NodePositionsResponse is returned by GET /network/positions/:ns.
-type NodePositionsResponse struct {
-	Positions map[string]NodePosition `json:"positions"`
 }
 
 // ─── Files ────────────────────────────────────────────────────────────────────

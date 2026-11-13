@@ -321,8 +321,8 @@ func swaggerGetNetwork() {}
 //	@Accept       json
 //	@Produce      json
 //	@Param        namespace  path      string                    true  "Namespace name"
-//	@Param        body       body      types.NodePositionsRequest  true  "Map of node name to {x, y} position"
-//	@Success      200        {object}  types.MessageResponse
+//	@Param        body       body      map[string]types.NodePosition  true  "Node name to {x, y}, the map itself as the body"
+//	@Success      204        "No Content"
 //	@Failure      400        {object}  types.ErrorResponse
 //	@Failure      500        {object}  types.ErrorResponse
 //	@Router       /network/positions/{namespace} [post]
@@ -335,7 +335,7 @@ func swaggerSaveNodePositions() {}
 //	@Tags         network
 //	@Produce      json
 //	@Param        namespace  path      string  true  "Namespace name"
-//	@Success      200        {object}  types.NodePositionsResponse
+//	@Success      200        {object}  map[string]types.NodePosition  "Node name to {x, y}, the map itself"
 //	@Failure      500        {object}  types.ErrorResponse
 //	@Router       /network/positions/{namespace} [get]
 func swaggerGetNodePositions() {}
@@ -890,8 +890,7 @@ var _ = types.NetworkDeleteSpecDoc{}
 var _ = types.NetworkModifyRequestDoc{}
 var _ = types.ModifyNetworkResponse{}
 var _ = types.ConfigureNetworkResponse{}
-var _ = types.NodePositionsRequest{}
-var _ = types.NodePositionsResponse{}
+var _ = types.NodePosition{}
 var _ = types.FileEntry{}
 var _ = types.FilesListResponse{}
 var _ = types.UpdateFileContentRequest{}

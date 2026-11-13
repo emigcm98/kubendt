@@ -46,11 +46,11 @@ Everything beyond the minimum is an optional interface, all of them in `backend/
 | `ShellProvider` | `Shells() []ShellSpec` | The pod shell, plus the serial console on a VM | FRR, VyOS |
 | `GuestToolProvider` | `GuestWrapper() []string`, `GuestTools() []string` | A container runs every tool in its toolbox; a VM offers none | VyOS |
 | `InterfaceNameConstrainer` | `InterfaceNameConstraints()` | The kernel's rules only | VyOS |
-| `ReadinessProbeProvider` | `ReadinessProbeCommands()` | `command -v ip`, the node is Ready when its image has `ip` | FRR, OVS, VyOS, EXOS, Faucet |
+| `ReadinessProbeProvider` | `ReadinessProbeCommands()` | `command -v ip`, the node is Ready when its image has `ip` | FRR, OVS, VyOS, EXOS, Faucet, P4 |
 | `EffectiveInterfaceInspector`, `EffectiveSingleInterfaceInspector`, `EffectiveInterfaceStateInspector` | `GetEffectiveInterfaces`, `GetEffectiveInterface`, `GetEffectiveInterfaceStates` | The pod's own `ip a` and link states | VyOS |
 | `SNATInterfaceInspector` | `GetSNATInterface()` | The namespace summary shows no NAT interface | VyOS |
 | `GuestInterfaceMapper` | `GuestInterface(ns, pod, iface)` | Interface names reach the actions as the pod names them | Guest-named dataplanes |
-| `KnownImagesProvider` | `KnownImages()` | Any image deploys quietly | FRR, VyOS, OVS, EXOS, Faucet, Linux switch and router |
+| `KnownImagesProvider` | `KnownImages()` | Any image deploys quietly | FRR, VyOS, OVS, EXOS, Faucet, P4, Linux switch and router |
 
 What each one feeds:
 
