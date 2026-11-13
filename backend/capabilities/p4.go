@@ -30,6 +30,8 @@ type P4Inspector interface {
 	P4Tables(namespace, pod string) (Rows, error)
 	P4Entries(namespace, pod string) (Rows, error)
 	P4MulticastGroups(namespace, pod string) (Rows, error)
+	P4Counters(namespace, pod string) (Rows, error)
+	P4Registers(namespace, pod string) (Rows, error)
 }
 
 // A group is what v1model's mcast_grp names, 0 meaning none; a port is a
@@ -184,5 +186,12 @@ func init() {
 		actions.Inspection[P4Inspector]{ID: "p4_entries", Label: "P4 table entries", Columns: cols("match", "Match", "table", "Table", "action", "Action", "params", "Parameters", "handle", "Handle"),
 			Run: func(c P4Inspector, ns, pod string) (Rows, error) { return c.P4Entries(ns, pod) }},
 		actions.Inspection[P4Inspector]{ID: "p4_multicast_groups", Label: "P4 multicast groups", Columns: cols("group", "Group", "ports", "Ports", "handle", "Node"),
-			Run: func(c P4Inspector, ns, pod string) (Rows, error) { return c.P4MulticastGroups(ns, pod) }})
+			Run: func(c P4Inspector, ns, pod string) (Rows, error) { return c.P4MulticastGroups(ns, pod) }},
+		// What the program declares: a direct counter per entry of its table (the
+		// index is the entry's handle), the cells of an indexed counter or a
+		// register that hold something.
+		actions.Inspection[P4Inspector]{ID: "p4_counters", Label: "P4 counters", Columns: cols("counter", "Counter", "index", "Index", "packets", "Packets", "bytes", "Bytes", "table", "Table"),
+			Run: func(c P4Inspector, ns, pod string) (Rows, error) { return c.P4Counters(ns, pod) }},
+		actions.Inspection[P4Inspector]{ID: "p4_registers", Label: "P4 registers", Columns: cols("register", "Register", "index", "Index", "value", "Value", "hex", "Hex"),
+			Run: func(c P4Inspector, ns, pod string) (Rows, error) { return c.P4Registers(ns, pod) }})
 }

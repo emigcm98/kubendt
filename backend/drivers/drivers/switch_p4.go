@@ -1,6 +1,7 @@
 package drivers
 
 import (
+	"math/big"
 	"regexp"
 	"sort"
 	"strconv"
@@ -269,6 +270,107 @@ func parseP4MulticastGroups(text string) capabilities.Rows {
 		}
 		if m := p4NodeRe.FindStringSubmatch(line); m != nil && group != "" {
 			rows = append(rows, map[string]string{"group": group, "ports": strings.TrimSpace(m[2]), "handle": m[1]})
+		}
+	}
+	return rows
+}
+
+// The counters and registers are read from what the loaded program declares
+// (its JSON stays in the pod), by a Python snippet that builds the CLI lines:
+// the image ships python3 for the CLI itself. A direct counter is read per
+// entry of its table, by handle, behind a marker naming the table; an
+// indexed one cell by cell, the first 4096; a register whole, one line.
+const p4PyPreamble = `import json, re, subprocess
+P = json.load(open("` + p4ProgramPath + `"))
+CLI = "` + p4CLI + `".split()
+def cli(lines):
+    return subprocess.run(CLI, input="".join(l + "\n" for l in lines), capture_output=True, text=True).stdout
+`
+
+const p4PyCounters = p4PyPreamble + `lines = []
+for c in P.get("counter_arrays", []):
+    if c.get("is_direct"):
+        print("### direct %s %s" % (c["name"], c.get("binding", "")))
+        for h in re.findall(r"Dumping entry 0x([0-9a-fA-F]+)", cli(["table_dump " + c.get("binding", "")])):
+            lines.append("counter_read %s %d" % (c["name"], int(h, 16)))
+    else:
+        lines += ["counter_read %s %d" % (c["name"], i) for i in range(min(int(c.get("size", 0)), 4096))]
+print(cli(lines) if lines else "")
+`
+
+const p4PyRegisters = p4PyPreamble + `print(cli(["register_read " + r["name"] for r in P.get("register_arrays", [])]))
+`
+
+// p4py runs a snippet against the loaded program; no program, nothing.
+func p4py(script string) []string {
+	return []string{"sh", "-c", "[ -f " + p4ProgramPath + " ] || exit 0; python3 -c " + shellSingleQuote(script)}
+}
+
+var (
+	p4DirectRe   = regexp.MustCompile(`^### direct (\S+) ?(\S*)`)
+	p4CounterRe  = regexp.MustCompile(`^(?:RuntimeCmd: )?(\S+)\[(\d+)\]= \((\d+) bytes, (\d+) packets\)`)
+	p4RegisterRe = regexp.MustCompile(`^(?:RuntimeCmd: )?([A-Za-z_][A-Za-z0-9_.]*)= (.*)$`)
+)
+
+func (P4SwitchDriver) P4Counters(namespace, pod string) (capabilities.Rows, error) {
+	out, err := executor.ExecAndGet(namespace, pod, p4py(p4PyCounters))
+	if err != nil {
+		return nil, err
+	}
+	return parseP4Counters(string(out)), nil
+}
+
+// parseP4Counters keeps every entry of a direct counter and the cells of an
+// indexed one that counted something.
+func parseP4Counters(text string) capabilities.Rows {
+	rows := capabilities.Rows{}
+	direct := map[string]string{}
+	for _, raw := range strings.Split(text, "\n") {
+		line := strings.TrimSpace(raw)
+		if m := p4DirectRe.FindStringSubmatch(line); m != nil {
+			direct[m[1]] = m[2]
+			continue
+		}
+		m := p4CounterRe.FindStringSubmatch(line)
+		if m == nil {
+			continue
+		}
+		table, isDirect := direct[m[1]]
+		if !isDirect && m[3] == "0" && m[4] == "0" {
+			continue
+		}
+		rows = append(rows, map[string]string{"counter": m[1], "index": m[2], "packets": m[4], "bytes": m[3], "table": table})
+	}
+	return rows
+}
+
+func (P4SwitchDriver) P4Registers(namespace, pod string) (capabilities.Rows, error) {
+	out, err := executor.ExecAndGet(namespace, pod, p4py(p4PyRegisters))
+	if err != nil {
+		return nil, err
+	}
+	return parseP4Registers(string(out)), nil
+}
+
+// parseP4Registers reads "NAME= v0, v1, ..." and keeps the cells that hold
+// something, in decimal and hex.
+func parseP4Registers(text string) capabilities.Rows {
+	rows := capabilities.Rows{}
+	for _, raw := range strings.Split(text, "\n") {
+		m := p4RegisterRe.FindStringSubmatch(strings.TrimSpace(raw))
+		if m == nil {
+			continue
+		}
+		for i, v := range strings.Split(m[2], ",") {
+			v = strings.TrimSpace(v)
+			if v == "" || v == "0" {
+				continue
+			}
+			hex := ""
+			if n, ok := new(big.Int).SetString(v, 10); ok {
+				hex = "0x" + n.Text(16)
+			}
+			rows = append(rows, map[string]string{"register": m[1], "index": strconv.Itoa(i), "value": v, "hex": hex})
 		}
 	}
 	return rows

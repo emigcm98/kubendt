@@ -555,6 +555,7 @@ def ex11():
         configure(ex, f"{d}/network_conf_switches.json", label="configure (switches: ports, basic.p4, default drop)")
         ok, det, w = retry(inspect_count(ex.ns, "s1-0", "p4_ports", "status", "up", 3), 30); ex.check("s1 has its three ports up", ok, det, w)
         ok, det, w = retry(inspect_has(ex.ns, "s3-0", "p4_tables", "table", "ipv4_lpm"), 30); ex.check("s3 runs basic.p4", ok, det, w)
+        rows = inspect(ex.ns, "s3-0", "p4_counters"); ex.check("p4_counters answers empty, basic.p4 declares none", rows == [], rows)
         configure(ex, f"{d}/network_conf_entries.json", label="configure (the entries of the three switches)")
         ok, det, w = retry(inspect_count(ex.ns, "s1-0", "p4_entries", "action", "ipv4_forward", 3), 30); ex.check("s1 holds its three entries", ok, det, w)
         ok, det, w = retry(ping(ex.ns, "h1-0", "10.0.2.2"), 60); ex.check("h1 ping h2 (s1, s2)", ok, det, w)
