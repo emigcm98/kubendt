@@ -1,0 +1,269 @@
+# proto-file: p4/config/v1/p4info.proto
+# proto-message: p4.config.v1.P4Info
+
+pkg_info {
+  arch: "v1model"
+}
+tables {
+  preamble {
+    id: 41524292
+    name: "MyIngress.switch_mac"
+    alias: "switch_mac"
+  }
+  action_refs {
+    id: 31958552
+  }
+  initial_default_action {
+    action_id: 31958552
+    arguments {
+      param_id: 1
+      value: "\000\000\000\000\000\000"
+    }
+  }
+  size: 1024
+}
+tables {
+  preamble {
+    id: 36407998
+    name: "MyIngress.arp_responder"
+    alias: "arp_responder"
+  }
+  match_fields {
+    id: 1
+    name: "hdr.arp.tpa"
+    bitwidth: 32
+    match_type: EXACT
+  }
+  action_refs {
+    id: 22921650
+  }
+  action_refs {
+    id: 25652968
+  }
+  initial_default_action {
+    action_id: 25652968
+  }
+  direct_resource_ids: 324575649
+  size: 64
+}
+tables {
+  preamble {
+    id: 44949801
+    name: "MyIngress.port_gateway"
+    alias: "port_gateway"
+  }
+  match_fields {
+    id: 1
+    name: "standard_metadata.egress_spec"
+    bitwidth: 9
+    match_type: EXACT
+  }
+  action_refs {
+    id: 27581673
+  }
+  action_refs {
+    id: 21257015
+  }
+  initial_default_action {
+    action_id: 21257015
+  }
+  size: 64
+}
+tables {
+  preamble {
+    id: 37375156
+    name: "MyIngress.ipv4_lpm"
+    alias: "ipv4_lpm"
+  }
+  match_fields {
+    id: 1
+    name: "hdr.ipv4.dstAddr"
+    bitwidth: 32
+    match_type: LPM
+  }
+  action_refs {
+    id: 28792405
+  }
+  action_refs {
+    id: 23474021
+  }
+  action_refs {
+    id: 17210681
+  }
+  action_refs {
+    id: 25652968
+  }
+  action_refs {
+    id: 21257015
+  }
+  initial_default_action {
+    action_id: 25652968
+  }
+  direct_resource_ids: 324306921
+  size: 1024
+}
+tables {
+  preamble {
+    id: 42718419
+    name: "MyIngress.ecmp_nhop"
+    alias: "ecmp_nhop"
+  }
+  match_fields {
+    id: 1
+    name: "meta.ecmp_group"
+    bitwidth: 16
+    match_type: EXACT
+  }
+  match_fields {
+    id: 2
+    name: "meta.ecmp_select"
+    bitwidth: 16
+    match_type: EXACT
+  }
+  action_refs {
+    id: 28792405
+  }
+  action_refs {
+    id: 25652968
+  }
+  initial_default_action {
+    action_id: 25652968
+  }
+  size: 64
+}
+actions {
+  preamble {
+    id: 21257015
+    name: "NoAction"
+    alias: "NoAction"
+    annotations: "@noWarn(\"unused\")"
+  }
+}
+actions {
+  preamble {
+    id: 25652968
+    name: "MyIngress.drop"
+    alias: "drop"
+  }
+}
+actions {
+  preamble {
+    id: 31958552
+    name: "MyIngress.set_switch_mac"
+    alias: "set_switch_mac"
+  }
+  params {
+    id: 1
+    name: "mac"
+    bitwidth: 48
+  }
+}
+actions {
+  preamble {
+    id: 28792405
+    name: "MyIngress.ipv4_forward"
+    alias: "ipv4_forward"
+  }
+  params {
+    id: 1
+    name: "port"
+    bitwidth: 9
+  }
+}
+actions {
+  preamble {
+    id: 22921650
+    name: "MyIngress.arp_reply"
+    alias: "arp_reply"
+  }
+  params {
+    id: 1
+    name: "mac"
+    bitwidth: 48
+  }
+}
+actions {
+  preamble {
+    id: 27581673
+    name: "MyIngress.arp_ask"
+    alias: "arp_ask"
+  }
+  params {
+    id: 1
+    name: "gw_ip"
+    bitwidth: 32
+  }
+  params {
+    id: 2
+    name: "gw_mac"
+    bitwidth: 48
+  }
+}
+actions {
+  preamble {
+    id: 23474021
+    name: "MyIngress.set_ecmp_group"
+    alias: "set_ecmp_group"
+  }
+  params {
+    id: 1
+    name: "group"
+    bitwidth: 16
+  }
+  params {
+    id: 2
+    name: "count"
+    bitwidth: 16
+  }
+}
+actions {
+  preamble {
+    id: 17210681
+    name: "MyIngress.set_multicast_group"
+    alias: "set_multicast_group"
+  }
+  params {
+    id: 1
+    name: "group"
+    bitwidth: 16
+  }
+}
+direct_counters {
+  preamble {
+    id: 324575649
+    name: "MyIngress.arp_counter"
+    alias: "arp_counter"
+  }
+  spec {
+    unit: BOTH
+  }
+  direct_table_id: 36407998
+}
+direct_counters {
+  preamble {
+    id: 324306921
+    name: "MyIngress.lpm_counter"
+    alias: "lpm_counter"
+  }
+  spec {
+    unit: BOTH
+  }
+  direct_table_id: 37375156
+}
+registers {
+  preamble {
+    id: 384617504
+    name: "MyIngress.learned_mac"
+    alias: "learned_mac"
+  }
+  type_spec {
+    bitstring {
+      bit {
+        bitwidth: 48
+      }
+    }
+  }
+  size: 512
+}
+type_info {
+}

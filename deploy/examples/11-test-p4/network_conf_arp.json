@@ -1,0 +1,51 @@
+{
+  "targets": [
+    {"pod": "s1-0", "actions": [
+      {"type": "load_program", "file": "arp.json"},
+      {"type": "table_set_default", "table": "MyIngress.switch_mac", "action": "MyIngress.set_switch_mac", "params": "08:00:00:00:01:00"},
+      {"type": "table_set_default", "table": "MyIngress.ipv4_lpm", "action": "MyIngress.drop"},
+      {"type": "table_add", "table": "MyIngress.ipv4_lpm", "action": "MyIngress.ipv4_forward", "match": "10.0.1.1/32", "params": "1"},
+      {"type": "table_add", "table": "MyIngress.ipv4_lpm", "action": "MyIngress.ipv4_forward", "match": "10.0.2.2/32", "params": "2"},
+      {"type": "table_add", "table": "MyIngress.ipv4_lpm", "action": "MyIngress.set_ecmp_group", "match": "10.0.3.3/32", "params": "1 2"},
+      {"type": "table_add", "table": "MyIngress.ecmp_nhop", "action": "MyIngress.ipv4_forward", "match": "1 0", "params": "3"},
+      {"type": "table_add", "table": "MyIngress.ecmp_nhop", "action": "MyIngress.ipv4_forward", "match": "1 1", "params": "2"},
+      {"type": "table_add", "table": "MyIngress.ipv4_lpm", "action": "MyIngress.set_multicast_group", "match": "224.0.0.0/4", "params": "1"},
+      {"type": "table_add", "table": "MyIngress.arp_responder", "action": "MyIngress.arp_reply", "match": "10.0.1.10", "params": "08:00:00:00:01:00"},
+      {"type": "table_add", "table": "MyIngress.port_gateway", "action": "MyIngress.arp_ask", "match": "1", "params": "10.0.1.10 08:00:00:00:01:00"},
+      {"type": "add_multicast_group", "group": 1, "ports": [1, 2, 3]}
+    ]},
+    {"pod": "s2-0", "actions": [
+      {"type": "load_program", "file": "arp.json"},
+      {"type": "table_set_default", "table": "MyIngress.switch_mac", "action": "MyIngress.set_switch_mac", "params": "08:00:00:00:02:00"},
+      {"type": "table_set_default", "table": "MyIngress.ipv4_lpm", "action": "MyIngress.drop"},
+      {"type": "table_add", "table": "MyIngress.ipv4_lpm", "action": "MyIngress.ipv4_forward", "match": "10.0.2.2/32", "params": "1"},
+      {"type": "table_add", "table": "MyIngress.ipv4_lpm", "action": "MyIngress.ipv4_forward", "match": "10.0.1.1/32", "params": "2"},
+      {"type": "table_add", "table": "MyIngress.ipv4_lpm", "action": "MyIngress.ipv4_forward", "match": "10.0.3.3/32", "params": "3"},
+      {"type": "table_add", "table": "MyIngress.ipv4_lpm", "action": "MyIngress.set_multicast_group", "match": "224.0.0.0/4", "params": "1"},
+      {"type": "table_add", "table": "MyIngress.arp_responder", "action": "MyIngress.arp_reply", "match": "10.0.2.20", "params": "08:00:00:00:02:00"},
+      {"type": "table_add", "table": "MyIngress.port_gateway", "action": "MyIngress.arp_ask", "match": "1", "params": "10.0.2.20 08:00:00:00:02:00"},
+      {"type": "add_multicast_group", "group": 1, "ports": [1, 2]}
+    ]},
+    {"pod": "s3-0", "actions": [
+      {"type": "load_program", "file": "arp.json"},
+      {"type": "table_set_default", "table": "MyIngress.switch_mac", "action": "MyIngress.set_switch_mac", "params": "08:00:00:00:03:00"},
+      {"type": "table_set_default", "table": "MyIngress.ipv4_lpm", "action": "MyIngress.drop"},
+      {"type": "table_add", "table": "MyIngress.ipv4_lpm", "action": "MyIngress.ipv4_forward", "match": "10.0.3.3/32", "params": "1"},
+      {"type": "table_add", "table": "MyIngress.ipv4_lpm", "action": "MyIngress.ipv4_forward", "match": "10.0.1.1/32", "params": "2"},
+      {"type": "table_add", "table": "MyIngress.ipv4_lpm", "action": "MyIngress.ipv4_forward", "match": "10.0.2.2/32", "params": "3"},
+      {"type": "table_add", "table": "MyIngress.ipv4_lpm", "action": "MyIngress.set_multicast_group", "match": "224.0.0.0/4", "params": "1"},
+      {"type": "table_add", "table": "MyIngress.arp_responder", "action": "MyIngress.arp_reply", "match": "10.0.3.30", "params": "08:00:00:00:03:00"},
+      {"type": "table_add", "table": "MyIngress.port_gateway", "action": "MyIngress.arp_ask", "match": "1", "params": "10.0.3.30 08:00:00:00:03:00"},
+      {"type": "add_multicast_group", "group": 1, "ports": [1, 2]}
+    ]},
+    {"pod": "h1-0", "actions": [
+      {"type": "remove_static_neighbor", "iface": "eth1", "neighbor": "10.0.1.10"}
+    ]},
+    {"pod": "h2-0", "actions": [
+      {"type": "remove_static_neighbor", "iface": "eth1", "neighbor": "10.0.2.20"}
+    ]},
+    {"pod": "h3-0", "actions": [
+      {"type": "remove_static_neighbor", "iface": "eth1", "neighbor": "10.0.3.30"}
+    ]}
+  ]
+}
