@@ -2191,9 +2191,12 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Node name to {x, y}, the map itself",
                         "schema": {
-                            "$ref": "#/definitions/types.NodePositionsResponse"
+                            "type": "object",
+                            "additionalProperties": {
+                                "$ref": "#/definitions/types.NodePosition"
+                            }
                         }
                     },
                     "500": {
@@ -2225,21 +2228,21 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Map of node name to {x, y} position",
+                        "description": "Node name to {x, y}, the map itself as the body",
                         "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/types.NodePositionsRequest"
+                            "type": "object",
+                            "additionalProperties": {
+                                "$ref": "#/definitions/types.NodePosition"
+                            }
                         }
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/types.MessageResponse"
-                        }
+                    "204": {
+                        "description": "No Content"
                     },
                     "400": {
                         "description": "Bad Request",
@@ -5267,28 +5270,6 @@ const docTemplate = `{
                 "y": {
                     "type": "number",
                     "example": 340
-                }
-            }
-        },
-        "types.NodePositionsRequest": {
-            "type": "object",
-            "properties": {
-                "positions": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "$ref": "#/definitions/types.NodePosition"
-                    }
-                }
-            }
-        },
-        "types.NodePositionsResponse": {
-            "type": "object",
-            "properties": {
-                "positions": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "$ref": "#/definitions/types.NodePosition"
-                    }
                 }
             }
         },

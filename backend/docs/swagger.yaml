@@ -1759,20 +1759,6 @@ definitions:
         example: 340
         type: number
     type: object
-  types.NodePositionsRequest:
-    properties:
-      positions:
-        additionalProperties:
-          $ref: '#/definitions/types.NodePosition'
-        type: object
-    type: object
-  types.NodePositionsResponse:
-    properties:
-      positions:
-        additionalProperties:
-          $ref: '#/definitions/types.NodePosition'
-        type: object
-    type: object
   types.NodeResourceQuantityDoc:
     properties:
       cpu_milli:
@@ -4208,9 +4194,11 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Node name to {x, y}, the map itself
           schema:
-            $ref: '#/definitions/types.NodePositionsResponse'
+            additionalProperties:
+              $ref: '#/definitions/types.NodePosition'
+            type: object
         "500":
           description: Internal Server Error
           schema:
@@ -4228,19 +4216,19 @@ paths:
         name: namespace
         required: true
         type: string
-      - description: Map of node name to {x, y} position
+      - description: Node name to {x, y}, the map itself as the body
         in: body
         name: body
         required: true
         schema:
-          $ref: '#/definitions/types.NodePositionsRequest'
+          additionalProperties:
+            $ref: '#/definitions/types.NodePosition'
+          type: object
       produces:
       - application/json
       responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/types.MessageResponse'
+        "204":
+          description: No Content
         "400":
           description: Bad Request
           schema:
