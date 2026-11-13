@@ -187,6 +187,56 @@ func TestP4MulticastGroup(t *testing.T) {
 	}
 }
 
+const p4CountersSample = `### direct MyIngress.lpm_counter MyIngress.ipv4_lpm
+RuntimeCmd: MyIngress.port_counter[1]= (1146 bytes, 13 packets)
+RuntimeCmd: MyIngress.port_counter[2]= (1146 bytes, 13 packets)
+RuntimeCmd: MyIngress.port_counter[0]= (0 bytes, 0 packets)
+RuntimeCmd: this is the direct counter for table MyIngress.ipv4_lpm
+MyIngress.lpm_counter[0]= (294 bytes, 3 packets)
+RuntimeCmd: this is the direct counter for table MyIngress.ipv4_lpm
+MyIngress.lpm_counter[1]= (0 bytes, 0 packets)
+RuntimeCmd: 
+`
+
+func TestParseP4Counters(t *testing.T) {
+	// Zero cells of an indexed counter are left out, every entry of a direct one stays.
+	want := capabilities.Rows{
+		{"counter": "MyIngress.port_counter", "index": "1", "packets": "13", "bytes": "1146", "table": ""},
+		{"counter": "MyIngress.port_counter", "index": "2", "packets": "13", "bytes": "1146", "table": ""},
+		{"counter": "MyIngress.lpm_counter", "index": "0", "packets": "3", "bytes": "294", "table": "MyIngress.ipv4_lpm"},
+		{"counter": "MyIngress.lpm_counter", "index": "1", "packets": "0", "bytes": "0", "table": "MyIngress.ipv4_lpm"},
+	}
+	if got := parseP4Counters(p4CountersSample); !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v\nwant %v", got, want)
+	}
+	if got := parseP4Counters(""); len(got) != 0 {
+		t.Errorf("no program, got %v", got)
+	}
+}
+
+func TestParseP4Registers(t *testing.T) {
+	sample := "RuntimeCmd: register index omitted, reading entire array\nMyIngress.last_src= 0, 191672601071515, 213609463411245, 0, 0\nRuntimeCmd: \n"
+	want := capabilities.Rows{
+		{"register": "MyIngress.last_src", "index": "1", "value": "191672601071515", "hex": "0xae53414ccf9b"},
+		{"register": "MyIngress.last_src", "index": "2", "value": "213609463411245", "hex": "0xc246d42ff22d"},
+	}
+	if got := parseP4Registers(sample); !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v\nwant %v", got, want)
+	}
+}
+
+func TestP4PyScripts(t *testing.T) {
+	// The snippets go through sh -c in single quotes, so they must carry none.
+	for _, s := range []string{p4PyCounters, p4PyRegisters} {
+		if strings.Contains(s, "'") {
+			t.Errorf("a single quote in the snippet breaks the quoting: %s", s)
+		}
+	}
+	if cmd := p4py(p4PyRegisters); !strings.Contains(cmd[2], "[ -f "+p4ProgramPath+" ] || exit 0") {
+		t.Errorf("a switch without a program must answer nothing: %v", cmd)
+	}
+}
+
 func TestP4EntryLine(t *testing.T) {
 	cases := []struct {
 		table, action, match, params string
