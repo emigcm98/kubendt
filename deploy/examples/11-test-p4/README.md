@@ -50,8 +50,10 @@ The gateways do not exist: a host sends everything to its switch, which rewrites
 - `network_conf_ecmp.json`: on `s1`, `ecmp.json` loaded and its entries, `h3` behind a group of two next hops
 - `files/mcast.p4`, `files/mcast.json`, `files/mcast.p4info.txtpb`: `ecmp.p4` with a multicast action, and a copy never sent back out of its ingress port
 - `network_conf_mcast.json`: `mcast.json` on the three switches with their entries, `224.0.0.0/4` to multicast group 1, and the group's ports on each switch, a tree over the triangle
+- `files/arp.p4`, `files/arp.json`, `files/arp.p4info.txtpb`: `mcast.p4` with the switch answering ARP for its gateway, learning the hosts' MACs in a register and asking for a host it has not learned yet
+- `network_conf_arp.json`: `arp.json` on the three switches with their entries by port alone, the gateway each answers for and the host port each asks on, and the hosts without the static neighbor
 
-Upload the `files/` folder to the file manager first, deploy, then apply the configurations in that order. After the first three the hosts reach each other; the fourth bends one path; the fifth is the second part and the sixth the third.
+Upload the `files/` folder to the file manager first, deploy, then apply the configurations in that order. After the first three the hosts reach each other; the fourth bends one path; the fifth is the second part, the sixth the third and the seventh the fourth.
 
 ## Notable Characteristics
 
@@ -62,6 +64,7 @@ Upload the `files/` folder to the file manager first, deploy, then apply the con
 - `ecmp.p4` adds `set_ecmp_group(group, count)` as a possible action of `ipv4_lpm`: it hashes source and destination address, protocol and ports (a CRC16, in v1model's `hash`) into a number below `count`, and a second table, `ecmp_nhop`, keyed by the group and that number, picks the next hop. Every packet of a flow hashes alike, so a flow never reorders; different flows spread.
 - BMv2 reads and writes its ports through packet sockets, so it forwards whole frames and cannot send one larger than the port's MTU. The driver turns the segmentation and receive offloads off on its ports for that reason, and a port on a link to another worker, a VXLAN tunnel, reads through a veth pair of its own: the worker's NIC merges the TCP segments of a flow arriving through the tunnel into frames of several segments, and the veth, with its offloads off, has the kernel split them again before the switch sees them (`ip -d link` in the switch shows `eth2-tc` and `eth2-p4` next to such a port). A switch forwards a few hundred Mbit/s and some fifty thousand packets per second, software numbers, with two to three cores busy.
 - `mcast.p4` adds `set_multicast_group(group)` to `ipv4_lpm`: it hands the packet to BMv2's replication engine, which copies it to every port of the group, each copy going through egress on its own with the group's replication id set. The ports of a group are not in the program: `add_multicast_group` sets them on the running switch (`mc_mgrp_create`, `mc_node_create` and `mc_node_associate` in the CLI), `remove_multicast_group` takes them away, **P4 multicast groups** shows them, and they survive a program swap, so `load_program` leaves them in the history. The egress drops a copy bound for the port it came in on, so a group may hold every port of the switch. The copies are the frame as the host built it, multicast MAC and TTL included.
+- `arp.p4` makes the switch resolve its hosts, as a layer 3 switch does. It answers the ARP requests for the gateway address it owns (`arp_responder`, the reply built from the request and sent back out of its port), writes the source MAC of every ARP or IPv4 frame into a register indexed by port (`learned_mac`), and `ipv4_forward` takes the next hop's MAC from that register, so the entries carry only the port, and puts the switch's own MAC as the source, as a router does, which is what the next switch learns on the link between them. A packet for a host port with nothing learned yet becomes the ARP request for its destination, from the gateway `port_gateway` names for that port, and the host's reply teaches the switch. Other frames are left out of the register on purpose: the pod's own kernel sends IPv6 neighbour discovery out of the ports, and the switch reads it as if it had come in.
 - The hosts' MACs are fixed by an action, not by Meshnet, which assigns a random one each time it creates an interface. A switch restart recreates the hosts' ends too, and the peer replay re-runs `set_mac` and `add_static_neighbor` on them, so the entries that name those MACs stay valid.
 
 ## Step-By-Step (UI)
@@ -133,6 +136,25 @@ Create a namespace (e.g. `p4` or any name you prefer).
 - The same from `h3`: `h1` and `h2` get the five, `h3` gets nothing back, its own copy dropped at `s3`'s egress.
 - Restart `s1`: the group and the entry are back with the program.
 
+### 11. The switch resolves its hosts
+
+- Load `network_conf_arp.json`: the three switches load `arp.json`, `mcast.p4` with ARP, and get their entries again, now with the port alone as the parameter of `ipv4_forward`; each gets its own MAC as the parameter of the default action of `switch_mac`, a table with no key, the gateway address it answers for in `arp_responder` and its host port in `port_gateway`. The hosts drop the static neighbor of their gateway with `remove_static_neighbor`.
+- From `h1`, `ping -c 5 10.0.3.3`. The first echo is lost: `s3` had not learned `h3`'s MAC, so it turned that echo into an ARP request for `10.0.3.3` from `10.0.3.30`, `h3` answered, and the rest went through. **ARP and NDP** on `h1` shows `10.0.1.10` as `REACHABLE` now, resolved by `s1`, where it read `PERMANENT` before.
+- **P4 registers** on `s3`: `learned_mac` holds `h3`'s MAC at index 1 and `s1`'s at index 2, in hex. **P4 counters**: the ARP requests `arp_responder` answered, and the packets each entry of `ipv4_lpm` forwarded.
+- The capture on `h3-s3` during a first ping shows the exchange: no echo request at first, an ARP request from `10.0.3.30`, `h3`'s reply, then the echoes.
+- Restart `s1`: program, entries and group come back, its registers start empty, and the first packet toward `h1` asks for it again.
+
+## Bring Your Own Program
+
+The switch runs whatever `p4c` compiles for BMv2's `simple_switch` (the v1model architecture). Compile with the official image, upload the JSON to the namespace (and the source, to read it next to the compiled form), then `load_program` with its name and the entries its tables take:
+
+```bash
+podman run --rm -v "$PWD:/w" docker.io/p4lang/p4c:1.2.5.19 \
+  p4c-bm2-ss --p4v 16 --p4runtime-files /w/mine.p4info.txtpb -o /w/mine.json /w/mine.p4
+```
+
+`docker` takes the same line. The programs here were compiled with that image. The `.p4info.txtpb` is for a P4Runtime controller, the switch does not need it. The table and action names in `table_add` are the ones `p4c` gives, with their control block (`MyIngress.ipv4_lpm`); **P4 tables** lists them once the program is loaded, and a program's counters and registers show under **P4 counters** and **P4 registers**.
+
 ## Experiments
 
 - **Drop a host.** `table_delete` on `s1` with `10.0.2.2/32` through **Load network conf**: `h1` loses `h2` while `h3` goes on, and the State tab shows the entry gone. Add it back with the same `table_add` as in `network_conf_entries.json`.
@@ -140,7 +162,7 @@ Create a namespace (e.g. `p4` or any name you prefer).
 - **Loop it.** Point `s1`'s entry for `h3` at port 2 and `s2`'s at port 2 too: each switch hands the packet back to the other until the TTL reaches zero, some thirty round trips, visible in the counters of `s1-s2`. Nothing else protects a P4 network from itself.
 - **Three ways.** Make `h3` a group of three on `s1` (`set_ecmp_group 1 3` and a third `ecmp_nhop` entry, `1 2`, out of port 1 toward `h1` itself): the flows that hash to it go back to `h1` and die, a third of them. The counters of `s1 eth1` show the share.
 - **Close the triangle.** Give `s2`'s group its three ports (`add_multicast_group` with `1 2 3`): one echo from `h1` now comes back round, `s2` to `s3` to `s1` to `s2`, for ever, since no switch takes from its TTL, and every lap leaves a copy on each host. The counters of the three links run away at the switches' speed until `remove_multicast_group` on `s2`, or the group with `1 2` again. The tree of step 10 is what a flooding network needs and what spanning tree computes for a real switch.
-- **The program that answers ARP.** `basic.p4` drops ARP, so the hosts carry static neighbors. A program that floods ARP through the group of step 10 and forwards IPv4 by table would let the hosts resolve a real neighbor and drop the static entries; an ARP reply back out of the ingress port is the smaller program and needs no group.
+- **Who answers for the gateway.** `table_delete` on `s1`'s `arp_responder` entry (`10.0.1.10`): nothing answers `h1`'s next ARP request, so once its neighbor entry ages out the pings from `h1` stop while `h2` and `h3` go on, and **P4 counters** shows the entry gone with its count. Add it back and `h1` resolves again.
 
 ## Troubleshooting
 
@@ -148,7 +170,8 @@ Create a namespace (e.g. `p4` or any name you prefer).
 - A ping fails and the entries are right: the host's MAC is not the one the entry names (the **Links** tab of the host), or the gateway's neighbor is missing (**ARP and NDP** on the host, it must read `PERMANENT`); both are in `network_conf_hosts.json`.
 - Everything stops after `network_conf_ecmp.json`: the program swap emptied `s1`'s tables and an entry of the new set was refused; load the file again once fixed, or `network_conf_switches.json` and `network_conf_entries.json` to go back to `basic.p4` on `s1`.
 - The flows do not spread: one flow is one path by design; several runs of the throughput test, or `iperf3 -P`, are needed to see both uplinks move.
+- The first echo of a ping is lost after `network_conf_arp.json`: by design, that echo became the switch's ARP request for a host it had not learned, and the rest pass. Every echo lost: the host still holds the static neighbor (**ARP and NDP**, `PERMANENT`), or its switch lacks the `arp_responder` entry (**P4 table entries**).
 - `ping 224.1.1.1` reports every packet lost: expected, the hosts do not answer echo requests to a multicast address; the counters of their `eth1` and the capture are the evidence. If they do not climb either, **P4 multicast groups** on the switches shows whether the groups are there with the ports of step 10.
 - A switch pod never becomes ready: the image could not be pulled (`ghcr.io/emigcm98/kubendt-p4`, public), or its CLI port is not answering; the pod's logs show `simple_switch` starting.
 
-> Last reviewed: 11 Nov 2026
+> Last reviewed: 13 Nov 2026

@@ -610,10 +610,21 @@ def ex11():
             ex.check(label, all(got[h] >= 5 for h in others) and got[src] < 3, ", ".join(f"{h} +{got[h]}" for h in got))
         mcast_from("h1-0", "h1's five echoes to 224.1.1.1 reach h2 and h3")
         mcast_from("h3-0", "h3's reach h1 and h2, none comes back to h3")
+        # Fourth part: arp.p4 on the three switches, the hosts without their static neighbours; the switches answer the gateways' ARP, learn the hosts' MACs and ask for one they have not learned.
+        configure(ex, f"{d}/network_conf_arp.json", label="configure (arp.p4 on the three switches, the hosts without static neighbors)")
+        rows = inspect(ex.ns, "h1-0", "neighbors"); ex.check("h1 no longer holds its gateway as a permanent neighbor", rows is not None and not any("PERMANENT" in str(r) for r in rows), rows)
+        ok, det, w = retry(ping(ex.ns, "h1-0", "10.0.3.3"), 60); ex.check("h1 ping h3 on arp.p4 (the first echo asks for h3)", ok, det, w)
+        ok, det, w = retry(ping(ex.ns, "h2-0", "10.0.3.3"), 60); ex.check("h2 ping h3 on arp.p4", ok, det, w)
+        gw = lambda: (lambda rows: (rows is not None and any("10.0.1.10" in str(r) and "PERMANENT" not in str(r) for r in rows), rows))(inspect(ex.ns, "h1-0", "neighbors"))
+        ok, det, w = retry(gw, 30); ex.check("h1 resolved its gateway by ARP, s1 answered", ok, det, w)
+        ok, det, w = retry(inspect_has(ex.ns, "s3-0", "p4_registers", "hex", "0x80000000333"), 30); ex.check("s3 learned h3's MAC in its register", ok, det, w)
+        ok, det, w = retry(inspect_has(ex.ns, "s1-0", "p4_counters", "counter", "arp_counter"), 30); ex.check("s1 counts the ARP requests it answered", ok, det, w)
+        ok, det, w = retry(contains(ex.ns, "h1-0", "ping -c 1 -W 2 10.0.3.3", "ttl=62"), 30); ex.check("still two P4 hops on the way", ok, det, w)
         if restart(ex, "s1-0"):
-            ok, det, w = retry(inspect_count(ex.ns, "s1-0", "p4_entries", "match", "ecmp_select", 2), 120); ex.check("mcast.p4 and its entries are back on s1 after the restart (replay)", ok, det, w)
+            ok, det, w = retry(inspect_has(ex.ns, "s1-0", "p4_entries", "action", "arp_reply"), 120); ex.check("arp.p4 and its entries are back on s1 after the restart (replay)", ok, det, w)
             ok, det, w = retry(inspect_has(ex.ns, "s1-0", "p4_multicast_groups", "ports", "1, 2, 3"), 60); ex.check("s1's multicast group is back after the restart", ok, det, w)
-            ok, det, w = retry(ping(ex.ns, "h1-0", "10.0.3.3"), 120); ex.check("h1 ping h3 after s1's restart", ok, det, w)
+            ok, det, w = retry(ping(ex.ns, "h1-0", "10.0.3.3"), 120); ex.check("h1 ping h3 after s1's restart (s1 asks for h1 again)", ok, det, w)
+            ok, det, w = retry(inspect_has(ex.ns, "s1-0", "p4_registers", "hex", "0x80000000111"), 30); ex.check("s1 learned h1's MAC again", ok, det, w)
             mcast_from("h1-0", "h1's echoes to 224.1.1.1 reach h2 and h3 after the restart")
     teardown(ex); return ex
 
