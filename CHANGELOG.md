@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-11-13
+
 ### Added
 
 - A BMv2 image of our own, `ghcr.io/emigcm98/kubendt-p4`: bmv2 1.15.8 built for forwarding (Release, without the logging macros, the event logger and the debugger) on Ubuntu 24.04 with iproute2 and ethtool, published by bmv2 version on every change to its folder.
@@ -328,7 +330,8 @@ Initial public release. KubeNDT deploys and operates virtual network topologies 
 - Health, readiness and version endpoints, and Swagger docs at `/swagger`.
 - Container images published to GHCR and a Docker Compose deployment.
 
-[Unreleased]: https://github.com/emigcm98/kubendt/compare/v1.9.0...HEAD
+[Unreleased]: https://github.com/emigcm98/kubendt/compare/v1.10.0...HEAD
+[1.10.0]: https://github.com/emigcm98/kubendt/compare/v1.9.0...v1.10.0
 [1.9.0]: https://github.com/emigcm98/kubendt/compare/v1.8.0...v1.9.0
 [1.8.0]: https://github.com/emigcm98/kubendt/compare/v1.7.0...v1.8.0
 [1.7.0]: https://github.com/emigcm98/kubendt/compare/v1.6.0...v1.7.0
