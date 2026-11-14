@@ -99,7 +99,7 @@ Go to the Namespace File Manager for that namespace.
 - Click **Import topology**.
 - Select `topology-network-test-vyos.json`.
 - Wait until all nodes are running and visible. QEMU-based nodes (`router-0`, `router-1`) take longer to become Ready than regular pods: the guest has to boot and its SSH and HTTP API have to answer.
-- Nodes can be moved to the preferred position and saved by clicking **Save positions**.
+- Nodes can be moved to the preferred position and saved by clicking **Save layout**.
 
 ### 5. Edit `network_conf.json` for your environment
 

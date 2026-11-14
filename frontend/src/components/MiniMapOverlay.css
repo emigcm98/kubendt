@@ -107,6 +107,12 @@
   filter: drop-shadow(0 0 10px #8b5cf6);
 }
 
+/* Annotations: a faint outline, the pods are what the map is for. */
+.minimap-node.shape {
+  stroke: var(--text-subtle) !important;
+  stroke-width: 2px !important;
+}
+
 .minimap-node.selected {
   animation: blink 1s infinite;
 }

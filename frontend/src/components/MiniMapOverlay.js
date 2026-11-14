@@ -22,7 +22,7 @@ const storeHidden = (hidden) => {
   }
 };
 
-const MiniMapOverlay = ({ nodes, selectedNodeId }) => {
+const MiniMapOverlay = ({ selectedNodeId }) => {
   const [hidden, setHidden] = useState(readHidden);
   const toggle = () => {
     setHidden((h) => {
@@ -34,6 +34,8 @@ const MiniMapOverlay = ({ nodes, selectedNodeId }) => {
   const getColor = (node) => {
     const type = node.data?.type || node.type;
     switch (type) {
+      case 'annotation':
+        return 'transparent';
       case 'router':
         return '#3b82f6';
       case 'switch':
@@ -49,6 +51,7 @@ const MiniMapOverlay = ({ nodes, selectedNodeId }) => {
 
   const getClassName = (node) => {
     const type = node.data?.type || node.type;
+    if (type === 'annotation') return 'minimap-node shape';
     const base =
       type === 'router'
         ? 'minimap-node router'
@@ -86,7 +89,6 @@ const MiniMapOverlay = ({ nodes, selectedNodeId }) => {
         <MinusIcon className="app-icon" />
       </button>
       <MiniMap
-        nodes={nodes}
         nodeColor={getColor}
         nodeStrokeColor="#111"
         nodeStrokeWidth={1.5}

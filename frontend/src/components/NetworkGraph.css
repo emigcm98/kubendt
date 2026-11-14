@@ -299,6 +299,11 @@
   color: var(--warning-strong);
 }
 
+/* The unsaved marker sits tight after the label, not a full gap away. */
+.topbar button .dirty-dot {
+  margin-left: -4px;
+}
+
 .topbar button:active:not(:disabled) {
   transform: translateY(0);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);

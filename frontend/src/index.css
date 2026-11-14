@@ -129,6 +129,16 @@ code {
   font-family: var(--font-mono);
 }
 
+/* Unsaved marker: the bullet after a name whose changes are not saved yet,
+   in the file manager's list and on the graph's save button. */
+.dirty-dot {
+  font-size: 18px;
+  line-height: 1;
+  color: var(--danger);
+  user-select: none;
+  flex-shrink: 0;
+}
+
 /* Shared inline icon: SVG that scales with the surrounding text and inherits
    its color (icons use stroke="currentColor"). Use for icons placed inline with
    text (buttons, menu items, headings). Add an explicit size for standalone or

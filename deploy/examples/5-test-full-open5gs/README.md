@@ -185,7 +185,7 @@ The Secret commands should return `Opaque` Secrets; the ConfigMap should return 
 - Click **Import topology**.
 - Select `topology-network-test-big.json`.
 - Wait until all nodes reach `Running` state. NF nodes run multi-step init scripts that take longer than typical containers, allow 30–60 seconds after the pod shows `Running` for the process inside to complete.
-- Optionally arrange and save node positions with **Save positions**.
+- Optionally arrange and save the layout with **Save layout**.
 
 ### 4. Edit `network_conf.json` for your environment
 

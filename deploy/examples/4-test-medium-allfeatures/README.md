@@ -142,7 +142,7 @@ Alternatively, if the File Manager supports zip import, you can zip the `files/`
 - Click **Import topology**.
 - Select `topology-network-test-allfeatures.json`.
 - Wait until all nodes reach `Running` state. The `dns-server-0`, `iperf-server-*`, and `web-*` nodes may take a moment due to their startup commands.
-- Optionally arrange and save positions with **Save positions**.
+- Optionally arrange and save the layout with **Save layout**.
 
 ### 4. Edit `network_conf.json` for your environment
 
@@ -414,4 +414,4 @@ To shape a whole link, name one end in a `links` section and the backend finds t
 - **`web-internal` returns default nginx page**: the file `web_internal/index_internal.html` may have been created after the node was started. Restart `web-internal-0` to re-mount the file.
 - **Internet access not working**: verify the SNAT rule on `edge-router-0 eth0` is active (`iptables -t nat -L POSTROUTING`) and that pods in the cluster can reach the internet at all; the external IP on `eth1` only matters for the DNAT tests.
 
-> Last reviewed: 4 Nov 2026
+> Last reviewed: 14 Nov 2026

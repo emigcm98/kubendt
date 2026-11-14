@@ -93,7 +93,7 @@ Go to the Namespace File Manager for that namespace.
 - Click **Import topology**.
 - Select `topology-network-test-small.json`.
 - Wait until all nodes are running and visible.
-- Nodes can be moved to the preferred position and saved by clicking **Save positions**.
+- Nodes can be moved to the preferred position and saved by clicking **Save layout**.
 
 ### 6. Apply network configuration
 
@@ -214,4 +214,4 @@ Open the info panel of any `pc-*` and go to the last tab, `Files/Vars`. It summa
 - If a target name in `network_conf.json` is ambiguous (multi-replica), use the explicit `-N` pod name.
 - If `cat /etc/kubendt/secret.env` on `server-0` is missing, the topology was imported before the file existed. Create it, mark sensitive, then redeploy or restart `server-0`.
 
-> Last reviewed: 4 Nov 2026
+> Last reviewed: 14 Nov 2026

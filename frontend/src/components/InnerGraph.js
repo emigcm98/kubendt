@@ -10,6 +10,10 @@ import {
   useStoreApi,
 } from 'reactflow';
 import LinkEdge from './LinkEdge';
+import AnnotationNode from './AnnotationNode';
+import AnnotationToolbar from './AnnotationToolbar';
+import AnnotationDrawLayer from './AnnotationDrawLayer';
+import { isAnnotationId } from './useLayout';
 import 'reactflow/dist/style.css';
 import MiniMapOverlay from './MiniMapOverlay.js';
 import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
@@ -36,7 +40,7 @@ const MULTI_SELECT_KEYS = ['Shift', 'Control', 'Meta'];
 const GRAPH_MIN_ZOOM = 0.4;
 const GRAPH_MAX_ZOOM = 3.5;
 
-const nodeTypes = { custom: CustomNode };
+const nodeTypes = { custom: CustomNode, annotation: AnnotationNode };
 const edgeTypes = { link: LinkEdge };
 
 const EdgeLabel = ({ x, y, intfName, status, loading, dimmed, onClick, onHover, onRightClick }) => {
@@ -151,6 +155,8 @@ const InnerGraph = ({
   onDeselect,
   handleNodesChange,
   onNodeDropRelax,
+  onAddAnnotation,
+  onDeleteAnnotations,
   hoveredInfo,
   setHoveredInfo,
   setTooltipPos,
@@ -199,6 +205,7 @@ const InnerGraph = ({
   const fitTimerRef = useRef(null);
   useEffect(() => {
     const ids = nodes
+      .filter((n) => n.type !== 'annotation')
       .map((n) => n.id)
       .sort()
       .join(',');
@@ -245,6 +252,11 @@ const InnerGraph = ({
   // True while a selection box is being dragged: interface labels go inert so
   // the box does not stop on them and no tooltip gets stuck.
   const [selecting, setSelecting] = useState(false);
+  // The drawing tool: select, or the kind of annotation the next drag draws.
+  const [tool, setTool] = useState('select');
+  useEffect(() => {
+    if (locked || isBusy) setTool('select');
+  }, [locked, isBusy]);
   const onSelectionChange = useCallback(({ nodes: picked }) => {
     const ids = picked.map((n) => n.id);
     setSelectedIds((prev) =>
@@ -284,10 +296,19 @@ const InnerGraph = ({
 
   useEffect(() => {
     const onKey = (e) => {
-      if (e.key !== 'Escape' || selectedIds.length === 0) return;
       const tag = e.target?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-      handleNodesChange(selectedIds.map((id) => ({ id, type: 'select', selected: false })));
+      if (e.key === 'Escape') {
+        setTool('select');
+        if (selectedIds.length === 0) return;
+        handleNodesChange(selectedIds.map((id) => ({ id, type: 'select', selected: false })));
+        return;
+      }
+      // Delete takes the selected annotations; a pod goes from its menu.
+      if ((e.key === 'Delete' || e.key === 'Backspace') && onDeleteAnnotations) {
+        const ids = selectedIds.filter(isAnnotationId);
+        if (ids.length > 0) onDeleteAnnotations(ids);
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -526,6 +547,7 @@ const InnerGraph = ({
   });
 
   const displayedNodes = nodes.map((n) => {
+    if (n.type === 'annotation') return n;
     let next = n;
     if (n.id === selectedNodeId) {
       next = { ...next, data: { ...next.data, selected: true } };
@@ -611,6 +633,7 @@ const InnerGraph = ({
         onPaneContextMenu={(e) => e.preventDefault()}
         onNodeClick={(event, node) => {
           if (isBusy) return;
+          if (node.type === 'annotation') return;
           // Shift or Ctrl and a click adds the node to the selection, React
           // Flow handles that; the info panel stays as it is.
           if (event?.shiftKey || event?.ctrlKey || event?.metaKey) return;
@@ -640,6 +663,7 @@ const InnerGraph = ({
             nodeClickTimerRef.current = null;
           }
           if (isBusy) return;
+          if (node.type === 'annotation') return;
           if (node.data?.type === 'external') return;
           if (!onOpenInteractiveShell) return;
           const info = node.data?.fullInfo;
@@ -659,6 +683,7 @@ const InnerGraph = ({
           e.preventDefault();
 
           if (isBusy) return;
+          if (node.type === 'annotation') return;
 
           setEdgeContextMenu(null);
           setInterfaceContextMenu(null);
@@ -704,6 +729,7 @@ const InnerGraph = ({
           setInterfaceContextMenu(null);
         }}
         onNodeDragStart={(_, node) => {
+          if (!node) return;
           setContextMenu(null);
           setEdgeContextMenu(null);
           setInterfaceContextMenu(null);
@@ -716,6 +742,7 @@ const InnerGraph = ({
         onNodeDragStop={(dragEvent, node, draggedNodes) => {
           const info = dragInfoRef.current;
           dragInfoRef.current = null;
+          if (node.type === 'annotation') return;
           // A group drag moves the selection as a block: no click fallback and
           // no bounce, the arrangement the user made inside the block stays.
           if (draggedNodes && draggedNodes.length > 1) return;
@@ -747,54 +774,67 @@ const InnerGraph = ({
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
       >
-        <MiniMapOverlay nodes={nodes} selectedNodeId={selectedNodeInfo?.id} />
+        {tool !== 'select' && onAddAnnotation && (
+          <AnnotationDrawLayer
+            kind={tool}
+            onDraw={(kind, rect) => {
+              clearSelection();
+              onAddAnnotation(kind, rect);
+            }}
+            onDone={() => setTool('select')}
+          />
+        )}
+        <MiniMapOverlay selectedNodeId={selectedNodeInfo?.id} />
         {/* Custom controls: zoom and fit are animated with a duration so they
             glide (the built-in Controls can't animate the +/- without firing
             twice). Also lets us style them to match the app. */}
-        <Panel position="bottom-left" className="graph-controls">
-          <button
-            type="button"
-            className="graph-control-btn"
-            title="Zoom in"
-            onClick={() => zoomIn({ duration: 150 })}
-          >
-            <PlusIcon className="app-icon" aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            className="graph-control-btn"
-            title="Zoom out"
-            onClick={() => zoomOut({ duration: 150 })}
-          >
-            <MinusIcon className="app-icon" aria-hidden="true" />
-          </button>
-          <button type="button" className="graph-control-btn" title="Fit view" onClick={fitGraph}>
-            <MaximizeIcon className="app-icon" aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            className="graph-control-btn"
-            title={locked ? 'Unlock node dragging' : 'Lock node dragging'}
-            onClick={() => setLocked((v) => !v)}
-          >
-            {locked ? (
-              <LockIcon className="app-icon" aria-hidden="true" />
-            ) : (
-              <UnlockIcon className="app-icon" aria-hidden="true" />
-            )}
-          </button>
-          <button
-            type="button"
-            className={`graph-control-btn${repel ? ' graph-control-btn-active' : ''}`}
-            title={
-              repel
-                ? 'Node repulsion on (nodes spread apart on drop). Hold Ctrl to place close.'
-                : 'Node repulsion off (nodes can overlap)'
-            }
-            onClick={() => setRepel((v) => !v)}
-          >
-            <MagnetIcon className="app-icon" aria-hidden="true" />
-          </button>
+        <Panel position="bottom-left" className="graph-controls-stack">
+          <AnnotationToolbar tool={tool} setTool={setTool} disabled={isBusy || locked} />
+          <div className="graph-controls">
+            <button
+              type="button"
+              className="graph-control-btn"
+              title="Zoom in"
+              onClick={() => zoomIn({ duration: 150 })}
+            >
+              <PlusIcon className="app-icon" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              className="graph-control-btn"
+              title="Zoom out"
+              onClick={() => zoomOut({ duration: 150 })}
+            >
+              <MinusIcon className="app-icon" aria-hidden="true" />
+            </button>
+            <button type="button" className="graph-control-btn" title="Fit view" onClick={fitGraph}>
+              <MaximizeIcon className="app-icon" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              className="graph-control-btn"
+              title={locked ? 'Unlock node dragging' : 'Lock node dragging'}
+              onClick={() => setLocked((v) => !v)}
+            >
+              {locked ? (
+                <LockIcon className="app-icon" aria-hidden="true" />
+              ) : (
+                <UnlockIcon className="app-icon" aria-hidden="true" />
+              )}
+            </button>
+            <button
+              type="button"
+              className={`graph-control-btn${repel ? ' graph-control-btn-active' : ''}`}
+              title={
+                repel
+                  ? 'Node repulsion on (nodes spread apart on drop). Hold Ctrl to place close.'
+                  : 'Node repulsion off (nodes can overlap)'
+              }
+              onClick={() => setRepel((v) => !v)}
+            >
+              <MagnetIcon className="app-icon" aria-hidden="true" />
+            </button>
+          </div>
         </Panel>
         {selectedIds.length > 1 && (
           <Panel position="top-center" className="graph-selection-chip">
