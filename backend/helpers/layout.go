@@ -179,8 +179,7 @@ func PutLayout(namespace string, l types.Layout) error {
 }
 
 // SavePositions merges positions into the layout, each node's replacing its
-// own, which is what the graph's Save positions and the auto-save after a
-// modify send.
+// own, which is what the graph's auto-save after a modify sends.
 func SavePositions(namespace string, positions map[string]types.NodePosition) error {
 	var lastErr error
 	for attempt := 0; attempt < 3; attempt++ {

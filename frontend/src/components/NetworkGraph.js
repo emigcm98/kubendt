@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import Modal from 'react-modal';
 import { useNodesState, useEdgesState, ReactFlowProvider } from 'reactflow';
 import 'reactflow/dist/style.css';
@@ -34,6 +35,7 @@ import { ReactComponent as GaugeIcon } from '../assets/images/icons/gauge.svg';
 import { ReactComponent as SaveIcon } from '../assets/images/icons/save.svg';
 import { ReactComponent as DownloadIcon } from '../assets/images/icons/download.svg';
 import InnerGraph from './InnerGraph';
+import { useLayout, isAnnotationId } from './useLayout';
 import LoadingOverlay from './LoadingOverlay';
 import './NetworkGraph.css';
 import { NODE_SIZE } from './CustomNode';
@@ -766,6 +768,15 @@ const NetworkGraph = ({
 }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const {
+    annotationNodes,
+    annotationsDirty,
+    loadLayout,
+    saveLayout,
+    addAnnotation,
+    removeAnnotations,
+    applyAnnotationChanges,
+  } = useLayout();
   const nodesRef = useRef([]);
   const edgesRef = useRef([]);
   const [selectedNodeInfo, setSelectedNodeInfo] = useState(null);
@@ -832,7 +843,8 @@ const NetworkGraph = ({
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
   const [tooltipLoading, setTooltipLoading] = useState(false);
   const [interfacesData, setInterfacesData] = useState({});
-  const [, setSavedPositions] = useState({});
+  // Pods moved since the layout was loaded or saved.
+  const [positionsDirty, setPositionsDirty] = useState(false);
   const [importing, setImporting] = useState(false);
   const [loadingConfig, setLoadingConfig] = useState(false);
   const [modifyingTopology, setModifyingTopology] = useState(false);
@@ -2023,12 +2035,26 @@ const NetworkGraph = ({
   };
 
   const handleNodesChange = (changes) => {
-    changes.forEach((change) => {
+    // The annotations are nodes of their own: their changes go to the layout.
+    const own = [];
+    const ann = [];
+    for (const change of changes) (isAnnotationId(change.id) ? ann : own).push(change);
+    if (ann.length > 0) {
+      // A resize commits before the frame paints, or the pending size lands
+      // inside the resize observer's delivery and Chrome reports a loop.
+      if (ann.some((c) => c.type === 'dimensions' && c.resizing)) {
+        flushSync(() => applyAnnotationChanges(ann));
+      } else {
+        applyAnnotationChanges(ann);
+      }
+    }
+    own.forEach((change) => {
       if (change.type === 'position' && change.id && change.position) {
         positionRef.current[change.id] = change.position;
       }
     });
-    onNodesChange(changes);
+    if (own.some((c) => c.type === 'position')) setPositionsDirty(true);
+    if (own.length > 0) onNodesChange(own);
   };
 
   // When a node is dropped too close to another, push ONLY the dropped node out
@@ -2078,46 +2104,30 @@ const NetworkGraph = ({
     animateNodesFromTo({ [nodeId]: dropPos }, { [nodeId]: pos }, setNodes, 520);
   };
 
-  // POST a { id: {x, y} } map to the backend and update the saved snapshot.
-  // Shared by the explicit "Save positions" button and the auto-save after a
-  // modify.
+  // POST a { id: {x, y} } map to the backend, the auto-save after a modify.
   const persistPositions = async (positionsToSave) => {
     await fetch(`${API_BASE_URL}/network/positions/${namespace}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(positionsToSave),
     });
-    setSavedPositions(positionsToSave);
+    setPositionsDirty(false);
   };
 
-  const handleSavePositions = async () => {
-    if (nodes.length === 0) {
-      setAlertModal({
-        isOpen: true,
-        type: 'warning',
-        title: 'No nodes',
-        message: 'There are no nodes to save positions for.',
-        onConfirm: () => setAlertModal((prev) => ({ ...prev, isOpen: false })),
-        onCancel: () => setAlertModal((prev) => ({ ...prev, isOpen: false })),
-      });
-      return;
-    }
-
+  // The whole layout, positions and annotations. The marker going out is
+  // the confirmation.
+  const handleSaveLayout = async () => {
+    if (nodes.length === 0 && annotationNodes.length === 0) return;
     const positionsToSave = Object.fromEntries(nodes.map((n) => [n.id, n.position]));
-
     try {
-      await persistPositions(positionsToSave);
-      setAlertModal({
-        isOpen: true,
-        type: 'success',
-        title: 'Positions saved',
-        message: 'Node positions (x, y) have been saved successfully.',
-        onConfirm: () => setAlertModal((prev) => ({ ...prev, isOpen: false })),
-        onCancel: () => setAlertModal((prev) => ({ ...prev, isOpen: false })),
-      });
+      await saveLayout(namespace, positionsToSave);
+      setPositionsDirty(false);
     } catch (error) {
-      console.error('❌ Error saving positions:', error);
-      showError('Error saving positions', 'An error occurred while saving node positions.');
+      console.error('❌ Error saving the layout:', error);
+      showError(
+        'Error saving the layout',
+        'An error occurred while saving the positions and annotations.'
+      );
     }
   };
 
@@ -3408,19 +3418,18 @@ const NetworkGraph = ({
     creatingNodeTimersRef.current.forEach((t) => clearTimeout(t));
     creatingNodeTimersRef.current = new Map();
 
-    const fetchSavedPositions = async () => {
+    const fetchSavedLayout = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/network/positions/${namespace}`);
-        const data = await res.json();
-        setSavedPositions(data);
+        const data = await loadLayout(namespace);
+        setPositionsDirty(false);
         positionRef.current = { ...data };
       } catch (error) {
-        console.error('❌ Error fetching saved positions:', error);
+        console.error('❌ Error fetching the saved layout:', error);
       }
     };
 
-    fetchSavedPositions();
-  }, [namespace, setNodes, setEdges]);
+    fetchSavedLayout();
+  }, [namespace, setNodes, setEdges, loadLayout]);
 
   useEffect(() => {
     if (!namespace) return;
@@ -3875,12 +3884,17 @@ const NetworkGraph = ({
           <div className="topbar-right">
             <div className="topbar-right-buttons">
               <button
-                onClick={!isBusy ? handleSavePositions : undefined}
-                disabled={nodes.length === 0 || isBusy}
-                title="Save node positions (x,y)"
+                onClick={!isBusy ? handleSaveLayout : undefined}
+                disabled={(nodes.length === 0 && annotationNodes.length === 0) || isBusy}
+                title="Save the layout: node positions and annotations"
               >
                 <SaveIcon className="app-icon" aria-hidden="true" />
-                Save positions
+                Save layout
+                {(positionsDirty || annotationsDirty) && (
+                  <span className="dirty-dot" aria-label="Unsaved changes">
+                    •
+                  </span>
+                )}
               </button>
 
               <button
@@ -3907,7 +3921,9 @@ const NetworkGraph = ({
         <ReactFlowProvider>
           <InnerGraph
             namespace={namespace}
-            nodes={visibleNodes}
+            nodes={
+              annotationNodes.length > 0 ? [...annotationNodes, ...visibleNodes] : visibleNodes
+            }
             edges={visibleEdges}
             onNodesChange={handleNodesChange}
             onEdgesChange={onEdgesChange}
@@ -3918,6 +3934,8 @@ const NetworkGraph = ({
             onDeselect={requestClosePanels}
             handleNodesChange={handleNodesChange}
             onNodeDropRelax={relaxDroppedNode}
+            onAddAnnotation={addAnnotation}
+            onDeleteAnnotations={removeAnnotations}
             hoveredInfo={hoveredInfo}
             setHoveredInfo={setHoveredInfo}
             setTooltipPos={setTooltipPos}

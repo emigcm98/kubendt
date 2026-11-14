@@ -13,6 +13,36 @@
   z-index: 1001;
 }
 
+/* The control strip: the drawing tools above the zoom and lock controls,
+   the same panel in a tinted shade so the two groups read apart. */
+.graph-controls-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.graph-tools .graph-control-btn {
+  background: var(--panel-header-from);
+}
+
+.graph-tools .graph-control-btn:hover {
+  background: var(--panel-header-to);
+  color: var(--primary);
+}
+
+.graph-tools .graph-control-btn-active,
+.graph-tools .graph-control-btn-active:hover {
+  background: var(--primary);
+  color: #fff;
+}
+
+.graph-tools .graph-control-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+  background: var(--panel-header-from);
+  color: var(--text-body);
+}
+
 /* Custom zoom / fit / lock control: a rounded white panel with brand hover,
    matching the rest of the app. */
 .graph-controls {

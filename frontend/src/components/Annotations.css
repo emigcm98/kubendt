@@ -1,0 +1,160 @@
+/* Shapes sit under the pods and the links. A colour is a palette name the
+   tokens fill in: the ink of the border and the text, and a faint fill.
+   Nothing says a colour, so it is the muted slate of the UI's own text. */
+.annotation {
+  --ann-stroke: var(--text-muted);
+  --ann-fill: color-mix(in srgb, var(--text-muted) 7%, transparent);
+  position: relative;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  border: 1.5px solid var(--ann-stroke);
+  background: var(--ann-fill);
+  color: var(--ann-stroke);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.annotation-rect {
+  border-radius: var(--radius-md);
+}
+
+.annotation-ellipse {
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+/* A note is text on the canvas, no box. A dashed hint on hover says it is
+   something to grab; selected, the resizer frames it. */
+.annotation-note {
+  --ann-stroke: var(--text-body);
+  border-color: transparent;
+  background: transparent;
+  border-radius: var(--radius-sm);
+}
+
+.annotation-note:not(.annotation-selected):hover {
+  border-color: var(--border);
+  border-style: dashed;
+}
+
+.ann-color-blue {
+  --ann-stroke: var(--primary);
+  --ann-fill: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+.ann-color-green {
+  --ann-stroke: var(--success);
+  --ann-fill: color-mix(in srgb, var(--success) 8%, transparent);
+}
+
+.ann-color-amber {
+  --ann-stroke: var(--warning-strong);
+  --ann-fill: color-mix(in srgb, var(--warning) 12%, transparent);
+}
+
+.ann-color-red {
+  --ann-stroke: var(--danger);
+  --ann-fill: color-mix(in srgb, var(--danger) 8%, transparent);
+}
+
+.ann-border-dashed {
+  border-style: dashed;
+}
+
+.ann-text-sm {
+  font-size: 11px;
+}
+
+.ann-text-lg {
+  font-size: 17px;
+}
+
+.annotation-text {
+  padding: 5px 9px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-weight: 600;
+}
+
+.annotation-note .annotation-text {
+  font-weight: 400;
+}
+
+.annotation-placeholder {
+  color: var(--text-subtle);
+  font-style: italic;
+}
+
+.annotation-locked.annotation-selected {
+  outline: 1px dashed var(--text-subtle);
+  outline-offset: 2px;
+}
+
+.annotation-editor {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 5px 9px;
+  border: none;
+  background: transparent;
+  resize: none;
+  outline: none;
+  font: inherit;
+  font-weight: inherit;
+  color: inherit;
+}
+
+.annotation-note .annotation-editor {
+  font-weight: 400;
+}
+
+.annotation-ellipse .annotation-editor {
+  text-align: center;
+}
+
+/* The selection is the resizer's own frame: a hairline and small square
+   handles, no halo. */
+.annotation-resize-line {
+  border-color: var(--primary) !important;
+}
+
+.annotation-resize-handle {
+  width: 7px !important;
+  height: 7px !important;
+  border-radius: 1px !important;
+  background: var(--surface) !important;
+  border: 1.5px solid var(--primary) !important;
+}
+
+/* The drawing layer covers the graph while a tool is picked, above the
+   pane and under the controls. */
+.annotation-draw-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.annotation-preview {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1.5px dashed var(--primary);
+  background: color-mix(in srgb, var(--primary) 5%, transparent);
+  border-radius: var(--radius-md);
+  pointer-events: none;
+}
+
+.annotation-preview-ellipse {
+  border-radius: 50%;
+}
+
+.annotation-preview-note {
+  border-radius: var(--radius-sm);
+  background: transparent;
+}

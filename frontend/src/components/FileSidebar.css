@@ -156,14 +156,6 @@
   white-space: nowrap;
 }
 
-.dirty-dot {
-  font-size: 18px;
-  line-height: 1;
-  color: var(--danger);
-  user-select: none;
-  flex-shrink: 0;
-}
-
 .file-list li.selected .dirty-dot,
 .nested-list li.selected .dirty-dot {
   color: var(--danger-bg) !important;

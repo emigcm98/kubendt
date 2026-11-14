@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Added
 
 - `GET` and `PUT /network/layout/{namespace}`: the graph's node positions and annotations as one document kept in the namespace, the `kubendt-internal-layout` ConfigMap, so a lab carries its layout and any backend sees it. `/network/positions` works on the same document, and the SQLite rows fill it once and mirror it while a database is open.
+- Annotations on the graph: notes, rectangles and ellipses, drawn by dragging with the tools next to the zoom controls, moved, resized and edited in place, deleted with the key, kept under the nodes and links. Save positions becomes Save layout, keeps them in the namespace's layout with the positions, and carries the unsaved marker while the graph has changes.
 
 ## [1.10.0] - 2026-11-13
 
