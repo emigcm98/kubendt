@@ -130,6 +130,9 @@ func SetupRoutes(router *gin.Engine) {
 		netGroup.POST("/positions/:namespace", handlers.SaveNodePositions)
 		// Get node positions
 		netGroup.GET("/positions/:namespace", handlers.GetNodePositions)
+		// The layout document, positions and annotations
+		netGroup.GET("/layout/:namespace", handlers.GetLayout)
+		netGroup.PUT("/layout/:namespace", handlers.PutLayout)
 		// Configure Pods via DRIVERS (includes network config)
 		netGroup.POST("/configure/:namespace", handlers.ConfigureNetwork)
 		// The applied configuration as a configure request

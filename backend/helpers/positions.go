@@ -1,10 +1,6 @@
 package helpers
 
-import (
-	"database/sql"
-
-	"kubendt/kubeclient"
-)
+import "database/sql"
 
 var DB *sql.DB
 
@@ -16,12 +12,8 @@ func GetDB() *sql.DB {
 	return DB
 }
 
+// DeletePositionsByNamespace is the "delete positions" of a clear or a
+// namespace delete: the layout's positions go, with their mirror.
 func DeletePositionsByNamespace(namespace string) error {
-	clusterID, err := kubeclient.CurrentClusterID()
-	if err != nil {
-		return err
-	}
-	stmt := `DELETE FROM node_positions WHERE cluster_id = ? AND namespace = ?`
-	_, err = DB.Exec(stmt, clusterID, namespace)
-	return err
+	return ClearPositions(namespace)
 }

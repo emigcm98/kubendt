@@ -266,6 +266,43 @@ definitions:
         example: false
         type: boolean
     type: object
+  types.Annotation:
+    properties:
+      border:
+        example: dashed
+        type: string
+      color:
+        example: blue
+        type: string
+      height:
+        example: 200
+        type: number
+      id:
+        example: a1
+        type: string
+      locked:
+        type: boolean
+      text:
+        example: Site A
+        type: string
+      text_size:
+        example: md
+        type: string
+      type:
+        example: rect
+        type: string
+      width:
+        example: 320
+        type: number
+      x:
+        example: 40
+        type: number
+      "y":
+        example: 60
+        type: number
+      z:
+        type: integer
+    type: object
   types.AuthStatus:
     properties:
       authenticated:
@@ -1007,6 +1044,17 @@ definitions:
       path:
         example: /home/user/.kube/config
         type: string
+    type: object
+  types.Layout:
+    properties:
+      annotations:
+        items:
+          $ref: '#/definitions/types.Annotation'
+        type: array
+      positions:
+        additionalProperties:
+          $ref: '#/definitions/types.NodePosition'
+        type: object
     type: object
   types.LinkMTUDoc:
     properties:
@@ -4091,6 +4139,61 @@ paths:
           schema:
             $ref: '#/definitions/types.ErrorResponse'
       summary: Get network topology
+      tags:
+      - network
+  /network/layout/{namespace}:
+    get:
+      description: The namespace's node positions and annotations, one document kept
+        in the namespace as the ConfigMap kubendt-internal-layout.
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.Layout'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Get the graph layout
+      tags:
+      - network
+    put:
+      consumes:
+      - application/json
+      description: Replaces the namespace's node positions and annotations with the
+        document given.
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: The whole layout
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/types.Layout'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Save the graph layout
       tags:
       - network
   /network/links/{namespace}:

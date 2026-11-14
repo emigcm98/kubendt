@@ -190,6 +190,10 @@ def ex1():
     upload_dir(ex, f"{d}/files")
     if deploy(ex, f"{d}/topology-network-test-small.json"):
         configure(ex, f"{d}/network_conf.json")
+        # The layout lives in the namespace: positions saved the old way show in the document and in the ConfigMap.
+        st, r = api("POST", f"/network/positions/{ex.ns}", body={"r1-0": {"x": 120.4, "y": 80}}); ex.check("save a position", st == 204, r if st != 204 else "")
+        st, r = api("GET", f"/network/layout/{ex.ns}"); ex.check("the layout holds it, rounded", st == 200 and (r.get("positions") or {}).get("r1-0") == {"x": 120, "y": 80} and r.get("annotations") == [], r)
+        rc, out, _ = C.kubectl(["-n", ex.ns, "get", "configmap", "kubendt-internal-layout", "-o", "jsonpath={.metadata.labels.kubendt/kind}"], 30); ex.check("the layout ConfigMap is in the namespace", rc == 0 and out.strip() == "layout", out)
         for ip, what in (("10.0.1.12", "pc-1 same LAN"), ("10.0.2.11", "pc-2 via r1"), ("10.0.3.11", "server via ovs")):
             ok, det, w = retry(ping(ex.ns, "pc-0", ip), 60); ex.check(f"pc-0 ping {ip} ({what})", ok, det, w)
         rc, out = kexec(ex.ns, "pc-0", "cat /mnt/test.sh"); ex.check("mount test.sh visible in pc-0", rc == 0 and out, out[:80])

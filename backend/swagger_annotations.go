@@ -328,6 +328,32 @@ func swaggerGetNetwork() {}
 //	@Router       /network/positions/{namespace} [post]
 func swaggerSaveNodePositions() {}
 
+// swaggerGetLayout godoc
+//
+//	@Summary      Get the graph layout
+//	@Description  The namespace's node positions and annotations, one document kept in the namespace as the ConfigMap kubendt-internal-layout.
+//	@Tags         network
+//	@Produce      json
+//	@Param        namespace  path      string  true  "Namespace name"
+//	@Success      200        {object}  types.Layout
+//	@Failure      500        {object}  types.ErrorResponse
+//	@Router       /network/layout/{namespace} [get]
+func swaggerGetLayout() {}
+
+// swaggerPutLayout godoc
+//
+//	@Summary      Save the graph layout
+//	@Description  Replaces the namespace's node positions and annotations with the document given.
+//	@Tags         network
+//	@Accept       json
+//	@Param        namespace  path      string        true  "Namespace name"
+//	@Param        body       body      types.Layout  true  "The whole layout"
+//	@Success      204        "No Content"
+//	@Failure      400        {object}  types.ErrorResponse
+//	@Failure      500        {object}  types.ErrorResponse
+//	@Router       /network/layout/{namespace} [put]
+func swaggerPutLayout() {}
+
 // swaggerGetNodePositions godoc
 //
 //	@Summary      Get node positions
@@ -891,6 +917,7 @@ var _ = types.NetworkModifyRequestDoc{}
 var _ = types.ModifyNetworkResponse{}
 var _ = types.ConfigureNetworkResponse{}
 var _ = types.NodePosition{}
+var _ = types.Layout{}
 var _ = types.FileEntry{}
 var _ = types.FilesListResponse{}
 var _ = types.UpdateFileContentRequest{}
