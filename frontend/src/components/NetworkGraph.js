@@ -2131,6 +2131,18 @@ const NetworkGraph = ({
     }
   };
 
+  // Ctrl+S saves the layout when something changed, and never opens the
+  // browser's save dialog on the graph.
+  useEffect(() => {
+    const onKey = (e) => {
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 's') return;
+      e.preventDefault();
+      if ((positionsDirty || annotationsDirty) && !isBusy) handleSaveLayout();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
+
   const handleExportTopology = async () => {
     if (!namespace) return;
 

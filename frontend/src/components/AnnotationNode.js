@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { NodeResizer, useStore } from 'reactflow';
 import { useViewportGestures } from './useViewportGestures';
+import AnnotationStyleBar from './AnnotationStyleBar';
+import { anchorAxes, defaultAnchor } from './useLayout';
 import './Annotations.css';
 
 // A note, rectangle or ellipse on the graph: a React Flow node with no
@@ -37,11 +39,15 @@ const AnnotationNode = ({ id, data, selected }) => {
     if (text !== (data.text || '')) data.onChange?.(id, { text });
   };
 
+  const [row, column] = anchorAxes(data.textAnchor || defaultAnchor(kind));
   const cls = [
     'annotation',
     `annotation-${kind}`,
+    `ann-v-${row}`,
+    `ann-h-${column}`,
     data.color ? `ann-color-${data.color}` : '',
     data.border ? `ann-border-${data.border}` : '',
+    `ann-fill-${data.fill || 'glass'}`,
     data.textSize ? `ann-text-${data.textSize}` : '',
     selected ? 'annotation-selected' : '',
     locked ? 'annotation-locked' : '',
@@ -58,6 +64,7 @@ const AnnotationNode = ({ id, data, selected }) => {
         lineClassName="annotation-resize-line"
         handleClassName="annotation-resize-handle"
       />
+      <AnnotationStyleBar id={id} data={data} />
       <div
         className={cls}
         {...pan}

@@ -405,18 +405,22 @@ type Layout struct {
 // Annotation is a note, rectangle or ellipse on the graph. Colour, border
 // and text size are the names of the graph's palette, not free values.
 type Annotation struct {
-	ID       string  `json:"id" example:"a1"`
-	Type     string  `json:"type" example:"rect"`
-	X        float64 `json:"x" example:"40"`
-	Y        float64 `json:"y" example:"60"`
-	Width    float64 `json:"width,omitempty" example:"320"`
-	Height   float64 `json:"height,omitempty" example:"200"`
-	Text     string  `json:"text,omitempty" example:"Site A"`
-	Color    string  `json:"color,omitempty" example:"blue"`
-	Border   string  `json:"border,omitempty" example:"dashed"`
-	TextSize string  `json:"text_size,omitempty" example:"md"`
-	Locked   bool    `json:"locked,omitempty"`
-	Z        int     `json:"z,omitempty"`
+	ID     string  `json:"id" example:"a1"`
+	Type   string  `json:"type" example:"rect"`
+	X      float64 `json:"x" example:"40"`
+	Y      float64 `json:"y" example:"60"`
+	Width  float64 `json:"width,omitempty" example:"320"`
+	Height float64 `json:"height,omitempty" example:"200"`
+	Text   string  `json:"text,omitempty" example:"Site A"`
+	Color  string  `json:"color,omitempty" example:"blue"`
+	Border string  `json:"border,omitempty" example:"dashed"`
+	// The fill: none, glass (the default) or solid.
+	Fill     string `json:"fill,omitempty" example:"solid"`
+	TextSize string `json:"text_size,omitempty" example:"md"`
+	// Where the text sits in the shape: a corner, a side or the centre.
+	TextAnchor string `json:"text_anchor,omitempty" example:"center"`
+	Locked     bool   `json:"locked,omitempty"`
+	Z          int    `json:"z,omitempty"`
 }
 
 // ─── Files ────────────────────────────────────────────────────────────────────

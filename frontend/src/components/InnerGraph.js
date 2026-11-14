@@ -304,16 +304,18 @@ const InnerGraph = ({
         handleNodesChange(selectedIds.map((id) => ({ id, type: 'select', selected: false })));
         return;
       }
-      // Delete takes the selected annotations; a pod goes from its menu.
+      // Delete takes the selected annotations that are not locked; a pod
+      // goes from its menu.
       if ((e.key === 'Delete' || e.key === 'Backspace') && onDeleteAnnotations) {
-        const ids = selectedIds.filter(isAnnotationId);
+        const locked = new Set(nodes.filter((n) => n.data?.locked).map((n) => n.id));
+        const ids = selectedIds.filter((id) => isAnnotationId(id) && !locked.has(id));
         if (ids.length > 0) onDeleteAnnotations(ids);
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedIds]);
+  }, [selectedIds, nodes]);
 
   // Remember the lock / repulsion toggles across sessions.
   useEffect(() => {

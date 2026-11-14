@@ -3321,6 +3321,11 @@ const docTemplate = `{
                     "type": "string",
                     "example": "blue"
                 },
+                "fill": {
+                    "description": "The fill: none, glass (the default) or solid.",
+                    "type": "string",
+                    "example": "solid"
+                },
                 "height": {
                     "type": "number",
                     "example": 200
@@ -3335,6 +3340,11 @@ const docTemplate = `{
                 "text": {
                     "type": "string",
                     "example": "Site A"
+                },
+                "text_anchor": {
+                    "description": "Where the text sits in the shape: a corner, a side or the centre.",
+                    "type": "string",
+                    "example": "center"
                 },
                 "text_size": {
                     "type": "string",

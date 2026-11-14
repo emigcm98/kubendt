@@ -80,7 +80,7 @@ func ValidateLayout(l *types.Layout) error {
 			return fmt.Errorf("annotation %q: type must be note, rect or ellipse, got %q", a.ID, a.Type)
 		case len(a.Text) > maxAnnotationText:
 			return fmt.Errorf("annotation %q: text over %d bytes", a.ID, maxAnnotationText)
-		case len(a.Color) > 32 || len(a.Border) > 32 || len(a.TextSize) > 16:
+		case len(a.Color) > 32 || len(a.Border) > 32 || len(a.Fill) > 16 || len(a.TextSize) > 16 || len(a.TextAnchor) > 16:
 			return fmt.Errorf("annotation %q: a style value is too long", a.ID)
 		}
 		seen[a.ID] = true

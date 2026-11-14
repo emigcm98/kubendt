@@ -274,6 +274,10 @@ definitions:
       color:
         example: blue
         type: string
+      fill:
+        description: 'The fill: none, glass (the default) or solid.'
+        example: solid
+        type: string
       height:
         example: 200
         type: number
@@ -284,6 +288,10 @@ definitions:
         type: boolean
       text:
         example: Site A
+        type: string
+      text_anchor:
+        description: 'Where the text sits in the shape: a corner, a side or the centre.'
+        example: center
         type: string
       text_size:
         example: md
