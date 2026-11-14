@@ -3,6 +3,8 @@ import {
   annotationToNode,
   nodeToAnnotation,
   isAnnotationId,
+  anchorAxes,
+  defaultAnchor,
   useLayout,
   ANNOTATION_PREFIX,
 } from './useLayout';
@@ -18,7 +20,9 @@ test('an annotation becomes a node under the links and comes back the same', () 
     text: 'Site A',
     color: 'green',
     border: 'dashed',
+    fill: 'solid',
     text_size: 'lg',
+    text_anchor: 'bottom-right',
     locked: true,
     z: 3,
   };
@@ -63,6 +67,39 @@ test('the annotations know when they differ from what was saved', () => {
     ])
   );
   expect(result.current.annotationsDirty).toBe(true);
+});
+
+test('a shape goes behind or in front of the others', () => {
+  const { result } = renderHook(() => useLayout());
+  act(() => result.current.addAnnotation('rect', { x: 0, y: 0, width: 10, height: 10 }));
+  act(() => result.current.addAnnotation('rect', { x: 5, y: 5, width: 10, height: 10 }));
+  const [a, b] = result.current.annotationNodes;
+  act(() => a.data.onReorder(a.id, 'front'));
+  const front = result.current.annotationNodes.find((n) => n.id === a.id);
+  expect(front.data.z).toBeGreaterThan(b.data.z || 0);
+  expect(front.zIndex + 1000).toBeLessThan(0);
+  act(() => a.data.onReorder(a.id, 'back'));
+  const back = result.current.annotationNodes.find((n) => n.id === a.id);
+  expect(back.data.z).toBeLessThan(b.data.z || 0);
+});
+
+test('the text anchor reads as a row and a column', () => {
+  expect(anchorAxes('bottom-right')).toEqual(['bottom', 'right']);
+  expect(anchorAxes('top')).toEqual(['top', 'center']);
+  expect(anchorAxes('left')).toEqual(['middle', 'left']);
+  expect(anchorAxes('center')).toEqual(['middle', 'center']);
+  expect(defaultAnchor('ellipse')).toBe('center');
+  expect(defaultAnchor('rect')).toBe('top-left');
+});
+
+test('the order among shapes holds while one is selected', () => {
+  const { result } = renderHook(() => useLayout());
+  act(() => result.current.addAnnotation('rect', { x: 0, y: 0, width: 10, height: 10 }));
+  act(() => result.current.addAnnotation('rect', { x: 5, y: 5, width: 10, height: 10 }));
+  const [a, b] = result.current.annotationNodes;
+  expect(b.selected).toBe(true);
+  // React Flow adds 1000 to the selected one, which lands it level with a.
+  expect(b.zIndex + 1000).toBe(a.zIndex);
 });
 
 test('annotation ids are told apart from pod ids', () => {

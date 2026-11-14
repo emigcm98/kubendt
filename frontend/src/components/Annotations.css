@@ -1,19 +1,31 @@
 /* Shapes sit under the pods and the links. A colour is a palette name the
-   tokens fill in: the ink of the border and the text, and a faint fill.
-   Nothing says a colour, so it is the muted slate of the UI's own text. */
+   tokens fill in: the ink of the border and the text, and a tint of it as the
+   fill, glass by default so the grid and what lies behind show through, solid
+   to cover them, or none. Nothing says a colour, so it is the muted slate of
+   the UI's own text. */
 .annotation {
   --ann-stroke: var(--text-muted);
-  --ann-fill: color-mix(in srgb, var(--text-muted) 7%, transparent);
+  --ann-tint: 8%;
+  --ann-base: transparent;
   position: relative;
+  display: flex;
   width: 100%;
   height: 100%;
   box-sizing: border-box;
   border: 1.5px solid var(--ann-stroke);
-  background: var(--ann-fill);
+  background: color-mix(in srgb, var(--ann-stroke) var(--ann-tint), var(--ann-base));
   color: var(--ann-stroke);
   font-family: inherit;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.4;
+}
+
+.ann-fill-solid {
+  --ann-base: var(--surface);
+}
+
+.ann-fill-none {
+  background: transparent;
 }
 
 .annotation-rect {
@@ -22,10 +34,34 @@
 
 .annotation-ellipse {
   border-radius: 50%;
-  display: flex;
+}
+
+/* Where the text sits in the shape, its row and its column. */
+.ann-v-top {
+  align-items: flex-start;
+}
+
+.ann-v-middle {
   align-items: center;
+}
+
+.ann-v-bottom {
+  align-items: flex-end;
+}
+
+.ann-h-left {
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.ann-h-center {
   justify-content: center;
   text-align: center;
+}
+
+.ann-h-right {
+  justify-content: flex-end;
+  text-align: right;
 }
 
 /* A note is text on the canvas, no box. A dashed hint on hover says it is
@@ -42,39 +78,42 @@
   border-style: dashed;
 }
 
+.ann-color-slate {
+  --ann-stroke: var(--text-muted);
+}
+
 .ann-color-blue {
   --ann-stroke: var(--primary);
-  --ann-fill: color-mix(in srgb, var(--primary) 8%, transparent);
 }
 
 .ann-color-green {
   --ann-stroke: var(--success);
-  --ann-fill: color-mix(in srgb, var(--success) 8%, transparent);
 }
 
 .ann-color-amber {
   --ann-stroke: var(--warning-strong);
-  --ann-fill: color-mix(in srgb, var(--warning) 12%, transparent);
+  --ann-tint: 12%;
 }
 
 .ann-color-red {
   --ann-stroke: var(--danger);
-  --ann-fill: color-mix(in srgb, var(--danger) 8%, transparent);
 }
 
 .ann-border-dashed {
   border-style: dashed;
 }
 
+/* Three sizes far enough apart to tell: a caption, the pod labels, a title. */
 .ann-text-sm {
-  font-size: 11px;
+  font-size: 8px;
 }
 
 .ann-text-lg {
-  font-size: 17px;
+  font-size: 18px;
 }
 
 .annotation-text {
+  max-width: 100%;
   padding: 5px 9px;
   white-space: pre-wrap;
   word-break: break-word;
@@ -107,14 +146,11 @@
   font: inherit;
   font-weight: inherit;
   color: inherit;
+  text-align: inherit;
 }
 
 .annotation-note .annotation-editor {
   font-weight: 400;
-}
-
-.annotation-ellipse .annotation-editor {
-  text-align: center;
 }
 
 /* The selection is the resizer's own frame: a hairline and small square
@@ -157,4 +193,126 @@
 .annotation-preview-note {
   border-radius: var(--radius-sm);
   background: transparent;
+}
+
+/* The style bar over a selected shape: a strip that keeps its size whatever
+   the zoom, the ink swatches first, then border and text size, then order,
+   lock and delete. */
+.annotation-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+}
+
+.annotation-bar-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 5px;
+}
+
+.annotation-bar-sep {
+  width: 1px;
+  height: 18px;
+  margin: 0 2px;
+  background: var(--border-light);
+}
+
+.annotation-bar-btn {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-body);
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 700;
+}
+
+.annotation-bar-btn .app-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.annotation-bar-btn:hover {
+  background: var(--info-bg);
+  color: var(--primary);
+}
+
+.annotation-bar-btn-active,
+.annotation-bar-btn-active:hover {
+  background: var(--primary);
+  color: #fff;
+}
+
+.annotation-bar-danger:hover {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.annotation-bar-text-sm {
+  font-size: 10px;
+}
+
+.annotation-bar-text-md {
+  font-size: 12px;
+}
+
+.annotation-bar-text-lg {
+  font-size: 15px;
+}
+
+/* An ink swatch: the colour itself, ringed when it is the shape's. */
+.annotation-swatch {
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--ann-stroke);
+  cursor: pointer;
+}
+
+.annotation-swatch-active {
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 3.5px var(--ann-stroke);
+}
+
+/* Where the text sits: a three by three grid of the corners, the sides and
+   the centre, the shape's one filled. */
+.annotation-anchors {
+  display: grid;
+  grid-template-columns: repeat(3, 7px);
+  gap: 2px;
+  padding: 2px 6px;
+}
+
+.annotation-anchor {
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  border: 1px solid var(--text-subtle);
+  border-radius: 1px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.annotation-anchor:hover {
+  border-color: var(--primary);
+}
+
+.annotation-anchor-active {
+  background: var(--primary);
+  border-color: var(--primary);
 }
