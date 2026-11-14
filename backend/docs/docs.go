@@ -2046,6 +2046,86 @@ const docTemplate = `{
                 }
             }
         },
+        "/network/layout/{namespace}": {
+            "get": {
+                "description": "The namespace's node positions and annotations, one document kept in the namespace as the ConfigMap kubendt-internal-layout.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "network"
+                ],
+                "summary": "Get the graph layout",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.Layout"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Replaces the namespace's node positions and annotations with the document given.",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "network"
+                ],
+                "summary": "Save the graph layout",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The whole layout",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.Layout"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/network/links/{namespace}": {
             "get": {
                 "description": "Lists every link in the namespace as it exists on the cluster, with the worker behind each endpoint and how Meshnet realized it: veth when both pods share a worker, vxlan across workers, external for host uplinks, pending while an endpoint is not scheduled yet.",
@@ -3230,6 +3310,57 @@ const docTemplate = `{
                 }
             }
         },
+        "types.Annotation": {
+            "type": "object",
+            "properties": {
+                "border": {
+                    "type": "string",
+                    "example": "dashed"
+                },
+                "color": {
+                    "type": "string",
+                    "example": "blue"
+                },
+                "height": {
+                    "type": "number",
+                    "example": 200
+                },
+                "id": {
+                    "type": "string",
+                    "example": "a1"
+                },
+                "locked": {
+                    "type": "boolean"
+                },
+                "text": {
+                    "type": "string",
+                    "example": "Site A"
+                },
+                "text_size": {
+                    "type": "string",
+                    "example": "md"
+                },
+                "type": {
+                    "type": "string",
+                    "example": "rect"
+                },
+                "width": {
+                    "type": "number",
+                    "example": 320
+                },
+                "x": {
+                    "type": "number",
+                    "example": 40
+                },
+                "y": {
+                    "type": "number",
+                    "example": 60
+                },
+                "z": {
+                    "type": "integer"
+                }
+            }
+        },
         "types.AuthStatus": {
             "type": "object",
             "properties": {
@@ -4250,6 +4381,23 @@ const docTemplate = `{
                 "path": {
                     "type": "string",
                     "example": "/home/user/.kube/config"
+                }
+            }
+        },
+        "types.Layout": {
+            "type": "object",
+            "properties": {
+                "annotations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.Annotation"
+                    }
+                },
+                "positions": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/types.NodePosition"
+                    }
                 }
             }
         },

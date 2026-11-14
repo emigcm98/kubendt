@@ -76,7 +76,7 @@ KubeNDT stores control-plane state in SQLite (var `KUBENDT_DB_PATH`) and per-nam
 
 SQLite tables:
 
-- `node_positions`
+- `node_positions` — a mirror of the layout, which lives in the namespace as the `kubendt-internal-layout` ConfigMap (`GET` and `PUT /network/layout/:namespace`, the positions endpoints on the same document)
 - `namespace_state`
 - `namespace_operations`
 - `link_uid_registry`

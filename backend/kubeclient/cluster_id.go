@@ -46,6 +46,13 @@ func invalidateClusterID() {
 	clusterIDMu.Unlock()
 }
 
+// SetClusterIDForTest fixes the cached id, for tests with no cluster.
+func SetClusterIDForTest(id string) {
+	clusterIDMu.Lock()
+	cachedClusterID = id
+	clusterIDMu.Unlock()
+}
+
 // CurrentClusterID returns the canonical ID of the currently active cluster,
 // resolving it from the live cluster on first use and caching it until the
 // active client changes. It is the scoping key for all persisted state.

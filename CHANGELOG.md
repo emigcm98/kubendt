@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- `GET` and `PUT /network/layout/{namespace}`: the graph's node positions and annotations as one document kept in the namespace, the `kubendt-internal-layout` ConfigMap, so a lab carries its layout and any backend sees it. `/network/positions` works on the same document, and the SQLite rows fill it once and mirror it while a database is open.
+
 ## [1.10.0] - 2026-11-13
 
 ### Added

@@ -395,6 +395,30 @@ type NodePosition struct {
 	Y float64 `json:"y" example:"340.0"`
 }
 
+// Layout is a namespace's graph layout, the positions of its nodes and the
+// annotations drawn on it, one document kept in the namespace.
+type Layout struct {
+	Positions   map[string]NodePosition `json:"positions"`
+	Annotations []Annotation            `json:"annotations"`
+}
+
+// Annotation is a note, rectangle or ellipse on the graph. Colour, border
+// and text size are the names of the graph's palette, not free values.
+type Annotation struct {
+	ID       string  `json:"id" example:"a1"`
+	Type     string  `json:"type" example:"rect"`
+	X        float64 `json:"x" example:"40"`
+	Y        float64 `json:"y" example:"60"`
+	Width    float64 `json:"width,omitempty" example:"320"`
+	Height   float64 `json:"height,omitempty" example:"200"`
+	Text     string  `json:"text,omitempty" example:"Site A"`
+	Color    string  `json:"color,omitempty" example:"blue"`
+	Border   string  `json:"border,omitempty" example:"dashed"`
+	TextSize string  `json:"text_size,omitempty" example:"md"`
+	Locked   bool    `json:"locked,omitempty"`
+	Z        int     `json:"z,omitempty"`
+}
+
 // ─── Files ────────────────────────────────────────────────────────────────────
 
 // FileEntry is a single item returned in the file listing.
