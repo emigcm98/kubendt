@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `GET` and `PUT /network/layout/{namespace}`: the graph's node positions and annotations as one document kept in the namespace, the `kubendt-internal-layout` ConfigMap, so a lab carries its layout and any backend sees it. `/network/positions` works on the same document, and the SQLite rows fill it once and mirror it while a database is open.
 - Annotations on the graph: notes, rectangles and ellipses, drawn by dragging with the tools next to the zoom controls, moved, resized and edited in place, deleted with the key, kept under the nodes and links. Save positions becomes Save layout, keeps them in the namespace's layout with the positions, and carries the unsaved marker while the graph has changes, with Ctrl+S to save.
 - A style bar over a selected annotation: ink colour from the palette, fill (none, glass or solid), dashed border, text size, where the text sits in the shape, send to back and bring to front, lock, and delete. A locked shape does not move, resize, edit or go with the key.
+- A delete tool in the strip, under select: the cursor becomes a bin and the shape it clicks goes. Pods and links stay, they come from the topology. Under a tool nothing else on the graph reacts, and a click outside the canvas goes back to select.
 
 ## [1.10.0] - 2026-11-13
 
