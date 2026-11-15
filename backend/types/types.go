@@ -228,10 +228,13 @@ type MountSpec struct {
 	Missing   bool   `json:"missing,omitempty" example:"false"`     // file is mounted but no longer present in the namespace file manager
 }
 
-// Main structure for the deployment request
+// Main structure for the deployment request. The layout is optional: the
+// export writes it so a file replicates a scenario with its picture, and a
+// deploy that carries one applies it to the namespace.
 type DeployRequest struct {
-	Nodes []NodeSpec `json:"nodes"`
-	Links []LinkSpec `json:"links"`
+	Nodes  []NodeSpec `json:"nodes"`
+	Links  []LinkSpec `json:"links"`
+	Layout *Layout    `json:"layout,omitempty"`
 }
 
 // ScaleSpec is one entry in the network-modify "scale" section.

@@ -132,8 +132,67 @@ func TestValidateLayout(t *testing.T) {
 		t.Errorf("too many annotations must fail")
 	}
 	var nilDoc types.Layout
-	if err := ValidateLayout(&nilDoc); err != nil || nilDoc.Positions == nil || nilDoc.Annotations == nil {
-		t.Errorf("an empty document validates and gets empty collections, got %v %v", nilDoc, err)
+	if err := ValidateLayout(&nilDoc); err != nil || nilDoc.Positions != nil || nilDoc.Annotations != nil {
+		t.Errorf("an empty document validates and keeps its nil collections, got %v %v", nilDoc, err)
+	}
+}
+
+func TestMergeLayoutKeepsWhatTheFileLeavesOut(t *testing.T) {
+	fakeLayoutStore(t)
+	saved := types.Layout{
+		Positions:   map[string]types.NodePosition{"r1-0": {X: 1, Y: 2}, "old-0": {X: 3, Y: 4}},
+		Annotations: []types.Annotation{{ID: "a", Type: "note", Text: "drawn here"}},
+	}
+	if err := PutLayout("ns", saved); err != nil {
+		t.Fatal(err)
+	}
+	// positions only: the map is replaced whole, the annotations stay
+	if err := MergeLayout("ns", types.Layout{Positions: map[string]types.NodePosition{"r1-0": {X: 10, Y: 20}}}); err != nil {
+		t.Fatal(err)
+	}
+	got, _ := GetLayout("ns")
+	if len(got.Positions) != 1 || got.Positions["r1-0"].X != 10 || len(got.Annotations) != 1 {
+		t.Errorf("positions replaced and annotations kept, got %+v", got)
+	}
+	// annotations only, an empty list: cleared on purpose, positions stay
+	if err := MergeLayout("ns", types.Layout{Annotations: []types.Annotation{}}); err != nil {
+		t.Fatal(err)
+	}
+	got, _ = GetLayout("ns")
+	if len(got.Positions) != 1 || len(got.Annotations) != 0 {
+		t.Errorf("annotations cleared and positions kept, got %+v", got)
+	}
+	// nothing: nothing changes
+	if err := MergeLayout("ns", types.Layout{}); err != nil {
+		t.Fatal(err)
+	}
+	got, _ = GetLayout("ns")
+	if len(got.Positions) != 1 || len(got.Annotations) != 0 {
+		t.Errorf("an empty file layout changes nothing, got %+v", got)
+	}
+	// a bad one is refused before anything is touched
+	if err := MergeLayout("ns", types.Layout{Annotations: []types.Annotation{{ID: "x", Type: "triangle"}}}); err == nil {
+		t.Errorf("a bad annotation must fail")
+	}
+}
+
+func TestDeleteLayoutDropsTheDocument(t *testing.T) {
+	cs := fakeLayoutStore(t)
+	if err := PutLayout("ns", types.Layout{Positions: map[string]types.NodePosition{"r1-0": {X: 1}}, Annotations: []types.Annotation{{ID: "a", Type: "rect"}}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := DeleteLayout("ns"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := cs.CoreV1().ConfigMaps("ns").Get(context.TODO(), LayoutConfigMapName, metav1.GetOptions{}); err == nil {
+		t.Errorf("the ConfigMap must be gone")
+	}
+	if err := DeleteLayout("ns"); err != nil {
+		t.Errorf("deleting twice is fine, got %v", err)
+	}
+	got, err := GetLayout("ns")
+	if err != nil || len(got.Positions) != 0 || len(got.Annotations) != 0 {
+		t.Errorf("an empty layout after the delete, got %+v %v", got, err)
 	}
 }
 

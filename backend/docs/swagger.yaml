@@ -655,6 +655,8 @@ definitions:
     type: object
   types.DeployRequest:
     properties:
+      layout:
+        $ref: '#/definitions/types.Layout'
       links:
         items:
           $ref: '#/definitions/types.LinkSpec'
@@ -1657,6 +1659,17 @@ definitions:
           $ref: '#/definitions/types.NamespaceInfo'
         type: array
     type: object
+  types.NetworkAddSpecDoc:
+    properties:
+      links:
+        items:
+          $ref: '#/definitions/types.LinkSpec'
+        type: array
+      nodes:
+        items:
+          $ref: '#/definitions/types.NodeSpec'
+        type: array
+    type: object
   types.NetworkDeleteSpecDoc:
     properties:
       links:
@@ -1671,7 +1684,7 @@ definitions:
   types.NetworkModifyRequestDoc:
     properties:
       add:
-        $ref: '#/definitions/types.DeployRequest'
+        $ref: '#/definitions/types.NetworkAddSpecDoc'
       delete:
         $ref: '#/definitions/types.NetworkDeleteSpecDoc'
       scale:
@@ -1685,6 +1698,10 @@ definitions:
     type: object
   types.NetworkTopologyResponse:
     properties:
+      layout:
+        allOf:
+        - $ref: '#/definitions/types.Layout'
+        description: The graph's layout, with ?layout=true and when there is one.
       links:
         items:
           $ref: '#/definitions/types.LinkSpec'
@@ -3967,13 +3984,22 @@ paths:
   /network/clear-topology/{namespace}:
     delete:
       description: Deletes all topology resources in a namespace without deleting
-        the namespace itself.
+        the namespace itself. The graph's layout and the namespace files stay unless
+        asked.
       parameters:
       - description: Namespace name
         in: path
         name: namespace
         required: true
         type: string
+      - description: Also delete the graph's layout, positions and annotations.
+        in: query
+        name: deletePositions
+        type: boolean
+      - description: Also delete the namespace files (file manager).
+        in: query
+        name: deleteFiles
+        type: boolean
       produces:
       - application/json
       responses:
@@ -4046,10 +4072,12 @@ paths:
     post:
       consumes:
       - application/json
-      description: Deploys a full network topology (nodes + links) into a namespace.
+      description: 'Deploys a full network topology (nodes + links) into a namespace.
         In links, use the reserved name "external" for either node or peerNode to
         create a host uplink (external network connection). Both ends of a link cannot
-        be "external" simultaneously.
+        be "external" simultaneously. An optional layout (positions and annotations,
+        what the export writes) is applied once the pods are up: what it brings replaces
+        that part of the namespace''s layout, what it leaves out stays.'
       parameters:
       - description: Namespace name
         in: path
@@ -4061,7 +4089,7 @@ paths:
         in: query
         name: force
         type: boolean
-      - description: Topology definition
+      - description: Topology definition, with an optional layout
         in: body
         name: body
         required: true
@@ -4128,13 +4156,19 @@ paths:
       - network
   /network/get-network/{namespace}:
     get:
-      description: Returns the current network topology deployed in a namespace.
+      description: Returns the current network topology deployed in a namespace, as
+        a file the deploy takes back.
       parameters:
       - description: Namespace name
         in: path
         name: namespace
         required: true
         type: string
+      - description: Include the graph's layout (positions and annotations) so the
+          file replicates the scenario with its picture.
+        in: query
+        name: layout
+        type: boolean
       produces:
       - application/json
       responses:

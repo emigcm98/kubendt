@@ -109,9 +109,11 @@ func ClearNamespaceTopologyResources(namespace string, deletePositions, deleteFi
 		}
 	}
 
+	// The box on a clear takes the whole layout, annotations included: the
+	// namespace stays, so what is left would be shapes around nothing.
 	if deletePositions {
-		if err := DeletePositionsByNamespace(namespace); err != nil {
-			return fmt.Errorf("error deleting stored positions for namespace %s: %w", namespace, err)
+		if err := DeleteLayout(namespace); err != nil {
+			return fmt.Errorf("error deleting the layout of namespace %s: %w", namespace, err)
 		}
 	}
 

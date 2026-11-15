@@ -1789,7 +1789,7 @@ const docTemplate = `{
         },
         "/network/clear-topology/{namespace}": {
             "delete": {
-                "description": "Deletes all topology resources in a namespace without deleting the namespace itself.",
+                "description": "Deletes all topology resources in a namespace without deleting the namespace itself. The graph's layout and the namespace files stay unless asked.",
                 "produces": [
                     "application/json"
                 ],
@@ -1804,6 +1804,18 @@ const docTemplate = `{
                         "name": "namespace",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Also delete the graph's layout, positions and annotations.",
+                        "name": "deletePositions",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Also delete the namespace files (file manager).",
+                        "name": "deleteFiles",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1895,7 +1907,7 @@ const docTemplate = `{
         },
         "/network/deploy-network/{namespace}": {
             "post": {
-                "description": "Deploys a full network topology (nodes + links) into a namespace. In links, use the reserved name \"external\" for either node or peerNode to create a host uplink (external network connection). Both ends of a link cannot be \"external\" simultaneously.",
+                "description": "Deploys a full network topology (nodes + links) into a namespace. In links, use the reserved name \"external\" for either node or peerNode to create a host uplink (external network connection). Both ends of a link cannot be \"external\" simultaneously. An optional layout (positions and annotations, what the export writes) is applied once the pods are up: what it brings replaces that part of the namespace's layout, what it leaves out stays.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1921,7 +1933,7 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "description": "Topology definition",
+                        "description": "Topology definition, with an optional layout",
                         "name": "body",
                         "in": "body",
                         "required": true,
@@ -2013,7 +2025,7 @@ const docTemplate = `{
         },
         "/network/get-network/{namespace}": {
             "get": {
-                "description": "Returns the current network topology deployed in a namespace.",
+                "description": "Returns the current network topology deployed in a namespace, as a file the deploy takes back.",
                 "produces": [
                     "application/json"
                 ],
@@ -2028,6 +2040,12 @@ const docTemplate = `{
                         "name": "namespace",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Include the graph's layout (positions and annotations) so the file replicates the scenario with its picture.",
+                        "name": "layout",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -3839,6 +3857,9 @@ const docTemplate = `{
         "types.DeployRequest": {
             "type": "object",
             "properties": {
+                "layout": {
+                    "$ref": "#/definitions/types.Layout"
+                },
                 "links": {
                     "type": "array",
                     "items": {
@@ -5206,6 +5227,23 @@ const docTemplate = `{
                 }
             }
         },
+        "types.NetworkAddSpecDoc": {
+            "type": "object",
+            "properties": {
+                "links": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.LinkSpec"
+                    }
+                },
+                "nodes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.NodeSpec"
+                    }
+                }
+            }
+        },
         "types.NetworkDeleteSpecDoc": {
             "type": "object",
             "properties": {
@@ -5227,7 +5265,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "add": {
-                    "$ref": "#/definitions/types.DeployRequest"
+                    "$ref": "#/definitions/types.NetworkAddSpecDoc"
                 },
                 "delete": {
                     "$ref": "#/definitions/types.NetworkDeleteSpecDoc"
@@ -5244,6 +5282,14 @@ const docTemplate = `{
         "types.NetworkTopologyResponse": {
             "type": "object",
             "properties": {
+                "layout": {
+                    "description": "The graph's layout, with ?layout=true and when there is one.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.Layout"
+                        }
+                    ]
+                },
                 "links": {
                     "type": "array",
                     "items": {

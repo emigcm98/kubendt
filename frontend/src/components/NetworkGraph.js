@@ -772,6 +772,7 @@ const NetworkGraph = ({
     annotationNodes,
     annotationsDirty,
     loadLayout,
+    showAnnotations,
     saveLayout,
     addAnnotation,
     removeAnnotations,
@@ -2147,7 +2148,8 @@ const NetworkGraph = ({
     if (!namespace) return;
 
     try {
-      const res = await fetch(`${API_BASE_URL}/network/get-network/${namespace}`);
+      // The file carries the layout too, so a deploy of it brings the picture back.
+      const res = await fetch(`${API_BASE_URL}/network/get-network/${namespace}?layout=true`);
       const data = await res.json();
 
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -2203,16 +2205,19 @@ const NetworkGraph = ({
     if (!json || typeof json !== 'object' || Array.isArray(json)) {
       throw new Error('Topology JSON must be an object.');
     }
-    const allowedKeys = new Set(['nodes', 'links']);
+    const allowedKeys = new Set(['nodes', 'links', 'layout']);
     for (const key of Object.keys(json)) {
       if (!allowedKeys.has(key)) {
         throw new Error(
-          `Unrecognized root-level field: '${key}'. Only 'nodes' and 'links' are allowed.`
+          `Unrecognized root-level field: '${key}'. Only 'nodes', 'links' and 'layout' are allowed.`
         );
       }
     }
     if (!Array.isArray(json.nodes) || json.nodes.length < 1) {
       throw new Error('Must have at least 1 node.');
+    }
+    if (json.layout !== undefined && (typeof json.layout !== 'object' || json.layout === null)) {
+      throw new Error("'layout' must be an object with positions and annotations.");
     }
 
     const nodeNames = new Set();
@@ -2322,8 +2327,9 @@ const NetworkGraph = ({
       // Snapshot the real saved positions (loaded from the DB on namespace
       // change) BEFORE buildPlaceholderNodes runs, because that function
       // pins its own grid layout into positionRef and would otherwise make
-      // every fresh import look like it already had saved positions.
-      const savedSnapshot = { ...positionRef.current };
+      // every fresh import look like it already had saved positions. The
+      // positions the file carries count as saved, the backend writes them.
+      const savedSnapshot = { ...positionRef.current, ...(json.layout?.positions || {}) };
 
       // Render "creating" placeholders straight from the JSON so the user
       // sees the graph appear before the backend finishes. Deep-copy links
@@ -2405,6 +2411,10 @@ const NetworkGraph = ({
         }
       }
 
+      // The annotations the file brings show with the placeholders, so the
+      // picture is whole while the deploy runs.
+      if (Array.isArray(json.layout?.annotations)) showAnnotations(json.layout.annotations);
+
       // Track what we optimistically added so we can roll it back on
       // backend errors (lock conflict, validation, etc.), otherwise the
       // partial graph lingers until the user manually refreshes.
@@ -2418,6 +2428,8 @@ const NetworkGraph = ({
         if (phEdgeIds.size > 0) {
           setEdges((prev) => prev.filter((e) => !phEdgeIds.has(e.id)));
         }
+        // and the saved layout comes back in place of the file's
+        if (json.layout) loadLayout(namespace).catch(() => {});
       };
 
       let res;
@@ -2438,6 +2450,20 @@ const NetworkGraph = ({
       if (res.ok) {
         const payload = await res.json().catch(() => null);
         await fetchTopology(true);
+        // The deploy wrote the layout the file carried: pick the annotations
+        // and the positions up from the namespace.
+        if (json.layout) {
+          try {
+            const positions = await loadLayout(namespace);
+            positionRef.current = { ...positionRef.current, ...positions };
+            setNodes((prev) =>
+              prev.map((n) => (positions[n.id] ? { ...n, position: positions[n.id] } : n))
+            );
+            setPositionsDirty(false);
+          } catch (e) {
+            console.error('❌ Error loading the layout after the deploy:', e);
+          }
+        }
         showOperationSuccessModal(
           'Topology deployed',
           payload?.message || 'Network infrastructure deployed successfully.',
@@ -4389,6 +4415,7 @@ const NetworkGraph = ({
             return (
               <DeleteExtrasCheckboxes
                 positionsChecked={clearPositionsChecked}
+                positionsLabel="Also delete the saved layout (positions and annotations)"
                 onPositionsChange={(v) => {
                   setClearPositionsChecked(v);
                   clearPositionsRef.current = v;

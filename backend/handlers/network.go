@@ -40,6 +40,16 @@ type NetworkModifyRequest struct {
 	Scale  []types.ScaleSpec   `json:"scale"`
 }
 
+// A modify's add shares the deploy's shape, so the decoder would take a
+// layout there and the modify would drop it on the floor. Refuse it instead.
+func rejectModifyLayout(c *gin.Context, request NetworkModifyRequest) bool {
+	if request.Add.Layout == nil {
+		return false
+	}
+	c.JSON(http.StatusBadRequest, gin.H{"error": "add.layout is not accepted on a modify, the layout changes through PUT /network/layout/{namespace}"})
+	return true
+}
+
 func ModifyNetwork(c *gin.Context) {
 	startedAt := time.Now()
 	var request NetworkModifyRequest
@@ -51,6 +61,9 @@ func ModifyNetwork(c *gin.Context) {
 	if err := decoder.Decode(&request); err != nil {
 		log.Printf("❌ Error en la solicitud JSON (network-modify): %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if rejectModifyLayout(c, request) {
 		return
 	}
 
@@ -660,6 +673,12 @@ func DeployNetwork(c *gin.Context) {
 		})
 		return
 	}
+	if request.Layout != nil {
+		if err := helpers.ValidateLayout(request.Layout); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "layout: " + err.Error()})
+			return
+		}
+	}
 
 	// 2. Validate namespace
 	if err := helpers.ValidateNamespaceEnabled(namespace); err != nil {
@@ -968,6 +987,16 @@ func DeployNetwork(c *gin.Context) {
 		return
 	}
 	log.Println("✅ All nodes are in Running state.")
+
+	// What the file's layout brings replaces that part of the namespace's,
+	// so a scenario comes back with its picture and what the file leaves out
+	// stays. A failure here is a warning, the lab is up.
+	if request.Layout != nil {
+		if err := helpers.MergeLayout(namespace, *request.Layout); err != nil {
+			log.Printf("⚠️ Could not save the layout of namespace '%s': %v", namespace, err)
+			warnings = append(warnings, types.Warning{Kind: "layout_not_saved", Detail: err.Error()})
+		}
+	}
 
 	nodeRunningDur := time.Since(nodeWaitAt)
 	healAt := time.Now()
@@ -1420,10 +1449,22 @@ func GetNetwork(c *gin.Context) {
 		}
 	}
 
-	// Return JSON
 	response := types.DeployRequest{
 		Nodes: nodes,
 		Links: links,
+	}
+	// With ?layout=true the file carries the graph's layout too, so it
+	// replicates the scenario with its picture.
+	if c.Query("layout") == "true" {
+		l, err := helpers.GetLayout(namespace)
+		if err != nil {
+			log.Printf("❌ get-network: could not read the layout: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		if len(l.Positions) > 0 || len(l.Annotations) > 0 {
+			response.Layout = &l
+		}
 	}
 
 	responseJSON, err := json.MarshalIndent(response, "", "  ")

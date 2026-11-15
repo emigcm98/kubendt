@@ -52,14 +52,9 @@ var annotationTypes = map[string]bool{"note": true, "rect": true, "ellipse": tru
 
 // ValidateLayout rounds the positions and checks the annotations: a type
 // the graph draws, an id of its own, text and document sizes that fit a
-// ConfigMap with room to spare.
+// ConfigMap with room to spare. A nil collection stays nil, it means the
+// document does not speak of it.
 func ValidateLayout(l *types.Layout) error {
-	if l.Positions == nil {
-		l.Positions = map[string]types.NodePosition{}
-	}
-	if l.Annotations == nil {
-		l.Annotations = []types.Annotation{}
-	}
 	for id, p := range l.Positions {
 		if id == "" {
 			return fmt.Errorf("a position has no node name")
@@ -140,6 +135,12 @@ func PutLayout(namespace string, l types.Layout) error {
 	if err := ValidateLayout(&l); err != nil {
 		return err
 	}
+	if l.Positions == nil {
+		l.Positions = map[string]types.NodePosition{}
+	}
+	if l.Annotations == nil {
+		l.Annotations = []types.Annotation{}
+	}
 	raw, err := encodeLayout(l)
 	if err != nil {
 		return err
@@ -175,6 +176,43 @@ func PutLayout(namespace string, l types.Layout) error {
 		return fmt.Errorf("could not save the layout of %s: %w", namespace, err)
 	}
 	mirrorPositionsToDB(namespace, l.Positions)
+	return nil
+}
+
+// MergeLayout applies what a deploy's file brings: a positions map replaces
+// the positions, an annotations list replaces the annotations, and a
+// collection the file leaves out stays as the namespace has it.
+func MergeLayout(namespace string, l types.Layout) error {
+	if err := ValidateLayout(&l); err != nil {
+		return err
+	}
+	var lastErr error
+	for attempt := 0; attempt < 3; attempt++ {
+		cur, err := GetLayout(namespace)
+		if err != nil {
+			return err
+		}
+		if l.Positions != nil {
+			cur.Positions = l.Positions
+		}
+		if l.Annotations != nil {
+			cur.Annotations = l.Annotations
+		}
+		if lastErr = PutLayout(namespace, cur); lastErr == nil {
+			return nil
+		}
+	}
+	return lastErr
+}
+
+// DeleteLayout drops the whole document, positions and annotations, which
+// is what a clear with the box ticked asks for.
+func DeleteLayout(namespace string) error {
+	err := layoutConfigMaps(namespace).Delete(context.TODO(), LayoutConfigMapName, metav1.DeleteOptions{})
+	if err != nil && !apierrors.IsNotFound(err) {
+		return fmt.Errorf("could not delete the layout of %s: %w", namespace, err)
+	}
+	mirrorPositionsToDB(namespace, nil)
 	return nil
 }
 

@@ -253,9 +253,18 @@ type NamespaceMetricsResponse struct {
 // ─── Network ─────────────────────────────────────────────────────────────────
 
 // NetworkTopologyResponse is returned by GET /network/get-network/:ns.
+// NetworkAddSpecDoc is the add section of a modify: nodes and links, no
+// layout, that changes through the layout endpoint.
+type NetworkAddSpecDoc struct {
+	Nodes []NodeSpec `json:"nodes"`
+	Links []LinkSpec `json:"links"`
+}
+
 type NetworkTopologyResponse struct {
 	Nodes []NodeSpec `json:"nodes"`
 	Links []LinkSpec `json:"links"`
+	// The graph's layout, with ?layout=true and when there is one.
+	Layout *Layout `json:"layout,omitempty"`
 }
 
 // DeployTimingResponse breaks down deployment duration by phase.
@@ -310,7 +319,7 @@ type NetworkDeleteSpecDoc struct {
 // of them with content. Execution order inside a single request is:
 // delete → scale-down → scale-up → add.
 type NetworkModifyRequestDoc struct {
-	Add    DeployRequest        `json:"add"`
+	Add    NetworkAddSpecDoc    `json:"add"`
 	Delete NetworkDeleteSpecDoc `json:"delete"`
 	// Scale changes the replica count of existing nodes. Each entry takes
 	// the absolute number of replicas the node should end with. Replicas
