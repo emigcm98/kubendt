@@ -257,6 +257,16 @@ const InnerGraph = ({
   useEffect(() => {
     if (locked || isBusy) setTool('select');
   }, [locked, isBusy]);
+  // A tool owns the canvas only: a click anywhere else (the top bar, a
+  // panel, the navbar) goes back to select first, as Esc does.
+  useEffect(() => {
+    if (tool === 'select') return undefined;
+    const onDown = (e) => {
+      if (!containerRef.current?.contains(e.target)) setTool('select');
+    };
+    document.addEventListener('pointerdown', onDown, true);
+    return () => document.removeEventListener('pointerdown', onDown, true);
+  }, [tool]);
   const onSelectionChange = useCallback(({ nodes: picked }) => {
     const ids = picked.map((n) => n.id);
     setSelectedIds((prev) =>
@@ -292,6 +302,13 @@ const InnerGraph = ({
   const clearSelection = () => {
     if (selectedIds.length === 0) return;
     handleNodesChange(selectedIds.map((id) => ({ id, type: 'select', selected: false })));
+  };
+
+  // Picking a tool drops the selection, so no style bar or resizer hangs
+  // over the canvas while it is active.
+  const pickTool = (next) => {
+    if (next !== 'select') clearSelection();
+    setTool(next);
   };
 
   useEffect(() => {
@@ -548,9 +565,12 @@ const InnerGraph = ({
     return styled;
   });
 
+  // Under a tool nothing moves, and nopan keeps a double click on a node
+  // from zooming, as it does on a draggable one.
+  const inert = tool !== 'select';
   const displayedNodes = nodes.map((n) => {
-    if (n.type === 'annotation') return n;
-    let next = n;
+    let next = inert ? { ...n, draggable: false, className: 'nopan' } : n;
+    if (n.type === 'annotation') return next;
     if (n.id === selectedNodeId) {
       next = { ...next, data: { ...next.data, selected: true } };
     }
@@ -593,7 +613,7 @@ const InnerGraph = ({
   return (
     <div
       ref={containerRef}
-      className={`graph-container${selecting ? ' selecting' : ''}`}
+      className={`graph-container${selecting ? ' selecting' : ''}${tool === 'delete' ? ' tool-delete' : ''}`}
       onPointerDownCapture={(event) => {
         pointerIdRef.current = event.pointerId;
       }}
@@ -628,6 +648,8 @@ const InnerGraph = ({
         }}
         onSelectionEnd={() => setSelecting(false)}
         nodesDraggable={!isBusy && !locked}
+        // Under a tool a click must not pick the pod or the link it lands on.
+        elementsSelectable={tool === 'select'}
         nodeDragThreshold={8}
         minZoom={GRAPH_MIN_ZOOM}
         maxZoom={GRAPH_MAX_ZOOM}
@@ -635,6 +657,11 @@ const InnerGraph = ({
         onPaneContextMenu={(e) => e.preventDefault()}
         onNodeClick={(event, node) => {
           if (isBusy) return;
+          // The delete tool takes the shape it clicks, a locked one stays.
+          if (tool === 'delete') {
+            if (node.type === 'annotation' && !node.data?.locked) onDeleteAnnotations?.([node.id]);
+            return;
+          }
           if (node.type === 'annotation') return;
           // Shift or Ctrl and a click adds the node to the selection, React
           // Flow handles that; the info panel stays as it is.
@@ -664,7 +691,7 @@ const InnerGraph = ({
             clearTimeout(nodeClickTimerRef.current);
             nodeClickTimerRef.current = null;
           }
-          if (isBusy) return;
+          if (isBusy || tool !== 'select') return;
           if (node.type === 'annotation') return;
           if (node.data?.type === 'external') return;
           if (!onOpenInteractiveShell) return;
@@ -674,7 +701,7 @@ const InnerGraph = ({
           onOpenInteractiveShell(info, mode);
         }}
         onEdgeClick={(_, edge) => {
-          if (isBusy) return;
+          if (isBusy || tool !== 'select') return;
           if (setSelectedLink) setSelectedLink(edge);
           setSelectedNodeInfo(null);
           setContextMenu(null);
@@ -684,7 +711,7 @@ const InnerGraph = ({
         onNodeContextMenu={(e, node) => {
           e.preventDefault();
 
-          if (isBusy) return;
+          if (isBusy || tool !== 'select') return;
           if (node.type === 'annotation') return;
 
           setEdgeContextMenu(null);
@@ -699,7 +726,7 @@ const InnerGraph = ({
         onEdgeContextMenu={(e, edge) => {
           e.preventDefault();
 
-          if (isBusy) return;
+          if (isBusy || tool !== 'select') return;
 
           // External-endpoint edges aren't deletable through modify-network
           const sourceType = nodes.find((n) => n.id === edge.source)?.data?.type;
@@ -776,7 +803,7 @@ const InnerGraph = ({
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
       >
-        {tool !== 'select' && onAddAnnotation && (
+        {tool !== 'select' && tool !== 'delete' && onAddAnnotation && (
           <AnnotationDrawLayer
             kind={tool}
             onDraw={(kind, rect) => {
@@ -791,7 +818,7 @@ const InnerGraph = ({
             glide (the built-in Controls can't animate the +/- without firing
             twice). Also lets us style them to match the app. */}
         <Panel position="bottom-left" className="graph-controls-stack">
-          <AnnotationToolbar tool={tool} setTool={setTool} disabled={isBusy || locked} />
+          <AnnotationToolbar tool={tool} setTool={pickTool} disabled={isBusy || locked} />
           <div className="graph-controls">
             <button
               type="button"
@@ -940,11 +967,11 @@ const InnerGraph = ({
                     loading={loadingInterfaces.has(`${edge.source}:${edge.data?.localIntf}`)}
                     dimmed={dimmedByLabel}
                     onClick={() => {
-                      if (isBusy) return;
+                      if (isBusy || tool !== 'select') return;
                       toggleLinkState(edge.source, edge.data?.localIntf, localStatus);
                     }}
                     onRightClick={(e) => {
-                      if (isBusy) return;
+                      if (isBusy || tool !== 'select') return;
                       setInterfaceContextMenu({
                         x: e.clientX,
                         y: e.clientY,
@@ -954,7 +981,7 @@ const InnerGraph = ({
                       });
                     }}
                     onHover={(e) => {
-                      if (isBusy) return;
+                      if (isBusy || (e && tool !== 'select')) return;
                       if (e) {
                         if (containerRef.current) {
                           const bounds = containerRef.current.getBoundingClientRect();
@@ -991,11 +1018,11 @@ const InnerGraph = ({
                     loading={loadingInterfaces.has(`${edge.target}:${edge.data?.peerIntf}`)}
                     dimmed={dimmedByLabel}
                     onClick={() => {
-                      if (isBusy) return;
+                      if (isBusy || tool !== 'select') return;
                       toggleLinkState(edge.target, edge.data?.peerIntf, peerStatus);
                     }}
                     onRightClick={(e) => {
-                      if (isBusy) return;
+                      if (isBusy || tool !== 'select') return;
                       setInterfaceContextMenu({
                         x: e.clientX,
                         y: e.clientY,
@@ -1005,7 +1032,7 @@ const InnerGraph = ({
                       });
                     }}
                     onHover={(e) => {
-                      if (isBusy) return;
+                      if (isBusy || (e && tool !== 'select')) return;
                       if (e) {
                         if (containerRef.current) {
                           const bounds = containerRef.current.getBoundingClientRect();
