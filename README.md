@@ -51,7 +51,7 @@ KubeNDT bundles a small set of third-party SVG icons in its frontend. See [ATTRI
 - **Interactive terminal shell** with WebSocket for real-time pod access
 - **Dynamic network modification** - add/delete nodes and links without redeploying the entire topology
 - **Configuration management** - mount configuration files, environment variables, and dynamic daemon setup
-- **Persistent topology state** - save/export topologies as JSON for reproducible deployments, the export carrying the graph's layout (positions and annotations) so a deploy of it brings the picture back
+- **Persistent topology state** - save/export topologies as JSON for reproducible deployments, the export carrying the graph's layout (positions and annotations) so a deploy of it brings the picture back, and the graph itself exported as a PNG, SVG or PDF picture
 
 ### Advanced Networking Features
 

@@ -34,6 +34,8 @@ import { ReactComponent as SlidersIcon } from '../assets/images/icons/sliders.sv
 import { ReactComponent as GaugeIcon } from '../assets/images/icons/gauge.svg';
 import { ReactComponent as SaveIcon } from '../assets/images/icons/save.svg';
 import { ReactComponent as DownloadIcon } from '../assets/images/icons/download.svg';
+import { ReactComponent as ImageIcon } from '../assets/images/icons/image.svg';
+import { pictureToPng, pictureToPdf, svgDataUrl } from './graphPicture';
 import InnerGraph from './InnerGraph';
 import { useLayout, isAnnotationId, nodeToAnnotation } from './useLayout';
 import LoadingOverlay from './LoadingOverlay';
@@ -1270,6 +1272,16 @@ const NetworkGraph = ({
     timingData: null,
   });
   const [clearPositionsChecked, setClearPositionsChecked] = useState(false);
+  // Export image: the format and background picked in its dialog, and the
+  // function the graph hands over to take the picture.
+  const [imageExport, setImageExport] = useState({
+    format: 'png',
+    transparent: false,
+    margin: 40,
+    scale: 2,
+  });
+  const imageExportRef = useRef({ format: 'png', transparent: false, margin: 40, scale: 2 });
+  const exportImageRef = useRef(null);
   const clearPositionsRef = useRef(false);
   const [clearFilesChecked, setClearFilesChecked] = useState(false);
   const clearFilesRef = useRef(false);
@@ -2143,6 +2155,49 @@ const NetworkGraph = ({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   });
+
+  const exportImageNow = async () => {
+    const { format, transparent, margin, scale } = imageExportRef.current;
+    try {
+      const picture = await exportImageRef.current?.({
+        margin: Math.min(400, Math.max(0, Number(margin) || 0)),
+        transparent: format !== 'pdf' && transparent,
+      });
+      if (!picture) return;
+      const { svg, width, height } = picture;
+      const name = `graph-${namespace}.${format}`;
+      if (format === 'pdf') {
+        (await pictureToPdf(svg, width, height)).save(name);
+        return;
+      }
+      const a = document.createElement('a');
+      a.href = format === 'svg' ? svgDataUrl(svg) : await pictureToPng(svg, width, height, scale);
+      a.download = name;
+      a.click();
+    } catch (err) {
+      console.error('❌ Error exporting the graph image:', err);
+      showError('Export failed', err.message || 'Could not export the graph as an image.');
+    }
+  };
+
+  const handleExportImageClick = () => {
+    if (nodes.length === 0) return;
+    setAlertModal({
+      isOpen: true,
+      type: 'confirm',
+      title: 'Export image',
+      message: 'The graph as it is now: nodes, links and annotations, with a margin around them.',
+      confirmText: 'Export',
+      cancelText: 'Cancel',
+      showImageOptions: true,
+      onConfirm: () => {
+        setAlertModal((prev) => ({ ...prev, isOpen: false, showImageOptions: false }));
+        exportImageNow();
+      },
+      onCancel: () =>
+        setAlertModal((prev) => ({ ...prev, isOpen: false, showImageOptions: false })),
+    });
+  };
 
   const handleExportTopology = async () => {
     if (!namespace) return;
@@ -4031,12 +4086,23 @@ const NetworkGraph = ({
                 <DownloadIcon className="app-icon" aria-hidden="true" />
                 Export network conf
               </button>
+
+              <button
+                className="topbar-action-export-image"
+                disabled={nodes.length === 0 || isBusy}
+                onClick={!isBusy ? handleExportImageClick : undefined}
+                title="Save the graph as a PNG or SVG picture, annotations included"
+              >
+                <ImageIcon className="app-icon" aria-hidden="true" />
+                Export image
+              </button>
             </div>
           </div>
         </div>
         <ReactFlowProvider>
           <InnerGraph
             namespace={namespace}
+            exportImageRef={exportImageRef}
             nodes={
               annotationNodes.length > 0 ? [...annotationNodes, ...visibleNodes] : visibleNodes
             }
@@ -4489,6 +4555,80 @@ const NetworkGraph = ({
         confirmText={alertModal.confirmText}
         cancelText={alertModal.cancelText}
         extraContent={(() => {
+          if (alertModal.showImageOptions) {
+            const pick = (patch) => {
+              const next = { ...imageExportRef.current, ...patch };
+              imageExportRef.current = next;
+              setImageExport(next);
+            };
+            return (
+              <>
+                <label>
+                  <input
+                    type="radio"
+                    name="image-format"
+                    checked={imageExport.format === 'png'}
+                    onChange={() => pick({ format: 'png' })}
+                  />
+                  PNG
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    name="image-format"
+                    checked={imageExport.format === 'svg'}
+                    onChange={() => pick({ format: 'svg' })}
+                  />
+                  SVG
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    name="image-format"
+                    checked={imageExport.format === 'pdf'}
+                    onChange={() => pick({ format: 'pdf' })}
+                  />
+                  PDF
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={imageExport.transparent && imageExport.format !== 'pdf'}
+                    disabled={imageExport.format === 'pdf'}
+                    onChange={(e) => pick({ transparent: e.target.checked })}
+                  />
+                  Transparent background
+                </label>
+                <label className="alert-modal-field">
+                  Margin
+                  <span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="400"
+                      step="10"
+                      value={imageExport.margin}
+                      onChange={(e) => pick({ margin: e.target.value })}
+                    />
+                    px
+                  </span>
+                </label>
+                <label className="alert-modal-field">
+                  Scale
+                  <select
+                    value={imageExport.scale}
+                    disabled={imageExport.format !== 'png'}
+                    onChange={(e) => pick({ scale: Number(e.target.value) })}
+                  >
+                    <option value={1}>1x</option>
+                    <option value={2}>2x</option>
+                    <option value={3}>3x</option>
+                    <option value={4}>4x</option>
+                  </select>
+                </label>
+              </>
+            );
+          }
           if (alertModal.showPositionCheckbox) {
             return (
               <DeleteExtrasCheckboxes

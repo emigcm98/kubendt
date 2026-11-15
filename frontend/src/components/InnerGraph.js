@@ -9,6 +9,7 @@ import {
   useReactFlow,
   useStoreApi,
 } from 'reactflow';
+import { paintGraph, loadIcons, loadIconInsets, readTokens } from './graphPicture';
 import LinkEdge from './LinkEdge';
 import AnnotationNode from './AnnotationNode';
 import AnnotationToolbar from './AnnotationToolbar';
@@ -157,6 +158,7 @@ const InnerGraph = ({
   onNodeDropRelax,
   onAddAnnotation,
   onDeleteAnnotations,
+  exportImageRef,
   hoveredInfo,
   setHoveredInfo,
   setTooltipPos,
@@ -191,7 +193,8 @@ const InnerGraph = ({
   // (and open the shell instead, without opening the panel underneath).
   const nodeClickTimerRef = useRef(null);
   const NODE_CLICK_DELAY_MS = 220;
-  const { getViewport, setViewport, setCenter, zoomIn, zoomOut, fitView } = useReactFlow();
+  const { getViewport, setViewport, setCenter, zoomIn, zoomOut, fitView, getNodes, getEdges } =
+    useReactFlow();
 
   // Single fit used by both the auto-fit and the fit button.
   const fitGraph = useCallback(
@@ -303,6 +306,26 @@ const InnerGraph = ({
     if (selectedIds.length === 0) return;
     handleNodesChange(selectedIds.map((id) => ({ id, type: 'select', selected: false })));
   };
+
+  // The graph as a picture, painted from the nodes, links and annotations
+  // (graphPicture) with a margin around; nothing of the screen gets in.
+  const exportImage = async ({ margin = 40, transparent = false } = {}) => {
+    const icons = await loadIcons();
+    const iconInsets = await loadIconInsets(icons);
+    return paintGraph({
+      nodes: getNodes(),
+      edges: getEdges(),
+      margin,
+      transparent,
+      tokens: readTokens(),
+      icons,
+      iconInsets,
+      interfaceStatus: (pod, iface) => interfacesData?.[pod]?.interfaces?.[iface],
+    });
+  };
+  useEffect(() => {
+    if (exportImageRef) exportImageRef.current = exportImage;
+  });
 
   // Picking a tool drops the selection, so no style bar or resizer hangs
   // over the canvas while it is active.
