@@ -2187,7 +2187,7 @@ const docTemplate = `{
         },
         "/network/modify-network/{namespace}": {
             "post": {
-                "description": "Adds or removes nodes/links from an existing topology. Any change (add, delete or scale) returns 412 when the Meshnet CNI is not detected, since it restarts or creates pods that need rewiring. Bypass with force=true. Only clearing a topology is exempt.",
+                "description": "Adds or removes nodes, links and graph annotations in an existing topology, and places nodes with positions merged per pod. Any change (add, delete or scale) returns 412 when the Meshnet CNI is not detected, since it restarts or creates pods that need rewiring. Bypass with force=true. Only clearing a topology is exempt.",
                 "consumes": [
                     "application/json"
                 ],
@@ -5230,6 +5230,12 @@ const docTemplate = `{
         "types.NetworkAddSpecDoc": {
             "type": "object",
             "properties": {
+                "annotations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.Annotation"
+                    }
+                },
                 "links": {
                     "type": "array",
                     "items": {
@@ -5247,6 +5253,13 @@ const docTemplate = `{
         "types.NetworkDeleteSpecDoc": {
             "type": "object",
             "properties": {
+                "annotations": {
+                    "description": "Ids of annotations to remove from the graph.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "links": {
                     "type": "array",
                     "items": {
@@ -5269,6 +5282,13 @@ const docTemplate = `{
                 },
                 "delete": {
                     "$ref": "#/definitions/types.NetworkDeleteSpecDoc"
+                },
+                "positions": {
+                    "description": "Positions merged per pod, how a new node gets its spot on the graph.",
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/types.NodePosition"
+                    }
                 },
                 "scale": {
                     "description": "Scale changes the replica count of existing nodes. Each entry takes\nthe absolute number of replicas the node should end with. Replicas\nmust be \u003e= 1 (to remove a node entirely use delete.nodes).",

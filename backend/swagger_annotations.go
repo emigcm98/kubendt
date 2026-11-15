@@ -273,7 +273,7 @@ func swaggerClearTopology() {}
 // swaggerModifyNetwork godoc
 //
 //	@Summary      Modify network topology
-//	@Description  Adds or removes nodes/links from an existing topology. Any change (add, delete or scale) returns 412 when the Meshnet CNI is not detected, since it restarts or creates pods that need rewiring. Bypass with force=true. Only clearing a topology is exempt.
+//	@Description  Adds or removes nodes, links and graph annotations in an existing topology, and places nodes with positions merged per pod. Any change (add, delete or scale) returns 412 when the Meshnet CNI is not detected, since it restarts or creates pods that need rewiring. Bypass with force=true. Only clearing a topology is exempt.
 //	@Tags         network
 //	@Accept       json
 //	@Produce      json

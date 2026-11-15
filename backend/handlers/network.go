@@ -29,25 +29,26 @@ func writeOperationLockConflict(c *gin.Context, namespace string, lock *helpers.
 	c.JSON(http.StatusConflict, payload)
 }
 
+// NetworkAddSpec is a modify's add: nodes and links as the deploy takes
+// them, and annotations drawn on the graph, replacing one with the same id.
+type NetworkAddSpec struct {
+	Nodes       []types.NodeSpec   `json:"nodes"`
+	Links       []types.LinkSpec   `json:"links"`
+	Annotations []types.Annotation `json:"annotations"`
+}
+
 type NetworkDeleteSpec struct {
-	Nodes []string         `json:"nodes"`
-	Links []types.LinkSpec `json:"links"`
+	Nodes       []string         `json:"nodes"`
+	Links       []types.LinkSpec `json:"links"`
+	Annotations []string         `json:"annotations"`
 }
 
+// Positions are merged per pod, which is how a new node gets its spot.
 type NetworkModifyRequest struct {
-	Add    types.DeployRequest `json:"add"`
-	Delete NetworkDeleteSpec   `json:"delete"`
-	Scale  []types.ScaleSpec   `json:"scale"`
-}
-
-// A modify's add shares the deploy's shape, so the decoder would take a
-// layout there and the modify would drop it on the floor. Refuse it instead.
-func rejectModifyLayout(c *gin.Context, request NetworkModifyRequest) bool {
-	if request.Add.Layout == nil {
-		return false
-	}
-	c.JSON(http.StatusBadRequest, gin.H{"error": "add.layout is not accepted on a modify, the layout changes through PUT /network/layout/{namespace}"})
-	return true
+	Add       NetworkAddSpec                `json:"add"`
+	Delete    NetworkDeleteSpec             `json:"delete"`
+	Scale     []types.ScaleSpec             `json:"scale"`
+	Positions map[string]types.NodePosition `json:"positions"`
 }
 
 func ModifyNetwork(c *gin.Context) {
@@ -63,16 +64,23 @@ func ModifyNetwork(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if rejectModifyLayout(c, request) {
-		return
-	}
-
 	hasAdd := len(request.Add.Nodes) > 0 || len(request.Add.Links) > 0
 	hasDelete := len(request.Delete.Nodes) > 0 || len(request.Delete.Links) > 0
 	hasScale := len(request.Scale) > 0
-	if !hasAdd && !hasDelete && !hasScale {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "network-modify requires 'add', 'delete' and/or 'scale' with content"})
+	hasLayout := len(request.Add.Annotations) > 0 || len(request.Delete.Annotations) > 0 || len(request.Positions) > 0
+	if !hasAdd && !hasDelete && !hasScale && !hasLayout {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "network-modify requires 'add', 'delete', 'scale' and/or 'positions' with content"})
 		return
+	}
+	if err := helpers.ValidateLayout(&types.Layout{Positions: request.Positions, Annotations: request.Add.Annotations}); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "layout: " + err.Error()})
+		return
+	}
+	for i, id := range request.Delete.Annotations {
+		if id == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("delete.annotations[%d]: an id is required", i)})
+			return
+		}
 	}
 
 	if err := helpers.ValidateNamespaceEnabled(namespace); err != nil {
@@ -92,8 +100,9 @@ func ModifyNetwork(c *gin.Context) {
 	// restarts pods that the CNI has to wire, so without a running dataplane
 	// they come up unwired or stuck in ContainerCreating. Only clearing a
 	// topology and deleting the namespace are exempt (full teardown, no
-	// rewiring). Only "missing" blocks; ?force=true overrides.
-	if c.Query("force") != "true" {
+	// rewiring). Only "missing" blocks; ?force=true overrides. A change to
+	// the layout alone touches no pod, so it passes.
+	if (hasAdd || hasDelete || hasScale) && c.Query("force") != "true" {
 		if m := detectMeshnet(c.Request.Context()); m.State == "missing" {
 			c.JSON(http.StatusPreconditionFailed, gin.H{
 				"error":  "Meshnet CNI not detected in the cluster. Topology changes would leave pods unwired. Install Meshnet, clear the topology, or retry with force=true.",
@@ -343,7 +352,7 @@ func ModifyNetwork(c *gin.Context) {
 	}
 
 	if hasAdd {
-		newAddPods, touchedPeers, addWarnings, err := helpers.ApplyAddToExistingTopology(namespace, request.Add, existingNodes)
+		newAddPods, touchedPeers, addWarnings, err := helpers.ApplyAddToExistingTopology(namespace, types.DeployRequest{Nodes: request.Add.Nodes, Links: request.Add.Links}, existingNodes)
 		if err != nil {
 			status := http.StatusInternalServerError
 			if strings.HasPrefix(err.Error(), "VALIDATION:") {
@@ -595,6 +604,15 @@ func ModifyNetwork(c *gin.Context) {
 	}
 	warnings = append(warnings, mtuPass.Warnings...)
 	mtuDur := time.Since(mtuAt)
+
+	// The layout step: shapes added or replaced by id, shapes removed and
+	// positions merged per pod. A failure is a warning, the change is in.
+	if hasLayout {
+		if err := helpers.ModifyLayout(namespace, request.Add.Annotations, request.Delete.Annotations, request.Positions); err != nil {
+			log.Printf("⚠️ Could not update the layout of namespace '%s': %v", namespace, err)
+			warnings = append(warnings, types.Warning{Kind: "layout_not_saved", Detail: err.Error()})
+		}
+	}
 
 	// A recreated or new node whose process ended restarts forever; the
 	// modify is applied, the response says which node is not usable.
