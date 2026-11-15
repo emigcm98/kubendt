@@ -6,6 +6,7 @@ import React from 'react';
 function DeleteExtrasCheckboxes({
   positionsChecked,
   onPositionsChange,
+  positionsLabel = 'Also delete saved node positions',
   filesChecked,
   onFilesChange,
 }) {
@@ -17,7 +18,7 @@ function DeleteExtrasCheckboxes({
           checked={positionsChecked}
           onChange={(e) => onPositionsChange(e.target.checked)}
         />
-        Also delete saved node positions
+        {positionsLabel}
       </label>
       <label>
         <input

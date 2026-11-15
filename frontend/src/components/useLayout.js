@@ -165,6 +165,14 @@ export const useLayout = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // The annotations a topology file brings, shown with the placeholders while
+  // the deploy runs; the backend writes them, so nothing is dirty.
+  const showAnnotations = useCallback((annotations) => {
+    setAnnotationNodes((annotations || []).map((a) => annotationToNode(a, handlers)));
+    setAnnotationsDirty(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const saveLayout = useCallback(
     async (namespace, positions) => {
       const body = { positions, annotations: annotationNodes.map(nodeToAnnotation) };
@@ -204,6 +212,7 @@ export const useLayout = () => {
     annotationNodes,
     annotationsDirty,
     loadLayout,
+    showAnnotations,
     saveLayout,
     addAnnotation,
     removeAnnotations,

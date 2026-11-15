@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Annotations on the graph: notes, rectangles and ellipses, drawn by dragging with the tools next to the zoom controls, moved, resized and edited in place, deleted with the key, kept under the nodes and links. Save positions becomes Save layout, keeps them in the namespace's layout with the positions, and carries the unsaved marker while the graph has changes, with Ctrl+S to save.
 - A style bar over a selected annotation: ink colour from the palette, fill (none, glass or solid), dashed border, text size, where the text sits in the shape, send to back and bring to front, lock, and delete. A locked shape does not move, resize, edit or go with the key.
 - A delete tool in the strip, under select: the cursor becomes a bin and the shape it clicks goes. Pods and links stay, they come from the topology. Under a tool nothing else on the graph reacts, and a click outside the canvas goes back to select.
+- The topology export carries the graph's layout, positions and annotations, under `layout` (`GET /network/get-network/{namespace}?layout=true`), and the deploy takes the same optional field and applies it once the pods are up, so a scenario replicates with its picture. What the file brings replaces that part of the namespace's layout and what it leaves out stays.
 
 ## [1.10.0] - 2026-11-13
 

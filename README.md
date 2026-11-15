@@ -8,7 +8,7 @@
    <a href="https://doi.org/10.5281/zenodo.21276320"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.21276320.svg" alt="DOI" /></a>
 </p>
 
-> Last reviewed: 13 Nov 2026
+> Last reviewed: 15 Nov 2026
 
 **KubeNDT** is a platform for deploying and operating virtual network topologies on Kubernetes.
 
@@ -51,7 +51,7 @@ KubeNDT bundles a small set of third-party SVG icons in its frontend. See [ATTRI
 - **Interactive terminal shell** with WebSocket for real-time pod access
 - **Dynamic network modification** - add/delete nodes and links without redeploying the entire topology
 - **Configuration management** - mount configuration files, environment variables, and dynamic daemon setup
-- **Persistent topology state** - save/export topologies as JSON for reproducible deployments
+- **Persistent topology state** - save/export topologies as JSON for reproducible deployments, the export carrying the graph's layout (positions and annotations) so a deploy of it brings the picture back
 
 ### Advanced Networking Features
 
