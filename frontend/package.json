@@ -18,6 +18,7 @@
     "@testing-library/user-event": "^13.5.0",
     "@uiw/react-codemirror": "^4.23.10",
     "d3-force": "^3.0.0",
+    "jspdf": "^4.2.1",
     "prismjs": "^1.30.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -27,6 +28,7 @@
     "react-scripts": "5.0.1",
     "react-simple-code-editor": "^0.14.1",
     "reactflow": "^11.11.4",
+    "svg2pdf.js": "^2.9.0",
     "web-vitals": "^2.1.4",
     "xterm": "^5.3.0",
     "xterm-addon-fit": "^0.8.0"

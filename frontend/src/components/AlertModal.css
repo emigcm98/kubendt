@@ -143,12 +143,37 @@
   user-select: none;
 }
 
-.alert-modal-extra input[type='checkbox'] {
+.alert-modal-extra input[type='checkbox'],
+.alert-modal-extra input[type='radio'] {
   width: 15px;
   height: 15px;
   cursor: pointer;
   accent-color: var(--danger);
   flex-shrink: 0;
+}
+
+/* A value next to its name, the control on the right. */
+.alert-modal-extra .alert-modal-field {
+  justify-content: space-between;
+  cursor: default;
+}
+
+.alert-modal-field span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+}
+
+.alert-modal-field input[type='number'],
+.alert-modal-field select {
+  width: 5rem;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-body);
+  font: inherit;
 }
 
 .alert-modal-actions {
