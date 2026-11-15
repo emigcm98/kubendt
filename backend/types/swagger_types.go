@@ -253,11 +253,13 @@ type NamespaceMetricsResponse struct {
 // ─── Network ─────────────────────────────────────────────────────────────────
 
 // NetworkTopologyResponse is returned by GET /network/get-network/:ns.
-// NetworkAddSpecDoc is the add section of a modify: nodes and links, no
-// layout, that changes through the layout endpoint.
+// NetworkAddSpecDoc is the add section of a modify: nodes and links as the
+// deploy takes them, and annotations for the graph, one with an id already
+// drawn replaces it.
 type NetworkAddSpecDoc struct {
-	Nodes []NodeSpec `json:"nodes"`
-	Links []LinkSpec `json:"links"`
+	Nodes       []NodeSpec   `json:"nodes"`
+	Links       []LinkSpec   `json:"links"`
+	Annotations []Annotation `json:"annotations,omitempty"`
 }
 
 type NetworkTopologyResponse struct {
@@ -312,6 +314,8 @@ type ClearTopologyResponse struct {
 type NetworkDeleteSpecDoc struct {
 	Nodes []string   `json:"nodes"`
 	Links []LinkSpec `json:"links"`
+	// Ids of annotations to remove from the graph.
+	Annotations []string `json:"annotations,omitempty"`
 }
 
 // NetworkModifyRequestDoc is the request body for POST /network/modify-network/:ns.
@@ -325,6 +329,8 @@ type NetworkModifyRequestDoc struct {
 	// the absolute number of replicas the node should end with. Replicas
 	// must be >= 1 (to remove a node entirely use delete.nodes).
 	Scale []ScaleSpec `json:"scale"`
+	// Positions merged per pod, how a new node gets its spot on the graph.
+	Positions map[string]NodePosition `json:"positions,omitempty"`
 }
 
 // ModifyTimingResponse breaks down modify duration by phase.

@@ -176,6 +176,43 @@ func TestMergeLayoutKeepsWhatTheFileLeavesOut(t *testing.T) {
 	}
 }
 
+func TestModifyLayoutByIdAndPerPod(t *testing.T) {
+	fakeLayoutStore(t)
+	saved := types.Layout{
+		Positions:   map[string]types.NodePosition{"r1-0": {X: 1, Y: 2}},
+		Annotations: []types.Annotation{{ID: "a", Type: "note", Text: "old"}, {ID: "b", Type: "rect"}},
+	}
+	if err := PutLayout("ns", saved); err != nil {
+		t.Fatal(err)
+	}
+	err := ModifyLayout("ns",
+		[]types.Annotation{{ID: "a", Type: "note", Text: "new"}, {ID: "c", Type: "ellipse"}},
+		[]string{"b", "nope"},
+		map[string]types.NodePosition{"r2-0": {X: 30, Y: 40}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, _ := GetLayout("ns")
+	ids := ""
+	for _, a := range got.Annotations {
+		ids += a.ID + ":" + a.Text + " "
+	}
+	if ids != "a:new c: " {
+		t.Errorf("a replaced in place, b gone, c joined, got %q", ids)
+	}
+	if len(got.Positions) != 2 || got.Positions["r1-0"].X != 1 || got.Positions["r2-0"].Y != 40 {
+		t.Errorf("positions merged per pod, got %+v", got.Positions)
+	}
+	// the same id added and removed in one call: it goes
+	if err := ModifyLayout("ns", []types.Annotation{{ID: "c", Type: "rect"}}, []string{"c"}, nil); err != nil {
+		t.Fatal(err)
+	}
+	got, _ = GetLayout("ns")
+	if len(got.Annotations) != 1 || got.Annotations[0].ID != "a" {
+		t.Errorf("c gone, got %+v", got.Annotations)
+	}
+}
+
 func TestDeleteLayoutDropsTheDocument(t *testing.T) {
 	cs := fakeLayoutStore(t)
 	if err := PutLayout("ns", types.Layout{Positions: map[string]types.NodePosition{"r1-0": {X: 1}}, Annotations: []types.Annotation{{ID: "a", Type: "rect"}}}); err != nil {

@@ -550,7 +550,7 @@ Meshnet (CNI Controller)
 ```
 User
   │
-  ├─→ POST /api/network/modify-network/:namespace {add: {nodes, links}, delete: {...}}
+  ├─→ POST /api/network/modify-network/:namespace {add: {nodes, links, annotations}, delete: {nodes, links, annotations}, scale, positions}
   │         │
   │         ├─→ AcquireNamespaceOperationLock
   │         │

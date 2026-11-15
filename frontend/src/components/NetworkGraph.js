@@ -35,7 +35,7 @@ import { ReactComponent as GaugeIcon } from '../assets/images/icons/gauge.svg';
 import { ReactComponent as SaveIcon } from '../assets/images/icons/save.svg';
 import { ReactComponent as DownloadIcon } from '../assets/images/icons/download.svg';
 import InnerGraph from './InnerGraph';
-import { useLayout, isAnnotationId } from './useLayout';
+import { useLayout, isAnnotationId, nodeToAnnotation } from './useLayout';
 import LoadingOverlay from './LoadingOverlay';
 import './NetworkGraph.css';
 import { NODE_SIZE } from './CustomNode';
@@ -2605,11 +2605,11 @@ const NetworkGraph = ({
     }
 
     const keys = Object.keys(json);
-    const allowedKeys = new Set(['add', 'delete', 'scale']);
+    const allowedKeys = new Set(['add', 'delete', 'scale', 'positions']);
     for (const key of keys) {
       if (!allowedKeys.has(key)) {
         throw new Error(
-          `Unrecognized root-level field: '${key}'. Only 'add', 'delete' and 'scale' are allowed.`
+          `Unrecognized root-level field: '${key}'. Only 'add', 'delete', 'scale' and 'positions' are allowed.`
         );
       }
     }
@@ -2617,8 +2617,17 @@ const NetworkGraph = ({
     const hasAdd = Object.prototype.hasOwnProperty.call(json, 'add');
     const hasDelete = Object.prototype.hasOwnProperty.call(json, 'delete');
     const hasScale = Object.prototype.hasOwnProperty.call(json, 'scale');
-    if (!hasAdd && !hasDelete && !hasScale) {
-      throw new Error("Modify topology JSON must include 'add', 'delete' and/or 'scale'.");
+    const hasPositions = Object.prototype.hasOwnProperty.call(json, 'positions');
+    if (!hasAdd && !hasDelete && !hasScale && !hasPositions) {
+      throw new Error(
+        "Modify topology JSON must include 'add', 'delete', 'scale' and/or 'positions'."
+      );
+    }
+    if (
+      hasPositions &&
+      (!json.positions || typeof json.positions !== 'object' || Array.isArray(json.positions))
+    ) {
+      throw new Error("'positions' must be an object of pod name to {x, y}.");
     }
 
     const validateAdd = (addObj) => {
@@ -2627,8 +2636,10 @@ const NetworkGraph = ({
       }
       const addKeys = Object.keys(addObj);
       for (const key of addKeys) {
-        if (key !== 'nodes' && key !== 'links') {
-          throw new Error(`'add' contains unsupported field '${key}'. Allowed: 'nodes', 'links'.`);
+        if (key !== 'nodes' && key !== 'links' && key !== 'annotations') {
+          throw new Error(
+            `'add' contains unsupported field '${key}'. Allowed: 'nodes', 'links', 'annotations'.`
+          );
         }
       }
       if (addObj.nodes !== undefined && !Array.isArray(addObj.nodes)) {
@@ -2636,6 +2647,16 @@ const NetworkGraph = ({
       }
       if (addObj.links !== undefined && !Array.isArray(addObj.links)) {
         throw new Error("'add.links' must be an array.");
+      }
+      if (addObj.annotations !== undefined) {
+        if (!Array.isArray(addObj.annotations)) {
+          throw new Error("'add.annotations' must be an array.");
+        }
+        addObj.annotations.forEach((a, i) => {
+          if (!a || typeof a !== 'object' || !isNonEmptyString(a.id)) {
+            throw new Error(`add.annotations[${i}]: must be an object with an id.`);
+          }
+        });
       }
       if (Array.isArray(addObj.nodes)) {
         addObj.nodes.forEach((n, i) => {
@@ -2663,9 +2684,9 @@ const NetworkGraph = ({
       }
       const delKeys = Object.keys(delObj);
       for (const key of delKeys) {
-        if (key !== 'nodes' && key !== 'links') {
+        if (key !== 'nodes' && key !== 'links' && key !== 'annotations') {
           throw new Error(
-            `'delete' contains unsupported field '${key}'. Allowed: 'nodes', 'links'.`
+            `'delete' contains unsupported field '${key}'. Allowed: 'nodes', 'links', 'annotations'.`
           );
         }
       }
@@ -2674,6 +2695,18 @@ const NetworkGraph = ({
       }
       if (delObj.links !== undefined && !Array.isArray(delObj.links)) {
         throw new Error("'delete.links' must be an array.");
+      }
+      if (delObj.annotations !== undefined) {
+        if (!Array.isArray(delObj.annotations)) {
+          throw new Error("'delete.annotations' must be an array of ids.");
+        }
+        delObj.annotations.forEach((id, i) => {
+          if (!isNonEmptyString(id)) {
+            throw new Error(
+              `delete.annotations[${i}]: must be a non-empty string (annotation id).`
+            );
+          }
+        });
       }
       // delete.nodes is just an array of base names (strings) → only type check
       if (Array.isArray(delObj.nodes)) {
@@ -3188,6 +3221,16 @@ const NetworkGraph = ({
       // Pass add.links so new nodes anchor next to the neighbours they connect to.
       const addLinks = json.add && Array.isArray(json.add.links) ? json.add.links : [];
       const allPlaceholderNodes = buildPlaceholderNodes(combinedPlaceholderSpecs, addLinks);
+      // A spot the file gives a new node wins over the anchored guess.
+      if (json.positions) {
+        allPlaceholderNodes.forEach((n) => {
+          const p = json.positions[n.id];
+          if (p) {
+            n.position = { x: p.x, y: p.y };
+            positionRef.current[n.id] = { x: p.x, y: p.y };
+          }
+        });
+      }
 
       // Deep-copy add.links so buildPlaceholderExternalNodes can rewrite
       // "external" → peerLabel without mutating the JSON the backend
@@ -3240,6 +3283,27 @@ const NetworkGraph = ({
         }
       }
 
+      // The file's annotations show at once: the ones it adds join or
+      // replace by id, the ones it deletes go. A refusal brings the saved
+      // ones back.
+      const addAnns = Array.isArray(json.add?.annotations) ? json.add.annotations : [];
+      const delAnns = new Set(
+        Array.isArray(json.delete?.annotations) ? json.delete.annotations : []
+      );
+      const touchesLayout = addAnns.length > 0 || delAnns.size > 0 || !!json.positions;
+      if (addAnns.length > 0 || delAnns.size > 0) {
+        const byId = new Map(
+          annotationNodes
+            .map(nodeToAnnotation)
+            .filter((a) => !delAnns.has(a.id))
+            .map((a) => [a.id, a])
+        );
+        addAnns.forEach((a) => {
+          if (!delAnns.has(a.id)) byId.set(a.id, a);
+        });
+        showAnnotations([...byId.values()]);
+      }
+
       // On backend error we have to drop every optimistic mutation we
       // applied above, otherwise the user keeps seeing "creating"
       // placeholders and red "deleting" pods/edges forever even though
@@ -3256,6 +3320,7 @@ const NetworkGraph = ({
         preMarked.markedLinks.forEach(removeDeletingLink);
         scaleDownPodNames.forEach(removeDeletingPod);
         scaleDownMarkedLinks.forEach(removeDeletingLink);
+        if (touchesLayout) loadLayout(namespace).catch(() => {});
       };
 
       let res;
@@ -3311,6 +3376,19 @@ const NetworkGraph = ({
       // Drop positions of pods removed by a scale-down so they aren't
       // re-persisted or reused if the node is scaled up again later.
       scaleDownPodNames.forEach((n) => delete positionRef.current[n]);
+      // The layout the file changed comes back from the namespace first, so
+      // the auto-save below keeps the spots it gave and the shapes it drew.
+      if (touchesLayout) {
+        try {
+          const positions = await loadLayout(namespace);
+          positionRef.current = { ...positionRef.current, ...positions };
+          setNodes((prev) =>
+            prev.map((n) => (positions[n.id] ? { ...n, position: positions[n.id] } : n))
+          );
+        } catch (e) {
+          console.error('❌ Error loading the layout after the modify:', e);
+        }
+      }
       // Persist the new layout so a reload shows the same arrangement instead of
       // re-running the global force over the changed node set. positionRef is
       // updated synchronously by fetchTopology, so it holds the settled spots.

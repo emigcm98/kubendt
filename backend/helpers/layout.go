@@ -205,6 +205,51 @@ func MergeLayout(namespace string, l types.Layout) error {
 	return lastErr
 }
 
+// ModifyLayout is a modify's layout step: the annotations given replace
+// the ones with their id or join the list, the ids given go, and the
+// positions merge per pod.
+func ModifyLayout(namespace string, upsert []types.Annotation, remove []string, positions map[string]types.NodePosition) error {
+	gone := map[string]bool{}
+	for _, id := range remove {
+		gone[id] = true
+	}
+	var lastErr error
+	for attempt := 0; attempt < 3; attempt++ {
+		l, err := GetLayout(namespace)
+		if err != nil {
+			return err
+		}
+		kept := make([]types.Annotation, 0, len(l.Annotations)+len(upsert))
+		replaced := map[string]bool{}
+		for _, a := range l.Annotations {
+			if gone[a.ID] {
+				continue
+			}
+			for _, u := range upsert {
+				if u.ID == a.ID {
+					a = u
+					replaced[a.ID] = true
+					break
+				}
+			}
+			kept = append(kept, a)
+		}
+		for _, u := range upsert {
+			if !replaced[u.ID] && !gone[u.ID] {
+				kept = append(kept, u)
+			}
+		}
+		l.Annotations = kept
+		for id, p := range positions {
+			l.Positions[id] = p
+		}
+		if lastErr = PutLayout(namespace, l); lastErr == nil {
+			return nil
+		}
+	}
+	return lastErr
+}
+
 // DeleteLayout drops the whole document, positions and annotations, which
 // is what a clear with the box ticked asks for.
 func DeleteLayout(namespace string) error {

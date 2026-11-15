@@ -1661,6 +1661,10 @@ definitions:
     type: object
   types.NetworkAddSpecDoc:
     properties:
+      annotations:
+        items:
+          $ref: '#/definitions/types.Annotation'
+        type: array
       links:
         items:
           $ref: '#/definitions/types.LinkSpec'
@@ -1672,6 +1676,11 @@ definitions:
     type: object
   types.NetworkDeleteSpecDoc:
     properties:
+      annotations:
+        description: Ids of annotations to remove from the graph.
+        items:
+          type: string
+        type: array
       links:
         items:
           $ref: '#/definitions/types.LinkSpec'
@@ -1687,6 +1696,12 @@ definitions:
         $ref: '#/definitions/types.NetworkAddSpecDoc'
       delete:
         $ref: '#/definitions/types.NetworkDeleteSpecDoc'
+      positions:
+        additionalProperties:
+          $ref: '#/definitions/types.NodePosition'
+        description: Positions merged per pod, how a new node gets its spot on the
+          graph.
+        type: object
       scale:
         description: |-
           Scale changes the replica count of existing nodes. Each entry takes
@@ -4272,9 +4287,10 @@ paths:
     post:
       consumes:
       - application/json
-      description: Adds or removes nodes/links from an existing topology. Any change
-        (add, delete or scale) returns 412 when the Meshnet CNI is not detected, since
-        it restarts or creates pods that need rewiring. Bypass with force=true. Only
+      description: Adds or removes nodes, links and graph annotations in an existing
+        topology, and places nodes with positions merged per pod. Any change (add,
+        delete or scale) returns 412 when the Meshnet CNI is not detected, since it
+        restarts or creates pods that need rewiring. Bypass with force=true. Only
         clearing a topology is exempt.
       parameters:
       - description: Namespace name
