@@ -1,22 +1,4 @@
-"""Radio service: the GPU-side companion of KubeNDT for radio zones.
-
-Runs on the host that has the GPU. KubeNDT's backend forwards /radio/* here (KUBENDT_RADIO_URL), under its
-own authentication, so this service has none and must listen only where the backend can reach it
-(the Docker network gateway), never on a public address.
-
-  GET    /health
-  GET    /zones                      every zone
-  POST   /zones {name, bbox}         create a zone and fetch its OpenStreetMap extract
-  GET    /zones/{id}                 metadata, status and statistics
-  DELETE /zones/{id}
-  PUT    /zones/{id}/sites {sites}   set the sites
-  POST   /zones/{id}/sites/auto {count}   propose sites spread over the built-up area
-  GET    /zones/{id}/sites/osm       telephony masts mapped in OpenStreetMap inside the zone
-  POST   /zones/{id}/build           3D scene, road network and coverage maps (GPU)
-  GET    /zones/{id}/coverage.png
-  POST   /zones/{id}/activate        the zone the emulation uses
-  GET    /active
-"""
+"""Radio service: the GPU-side companion of KubeNDT for radio zones."""
 import argparse
 import asyncio
 import os
@@ -29,12 +11,32 @@ from pathlib import Path
 
 from aiohttp import web
 
+
+
+def settings():
+    """Command line of the service; what it sets reaches the scripts it launches through the environment."""
+    ap = argparse.ArgumentParser(description="Radio service of KubeNDT: builds radio zones and runs their emulation.")
+    ap.add_argument("--host", default=os.environ.get("KUBENDT_RADIO_HOST") or "127.0.0.1",
+                    help="address to listen on: one the KubeNDT backend reaches, never a public one (the service has no authentication)")
+    ap.add_argument("--port", type=int, default=int(os.environ.get("KUBENDT_RADIO_PORT") or 8770))
+    ap.add_argument("--kubendt-url", help="base URL of the KubeNDT API (KUBENDT_URL, default http://localhost:8080)")
+    ap.add_argument("--home", help="working folder for zones, cache and generated files (KUBENDT_RADIO_HOME, default ~/kubendt-radio)")
+    ap.add_argument("--token-file", help="file with a KubeNDT API token (KUBENDT_TOKEN_FILE, default <home>/.kubendt_token; or KUBENDT_TOKEN)")
+    a = ap.parse_args()
+    for var, value in (("KUBENDT_URL", a.kubendt_url), ("KUBENDT_RADIO_HOME", a.home), ("KUBENDT_TOKEN_FILE", a.token_file)):
+        if value:
+            os.environ[var] = value
+    return a
+
+
+ARGS = settings() if __name__ == "__main__" else None
 sys.path.insert(0, str(Path(__file__).parent))
-import zone as Z  # noqa: E402
+import config
+import zone as Z
 
 PY = sys.executable
 SCRIPT = str(Path(__file__).parent / "zone.py")
-JOBS = {}                                   # zone id -> Popen
+JOBS = {}
 
 
 def err(status, msg):
@@ -51,7 +53,6 @@ def public(z):
     m = dict(z.meta)
     job = JOBS.get(z.id)
     m["busy"] = bool(job and job.poll() is None)
-    # a job that died without writing its status (killed, out of memory)
     if not m["busy"] and m.get("status") in ("fetching", "building"):
         z.save(status="error", step=None, error="the job ended without a result; see job.log in the zone folder")
         m = dict(z.meta, busy=False)
@@ -60,7 +61,6 @@ def public(z):
     ns = m.get("namespace")
     if ns:
         ns = dict(ns)
-        # the namespace depends on how many gNBs and UEs there are, not on where they are or how they move
         ns["stale"] = ns.get("status") == "ready" and (ns.get("gnbs") != len(m.get("sites", [])) or ns.get("ues") != len(m.get("ues", [])))
         existing = kubendt_namespaces()
         if ns.get("status") == "ready" and existing is not None and ns.get("name") not in existing:
@@ -84,8 +84,7 @@ def kubendt_namespaces():
         return _NS_CACHE["names"]
     names = None
     try:
-        token = (Path.home() / "kubendt-radio" / ".kubendt_token").read_text().strip()
-        req = urllib.request.Request("http://127.0.0.1:8088/api/namespaces/", headers={"Authorization": f"Bearer {token}"})
+        req = urllib.request.Request(f"{config.KUBENDT_URL}/namespaces/", headers={"Authorization": f"Bearer {config.token()}"})
         data = json.load(urllib.request.urlopen(req, timeout=4))
         names = {n["name"] for n in (data.get("namespaces") or [])}
     except Exception:
@@ -356,8 +355,6 @@ async def put_sites(request):
         sites = clean_sites(z, (await request.json())["sites"])
     except (ValueError, KeyError, TypeError) as e:
         return err(400, str(e))
-    # changing the sites invalidates the coverage maps
-    # the UEs stay: they are re-snapped to the road network when the zone is rebuilt
     z.save(sites=sites, status="fetched" if z.meta.get("status") == "ready" else z.meta.get("status"))
     return web.json_response(public(z))
 
@@ -431,11 +428,8 @@ async def health(request):
 
 
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--host", default="172.19.0.1")
-    ap.add_argument("--port", type=int, default=8770)
-    a = ap.parse_args()
-    Z.ZONES.mkdir(exist_ok=True)
+    a = ARGS
+    Z.ZONES.mkdir(parents=True, exist_ok=True)
     app = web.Application(client_max_size=2 * 1024 * 1024)
     app.add_routes([web.get("/health", health), web.get("/zones", zones), web.post("/zones", create), web.get("/active", active),
                     web.get("/zones/{id}", get), web.delete("/zones/{id}", delete), web.put("/zones/{id}/sites", put_sites),

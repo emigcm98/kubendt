@@ -1,82 +1,51 @@
-"""Mobility system for the KubeNDT radio study.
-
-  SumoWorld   Eclipse SUMO (libsumo) on the real OpenStreetMap network of central Munich, cropped to the
-              Sionna scene and mapped into its coordinates: background traffic and pedestrians, plus the
-              UEs (vehicles that keep getting new destinations, pedestrians that keep getting new walks).
-  LiveRadio   Sionna RT PathSolver on the Munich scene with the 15 sectors of siona-thalesnet, the UEs as
-              receivers and SUMO's vehicles as moving metal objects (blockage and reflection).
-  A3Manager   3GPP-style mobility management: L3-filtered RSRP, event A3 with hysteresis and
-              time-to-trigger, radio link failure on Qout for T310 and re-establishment.
-"""
-import json
+"""Mobility system for the KubeNDT radio study."""
 import random
 import sys
 from pathlib import Path
 
 import numpy as np
 
-KR = Path.home() / "kubendt-radio"
-MOB = KR / "mobility"
-sys.path.insert(0, str(Path.home() / "thalesnet-benchmark" / "siona-thalesnet-v2"))
-import sumo  # noqa: E402
-import sumolib  # noqa: E402
-from siona_thalesnet import paths as st_paths  # noqa: E402
-from siona_thalesnet.linkrate import LinkConfig, LinkRate  # noqa: E402
-from siona_thalesnet.radio import RadioConfig, RadioMaps  # noqa: E402
+import config
+import sumo
+import sumolib
+from link_rate import LinkConfig, LinkRate
+from radio_maps import RadioMaps
 
-RCFG = RadioConfig()
 LCFG = LinkConfig(bandwidth_hz=20e6, num_prb=51)
 INVALID = -1e9
 
 
 class SumoWorld:
-    def __init__(self, n_veh_ue, n_ped_ue, step=0.5, seed=1, background=True, served=None, zone=None, ue_specs=None):
+    def __init__(self, n_veh_ue, n_ped_ue, zone, step=0.5, seed=1, background=True, served=None, ue_specs=None):
         import libsumo as traci
         self.traci = traci
         self.step_s = step
         self.rnd = random.Random(seed)
         self.zone = zone
-        if zone is not None:
-            # a zone's scene is north-aligned and its network maps to it through the geographic projection
-            self._xf, self.rot = zone.sumo_to_scene(), 0.0
-            net_file = zone.net_file
-        else:
-            al = json.loads((MOB / "align.json").read_text())
-            self.R, self.t = np.array(al["R"]), np.array(al["translation"])
-            self.rot = np.arctan2(self.R[1, 0], self.R[0, 0])
-            self._xf = None
-            net_file = MOB / "munich_scene.net.xml"
+        self._xf, self.rot = zone.sumo_to_scene(), 0.0
+        net_file = zone.net_file
         self.net = sumolib.net.readNet(str(net_file))
         self.veh_edges = [e.getID() for e in self.net.getEdges() if e.allows("passenger") and e.getLength() > 25]
         self.ped_edges = [e.getID() for e in self.net.getEdges() if e.allows("pedestrian") and e.getLength() > 15]
         if served is not None:
-            # UEs start and head for streets the radio deployment serves; they still cross the rest
             ok = lambda e: bool(served(self._edge_mid(e)))
             self.veh_edges = [e for e in self.veh_edges if ok(e)]
             self.ped_edges = [e for e in self.ped_edges if ok(e)]
-        if zone is not None:
-            routes = zone.routes() if background else []
-        else:
-            routes = [str(MOB / f) for f in ("veh.rou.xml", "ped.rou.xml")] if background else []
+        routes = zone.routes() if background else []
         cmd = [str(Path(sumo.SUMO_HOME) / "bin" / "sumo"), "-n", str(net_file), "--step-length", str(step),
                "--no-step-log", "--no-warnings", "--time-to-teleport", "120", "--seed", str(seed),
                "--ignore-route-errors", "--collision.action", "none"]
         if routes:
             cmd += ["-r", ",".join(routes)]
-        if zone is not None:
-            # a zone's background traffic is there to look and block like a street, not to jam it: a fraction
-            # of the generated demand, vehicles that wait too long are moved on, blocked junctions are passed
-            cmd += ["--scale", str(zone.meta.get("traffic_scale", 0.3)),
-                    "--ignore-junction-blocker", "15", "--max-depart-delay", "20"]
+        cmd += ["--scale", str(zone.meta.get("traffic_scale", 0.3)),
+                "--ignore-junction-blocker", "15", "--max-depart-delay", "20"]
         traci.start(cmd)
-        self.ues = []                                  # dicts: id, kind, xy, yaw, speed
+        self.ues = []
         for i in range(n_veh_ue):
             self.ues.append(dict(id=f"uev{i}", base=f"uev{i}", gen=0, kind="vehicle", xy=None, yaw=0.0, speed=0.0, edge=None))
         for i in range(n_ped_ue):
             self.ues.append(dict(id=f"uep{i}", base=f"uep{i}", gen=0, kind="pedestrian", xy=None, yaw=0.0, speed=0.0, edge=None))
         if ue_specs is not None:
-            # the zone's own UEs: a car or a person, moving from where the user put it, or fixed there.
-            # Traffic warms up first, so a mobile UE starts its trip at its start point.
             for _ in range(int(60 / step)):
                 traci.simulationStep()
             self.ues = []
@@ -92,32 +61,27 @@ class SumoWorld:
                         return dict(edge=w["edge"], pos=float(w["pos"]), xy=np.array([float(wx), float(wy)]))
                     pts = [point(w) for w in sp["waypoints"]]
                     if sp.get("at_end") == "loop":
-                        pts.append(point(sp))                   # back to the start, then over again
+                        pts.append(point(sp))
                     self.ues[-1].update(waypoints=pts, wp_i=0, at_end=sp.get("at_end", "stop"), legs_done=0)
         for u in self.ues:
             if not u.get("fixed"):
                 self._spawn(u)
         self.respawns = 0
-        for _ in range(0 if ue_specs is not None else int(60 / step)):                # warm-up: let traffic and UEs enter the network
+        for _ in range(0 if ue_specs is not None else int(60 / step)):
             traci.simulationStep()
         self.refresh()
 
-    # ------------------------------------------------------------ coordinates
     def to_scene(self, xy):
-        if self._xf is not None:
-            out = self._xf(xy)
-            return out[0] if np.ndim(xy) == 1 else out
-        return np.asarray(xy) @ self.R.T + self.t
+        out = self._xf(xy)
+        return out[0] if np.ndim(xy) == 1 else out
 
     def _edge_mid(self, edge):
         shp = self.net.getEdge(edge).getShape()
         return self.to_scene(shp[len(shp) // 2])
 
-    # ------------------------------------------------------------ UEs
     def _spawn(self, u):
         tr = self.traci
         for _ in range(50):
-            # a new SUMO id every time: the previous one may still be known to the simulation
             u["gen"] += 1
             u["id"] = f"{u['base']}g{u['gen']}"
             try:
@@ -142,7 +106,7 @@ class SumoWorld:
                 return
             except tr.TraCIException:
                 u["edge"] = None
-        self.failed_spawns = getattr(self, "failed_spawns", 0) + 1     # stays where it was; retried next step
+        self.failed_spawns = getattr(self, "failed_spawns", 0) + 1
 
     def _head(self, u, from_edge):
         """Send a UE on its way: to its next waypoint if it follows a route, to a random destination otherwise."""
@@ -171,8 +135,7 @@ class SumoWorld:
         return True
 
     def _follow(self, u, lane_pos):
-        """A UE on a route reached its waypoint: on to the next one. After the last it stays there, or, on a
-        loop, goes back to its start and over again."""
+        """A UE on a route reached its waypoint: on to the next one. After the last it stays there, or, on a."""
         tr = self.traci
         goal = u["waypoints"][u["wp_i"]]
         near = float(np.hypot(*(np.asarray(u["xy"]) - goal["xy"])))
@@ -188,7 +151,6 @@ class SumoWorld:
             if u["at_end"] == "loop":
                 u["wp_i"] = 0
             else:
-                # the end of the route: the UE stays at its last destination
                 try:
                     (tr.vehicle.remove if u["kind"] == "vehicle" else tr.person.remove)(u["id"])
                 except tr.TraCIException:
@@ -240,7 +202,7 @@ class SumoWorld:
                     if u["id"] not in vehicles:
                         if u["id"] not in tr.simulation.getPendingVehicles():
                             self.respawns += 1
-                            self._spawn(u)            # arrived or teleported out: start again where it was
+                            self._spawn(u)
                         continue
                     x, y = tr.vehicle.getPosition(u["id"])
                     if x < INVALID:
@@ -308,26 +270,20 @@ class SumoWorld:
 
 
 class LiveRadio:
-    VEH_ANT_Z = 1.9                                    # roof antenna of a vehicle UE
+    VEH_ANT_Z = 1.9
     PED_Z = 1.5
 
-    def __init__(self, world, car_pool=60, depth=5, diffraction=True, fused=False, zone=None):
+    def __init__(self, world, zone, car_pool=60, depth=5, diffraction=True, fused=False):
         import mitsuba as mi
         import sionna.rt as rt
         self.mi, self.rt = mi, rt
         self.world = world
         self.zone = zone
-        if zone is not None:
-            self.maps = RadioMaps.load(zone.dir / "radio.npz")
-            scene_src, freq = zone.scene_file, zone.meta.get("frequency_hz", 3.5e9)
-            tx = [(sec["pos"], sec["yaw"], sec["tilt"], sec["power_dbm"]) for sec in zone.sectors()]
-        else:
-            self.maps = RadioMaps.load(st_paths.RADIO)
-            scene_src, freq = getattr(rt.scene, RCFG.scene), RCFG.frequency_hz
-            tx = [(pos, a, float(np.deg2rad(RCFG.downtilt_deg)), RCFG.tx_power_dbm) for pos, a in
-                  zip(self.maps.sector_position, np.deg2rad(np.tile(RCFG.sector_azimuths_deg, RCFG.num_sites)))]
+        self.maps = RadioMaps.load(zone.dir / "radio.npz")
+        scene_src, freq = zone.scene_file, zone.meta.get("frequency_hz", 3.5e9)
+        tx = [(sec["pos"], sec["yaw"], sec["tilt"], sec["power_dbm"]) for sec in zone.sectors()]
         self.tx_power = np.array([t[3] for t in tx], float)
-        self.link = LinkRate(LCFG, cache=KR / "results" / "link_curves_e1.npz")
+        self.link = LinkRate(LCFG, cache=config.HOME / "cache" / "link_curves.npz")
         scene = rt.load_scene(scene_src)
         scene.frequency = freq
         scene.tx_array = rt.PlanarArray(num_rows=1, num_cols=1, pattern="tr38901", polarization="V")
@@ -348,14 +304,11 @@ class LiveRadio:
             scene.edit(add=self.cars)
             bb = self.cars[0].mi_mesh.bbox()
             self.car_dims = [float(bb.max.x - bb.min.x), float(bb.max.y - bb.min.y), float(bb.max.z - bb.min.z)]
-            self.car_z = float(self.cars[0].position.z[0]) - float(bb.min.z)   # origin height when wheels are at z = 0
+            self.car_z = float(self.cars[0].position.z[0]) - float(bb.min.z)
         self.scene, self.solver = scene, rt.PathSolver()
         self.kw = dict(max_depth=depth, los=True, specular_reflection=True, diffuse_reflection=False,
                        refraction=False, diffraction=diffraction, synthetic_array=True, seed=1)
         self.cars_used, self.car_updates, self.pose = 0, 0, {}
-        # Fused mode: the offline radio map (deeper, with diffuse reflection, averaged over a 5 m cell) is
-        # the large-scale gain; live tracing only contributes what the vehicles change, as the difference
-        # between the scene with them and a second, static copy of the scene without them.
         self.fused, self._nocars, self.last_delta = fused, False, None
         if fused:
             scene0 = rt.load_scene(scene_src)
@@ -376,7 +329,7 @@ class LiveRadio:
         if self.fused:
             self._nocars = not with_cars
             if not with_cars:
-                return                                  # the static copy already is the scene without cars
+                return
         xy = self.world.ue_xy()
         for j, (r, u, p) in enumerate(zip(self.rx, self.world.ues, xy)):
             z = self.VEH_ANT_Z if u["kind"] == "vehicle" else self.PED_Z
@@ -387,7 +340,6 @@ class LiveRadio:
             return
         veh, _ = self.world.vehicles()
         if with_cars and len(veh) > len(self.cars):
-            # more vehicles than objects: keep the ones nearest to a UE, they matter for its links
             d = np.min(np.hypot(veh[:, None, 0] - xy[None, :, 0], veh[:, None, 1] - xy[None, :, 1]), axis=1)
             veh = veh[np.argsort(d)[:len(self.cars)]]
         self.cars_used = len(veh) if with_cars else 0
@@ -397,7 +349,7 @@ class LiveRadio:
                 x, y, yaw, speed = veh[i]
                 pose = (float(x), float(y), float(yaw))
             else:
-                pose = None                                                      # parked out of the scene
+                pose = None
             last = self.pose.get(i, "new")
             if pose is None:
                 if last is not None:
@@ -405,7 +357,6 @@ class LiveRadio:
                     self.pose[i] = None
                     self.car_updates += 1
                 continue
-            # every write to an object rebuilds the scene acceleration structure, so skip what did not move
             if last in (None, "new") or abs(pose[2] - last[2]) > 0.035:
                 c.orientation = mi.Point3f(pose[2], 0.0, 0.0)
                 yaw_set = pose[2]
@@ -432,14 +383,12 @@ class LiveRadio:
             return self._fused - self.last_delta
         g1, g0 = self._trace(self.scene), self._trace(self.scene0)
         both, lost = (g1 > -200) & (g0 > -200), (g0 > -200) & (g1 <= -200)
-        # a link the vehicles cut completely counts as 40 dB of blockage
         self.last_delta = np.clip(np.where(both, g1 - g0, np.where(lost, -40.0, 0.0)), -40.0, 20.0)
         self._fused = self.map_gain_db() + self.last_delta
         return self._fused
 
     def map_gain_db(self):
-        """Map gain at each UE. A UE that SUMO puts on a cell the map holds as built (a road hugging a
-        facade, a passage) takes the best of the nine cells around it."""
+        """Map gain at each UE. A UE that SUMO puts on a cell the map holds as built (a road hugging a."""
         xy = self.world.ue_xy()
         g = self.maps.gain_db(self.maps.cell_of(xy))
         bad = g.max(1) < -150
@@ -470,15 +419,13 @@ class LiveRadio:
 
 
 class A3Manager:
-    """Event A3 (TS 38.331): neighbour better than serving by offset + hysteresis for time-to-trigger,
-    on L3-filtered RSRP. Radio link failure: serving SINR below Qout for T310, then re-establishment
-    on the best cell after an interruption."""
+    """Event A3 (TS 38.331): neighbour better than serving by offset + hysteresis for time-to-trigger,."""
 
     def __init__(self, n, sectors, sector_site, dt, hysteresis_db=3.0, offset_db=0.0, ttt_s=0.48,
                  filter_k=4, qout_db=-8.0, qin_db=-6.0, t310_s=1.0, reestablish_s=1.0):
         self.n, self.dt = n, dt
         self.hys, self.off, self.ttt = hysteresis_db, offset_db, ttt_s
-        self.alpha = 0.5 ** (filter_k / 4.0)            # TS 38.331 5.5.3.2: a = 1 / 2^(k/4)
+        self.alpha = 0.5 ** (filter_k / 4.0)
         self.qout, self.qin, self.t310, self.reest = qout_db, qin_db, t310_s, reestablish_s
         self.site = np.asarray(sector_site)
         self.filt = None

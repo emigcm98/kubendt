@@ -1,32 +1,19 @@
-"""Real 5G stack on KubeNDT: Open5GS core + UERANSIM gNBs and UEs, as nodes of type `gnb` and `ue`.
-
-Derived from KubeNDT's example 5 (5-test-full-open5gs), with three changes:
-  * arm64 images (Open5GS built from herlesupreeth/docker_open5gs, UERANSIM 3.2.6);
-  * one flat core network: every network function, the UPF and the N2/N3 side of the gNBs hang off one
-    switch, no external uplink, no routers, no WebUI;
-  * S gNBs and M UEs, every UE pre-wired to every gNB with its own link (the radio links). A gNB's radio
-    address lives on its loopback and each UE routes to it over the link to that gNB, so shaping or
-    cutting a link is shaping or cutting that UE's radio link to that gNB.
-
-Usage: g5_stack.py --gnbs 2 --ues 2            deploy and verify registration + PDU session + ping
-"""
-import argparse
+"""Real 5G stack on KubeNDT: Open5GS core + UERANSIM gNBs and UEs, as nodes of type `gnb` and `ue`."""
 import io
 import json
-import re
 import shutil
 import sys
-import time
 import zipfile
 from pathlib import Path
 
-KR = Path.home() / "kubendt-radio"
-sys.path.insert(0, str(KR / "src" / "kubendt" / "experiments"))
-import common as C  # noqa: E402
+import config
+REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO / "experiments"))
+import common as C
 
-EX5 = KR / "src" / "kubendt" / "deploy" / "examples" / "5-test-full-open5gs"
-OPEN5GS_IMAGE = "docker_open5gs:arm64"
-UERANSIM_IMAGE = "gradiant/ueransim:3.2.6"
+EX5 = REPO / "deploy" / "examples" / "5-test-full-open5gs"
+OPEN5GS_IMAGE = config.OPEN5GS_IMAGE
+UERANSIM_IMAGE = config.UERANSIM_IMAGE
 NS = "radio-5g"
 UPF_IP = "10.5.0.20"
 UE_POOL_GW = "192.168.10.1"
@@ -55,7 +42,6 @@ ignoreStreamIds: true
 """
 
 GNB_INIT = """#!/bin/bash
-# One gNB per replica: the index in the pod name gives it its cell identity and its radio address.
 IDX=${HOSTNAME##*-}
 echo "[gnb] waiting for the N2/N3 address on eth1"
 while true; do
@@ -121,8 +107,6 @@ integrityMaxRate:
 """
 
 UE_INIT = """#!/bin/bash
-# One UE per replica: the index in the pod name gives it its IMSI. It is wired to every gNB; the route to
-# a gNB's radio address goes over the link to that gNB.
 IDX=${HOSTNAME##*-}
 export MSISDN=$(printf '%010d' $(( IDX + 1 )))
 echo "[ue] index $IDX  imsi ${MCC}${MNC}${MSISDN}  gNBs ${NUM_GNBS}"
@@ -147,7 +131,7 @@ done
 
 def build_zip(gnbs):
     """The namespace files: example 5's Open5GS files plus our gNB and UE ones."""
-    src = KR / "fiveg" / "files"
+    src = config.HOME / "fiveg" / "files"
     if src.exists():
         shutil.rmtree(src)
     with zipfile.ZipFile(EX5 / "open5gs_files.zip") as z:
@@ -166,7 +150,7 @@ def build_zip(gnbs):
         for f in sorted(src.rglob("*")):
             if f.is_file():
                 z.write(f, f.relative_to(src).as_posix())
-    out = KR / "fiveg" / "files.zip"
+    out = config.HOME / "fiveg" / "files.zip"
     out.write_bytes(buf.getvalue())
     return out
 
@@ -232,70 +216,8 @@ def subscriber_cmd(k):
     return f"mongosh open5gs --quiet --eval 'db.subscribers.deleteOne({{imsi:\"{imsi}\"}}); db.subscribers.insertOne({doc})'"
 
 
-def client_():
-    pw = (KR / ".kubendt_password").read_text().strip()
-    return C.Client("http://127.0.0.1:8088/api", password=pw)
-
-
 def ue_status(k):
     rc, out = C.kexec(NS, f"ue-{k}", "ip -4 -o addr show uesimtun0 2>/dev/null | awk '{print $4}'")
     ip = out.strip().split("/")[0] if rc == 0 and out.strip() else None
     rc, st = C.kexec(NS, f"ue-{k}", f"nr-cli imsi-{MCC}{MNC}{k + 1:010d} -e status 2>/dev/null | egrep 'cm-state|rm-state|mm-state|current-cell|camped' | tr -s ' ' | tr '\\n' ';'")
     return ip, st.strip()
-
-
-def deploy(a):
-    client = client_()
-    res = dict(version=client.version(), gnbs=a.gnbs, ues=a.ues)
-    client.fresh_namespace(NS)
-    ok_, r = client.import_zip(NS, str(build_zip(a.gnbs)))
-    if not ok_:
-        raise SystemExit(f"file import failed: {str(r)[:300]}")
-    topo, sw_ports = topology(a.gnbs, a.ues)
-    (KR / "fiveg" / "topology.json").write_text(json.dumps(topo, indent=1))
-    st, r, wall = client.deploy(NS, topo)
-    C.run_or_die(st, r, "deploy")
-    res["deploy_s"] = wall
-    res["pods"] = len(C.pods_json(NS))
-    res["links"] = len(topo["links"])
-    C.log(f"deployed {res['pods']} pods, {res['links']} links in {wall:.1f} s")
-    targets = [dict(pod="sw-0", actions=[dict(type="setup_bridge", bridge="br0", ifaces=[f"eth{i}" for i in range(1, sw_ports + 1)])]),
-               dict(pod="udsf-0", actions=[dict(type="custom", command=subscriber_cmd(k)) for k in range(a.ues)])]
-    st, r, _ = client.configure(NS, dict(targets=targets))
-    if st != 200 or r.get("failures"):
-        raise SystemExit("configure failed: " + json.dumps(r)[:800])
-    t0 = time.time()
-    ok = {}
-    while time.time() - t0 < a.wait and len(ok) < a.ues:
-        time.sleep(5)
-        for k in range(a.ues):
-            if k not in ok:
-                ip, st_ = ue_status(k)
-                if ip:
-                    ok[k] = dict(ip=ip, after_s=round(time.time() - t0, 1), status=st_)
-                    C.log(f"ue-{k} has a PDU session: {ip} after {ok[k]['after_s']} s; {st_}")
-    res["pdu_sessions"] = ok
-    res["registered"] = len(ok)
-    for k in ok:
-        rc, out = C.kexec(NS, f"ue-{k}", f"ping -c 5 -i 0.2 -W 1 -q -I uesimtun0 {UE_POOL_GW}")
-        ok[k]["ping_upf"] = out.splitlines()[-2:] if out else None
-        C.log(f"ue-{k} ping through the 5G tunnel: {ok[k]['ping_upf']}")
-    for name in ("amf-0", "gnb-0", "ue-0"):
-        rc, out = C.kexec(NS, name, "true")
-    rc, out, _ = C.kubectl(["-n", NS, "logs", "gnb-0", "--tail", "12"])
-    res["gnb0_log_tail"] = out.splitlines()[-12:]
-    rc, out, _ = C.kubectl(["-n", NS, "logs", "ue-0", "--tail", "15"])
-    res["ue0_log_tail"] = out.splitlines()[-15:]
-    (KR / "results" / "g5_deploy.json").write_text(json.dumps(res, indent=1))
-    print(json.dumps({k: v for k, v in res.items() if not k.endswith("_tail")}, indent=1))
-    print("--- gnb-0\n" + "\n".join(res["gnb0_log_tail"]))
-    print("--- ue-0\n" + "\n".join(res["ue0_log_tail"]))
-    print("G5_DEPLOY_DONE", flush=True)
-
-
-if __name__ == "__main__":
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--gnbs", type=int, default=2)
-    ap.add_argument("--ues", type=int, default=2)
-    ap.add_argument("--wait", type=int, default=240)
-    deploy(ap.parse_args())

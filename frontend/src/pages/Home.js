@@ -564,7 +564,6 @@ const Home = () => {
       <div className="main-layout">
         {/* Left Column: Cluster Status */}
         <div className="layout-column left-column">
-          {/* Radio area in use, and the way into the map that picks it */}
           <RadioZoneCard />
           {/* Cluster Status Panel */}
           <div className="cluster-status-card">

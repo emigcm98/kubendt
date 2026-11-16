@@ -1,4 +1,4 @@
-// RadioZoneCard.js: the radio area in use, on the home page, with the way into the map that picks it.
+// RadioZoneCard.js: the radio area in use on the home page, with the way into its map.
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config';

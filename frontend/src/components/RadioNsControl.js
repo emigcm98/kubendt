@@ -1,4 +1,4 @@
-// RadioNsControl.js: in the navbar of a namespace generated from a radio zone, start or stop its emulation.
+// RadioNsControl.js: start or stop the radio emulation of a namespace generated from a radio zone.
 import React, { useEffect, useState } from 'react';
 import { API_BASE_URL } from '../config';
 

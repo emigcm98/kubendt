@@ -1,9 +1,4 @@
-// RadioPage.js: choose the area a radio scenario emulates, place its sites and build it.
-//
-// The map is OpenStreetMap through Leaflet, vendored under public/vendor/leaflet
-// and loaded on demand, so the dashboard gains no build dependency. What the
-// user sees is what gets built: the scene's buildings and roads come from the
-// same OpenStreetMap data, fetched by the radio service behind /radio.
+// RadioPage.js: pick the area of a radio scenario, place its sites and UEs, and run it.
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config';
@@ -14,7 +9,6 @@ import './RadioPage.css';
 const RADIO = `${API_BASE_URL.replace(/\/+$/, '')}/radio`;
 const LEAFLET = `${process.env.PUBLIC_URL || ''}/vendor/leaflet`;
 const DEFAULT_SITE = { height_m: null, azimuths: [0, 120, 240], downtilt_deg: 9, power_dbm: 44 };
-// one colour per UE for its trail and its planned route
 const UE_COLOURS = ['#e53935', '#8e24aa', '#3949ab', '#00897b', '#f4511e', '#6d4c41', '#d81b60', '#1e88e5', '#7cb342', '#fb8c00', '#5e35b1', '#00acc1'];
 
 const STATUS_LABEL = {
@@ -71,7 +65,7 @@ const metres = (bbox) => {
   return [Math.round((e - w) * ky * Math.cos(((s + n) / 2) * (Math.PI / 180))), Math.round((n - s) * ky)];
 };
 
-// name,lat,lon[,height_m[,azimuths]]: azimuths separated by spaces or semicolons; a header line is skipped.
+// parseCsv reads sites from CSV lines: name, lat, lon, height_m, azimuths.
 const parseCsv = (text) => {
   const out = [];
   text.split(/\r?\n/).forEach((line, i) => {
@@ -103,23 +97,23 @@ const RadioPage = () => {
   const map = useRef(null);
   const layers = useRef({});
   const modeRef = useRef('idle');
+  const firstView = useRef(false);
   const sitesRef = useRef([]);
 
   const [ready, setReady] = useState(false);
   const [zones, setZones] = useState([]);
   const [zone, setZone] = useState(null);
-  const [draft, setDraft] = useState(null); // [s, w, n, e] being drawn
+  const [draft, setDraft] = useState(null);
   const [name, setName] = useState('');
   const [sites, setSites] = useState([]);
   const [selected, setSelected] = useState(-1);
   const [dirty, setDirty] = useState(false);
-  const [mode, setModeState] = useState('idle'); // idle | draw | site
-  const [message, setMessage] = useState(null); // { kind: 'error' | 'info', text }
+  const [mode, setModeState] = useState('idle');
+  const [message, setMessage] = useState(null);
   const [search, setSearch] = useState('');
   const [opacity, setOpacity] = useState(0.75);
   const [autoCount, setAutoCount] = useState(3);
   const [serviceError, setServiceError] = useState(null);
-  // the UEs of the zone, its namespace, its emulation
   const [ues, setUes] = useState([]);
   const uesRef = useRef([]);
   const zoneRef = useRef(null);
@@ -132,7 +126,6 @@ const RadioPage = () => {
   const [autoPersons, setAutoPersons] = useState(3);
   const [nsName, setNsName] = useState('');
   const [working, setWorking] = useState(null);
-  // the UE whose route is being drawn: clicks on the map add its destinations, in order
   const [routeEdit, setRouteEditState] = useState(-1);
   const routeEditRef = useRef(-1);
   const setRouteEdit = (i) => {
@@ -147,7 +140,6 @@ const RadioPage = () => {
       map.current.getContainer().style.cursor = m === 'idle' ? '' : 'crosshair';
       if (m === 'draw') map.current.dragging.disable();
       else map.current.dragging.enable();
-      // quick clicks while placing points must not zoom the map
       if (m === 'idle') map.current.doubleClickZoom.enable();
       else map.current.doubleClickZoom.disable();
     }
@@ -164,19 +156,29 @@ const RadioPage = () => {
       const list = await api('/zones');
       setZones(list);
       setServiceError(null);
+      if (!firstView.current && list.length && map.current) {
+        firstView.current = true;
+        const z = list.find((x) => x.active) || list[0];
+        map.current.fitBounds(
+          [
+            [z.bbox[0], z.bbox[1]],
+            [z.bbox[2], z.bbox[3]],
+          ],
+          { padding: [40, 40] }
+        );
+      }
       setZone((cur) => (cur ? list.find((z) => z.id === cur.id) || null : cur));
     } catch (e) {
       setServiceError(e.message);
     }
   }, []);
 
-  // ---- map
   useEffect(() => {
     let cancelled = false;
     loadLeaflet()
       .then((L) => {
         if (cancelled || map.current) return;
-        const m = L.map(mapEl.current, { center: [40.3325, -3.7655], zoom: 15, zoomControl: true });
+        const m = L.map(mapEl.current, { center: [20, 0], zoom: 2, zoomControl: true });
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
           maxZoom: 19,
           attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
@@ -212,7 +214,6 @@ const RadioPage = () => {
           setSelected(next.length - 1);
         });
         map.current = m;
-        // the container gets its size after the first layout: without this the first tiles do not load
         setTimeout(() => m.invalidateSize(), 60);
         setReady(true);
       })
@@ -233,7 +234,6 @@ const RadioPage = () => {
     return () => clearInterval(t);
   }, [refresh]);
 
-  // ---- the area rectangle: the zone's, or the one being drawn
   const box = draft || (zone && zone.bbox) || null;
   useEffect(() => {
     const L = window.L;
@@ -252,7 +252,6 @@ const RadioPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, JSON.stringify(box), !!draft]);
 
-  // ---- coverage overlay
   const coverageKey = zone && zone.has_coverage ? `${zone.id}:${zone.built}` : '';
   useEffect(() => {
     const L = window.L;
@@ -271,7 +270,6 @@ const RadioPage = () => {
     if (layers.current.cov) layers.current.cov.setOpacity(opacity);
   }, [opacity]);
 
-  // ---- site markers with their sectors
   useEffect(() => {
     const L = window.L;
     if (!ready || !L) return;
@@ -299,7 +297,6 @@ const RadioPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, sites, selected]);
 
-  // ---- actions
   const openZone = (z) => {
     setDraft(null);
     setZone(z);
@@ -423,7 +420,6 @@ const RadioPage = () => {
     }
   };
 
-  // ---- UEs: cars and persons, on the streets only
   const updateUes = (next, markDirty = true) => {
     uesRef.current = next;
     setUes(next);
@@ -441,7 +437,6 @@ const RadioPage = () => {
     try {
       const editing = routeEditRef.current;
       if (editing >= 0 && uesRef.current[editing]) {
-        // a destination of the route being drawn, after the ones already there
         const p = await snapUe(latlng.lat, latlng.lng, uesRef.current[editing].kind);
         updateUes(uesRef.current.map((x, k) => (k === editing ? { ...x, waypoints: [...(x.waypoints || []), { lat: p.lat, lon: p.lon }] } : x)));
         return;
@@ -496,11 +491,9 @@ const RadioPage = () => {
     run('emulation', async () => {
       const call = (body) => api(`/zones/${zone.id}/emulation/${action}`, { method: 'POST', body: JSON.stringify(body) });
       try {
-        // moving UEs or redrawing routes needs no new namespace: save them and go
         if (action === 'start' && uesDirty) await saveUes();
         setZone(await call({}));
       } catch (e) {
-        // one emulation at a time: offer to move it here
         if (e.data && e.data.code === 'EMULATION_BUSY' && e.data.zone !== zone.id) {
           if (!window.confirm(`An emulation is running in the zone "${e.data.zone_name}". Only one runs at a time. Stop it and start this one?`)) return;
           setZone(await call({ takeover: true }));
@@ -513,7 +506,6 @@ const RadioPage = () => {
   const emu = (zone && zone.emulation) || {};
   const live = emu.state === 'running' && Array.isArray(emu.ues);
   const liveKey = live ? `${emu.step}` : '';
-  // ---- UE markers: where they are now while the emulation runs, where they start otherwise
   useEffect(() => {
     const L = window.L;
     if (!ready || !L) return;
@@ -530,7 +522,6 @@ const RadioPage = () => {
       }).addTo(group);
       if (live) {
         const colour = UE_COLOURS[i % UE_COLOURS.length];
-        // where it has been (solid), where it is heading (dashed, ending at its destination)
         if (u.trail && u.trail.length > 1) L.polyline(u.trail, { color: colour, weight: 4, opacity: 0.85, interactive: false }).addTo(group);
         if (u.route && u.route.length > 1) {
           L.polyline(u.route, { color: colour, weight: 2.5, opacity: 0.8, dashArray: '4 7', interactive: false }).addTo(group);
@@ -551,7 +542,6 @@ const RadioPage = () => {
         });
       }
     });
-    // the routes the user drew: start, then the numbered destinations in order
     ues.forEach((u, i) => {
       if (u.mode !== 'route' || !(u.waypoints || []).length) return;
       const colour = UE_COLOURS[i % UE_COLOURS.length];

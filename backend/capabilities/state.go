@@ -18,8 +18,7 @@ func keyDefaultRouteSet(a types.ActionEntry) string {
 	return "4"
 }
 
-// A handover is one per route: the last one says where it points. The
-// default route is keyed by family, as set_default_route is.
+// keyHandover keys a handover by the route it moves.
 func keyHandover(a types.ActionEntry) string {
 	if a.DstCIDR != "" {
 		return a.DstCIDR

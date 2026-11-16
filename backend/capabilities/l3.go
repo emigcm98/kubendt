@@ -14,10 +14,7 @@ type DefaultRoute6Remover interface {
 	RemoveDefaultRoute6() [][]string
 }
 
-// RouteHandover moves a route to another interface without a gap: the new
-// interface comes up, the route is replaced in one step, and the interface
-// being left goes down last, if one is named. A capability of its own, so
-// a driver without it reports the handover action as unsupported.
+// RouteHandover moves a route to another interface, make-before-break.
 type RouteHandover interface {
 	Handover(iface, gateway, dstCIDR, leaving string) [][]string
 }
@@ -91,12 +88,6 @@ func init() {
 	)
 	actions.Register[RouteHandover](
 		actions.Capability{ID: "RouteHandover", Label: "Route handover", Description: "Make-before-break move of a route to another interface, for nodes wired to several attachment points."},
-		// A node wired to several attachment points (a terminal with a link to
-		// every radio site in reach) changes the one it uses: iface and gateway
-		// are the new attachment, dst_cidr the route that moves (the default
-		// route when empty) and device the interface it leaves, brought down
-		// after the switch when given. The same action on the network side
-		// moves the route towards the terminal's address to the new site.
 		actions.Action[RouteHandover]{Type: "handover", Label: "Hand a route over to another interface", Params: actions.P(actions.Iface, actions.Gateway, actions.DstCIDR.Optional(), actions.Device.Optional()), State: "handover", Key: keyHandover,
 			Run: func(h RouteHandover, a types.ActionEntry) ([][]string, error) {
 				if a.Device != "" && a.Device == a.Iface {

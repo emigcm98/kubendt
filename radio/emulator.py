@@ -1,17 +1,4 @@
-"""Emulator: a radio zone as a KubeNDT namespace, and the loop that drives its radio links.
-
-  emulator.py deploy <zone> <namespace>   create the namespace of the zone: a 5G system with one gNB per
-                                          site, one UE per terminal of the zone, an Open5GS core, and a data
-                                          network (switch + one server) behind the UPF to hang servers from
-  emulator.py destroy <zone>              delete that namespace
-  emulator.py run <zone>                  the emulation: SUMO moves the mobile UEs along the streets, Sionna
-                                          RT gives every UE's link to every sector, A3 picks the serving gNB,
-                                          and KubeNDT gets the rate of the serving radio link and the cut of
-                                          the others. Stops on SIGTERM. Touches only the ue-* and gnb-* nodes.
-
-Every UE pod is pre-wired to every gNB pod; the links are the radio links. Status goes to
-zones/<zone>/emulation.json, which the dashboard reads through the radio service.
-"""
+"""Emulator: a radio zone as a KubeNDT namespace, and the loop that drives its radio links."""
 import json
 import os
 import signal
@@ -23,28 +10,24 @@ from pathlib import Path
 
 import numpy as np
 
-KR = Path.home() / "kubendt-radio"
-os.environ["PATH"] = f"{KR / 'bin'}:{os.environ.get('PATH', '')}"
-os.environ.setdefault("KUBECONFIG", str(KR / "kubeconfig"))
 sys.path.insert(0, str(Path(__file__).parent))
-import g5_stack as G  # noqa: E402
-import zone as Z  # noqa: E402
+import config
+import g5_stack as G
+import zone as Z
 
 C = G.C
 DN_CIDR, DN_GW, SERVER_IP = "10.45.0.0/24", "10.45.0.1", "10.45.0.10"
 OPT = {"persist_history": False}
-TOOLBOX = "kubendt-toolbox:1.9.0-arm64"
+TOOLBOX = config.TOOLBOX_IMAGE
 
 
 def client():
-    return C.Client("http://127.0.0.1:8088/api", token=(KR / ".kubendt_token").read_text().strip())
+    return C.Client(config.KUBENDT_URL, token=config.token())
 
 
-# ------------------------------------------------------------------ namespace
 def topology(z):
     sites, ues = z.meta["sites"], z.meta["ues"]
     topo, sw_ports = G.topology(len(sites), len(ues))
-    # the data network behind the UPF: a switch to hang servers from, and a first server
     topo["nodes"] += [dict(name="dn", image="alpine:3.24.2", type="switch", replicas=1),
                       dict(name="server", image=TOOLBOX, type="host", replicas=1,
                            commands=["sh", "-c", "iperf3 -s -D; sleep infinity"])]
@@ -69,7 +52,6 @@ def deploy(z, ns):
         info.update(step=text, **extra)
         z.save(namespace=info)
 
-    # the UEs reach the data network through their PDU session
     if DN_CIDR not in G.UE_INIT:
         G.UE_INIT = G.UE_INIT.replace("while true; do\n    nr-ue",
                                       f"( while true; do ip route replace {DN_CIDR} dev uesimtun0 2>/dev/null; sleep 2; done ) &\n"
@@ -107,12 +89,8 @@ def destroy(z):
     z.save(namespace=None)
 
 
-# ------------------------------------------------------------------ emulation loop
 def radio_actions(k, s, dl, ul, cut):
     def tc(rate):
-        # A link to another gNB is cut. The serving link never is: in a fade or a radio link failure of the
-        # model it drops to a 50 kbit/s floor, enough for the UE and the gNB to keep their signalling, so the
-        # 5G stack loses its cell only when the serving gNB changes.
         t = dict(qdisc="netem", in_place=True, delay="4ms", loss="100%" if cut else "0%")
         if not cut:
             t["rate"] = f"{max(int(rate * 1000), 50)}kbit"
@@ -127,7 +105,7 @@ def send(c, ns, pairs):
         by.setdefault(pod, []).append(act)
     try:
         st, r, wall = c.configure(ns, dict(targets=[dict(pod=p, actions=a) for p, a in by.items()]))
-    except SystemExit as e:                               # the API did not answer: keep the loop alive
+    except SystemExit as e:
         return False, str(e)
     ok = st == 200 and isinstance(r, dict) and not r.get("failures")
     return ok, (None if ok else json.dumps(r)[:300])
@@ -161,11 +139,10 @@ def planned_route(world, u, limit=70):
             shp = [tuple(q) for q in net.getEdge(e).getShape()]
         except KeyError:
             continue
-        d = lambda a, b: (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2  # noqa: E731
+        d = lambda a, b: (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2
         if d(pts[-1], shp[-1]) < d(pts[-1], shp[0]):
-            shp.reverse()                                   # a person may walk an edge against its direction
+            shp.reverse()
         if first:
-            # on its current edge the UE is somewhere along the shape: keep only what is ahead
             i = min(range(len(shp)), key=lambda k: d(shp[k], here))
             shp = shp[i + 1:]
             first = False
@@ -185,7 +162,6 @@ def run(z):
     ns = z.meta["namespace"]["name"]
     G.NS = ns
     c = client()
-    # snapped again: the road network may have been rebuilt since the UEs were placed
     specs, sites = Z.clean_ues(z, z.meta["ues"]), z.meta["sites"]
     n, S = len(specs), len(sites)
     p = dict(dt=0.5, cars=20, hysteresis_db=3.0, ttt_s=0.96, filter_k=8)
@@ -204,8 +180,8 @@ def run(z):
     signal.signal(signal.SIGINT, lambda *_: stop.set())
 
     maps = RadioMaps.load(z.dir / "radio.npz")
-    world = SumoWorld(0, 0, step=p["dt"], seed=1, zone=z, ue_specs=specs)
-    radio = LiveRadio(world, car_pool=int(p["cars"]), depth=3, fused=True, zone=z)
+    world = SumoWorld(0, 0, z, step=p["dt"], seed=1, ue_specs=specs)
+    radio = LiveRadio(world, z, car_pool=int(p["cars"]), depth=3, fused=True)
     radio.place(True)
     g = radio.gain_db()
     a3 = A3Manager(n, maps.num_sectors, maps.sector_site, p["dt"], hysteresis_db=p["hysteresis_db"], ttt_s=p["ttt_s"], filter_k=p["filter_k"])
@@ -217,11 +193,10 @@ def run(z):
         idx_in_site.append(seen.get(int(s), 0))
         seen[int(s)] = idx_in_site[-1] + 1
 
-    # real traffic checks, off the loop: does each UE hold its PDU session, does it reach the server
     session, reach = [None] * n, [None] * n
     misses, restarted_at, restarts = [0] * n, [0.0] * n, [0] * n
-    radio_ok = [False] * n                      # set by the loop: the UE has a usable serving link right now
-    changed_at = [0.0] * n                      # wall time of its last change of gNB
+    radio_ok = [False] * n
+    changed_at = [0.0] * n
 
     def prober():
         while not stop.is_set():
@@ -233,10 +208,6 @@ def run(z):
                 session[k] = bool(lines and lines[0].strip() == "1")
                 reach[k] = any(" 0% packet loss" in l or " 50% packet loss" in l for l in lines)
                 now = time.time()
-                # UERANSIM does not always recover its user plane after losing a cell: the UE believes it has a
-                # session and the gNB has none ("PDU session not found"). With a good radio link, well after the
-                # last change of gNB, two failed checks in a row mean that: restart the 5G stack of the UE so it
-                # registers again (its init script relaunches nr-ue).
                 steady = radio_ok[k] and now - changed_at[k] > 20 and now - restarted_at[k] > 45
                 misses[k] = 0 if reach[k] or not steady else misses[k] + 1
                 if misses[k] >= 2:
@@ -248,8 +219,8 @@ def run(z):
     threading.Thread(target=prober, daemon=True).start()
 
     hist, recent = [], []
-    trail = [[] for _ in range(n)]              # where each UE has been, one point every two seconds
-    route = [[] for _ in range(n)]              # where it is heading
+    trail = [[] for _ in range(n)]
+    route = [[] for _ in range(n)]
     changes = np.zeros(n, int)
     api_fail, step, t_start = 0, 0, time.time()
     gone = 0
@@ -311,7 +282,6 @@ def run(z):
         step += 1
         stop.wait(max(0.0, p["dt"] - (time.perf_counter() - w0)))
 
-    # leave the radio links open and unshaped
     pairs = []
     for k in range(n):
         for s in range(S):
@@ -331,7 +301,7 @@ if __name__ == "__main__":
             destroy(zone)
         elif cmd == "run":
             run(zone)
-    except BaseException as exc:                           # SystemExit from the API client included
+    except BaseException as exc:
         msg = f"{type(exc).__name__}: {exc}"
         traceback.print_exc()
         if cmd == "deploy":

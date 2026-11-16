@@ -1,19 +1,4 @@
-"""Zones: any area of the world as a radio emulation scenario.
-
-A zone is a folder ~/kubendt-radio/zones/<id>/ built from OpenStreetMap:
-  zone.json      name, bounding box, sites, status, statistics
-  zone.osm       the OSM extract
-  scene.xml      Sionna RT scene: buildings extruded from OSM footprints, ground plane
-  meshes/        buildings.ply, ground.ply
-  net.xml        SUMO road network (vehicles, pedestrians), veh.rou.xml, ped.rou.xml
-  radio.npz      ray-traced coverage map per sector (same format as siona-thalesnet RadioMaps)
-  coverage.png   best-sector path gain, for the map overlay
-
-Coordinates: a local tangent plane centred on the bounding box, x east, y north, metres. It is aligned
-with north, so the coverage image overlays the web map without rotation.
-
-CLI:  zone.py fetch <id> | build <id> | sites-osm <south> <west> <north> <east>
-"""
+"""Zones: any area of the world as a radio emulation scenario."""
 import json
 import math
 import re
@@ -28,9 +13,9 @@ from pathlib import Path
 
 import numpy as np
 
-KR = Path.home() / "kubendt-radio"
-ZONES = KR / "zones"
-sys.path.insert(0, str(Path.home() / "thalesnet-benchmark" / "siona-thalesnet-v2"))
+import config
+
+ZONES = config.ZONES
 OVERPASS_MIRRORS = ("https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter",
                     "https://overpass.private.coffee/api/interpreter")
 UA = "kubendt-radio-zones/1.0"
@@ -44,7 +29,6 @@ DEFAULT_HEIGHT = {"church": 20, "cathedral": 30, "chapel": 10, "garage": 3, "gar
                   "retail": 8, "commercial": 15, "office": 20, "hospital": 18, "hotel": 20, "kiosk": 3, "service": 3}
 
 
-# ------------------------------------------------------------------ zone folder and projection
 class Zone:
     def __init__(self, zone_id):
         self.id = zone_id
@@ -74,7 +58,6 @@ class Zone:
         x1, y1 = self.to_xy(n, e)
         return float(x0), float(y0), float(x1), float(y1)
 
-    # ---- what the emulation loop needs
     @property
     def scene_file(self):
         return str(self.dir / "scene.xml")
@@ -141,13 +124,12 @@ def overpass(query, timeout=240):
             req = urllib.request.Request(url, data=data, headers={"User-Agent": UA})
             with urllib.request.urlopen(req, timeout=timeout) as r:
                 return r.read()
-        except Exception as exc:                      # HTTPError, URLError, timeout
+        except Exception as exc:
             last = exc
             time.sleep(3 + 3 * attempt)
     raise RuntimeError(f"OpenStreetMap (Overpass) does not answer: {last}")
 
 
-# ------------------------------------------------------------------ OSM
 def fetch(z):
     z.save(status="fetching", step="downloading OpenStreetMap", error=None)
     s, w, n, e = z.meta["bbox"]
@@ -201,7 +183,7 @@ def parse_buildings(z):
         if abs(area) < 4.0:
             continue
         if area < 0:
-            xy = xy[::-1]                               # counter-clockwise
+            xy = xy[::-1]
         h, src = _height(tags)
         out.append(dict(xy=xy, height=h, height_source=src, name=tags.get("name")))
     return out
@@ -233,7 +215,6 @@ def osm_sites(s, w, n, e):
     return out
 
 
-# ------------------------------------------------------------------ scene
 def _write_ply(path, vertices, faces):
     v = np.asarray(vertices, "<f4")
     f = np.asarray(faces, "<i4")
@@ -283,7 +264,6 @@ def build_scene(z):
                 buildings_with_height=sum(1 for b in buildings if b["height_source"] != "default"))
 
 
-# ------------------------------------------------------------------ road network
 def build_roads(z):
     import sumo
     home = Path(sumo.SUMO_HOME)
@@ -300,7 +280,6 @@ def build_roads(z):
     net = sumolib.net.readNet(z.net_file)
     edges = net.getEdges()
     veh_len = sum(e.getLength() for e in edges if e.allows("passenger"))
-    # background traffic in proportion to the road length: about one vehicle on the road per 150 m of carriageway
     veh_period = max(0.5, min(20.0, 150.0 * 120.0 / max(veh_len, 1.0)))
     rt_py = str(home / "tools" / "randomTrips.py")
     common = [sys.executable, rt_py, "-n", z.net_file, "-b", "0", "-e", "3600", "--validate", "--seed", "3"]
@@ -315,13 +294,12 @@ def build_roads(z):
     return stats
 
 
-# ------------------------------------------------------------------ radio maps
 def build_radio(z):
-    import mitsuba as mi  # noqa: F401
+    import mitsuba as mi
     import sionna.rt as rt
     import mitsuba as mi
     from scipy import ndimage
-    from siona_thalesnet.radio import RadioMaps, _largest_component
+    from radio_maps import RadioMaps, largest_component
 
     scene = rt.load_scene(z.scene_file)
     scene.frequency = z.meta.get("frequency_hz", 3.5e9)
@@ -340,9 +318,8 @@ def build_radio(z):
     radius = int(round(60.0 / CELL_M))
     yy, xx = np.ogrid[-radius:radius + 1, -radius:radius + 1]
     near_buildings = ndimage.binary_dilation(built, structure=(yy ** 2 + xx ** 2) <= radius ** 2) if built.any() else np.ones_like(built)
-    outdoor = _largest_component((height < UE_HEIGHT_M - 0.5) & near_buildings)
+    outdoor = largest_component((height < UE_HEIGHT_M - 0.5) & near_buildings)
 
-    # sites: height above ground given, or the highest roof within 30 m plus a mast, or a 25 m mast on the ground
     sites = z.meta["sites"]
     if not sites:
         raise ValueError("the zone has no sites")
@@ -377,11 +354,10 @@ def build_radio(z):
     gain = np.array(rm.path_gain)
     solve_s = time.perf_counter() - t0
     served = outdoor & (gain.max(0) >= 10.0 ** (-118.0 / 10.0))
-    walk = _largest_component(served) if served.any() else served
+    walk = largest_component(served) if served.any() else served
     RadioMaps(gain, x, y, height, walk, np.array([s["pos"] for s in secs], float), np.array([s["site"] for s in secs]),
               dict(zone=z.id)).save(z.dir / "radio.npz")
 
-    # overlay for the web map
     from matplotlib import cm
     from PIL import Image
     best = 10 * np.log10(np.maximum(gain.max(0), 1e-30))
@@ -415,7 +391,7 @@ def auto_sites(z, count):
         c = np.array([np.average(pts[lab == k], axis=0, weights=w[lab == k]) if (lab == k).any() else c[k] for k in range(len(c))])
     out = []
     for k, p in enumerate(c):
-        near = pts[np.argmin(((pts - p) ** 2).sum(-1))]            # snap to the nearest building
+        near = pts[np.argmin(((pts - p) ** 2).sum(-1))]
         lat, lon = z.to_ll(near[0], near[1])
         out.append(dict(name=f"site-{k}", lat=float(lat), lon=float(lon), height_m=None, azimuths=[0.0, 120.0, 240.0],
                         downtilt_deg=9.0, power_dbm=44.0, source="auto-placed"))
@@ -435,7 +411,6 @@ def build(z):
     z.save(status="ready", step=None, stats=stats, built=time.strftime("%Y-%m-%dT%H:%M:%S"))
 
 
-# ------------------------------------------------------------------ UEs: on the streets only
 _NETS = {}
 VCLASS = {"car": "passenger", "person": "pedestrian"}
 
@@ -487,7 +462,6 @@ def clean_ues(z, ues):
         out.append(dict(name=f"ue-{i}", kind=kind, mode=mode, lat=p["lat"], lon=p["lon"], edge=p["edge"], pos=p["pos"],
                         source=str(u.get("source") or "manual")[:40]))
         if mode == "route":
-            # the destinations, in the order they are visited, each on a street this kind of UE may use
             wps = u.get("waypoints") or []
             if not 1 <= len(wps) <= 12:
                 raise ValueError(f"UE {i + 1}: a route takes between 1 and 12 destinations")
@@ -512,9 +486,9 @@ def auto_ues(z, cars, persons, seed=None):
     xf = z.sumo_to_scene()
     served = None
     if (z.dir / "radio.npz").exists():
-        from siona_thalesnet.radio import RadioMaps
+        from radio_maps import RadioMaps
         maps = RadioMaps.load(z.dir / "radio.npz")
-        served = lambda p: bool(maps.outdoor.ravel()[maps.cell_of(np.asarray(p))])  # noqa: E731
+        served = lambda p: bool(maps.outdoor.ravel()[maps.cell_of(np.asarray(p))])
     out = []
     for kind, count in (("car", int(cars)), ("person", int(persons))):
         edges = [e for e in net.getEdges() if e.allows(VCLASS[kind]) and e.getLength() > 15.0]

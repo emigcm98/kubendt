@@ -10,8 +10,7 @@ import (
 	"kubendt/types"
 )
 
-// An in-place update is one replace with no reset before it, and names the
-// options netem would otherwise keep from the previous shaping.
+// TestInPlaceShapingCommands checks the single-replace command of an in-place update.
 func TestInPlaceShapingCommands(t *testing.T) {
 	got, err := buildShapingCommands("eth1", &types.TCParamEntry{Qdisc: "netem", Rate: "20mbit", Delay: "4ms", InPlace: true})
 	if err != nil {
@@ -33,7 +32,6 @@ func TestInPlaceShapingCommands(t *testing.T) {
 		t.Errorf("%q resets a rate the request sets", line)
 	}
 
-	// No rate in the request: the previous one must not survive.
 	got, err = buildShapingCommands("eth1", &types.TCParamEntry{Loss: "100%", InPlace: true})
 	if err != nil {
 		t.Fatal(err)
@@ -42,7 +40,6 @@ func TestInPlaceShapingCommands(t *testing.T) {
 		t.Errorf("%q keeps the previous rate", line)
 	}
 
-	// Without the flag nothing changes: reset, then the qdisc.
 	got, _ = buildShapingCommands("eth1", &types.TCParamEntry{Rate: "20mbit"})
 	if len(got) != 2 || got[0][len(got[0])-1] != "noqueue" {
 		t.Errorf("default shaping lost its reset: %v", got)
@@ -66,8 +63,7 @@ func tcPlan(t *testing.T, iface, rate string) PlannedAction {
 	return PlannedAction{Action: types.ActionEntry{Type: "add_qdisc", Iface: iface}, Executor: executor.TCUniversalExecutorName, Exec: ex, Commands: cmds}
 }
 
-// The tc actions of a pod cost one exec together; a batch that fails is run
-// again action by action so the failing one is the one reported.
+// TestTCActionsShareOneExec checks that the tc actions of a pod share one batch.
 func TestTCActionsShareOneExec(t *testing.T) {
 	prev := executor.RunTCBatchHook
 	t.Cleanup(func() { executor.RunTCBatchHook = prev })
@@ -91,7 +87,6 @@ func TestTCActionsShareOneExec(t *testing.T) {
 		}
 	}
 
-	// eth2 fails: the merged batch fails, then each action runs on its own.
 	batches = nil
 	executor.RunTCBatchHook = func(namespace, podName string, lines []string) (string, string, error) {
 		batches = append(batches, lines)

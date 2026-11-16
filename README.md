@@ -8,7 +8,7 @@
    <a href="https://doi.org/10.5281/zenodo.21276320"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.21276320.svg" alt="DOI" /></a>
 </p>
 
-> Last reviewed: 7 Nov 2026
+> Last reviewed: 7 Nov 2026 (upstream) · radio emulation fork: 16 Nov 2026
 
 **KubeNDT** is a platform for deploying and operating virtual network topologies on Kubernetes.
 
@@ -17,6 +17,85 @@ You define your topology as a JSON file (nodes, links, images, replicas) and Kub
 Network configuration is abstracted through a **driver and capability system**: regardless of what image a node runs, the same declarative actions apply. The driver takes care of translating them into the right commands for that node type.
 
 ![KubeNDT topology overview](doc/images/kubendt-overview.png)
+
+## Radio emulation (this fork)
+
+This fork adds a radio access network to KubeNDT. You pick any area of the world on a map, place the radio sites and the terminals, and KubeNDT generates a namespace with a 5G system whose radio links follow a ray-traced model of that area while the terminals move through its streets.
+
+It is a research prototype. It was developed and tested on one machine (NVIDIA DGX Spark, arm64, single-node kind cluster) on top of KubeNDT v1.9.0.
+
+### What it adds
+
+- **Radio zones page** (`/radio`, also reachable from the home page and from every namespace): an OpenStreetMap map where you
+  1. draw the area (up to 3000 m per side); its buildings and roads are fetched from OpenStreetMap;
+  2. place the sites by clicking, by importing the telephony masts mapped in OpenStreetMap, by importing a CSV, or automatically, and set their height, sector azimuths, downtilt and power;
+  3. build the scenario: a 3D scene of the buildings for Sionna RT, a SUMO road network with background traffic, and a ray-traced coverage map per sector, drawn over the map;
+  4. define the UEs: cars or persons, each one **mobile** (moves on its own along the streets), **fixed**, or on a **route** (a start point and one or more destinations visited in order, then stop or loop). UEs are always snapped to a street;
+  5. create the namespace and start or stop the emulation, watching every UE move with its trail, its planned route and its link figures.
+- **Generated namespace**: an Open5GS core, one UERANSIM gNB per site, one UERANSIM UE per terminal (each UE wired to every gNB), and a data network behind the UPF with a switch (`dn-0`) and a first server (`server-0`) to hang your own servers from with the usual KubeNDT tools.
+- **Emulation loop**: SUMO moves the UEs, Sionna RT gives the path gain of every UE to every sector (with the vehicles as moving objects), an A3 handover rule picks the serving gNB, and KubeNDT shapes the serving radio link and cuts the others, through its own API.
+- **Node types `ue` and `gnb`**: hosts to the platform, drawn with their own icons in the graph.
+- **`in_place` shaping**: `tcparams.in_place: true` updates a netem or tbf without emptying its queue, for links whose state changes every step.
+- **One exec per pod for shaping**: the tc actions of a pod in a configure request share one `tc -b` batch.
+- **`handover` action**: moves a route to another interface, make-before-break, for nodes wired to several attachment points.
+- **`/radio/*` routes**: forwarded to the radio service when `KUBENDT_RADIO_URL` is set, behind the same authentication as the rest of the API.
+- **arm64**: the backend image builds for the host architecture, and `deploy/others/meshnet-multiarch` installs Meshnet on workers that are not amd64.
+
+The guide is in [doc/RADIO_ZONES.md](doc/RADIO_ZONES.md).
+
+### Running it
+
+The dashboard and backend changes build with the rest of KubeNDT. The radio side runs outside the cluster, on a host with an NVIDIA GPU, from the scripts in [`radio/`](radio/):
+
+| Script | |
+| --- | --- |
+| `radio_service.py` | the HTTP service behind `/radio/*`: zones, sites, UEs, namespaces, emulation |
+| `zone.py` | a zone from OpenStreetMap: 3D scene, road network, coverage maps, UEs on the streets |
+| `emulator.py` | the namespace of a zone and the loop that drives its radio links |
+| `mobility_sys.py` | SUMO mobility, the Sionna RT link model and the A3 handover rule |
+| `g5_stack.py` | the Open5GS and UERANSIM topology of a zone |
+| `radio_maps.py`, `link_rate.py` | coverage map container; SINR to rate curves from Sionna SYS |
+| `config.py` | the settings below |
+
+Launch the service with the address it listens on and where KubeNDT is:
+
+```bash
+python radio/radio_service.py --host 172.17.0.1 --port 8770 --kubendt-url http://localhost:8080 --home ~/kubendt-radio
+```
+
+and tell the backend where the service is:
+
+```bash
+KUBENDT_RADIO_URL=http://172.17.0.1:8770
+```
+
+`172.17.0.1` is only an example (the default Docker bridge gateway): use an address of the GPU host that the backend container reaches and that is not public, because the service has no authentication of its own.
+
+| Setting | Command line | Environment | Default |
+| --- | --- | --- | --- |
+| Address and port the service listens on | `--host`, `--port` | `KUBENDT_RADIO_HOST`, `KUBENDT_RADIO_PORT` | `127.0.0.1`, `8770` |
+| Base URL of the KubeNDT API | `--kubendt-url` | `KUBENDT_URL` | `http://localhost:8080` |
+| Working folder (zones, cache, generated files) | `--home` | `KUBENDT_RADIO_HOME` | `~/kubendt-radio` |
+| KubeNDT API token | `--token-file` | `KUBENDT_TOKEN_FILE`, or the token itself in `KUBENDT_TOKEN` | `<home>/.kubendt_token` |
+| Open5GS image | | `KUBENDT_RADIO_OPEN5GS_IMAGE` | `docker_open5gs:latest` |
+| UERANSIM image | | `KUBENDT_RADIO_UERANSIM_IMAGE` | `gradiant/ueransim:3.2.6` |
+| Image of `server-0` | | `KUBENDT_RADIO_TOOLBOX_IMAGE` | `ghcr.io/emigcm98/kubendt-toolbox:latest` |
+
+Create the API token in the dashboard (profile menu, API tokens) and save it in the token file. `kubectl` must be on the `PATH` of the service with a kubeconfig for the cluster, as for the scripts in `experiments/`.
+
+Raise `KUBENDT_K8S_QPS` and `KUBENDT_K8S_BURST` on the backend (2000 and 4000 were used) so that shaping many links per step is not throttled.
+
+### What you need besides this repository
+
+- A Python environment with Sionna 2.2 (Sionna RT and Sionna SYS, with PyTorch), Eclipse SUMO 1.28 (`eclipse-sumo`, `libsumo`, `sumolib`, `traci`), `aiohttp`, `mapbox-earcut`, `pyproj`, `scipy`, `matplotlib` and `Pillow`.
+- Container images for the 5G system, available to the cluster: Open5GS built from [herlesupreeth/docker_open5gs](https://github.com/herlesupreeth/docker_open5gs) and UERANSIM. On arm64 both Open5GS and the KubeNDT toolbox have to be built locally.
+
+### Limits
+
+- Building heights come from OpenStreetMap where mapped and from a default by building type elsewhere; roofs and terrain are flat; every building is concrete.
+- UERANSIM has no handover between gNBs: on a change of gNB the UE reselects the cell and service is interrupted for a few seconds. The emulator keeps the serving link at a 50 kbit/s floor during fades and restarts the 5G stack of a UE whose user plane does not come back.
+- One emulation at a time per GPU. With about a dozen UEs and five sites a step of 0.5 s ran in real time.
+- The radio service has no authentication of its own: it must listen only where the backend reaches it.
 
 ## License
 

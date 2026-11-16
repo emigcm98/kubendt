@@ -11,12 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// RadioProxy forwards /radio/* to the radio service: the companion that
-// builds radio zones (a 3D scene from OpenStreetMap buildings, the road
-// network and ray-traced coverage maps) on a host with a GPU. The service
-// has no authentication of its own; it is reached only through here, behind
-// the session or token every other route needs. KUBENDT_RADIO_URL names it,
-// and without it the routes answer 503 so the dashboard can say why.
+// RadioProxy forwards /radio/* to the radio service named by KUBENDT_RADIO_URL.
 func RadioProxy() gin.HandlerFunc {
 	target := strings.TrimSpace(os.Getenv("KUBENDT_RADIO_URL"))
 	if target == "" {
@@ -44,7 +39,6 @@ func RadioProxy() gin.HandlerFunc {
 		r.URL.Path = radioServicePath(c.Param("path"))
 		r.URL.RawPath = ""
 		r.Host = u.Host
-		// The session stays here: the service never sees the caller's credentials.
 		r.Header.Del("Cookie")
 		r.Header.Del("Authorization")
 		proxy.ServeHTTP(c.Writer, r)

@@ -184,8 +184,6 @@ func SetupRoutes(router *gin.Engine) {
 		kubeGroup.POST("/config", handlers.LoadKubeConfig)
 	}
 
-	// Radio zones: forwarded to the radio service (KUBENDT_RADIO_URL), behind
-	// the same authentication as every other route.
 	router.Any("/radio/*path", handlers.RadioProxy())
 
 	// Swagger UI at /swagger. Custom index (filter on, no Explore topbar); spec

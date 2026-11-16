@@ -154,8 +154,6 @@ func RunPlannedActions(namespace, podName string, plans []PlannedAction, opts Ru
 	}
 
 	i := 0
-	// tcUnmerged is where a merged tc batch failed: the actions before it
-	// run one by one, so each reports its own error.
 	tcUnmerged := 0
 	for i < len(plans) {
 		p := plans[i]
@@ -164,12 +162,6 @@ func RunPlannedActions(namespace, podName string, plans []PlannedAction, opts Ru
 			continue
 		}
 
-		// Consecutive tc actions of a pod go as one `tc -b` batch, one exec
-		// for all of them instead of one each: a node with many shaped
-		// interfaces (the radio side of fifty links) costs one round trip.
-		// tc stops at the first failing line without saying whose it was, so
-		// a failed batch is run again action by action. Shaping commands are
-		// replaces, running one twice changes nothing.
 		if p.Executor == executor.TCUniversalExecutorName && !p.Flags.Get && i >= tcUnmerged {
 			j := i
 			var rows [][]string
