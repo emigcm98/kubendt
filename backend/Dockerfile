@@ -14,7 +14,9 @@ COPY . .
 
 RUN go run github.com/swaggo/swag/cmd/swag@v1.16.6 init -g main.go
 
-RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -o /kubendt .
+# No GOARCH: the binary is built for the platform of this stage, which is the
+# target platform (amd64, arm64) under docker build and buildx alike.
+RUN CGO_ENABLED=1 GOOS=linux go build -o /kubendt .
 
 FROM alpine:${ALPINE_VERSION}
 

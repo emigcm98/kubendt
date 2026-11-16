@@ -8,7 +8,7 @@ import (
 
 type Driver interface {
 	Name() string
-	Type() string // "host" | "switch" | "router"
+	Type() string // "host" | "switch" | "router"; nodes of type "ue" and "gnb" take host drivers
 }
 
 // checkTypeContract enforces the minimum capabilities a driver must implement
@@ -41,6 +41,9 @@ var DefaultDriverByType = map[string]string{
 	"host":   "HostDriver",
 	"switch": "LinuxSwitchDriver",
 	"router": "LinuxRouterDriver",
+	// The radio roles are hosts: same default driver, same capabilities.
+	"ue":  "HostDriver",
+	"gnb": "HostDriver",
 }
 
 // driverAliases maps names kept for one version to the driver they now
@@ -90,6 +93,9 @@ func TypeOf(name string) (string, bool) {
 
 func ValidDriversForType(t string) []string {
 	out := []string{}
+	if t == "ue" || t == "gnb" {
+		t = "host"
+	}
 	for name, typ := range registryType {
 		if typ == t {
 			out = append(out, name)

@@ -137,6 +137,7 @@
       ["set nat source rule 190 translation address masquerade"]
     ]
   },
+  "handover": { "unsupported": true },
   "isis_add_interface": {
     "executor": "vyos_api_apply",
     "commands": [

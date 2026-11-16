@@ -40,6 +40,10 @@ const MiniMapOverlay = ({ nodes, selectedNodeId }) => {
         return '#6b7280';
       case 'host':
         return '#10b981';
+      case 'ue':
+        return '#f59e0b';
+      case 'gnb':
+        return '#ef4444';
       case 'external':
         return '#8b5cf6';
       default:

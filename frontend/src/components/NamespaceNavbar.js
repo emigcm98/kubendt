@@ -1,3 +1,4 @@
+import RadioNsControl from './RadioNsControl';
 import React, { useEffect, useMemo, useState } from 'react';
 import { API_BASE_URL } from '../config';
 import { useNavigate } from 'react-router-dom';
@@ -98,6 +99,14 @@ function NamespaceNavbar({
             <HomeIcon className="app-icon" aria-hidden="true" />
             Home
           </button>
+          <button className="navbar-button" onClick={() => navigate('/radio')} title="Pick the area the radio scenario emulates, place its sites">
+            <svg className="app-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+              <path d="M8 6v9M5 15h6M4.2 3.2a5.4 5.4 0 0 0 0 5.6M11.8 3.2a5.4 5.4 0 0 1 0 5.6" strokeLinecap="round" />
+              <circle cx="8" cy="6" r="1.4" fill="currentColor" stroke="none" />
+            </svg>
+            Radio area
+          </button>
+          <RadioNsControl namespace={namespace} />
           <button
             className="navbar-button navbar-button-danger"
             onClick={handleDelete}

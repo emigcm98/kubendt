@@ -21,6 +21,7 @@ import { ReactComponent as PlusIcon } from '../assets/images/icons/plus.svg';
 import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
 import { ReactComponent as RefreshIcon } from '../assets/images/icons/refresh.svg';
 import { ReactComponent as BookIcon } from '../assets/images/icons/book.svg';
+import RadioZoneCard from '../components/RadioZoneCard';
 import './Home.css';
 
 Modal.setAppElement('#root');
@@ -537,6 +538,9 @@ const Home = () => {
           </div>
         </div>
         <div className="home-header-right">
+          <button className="open-api-btn" onClick={() => navigate('/radio')} title="Pick the area a radio scenario emulates">
+            Radio zones
+          </button>
           <button className="open-api-btn" onClick={handleOpenSwagger}>
             <BookIcon className="app-icon" aria-hidden="true" />
             Open API
@@ -560,6 +564,8 @@ const Home = () => {
       <div className="main-layout">
         {/* Left Column: Cluster Status */}
         <div className="layout-column left-column">
+          {/* Radio area in use, and the way into the map that picks it */}
+          <RadioZoneCard />
           {/* Cluster Status Panel */}
           <div className="cluster-status-card">
             <div className="cluster-card-header">

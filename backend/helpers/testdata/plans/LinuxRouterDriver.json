@@ -92,6 +92,14 @@
       ["sh","-c","iptables -t nat -C POSTROUTING -o eth0 -j MASQUERADE || iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE"]
     ]
   },
+  "handover": {
+    "executor": "kubectl",
+    "commands": [
+      ["ip","link","set","dev","eth2","up"],
+      ["ip","route","replace","10.200.0.7/32","via","10.0.2.1","dev","eth2"],
+      ["ip","link","set","dev","eth1","down"]
+    ]
+  },
   "isis_add_interface": { "unsupported": true },
   "isis_passive_interface": { "unsupported": true },
   "isis_redistribute": { "unsupported": true },

@@ -186,6 +186,13 @@ type TCParamEntry struct {
 	Limit              *int         `json:"limit,omitempty" example:"1000"` // queue length in packets, 1 to 1000000
 	// Rate caps the bandwidth: netem's link rate emulation, or tbf's rate (required there).
 	Rate string `json:"rate,omitempty" example:"10mbit"`
+	// InPlace updates a netem or tbf that is already on the interface without
+	// emptying its queue: no reset first, the qdisc keeps its handle and the
+	// packets it holds. What the request leaves out goes back to none, as in a
+	// plain add_qdisc. With another kind (or nothing) on the interface it
+	// installs the qdisc. Meant for links whose state changes often, a radio
+	// link following a moving node. Not for htb.
+	InPlace bool `json:"in_place,omitempty" example:"false"`
 	// tbf only
 	Burst   string `json:"burst,omitempty" example:"32kbit"` // defaults to 32kbit
 	Latency string `json:"latency,omitempty" example:"50ms"` // 1 to 5000 ms, defaults to 50ms

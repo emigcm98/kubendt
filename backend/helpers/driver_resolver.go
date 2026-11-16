@@ -33,7 +33,7 @@ func ResolveDriversForNodes(requestNodes []types.NodeSpec) ([]types.Warning, err
 				return nil, fmt.Errorf("node %q: driver %q not registered. Valid drivers for type=%q: %v",
 					n.Name, n.Driver, n.Type, valid)
 			}
-			if driverType, ok := drivers_registry.TypeOf(n.Driver); ok && driverType != typ {
+			if driverType, ok := drivers_registry.TypeOf(n.Driver); ok && driverType != types.BaseNodeType(typ) {
 				validDrivers := drivers_registry.ValidDriversForType(typ)
 				return nil, fmt.Errorf("node %q: driver %q is for type=%q but node is type=%q. Valid drivers: %v",
 					n.Name, n.Driver, driverType, typ, validDrivers)

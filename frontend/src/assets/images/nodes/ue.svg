@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="User equipment">
+  <!-- Original icon for KubeNDT: a handset with radio waves. -->
+  <ellipse cx="30" cy="58" rx="16" ry="3.2" fill="#1f2a44" opacity=".18"/>
+  <g transform="rotate(-9 30 34)">
+    <rect x="17" y="10" width="26" height="46" rx="5" fill="#2b3a67"/>
+    <rect x="15.5" y="8.5" width="26" height="46" rx="5" fill="#3f51b5"/>
+    <rect x="18.5" y="13.5" width="20" height="33" rx="2" fill="#e8f1ff"/>
+    <rect x="21" y="17" width="15" height="3" rx="1.5" fill="#90caf9"/>
+    <rect x="21" y="23" width="10" height="3" rx="1.5" fill="#bbdefb"/>
+    <rect x="21" y="36" width="3" height="7" rx="1" fill="#43a047"/>
+    <rect x="25.5" y="33" width="3" height="10" rx="1" fill="#43a047"/>
+    <rect x="30" y="30" width="3" height="13" rx="1" fill="#43a047"/>
+    <circle cx="28.5" cy="50.5" r="2" fill="#c5cae9"/>
+  </g>
+  <g fill="none" stroke="#ff9800" stroke-width="3" stroke-linecap="round">
+    <path d="M47 15a9 9 0 0 1 6 8"/>
+    <path d="M49 7a17 17 0 0 1 12 15"/>
+  </g>
+  <circle cx="45.5" cy="24" r="2.6" fill="#ff9800"/>
+</svg>

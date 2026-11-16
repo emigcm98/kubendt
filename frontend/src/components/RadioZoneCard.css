@@ -1,0 +1,81 @@
+.radio-zone-card {
+  margin-bottom: 16px;
+}
+
+.radio-zone-card-icon {
+  width: 22px;
+  height: 22px;
+  vertical-align: -4px;
+  margin-right: 6px;
+}
+
+.radio-zone-card-btn {
+  background: #1976d2;
+  color: #ffffff;
+  border: 1px solid #1976d2;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.radio-zone-card-btn:hover {
+  background: #1565c0;
+}
+
+.radio-zone-card-note {
+  color: #5c6b85;
+  font-size: 13px;
+  padding: 4px 0 2px;
+}
+
+.radio-zone-card-error {
+  color: #b71c1c;
+}
+
+.radio-zone-card-body {
+  cursor: pointer;
+  border-radius: 8px;
+  padding: 6px 4px 2px;
+}
+
+.radio-zone-card-body:hover {
+  background: rgba(25, 118, 210, 0.06);
+}
+
+.radio-zone-card-name {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.radio-zone-card-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  color: #5c6b85;
+  font-size: 12px;
+}
+
+.radio-zone-card-stats span {
+  display: flex;
+  flex-direction: column;
+}
+
+.radio-zone-card-stats b {
+  color: #1f2a44;
+  font-size: 14px;
+}
+
+.radio-zone-card-ns {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #5c6b85;
+}
+
+.radio-zone-card-ns a {
+  font-weight: 600;
+  color: #1976d2;
+}

@@ -744,8 +744,8 @@ func DeployNetwork(c *gin.Context) {
 		seenNodeNames[node.Name] = struct{}{}
 
 		typ := node.Type
-		if typ != "host" && typ != "switch" && typ != "router" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Node '%s' has invalid type '%s' (expected: host|switch|router).", node.Name, node.Type)})
+		if !types.ValidNodeType(typ) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Node '%s' has invalid type '%s' (expected: %s).", node.Name, node.Type, types.NodeTypesHuman)})
 			return
 		}
 	}

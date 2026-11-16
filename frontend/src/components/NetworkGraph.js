@@ -121,8 +121,8 @@ const validateNodeSpecFields = (node, label) => {
   for (const f of ['name', 'image', 'type']) {
     if (!isNonEmptyString(node[f])) throw new Error(`${label}: '${f}' must be a non-empty string.`);
   }
-  if (!['host', 'router', 'switch'].includes(node.type)) {
-    throw new Error(`${label}: invalid type '${node.type}'. Must be 'host', 'router' or 'switch'.`);
+  if (!['host', 'router', 'switch', 'ue', 'gnb'].includes(node.type)) {
+    throw new Error(`${label}: invalid type '${node.type}'. Must be 'host', 'router', 'switch', 'ue' or 'gnb'.`);
   }
   if (node.replicas !== undefined && node.replicas !== null) {
     if (!Number.isInteger(node.replicas) || node.replicas < 1 || node.replicas > MAX_REPLICAS) {
@@ -342,11 +342,13 @@ const generateNodePositions = (pods) => {
 
   const routers = pods.filter((p) => p.type === 'router');
   const switchs = pods.filter((p) => p.type === 'switch' || p.type === 'external');
-  const hosts = pods.filter((p) => p.type === 'host');
+  const gnbs = pods.filter((p) => p.type === 'gnb');
+  const hosts = pods.filter((p) => p.type === 'host' || p.type === 'ue');
 
   let x = 50;
   x = placeGroup(routers, x);
   x = placeGroup(switchs, x);
+  x = placeGroup(gnbs, x);
   placeGroup(hosts, x);
 
   return podPositions;

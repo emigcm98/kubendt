@@ -594,7 +594,7 @@ func podTypeOrUnknown(m map[string]string, pod string) string {
 
 func typeRank(t string) int {
 	switch t {
-	case "host":
+	case "host", "ue", "gnb":
 		return 1
 	case "router":
 		return 2

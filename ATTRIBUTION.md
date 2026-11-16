@@ -22,6 +22,10 @@ The icons listed in the tables below were obtained from [SVG Repo](https://www.s
 
 CC BY 4.0 allows commercial use; the only requirement is attribution (this file) and indicating modifications, which the table above covers.
 
+## Leaflet (BSD 2-Clause)
+
+The Radio zones page draws its map with [Leaflet](https://leafletjs.com/) 1.9.4, copyright Volodymyr Agafonkin and CloudMade, vendored unmodified under [`frontend/public/vendor/leaflet/`](./frontend/public/vendor/leaflet/) with its `LICENSE`. Map tiles and the building and road data of a zone are © OpenStreetMap contributors (ODbL); the map shows the attribution.
+
 ## In-app surfacing
 
 When kubendt is presented in a context where attribution must be visible to end-users (academic publication, public demo, third-party redistribution, commercial release), include a link to this file from the application's About / Help section or accompanying documentation.

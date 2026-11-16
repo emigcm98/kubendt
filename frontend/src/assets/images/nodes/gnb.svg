@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="gNB base station">
+  <!-- Original icon for KubeNDT: a lattice mast with sector antennas and an equipment cabinet. -->
+  <ellipse cx="32" cy="59" rx="20" ry="3.4" fill="#1f2a44" opacity=".18"/>
+  <g stroke="#546e7a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M32 14 22 57M32 14l10 43"/>
+    <path d="M29.3 26h5.4M27 36h10M24.6 46h14.8"/>
+    <path d="M29.3 26 37 36M34.7 26 27 36M27 36l12.4 10M37 36 24.6 46"/>
+  </g>
+  <rect x="38" y="47" width="14" height="11" rx="1.5" fill="#78909c"/>
+  <rect x="40" y="49.5" width="10" height="2" rx="1" fill="#cfd8dc"/>
+  <circle cx="41.5" cy="55" r="1.1" fill="#66bb6a"/>
+  <rect x="30.4" y="6" width="3.2" height="12" rx="1.2" fill="#37474f"/>
+  <rect x="20.5" y="9" width="6" height="16" rx="1.6" fill="#eceff1" stroke="#90a4ae" stroke-width="1.2"/>
+  <rect x="37.5" y="9" width="6" height="16" rx="1.6" fill="#eceff1" stroke="#90a4ae" stroke-width="1.2"/>
+  <rect x="29" y="12" width="6" height="16" rx="1.6" fill="#ffffff" stroke="#90a4ae" stroke-width="1.2"/>
+  <g fill="none" stroke="#e53935" stroke-width="3" stroke-linecap="round">
+    <path d="M14 11a11 11 0 0 0 0 13"/>
+    <path d="M7 6a19 19 0 0 0 0 23"/>
+    <path d="M50 11a11 11 0 0 1 0 13"/>
+    <path d="M57 6a19 19 0 0 1 0 23"/>
+  </g>
+</svg>

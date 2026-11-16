@@ -154,11 +154,49 @@ func RunPlannedActions(namespace, podName string, plans []PlannedAction, opts Ru
 	}
 
 	i := 0
+	// tcUnmerged is where a merged tc batch failed: the actions before it
+	// run one by one, so each reports its own error.
+	tcUnmerged := 0
 	for i < len(plans) {
 		p := plans[i]
 		if p.Skip != "" || p.Err != nil {
 			i++
 			continue
+		}
+
+		// Consecutive tc actions of a pod go as one `tc -b` batch, one exec
+		// for all of them instead of one each: a node with many shaped
+		// interfaces (the radio side of fifty links) costs one round trip.
+		// tc stops at the first failing line without saying whose it was, so
+		// a failed batch is run again action by action. Shaping commands are
+		// replaces, running one twice changes nothing.
+		if p.Executor == executor.TCUniversalExecutorName && !p.Flags.Get && i >= tcUnmerged {
+			j := i
+			var rows [][]string
+			for j < len(plans) {
+				gp := plans[j]
+				if gp.Skip != "" || gp.Err != nil || gp.Executor != p.Executor || gp.Flags.Get {
+					break
+				}
+				rows = append(rows, gp.Commands...)
+				j++
+			}
+			if j-i > 1 {
+				var execErr error
+				for _, cmd := range executor.CommandsFromLegacyForExecutor(rows, p.Executor) {
+					if execErr = exec(func() error { return p.Exec.ExecCommand(podName, namespace, cmd) }); execErr != nil {
+						break
+					}
+				}
+				if execErr == nil {
+					for k := i; k < j; k++ {
+						outcomes[k] = ActionOutcome{Ran: true}
+					}
+					i = j
+					continue
+				}
+				tcUnmerged = j
+			}
 		}
 
 		if executor.BatchableExecutors[p.Executor] && !p.Flags.Get {

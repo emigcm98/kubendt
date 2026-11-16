@@ -23,6 +23,7 @@
   {"type": "disable_snat", "iface": "eth0"},
   {"type": "enable_dnat", "iface": "eth1", "externalPort": 8080, "internalIP": "10.0.0.5", "internalPort": 80, "protocol": "tcp"},
   {"type": "enable_snat", "iface": "eth0"},
+  {"type": "handover", "iface": "eth2", "gateway": "10.0.2.1", "dst_cidr": "10.200.0.7/32", "device": "eth1"},
   {"type": "isis_add_interface", "iface": "eth1", "level": "level-2"},
   {"type": "isis_passive_interface", "iface": "eth1"},
   {"type": "isis_redistribute", "redistribute": "ospf", "family": "6"},

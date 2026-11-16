@@ -16,6 +16,8 @@ import VarsTab from './podpanel/VarsTab';
 import pcIcon from '../assets/images/nodes/host.svg';
 import routerIcon from '../assets/images/nodes/router.svg';
 import switchIcon from '../assets/images/nodes/switch.svg';
+import ueIcon from '../assets/images/nodes/ue.svg';
+import gnbIcon from '../assets/images/nodes/gnb.svg';
 import { ReactComponent as RefreshIcon } from '../assets/images/icons/refresh.svg';
 import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
 import { ReactComponent as LogsIcon } from '../assets/images/icons/logs.svg';
@@ -637,6 +639,8 @@ const PodInfoPanel = ({
           {pod.type === 'host' && <img src={pcIcon} alt="Host" className="pod-type-icon" />}
           {pod.type === 'router' && <img src={routerIcon} alt="Router" className="pod-type-icon" />}
           {pod.type === 'switch' && <img src={switchIcon} alt="Switch" className="pod-type-icon" />}
+          {pod.type === 'ue' && <img src={ueIcon} alt="UE" className="pod-type-icon" />}
+          {pod.type === 'gnb' && <img src={gnbIcon} alt="gNB" className="pod-type-icon" />}
           {displayName}
         </h3>
 

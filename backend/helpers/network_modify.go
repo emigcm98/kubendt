@@ -49,8 +49,8 @@ func ApplyAddToExistingTopology(namespace string, request types.DeployRequest, e
 		newNodeSet[node.Name] = struct{}{}
 
 		typ := node.Type
-		if typ != "host" && typ != "switch" && typ != "router" {
-			return nil, nil, nil, fmt.Errorf("VALIDATION:Node '%s' has invalid type '%s' (expected: host|switch|router)", node.Name, node.Type)
+		if !types.ValidNodeType(typ) {
+			return nil, nil, nil, fmt.Errorf("VALIDATION:Node '%s' has invalid type '%s' (expected: %s)", node.Name, node.Type, types.NodeTypesHuman)
 		}
 
 		switch {

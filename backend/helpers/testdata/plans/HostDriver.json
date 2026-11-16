@@ -67,6 +67,14 @@
   "disable_snat": { "unsupported": true },
   "enable_dnat": { "unsupported": true },
   "enable_snat": { "unsupported": true },
+  "handover": {
+    "executor": "kubectl",
+    "commands": [
+      ["ip","link","set","dev","eth2","up"],
+      ["ip","route","replace","10.200.0.7/32","via","10.0.2.1","dev","eth2"],
+      ["ip","link","set","dev","eth1","down"]
+    ]
+  },
   "isis_add_interface": { "unsupported": true },
   "isis_passive_interface": { "unsupported": true },
   "isis_redistribute": { "unsupported": true },

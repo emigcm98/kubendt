@@ -1,0 +1,27 @@
+# Meshnet for clusters whose workers are not amd64 (or mix architectures).
+#
+# The upstream manifest pins the DaemonSet to amd64 with the deprecated
+# beta.kubernetes.io/arch label, so on an arm64 worker no Meshnet pod is
+# scheduled and every deploy stops with 412 meshnet_missing. The image
+# networkop/meshnet is published for amd64 and arm64, so the pin is all that
+# has to go.
+#
+#   kubectl apply -k deploy/others/meshnet-multiarch
+#
+# On a cluster where Meshnet is already installed, the same change as a patch:
+#
+#   kubectl -n meshnet patch ds meshnet --type=json \
+#     -p='[{"op":"replace","path":"/spec/template/spec/nodeSelector","value":{"kubernetes.io/os":"linux"}}]'
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - https://github.com/networkop/meshnet-cni//manifests/base?ref=master
+patches:
+  - target:
+      kind: DaemonSet
+      name: meshnet
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/nodeSelector
+        value:
+          kubernetes.io/os: linux

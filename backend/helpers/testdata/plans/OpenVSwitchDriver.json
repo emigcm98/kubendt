@@ -55,6 +55,7 @@
   "disable_snat": { "unsupported": true },
   "enable_dnat": { "unsupported": true },
   "enable_snat": { "unsupported": true },
+  "handover": { "unsupported": true },
   "isis_add_interface": { "unsupported": true },
   "isis_passive_interface": { "unsupported": true },
   "isis_redistribute": { "unsupported": true },

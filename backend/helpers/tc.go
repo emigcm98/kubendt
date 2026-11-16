@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -291,13 +292,43 @@ func buildShapingCommands(iface string, p *types.TCParamEntry) ([][]string, erro
 		return nil, fmt.Errorf("tcparams is required")
 	}
 	if strings.TrimSpace(p.Qdisc) == "htb" || (p.Qdisc == "" && len(p.Classes) > 0) {
+		if p.InPlace {
+			return nil, fmt.Errorf("tcparams.in_place applies to netem and tbf, an htb tree is rebuilt")
+		}
 		return htbCommands(iface, p)
 	}
 	qdisc, params, err := buildTCParams(p)
 	if err != nil {
 		return nil, err
 	}
+	if p.InPlace {
+		return buildChangeQdiscCommand(iface, qdisc, params), nil
+	}
 	return buildAddQdiscCommand(iface, qdisc, params), nil
+}
+
+// netemSticky are the netem options the kernel keeps across a change that
+// does not mention them (delay, jitter, loss and duplicate travel in the
+// fixed part of the message and are always overwritten). An in-place
+// update sends them as an explicit zero, so the result is what the request
+// says and nothing of the previous shaping.
+var netemSticky = []struct{ name, zero string }{{"rate", "0bit"}, {"corrupt", "0%"}, {"reorder", "0%"}}
+
+// buildChangeQdiscCommand emits the single `tc qdisc replace` of an in-place
+// update: over a qdisc of the same kind the kernel changes it where it is,
+// handle and queue kept, so the packets in flight see the new parameters
+// instead of being dropped by a reset. Over another kind, or an unshaped
+// interface, the same command installs the qdisc.
+func buildChangeQdiscCommand(iface, qdisc string, params []string) [][]string {
+	cmd := append([]string{"tc", "qdisc", "replace", "dev", iface, "root", qdisc}, params...)
+	if qdisc == "netem" {
+		for _, o := range netemSticky {
+			if !slices.Contains(params, o.name) {
+				cmd = append(cmd, o.name, o.zero)
+			}
+		}
+	}
+	return [][]string{cmd}
 }
 
 // buildTCParams validates a classless shaping request and returns the qdisc

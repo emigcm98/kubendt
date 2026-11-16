@@ -5,6 +5,8 @@ import routerIcon from '../assets/images/nodes/router.svg';
 import switchIcon from '../assets/images/nodes/switch.svg';
 import externalIcon from '../assets/images/nodes/switch_gray.svg';
 import internetIcon from '../assets/images/nodes/internet.svg';
+import ueIcon from '../assets/images/nodes/ue.svg';
+import gnbIcon from '../assets/images/nodes/gnb.svg';
 import './CustomNode.css';
 
 export const NODE_SIZE = 64;
@@ -17,7 +19,11 @@ const CustomNode = ({ data }) => {
         ? switchIcon
         : data.type === 'external'
           ? externalIcon
-          : pcIcon;
+          : data.type === 'ue'
+            ? ueIcon
+            : data.type === 'gnb'
+              ? gnbIcon
+              : pcIcon;
 
   return (
     <div
@@ -29,7 +35,7 @@ const CustomNode = ({ data }) => {
         style={{
           fontSize: NODE_SIZE * 0.13,
           padding: `${NODE_SIZE * 0.03}px ${NODE_SIZE * 0.06}px`,
-          transform: `translate(-50%, ${data.type === 'host' ? '150%' : '100%'})`,
+          transform: `translate(-50%, ${['host', 'ue', 'gnb'].includes(data.type) ? '150%' : '100%'})`,
         }}
       >
         {data.label}

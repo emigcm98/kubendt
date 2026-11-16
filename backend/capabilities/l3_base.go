@@ -35,6 +35,25 @@ func (L3Base) SetDefaultRoute(gateway string) [][]string {
 	return [][]string{{"ip", "route", "replace", "default", "via", gateway}}
 }
 
+// Handover is make-before-break: the new interface is up before the route
+// moves, `ip route replace` swaps the next hop atomically, and the old
+// interface goes down only after traffic left it.
+func (L3Base) Handover(iface, gateway, dstCIDR, leaving string) [][]string {
+	dst := dstCIDR
+	if dst == "" {
+		dst = "default"
+	}
+	route := []string{"ip", "route", "replace", dst, "via", gateway, "dev", iface}
+	if IsIPv6(gateway) {
+		route = []string{"ip", "-6", "route", "replace", dst, "via", gateway, "dev", iface}
+	}
+	cmds := [][]string{{"ip", "link", "set", "dev", iface, "up"}, route}
+	if leaving != "" {
+		cmds = append(cmds, []string{"ip", "link", "set", "dev", leaving, "down"})
+	}
+	return cmds
+}
+
 func (L3Base) RemoveDefaultRoute() [][]string {
 	return [][]string{{"ip", "route", "del", "default"}}
 }

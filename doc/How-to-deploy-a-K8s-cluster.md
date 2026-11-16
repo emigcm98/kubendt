@@ -14,6 +14,8 @@ cd meshnet-cni/
 kubectl apply -k manifests/base
 ```
 
+> **arm64 workers.** The upstream Meshnet manifest pins its DaemonSet to amd64, so on an arm64 worker (or a mixed cluster) install it with `kubectl apply -k deploy/others/meshnet-multiarch` from the KubeNDT repository instead, which drops the pin; the Meshnet image itself is multi-architecture. The KubeNDT backend, frontend and toolbox build for the host's architecture with `docker compose up --build`; the toolbox is built from `deploy/custom_images/toolbox` and named with `KUBENDT_TOOLBOX_IMAGE`.
+
 ## 1. Scope and Assumptions
 
 This guide focuses on cluster preparation. KubeNDT application startup is included at the end.
