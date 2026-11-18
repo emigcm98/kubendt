@@ -35,6 +35,8 @@ import { ReactComponent as GaugeIcon } from '../assets/images/icons/gauge.svg';
 import { ReactComponent as SaveIcon } from '../assets/images/icons/save.svg';
 import { ReactComponent as DownloadIcon } from '../assets/images/icons/download.svg';
 import { ReactComponent as ImageIcon } from '../assets/images/icons/image.svg';
+import { ReactComponent as ChevronDownIcon } from '../assets/images/icons/chevron-down.svg';
+import { ReactComponent as FileIcon } from '../assets/images/icons/file.svg';
 import { pictureToPng, pictureToPdf, svgDataUrl } from './graphPicture';
 import InnerGraph from './InnerGraph';
 import { useLayout, isAnnotationId, nodeToAnnotation } from './useLayout';
@@ -1282,6 +1284,24 @@ const NetworkGraph = ({
   });
   const imageExportRef = useRef({ format: 'png', transparent: false, margin: 40, scale: 2 });
   const exportImageRef = useRef(null);
+  // The export menu under its button, closed by a click elsewhere or Esc.
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const exportMenuRef = useRef(null);
+  useEffect(() => {
+    if (!exportMenuOpen) return undefined;
+    const onDown = (e) => {
+      if (!exportMenuRef.current?.contains(e.target)) setExportMenuOpen(false);
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') setExportMenuOpen(false);
+    };
+    document.addEventListener('pointerdown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('pointerdown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [exportMenuOpen]);
   const clearPositionsRef = useRef(false);
   const [clearFilesChecked, setClearFilesChecked] = useState(false);
   const clearFilesRef = useRef(false);
@@ -3891,10 +3911,10 @@ const NetworkGraph = ({
           })()}
 
         <div className="topbar">
-          {/* IZQUIERDA */}
-          <div className="topbar-left">
+          <div className="topbar-group" role="group" aria-label="Topology">
             <button
-              className="topbar-action-btn topbar-action-import"
+              type="button"
+              className={`topbar-btn${!hasGraph && !initialLoading ? ' topbar-btn-primary' : ''}`}
               disabled={
                 initialLoading ||
                 nodes.length > 0 ||
@@ -3933,33 +3953,15 @@ const NetworkGraph = ({
                 }
                 setTopologyInputKind('import');
               }}
-              title="Import topology JSON and deploy it in this namespace"
+              title="Import a topology JSON and deploy it in this namespace"
             >
               <UploadIcon className="app-icon" aria-hidden="true" />
-              Import topology
+              {hasGraph ? 'Import' : 'Import topology'}
             </button>
 
             <button
-              className="topbar-action-btn topbar-action-clear"
-              disabled={
-                !hasGraph ||
-                openShells.length > 0 ||
-                traceOpen ||
-                clearingTopology ||
-                loadingConfig ||
-                modifyingTopology ||
-                importing ||
-                topologyInputKind !== null
-              }
-              onClick={handleClearTopologyClick}
-              title="Delete all deployed topology resources in this namespace without deleting the namespace"
-            >
-              <TrashIcon className="app-icon" aria-hidden="true" />
-              Clear topology
-            </button>
-
-            <button
-              className="topbar-action-btn topbar-action-modify"
+              type="button"
+              className="topbar-btn"
               disabled={
                 !hasGraph ||
                 openShells.length > 0 ||
@@ -3971,14 +3973,37 @@ const NetworkGraph = ({
                 topologyInputKind !== null
               }
               onClick={handleModifyTopologyClick}
-              title="Apply modify topology JSON with 'add' and/or 'delete'"
+              title="Apply a modify JSON: add, delete, scale, annotations and positions"
             >
               <EditIcon className="app-icon" aria-hidden="true" />
-              Modify topology
+              Modify
             </button>
 
             <button
-              className="topbar-action-btn topbar-action-config"
+              type="button"
+              className="topbar-btn topbar-btn-danger"
+              disabled={
+                !hasGraph ||
+                openShells.length > 0 ||
+                traceOpen ||
+                clearingTopology ||
+                loadingConfig ||
+                modifyingTopology ||
+                importing ||
+                topologyInputKind !== null
+              }
+              onClick={handleClearTopologyClick}
+              title="Delete every pod and link of this namespace, the namespace stays"
+            >
+              <TrashIcon className="app-icon" aria-hidden="true" />
+              Clear
+            </button>
+
+            <span className="topbar-sep" aria-hidden="true" />
+
+            <button
+              type="button"
+              className="topbar-btn"
               disabled={
                 !hasGraph ||
                 clearingTopology ||
@@ -3988,114 +4013,146 @@ const NetworkGraph = ({
                 topologyInputKind !== null
               }
               onClick={handleLoadNetworkConfClick}
-              title="Apply a network configuration JSON (targets/actions)"
+              title="Apply a network configuration JSON (targets and actions)"
             >
               <SlidersIcon className="app-icon" aria-hidden="true" />
               Load network conf
             </button>
           </div>
 
-          {/* CENTRO */}
-          <div className="topbar-center">
-            <div className="topbar-tools-row">
-              <label
-                className={`topbar-toggle${hasExternalNodes ? '' : ' disabled'}`}
-                title={
-                  hasExternalNodes
-                    ? 'Hide external networks and their links from the graph'
-                    : 'No external networks in this topology'
-                }
-              >
-                <input
-                  type="checkbox"
-                  checked={hideExternal}
-                  disabled={!hasExternalNodes}
-                  onChange={(e) => setHideExternal(e.target.checked)}
-                />
-                <span>Hide external</span>
-              </label>
-
-              <div className="topbar-search">
-                <SearchIcon className="topbar-search-icon" aria-hidden="true" />
-                <input
-                  type="text"
-                  value={graphSearchQuery}
-                  onChange={(e) => setGraphSearchQuery(e.target.value)}
-                  placeholder="Search node…"
-                  aria-label="Search node by name"
-                  disabled={nodes.length === 0}
-                />
-                <span className="topbar-search-count">
-                  {graphSearchQuery &&
-                    (() => {
-                      const q = graphSearchQuery.trim().toLowerCase();
-                      const count = nodes.filter((n) => {
-                        const label = (n.data?.label || '').toLowerCase();
-                        const id = (n.id || '').toLowerCase();
-                        return label.includes(q) || id.includes(q);
-                      }).length;
-                      return `${count} match${count === 1 ? '' : 'es'}`;
-                    })()}
-                </span>
-                {graphSearchQuery && (
-                  <button
-                    type="button"
-                    className="topbar-search-clear"
-                    onClick={() => setGraphSearchQuery('')}
-                    title="Clear search"
-                  >
-                    <CloseIcon className="app-icon" />
-                  </button>
-                )}
-              </div>
+          <div className="topbar-group" role="group" aria-label="View">
+            <div className="topbar-search">
+              <SearchIcon className="topbar-search-icon" aria-hidden="true" />
+              <input
+                type="text"
+                value={graphSearchQuery}
+                onChange={(e) => setGraphSearchQuery(e.target.value)}
+                placeholder="Search node…"
+                aria-label="Search node by name"
+                disabled={nodes.length === 0}
+              />
+              <span className="topbar-search-count">
+                {graphSearchQuery &&
+                  (() => {
+                    const q = graphSearchQuery.trim().toLowerCase();
+                    const count = nodes.filter((n) => {
+                      const label = (n.data?.label || '').toLowerCase();
+                      const id = (n.id || '').toLowerCase();
+                      return label.includes(q) || id.includes(q);
+                    }).length;
+                    return `${count} match${count === 1 ? '' : 'es'}`;
+                  })()}
+              </span>
+              {graphSearchQuery && (
+                <button
+                  type="button"
+                  className="topbar-search-clear"
+                  onClick={() => setGraphSearchQuery('')}
+                  title="Clear search"
+                >
+                  <CloseIcon className="app-icon" />
+                </button>
+              )}
             </div>
+
+            <span className="topbar-sep" aria-hidden="true" />
+
+            <label
+              className={`topbar-switch${hasExternalNodes ? '' : ' disabled'}`}
+              title={
+                hasExternalNodes
+                  ? 'Show the external networks and their links'
+                  : 'No external networks in this topology'
+              }
+            >
+              <input
+                type="checkbox"
+                checked={hasExternalNodes && !hideExternal}
+                disabled={!hasExternalNodes}
+                onChange={(e) => setHideExternal(!e.target.checked)}
+              />
+              <span className="topbar-switch-track" aria-hidden="true" />
+              External
+            </label>
           </div>
 
-          {/* DERECHA */}
-          <div className="topbar-right">
-            <div className="topbar-right-buttons">
-              <button
-                onClick={!isBusy ? handleSaveLayout : undefined}
-                disabled={(nodes.length === 0 && annotationNodes.length === 0) || isBusy}
-                title="Save the layout: node positions and annotations"
-              >
-                <SaveIcon className="app-icon" aria-hidden="true" />
-                Save layout
-                {(positionsDirty || annotationsDirty) && (
-                  <span className="dirty-dot" aria-label="Unsaved changes">
-                    •
-                  </span>
-                )}
-              </button>
+          <div className="topbar-group" role="group" aria-label="Layout and export">
+            <button
+              type="button"
+              className="topbar-btn"
+              onClick={!isBusy ? handleSaveLayout : undefined}
+              disabled={(nodes.length === 0 && annotationNodes.length === 0) || isBusy}
+              title="Save the layout: node positions and annotations"
+            >
+              <SaveIcon className="app-icon" aria-hidden="true" />
+              Save layout
+              {(positionsDirty || annotationsDirty) && (
+                <span className="dirty-dot" aria-label="Unsaved changes">
+                  •
+                </span>
+              )}
+            </button>
 
+            <span className="topbar-sep" aria-hidden="true" />
+
+            <div className="topbar-menu-anchor" ref={exportMenuRef}>
               <button
+                type="button"
+                className={`topbar-btn${exportMenuOpen ? ' topbar-btn-open' : ''}`}
                 disabled={nodes.length === 0 || isBusy}
-                onClick={!isBusy ? handleExportTopology : undefined}
-                title="Export current topology as JSON"
+                onClick={() => setExportMenuOpen((v) => !v)}
+                aria-haspopup="menu"
+                aria-expanded={exportMenuOpen}
+                title="Export the topology, the network conf or a picture of the graph"
               >
                 <DownloadIcon className="app-icon" aria-hidden="true" />
-                Export topology
+                Export
+                <ChevronDownIcon className="app-icon topbar-caret" aria-hidden="true" />
               </button>
-
-              <button
-                className="topbar-action-export-config"
-                disabled={nodes.length === 0 || isBusy}
-                onClick={!isBusy ? handleExportNetworkConf : undefined}
-                title="Export the configuration applied in this namespace as network conf JSON"
-              >
-                <DownloadIcon className="app-icon" aria-hidden="true" />
-                Export network conf
-              </button>
-
-              <button
-                className="topbar-action-export-image"
-                disabled={nodes.length === 0 || isBusy}
-                onClick={!isBusy ? handleExportImageClick : undefined}
-                title="Save the graph as a PNG or SVG picture, annotations included"
-              >
-                <ImageIcon className="app-icon" aria-hidden="true" />
-                Export image
-              </button>
+              {exportMenuOpen && (
+                <div className="topbar-menu" role="menu">
+                  <div className="topbar-menu-head">Export</div>
+                  <button
+                    type="button"
+                    className="topbar-menu-item"
+                    role="menuitem"
+                    onClick={() => {
+                      setExportMenuOpen(false);
+                      handleExportTopology();
+                    }}
+                  >
+                    <FileIcon className="app-icon" aria-hidden="true" />
+                    Topology
+                    <span className="topbar-menu-sub">JSON, with layout</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="topbar-menu-item"
+                    role="menuitem"
+                    onClick={() => {
+                      setExportMenuOpen(false);
+                      handleExportNetworkConf();
+                    }}
+                  >
+                    <SlidersIcon className="app-icon" aria-hidden="true" />
+                    Network conf
+                    <span className="topbar-menu-sub">JSON</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="topbar-menu-item"
+                    role="menuitem"
+                    onClick={() => {
+                      setExportMenuOpen(false);
+                      handleExportImageClick();
+                    }}
+                  >
+                    <ImageIcon className="app-icon" aria-hidden="true" />
+                    Image
+                    <span className="topbar-menu-sub">PNG, SVG, PDF</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

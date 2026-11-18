@@ -1,15 +1,16 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { API_BASE_URL } from '../config';
 import { useNavigate } from 'react-router-dom';
 import './NamespaceNavbar.css';
 import AlertModal from './AlertModal';
 import DeleteExtrasCheckboxes from './DeleteExtrasCheckboxes';
 import { ReactComponent as RefreshIcon } from '../assets/images/icons/refresh.svg';
-import { ReactComponent as HomeIcon } from '../assets/images/icons/home.svg';
 import { ReactComponent as FolderIcon } from '../assets/images/icons/folder.svg';
+import { ReactComponent as HomeIcon } from '../assets/images/icons/home.svg';
 import { ReactComponent as TopologyIcon } from '../assets/images/icons/topology.svg';
 import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
 import { ReactComponent as ClockIcon } from '../assets/images/icons/clock.svg';
+import { ReactComponent as ChevronDownIcon } from '../assets/images/icons/chevron-down.svg';
 import kubendtLogo from '../assets/images/kubendt-logo.svg';
 
 const plural = (type) => (type === 'switch' ? 'switches' : `${type}s`);
@@ -78,7 +79,28 @@ function NamespaceNavbar({
   const [deletePositionsChecked, setDeletePositionsChecked] = useState(false);
   const [deleteFilesChecked, setDeleteFilesChecked] = useState(false);
 
+  // The destructive actions live under the dots menu, which closes on a
+  // click elsewhere or Esc.
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    const onDown = (e) => {
+      if (!menuRef.current?.contains(e.target)) setMenuOpen(false);
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') setMenuOpen(false);
+    };
+    document.addEventListener('pointerdown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('pointerdown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [menuOpen]);
+
   const handleDelete = () => {
+    setMenuOpen(false);
     if (disabled) return;
     setDeletePositionsChecked(false);
     setDeleteFilesChecked(false);
@@ -94,29 +116,21 @@ function NamespaceNavbar({
     <>
       <div className="navbar-container">
         <div className="navbar-left">
-          <button className="navbar-button" onClick={() => navigate('/')}>
+          <button
+            type="button"
+            className="navbar-brand"
+            onClick={() => navigate('/')}
+            title="KubeNDT"
+          >
+            <img src={kubendtLogo} alt="KubeNDT" className="navbar-brand-logo" />
+          </button>
+          <button
+            className="navbar-button"
+            onClick={() => navigate('/')}
+            title="Back to the namespace list"
+          >
             <HomeIcon className="app-icon" aria-hidden="true" />
             Home
-          </button>
-          <button
-            className="navbar-button navbar-button-danger"
-            onClick={handleDelete}
-            disabled={disabled}
-          >
-            <TrashIcon className="app-icon" aria-hidden="true" />
-            Delete namespace
-          </button>
-          <button
-            className="navbar-button navbar-button-namespace-history"
-            onClick={() => {
-              if (disabled) return;
-              if (!onDeleteHistory) return;
-              setShowDeleteHistoryConfirmModal(true);
-            }}
-            disabled={disabled}
-          >
-            <ClockIcon className="app-icon" aria-hidden="true" />
-            Delete history
           </button>
         </div>
 
@@ -136,7 +150,6 @@ function NamespaceNavbar({
           <div className="navbar-center" title={`Namespace: ${namespace}`}>
             <TopologyIcon className="navbar-ns-icon" aria-hidden="true" />
             <div className="navbar-center-text">
-              <span className="navbar-label">Namespace</span>
               <span className="navbar-namespace">{namespace}</span>
             </div>
             <button
@@ -167,24 +180,57 @@ function NamespaceNavbar({
 
         <div className="navbar-right">
           <button
-            className="navbar-button navbar-button-files"
+            className="navbar-button"
             onClick={() => {
               sessionStorage.setItem(`kubendt.restoreCache.${namespace}`, 'true');
               navigate(`/${namespace}/files`);
             }}
+            title="The files of this namespace, to mount into its pods"
           >
             <FolderIcon className="app-icon" aria-hidden="true" />
             File Manager
           </button>
-          <a
-            className="navbar-brand"
-            href="https://github.com/emigcm98/kubendt"
-            target="_blank"
-            rel="noopener noreferrer"
-            title="View KubeNDT on GitHub"
-          >
-            <img src={kubendtLogo} alt="KubeNDT" className="navbar-brand-logo" />
-          </a>
+          <div className="navbar-menu-anchor" ref={menuRef}>
+            <button
+              className={`navbar-button${menuOpen ? ' navbar-button-open' : ''}`}
+              onClick={() => setMenuOpen((v) => !v)}
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              title="Delete the history or the namespace"
+            >
+              <TopologyIcon className="app-icon" aria-hidden="true" />
+              Namespace
+              <ChevronDownIcon className="app-icon navbar-caret" aria-hidden="true" />
+            </button>
+            {menuOpen && (
+              <div className="navbar-menu" role="menu">
+                <button
+                  type="button"
+                  className="navbar-menu-item"
+                  role="menuitem"
+                  disabled={disabled || !onDeleteHistory}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setShowDeleteHistoryConfirmModal(true);
+                  }}
+                >
+                  <ClockIcon className="app-icon" aria-hidden="true" />
+                  Delete history
+                  <span className="navbar-menu-sub">the topology stays</span>
+                </button>
+                <button
+                  type="button"
+                  className="navbar-menu-item navbar-menu-item-danger"
+                  role="menuitem"
+                  disabled={disabled}
+                  onClick={handleDelete}
+                >
+                  <TrashIcon className="app-icon" aria-hidden="true" />
+                  Delete namespace
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

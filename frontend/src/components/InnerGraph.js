@@ -841,7 +841,6 @@ const InnerGraph = ({
             glide (the built-in Controls can't animate the +/- without firing
             twice). Also lets us style them to match the app. */}
         <Panel position="bottom-left" className="graph-controls-stack">
-          <AnnotationToolbar tool={tool} setTool={pickTool} disabled={isBusy || locked} />
           <div className="graph-controls">
             <button
               type="button"
@@ -887,6 +886,7 @@ const InnerGraph = ({
               <MagnetIcon className="app-icon" aria-hidden="true" />
             </button>
           </div>
+          <AnnotationToolbar tool={tool} setTool={pickTool} disabled={isBusy || locked} />
         </Panel>
         {selectedIds.length > 1 && (
           <Panel position="top-center" className="graph-selection-chip">

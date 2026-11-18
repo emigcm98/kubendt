@@ -1,14 +1,18 @@
 /* === PANEL PRINCIPAL === */
 .pod-info-panel {
   position: fixed;
-  top: 50%;
+  /* Where the panel used to start when it was centred, so the tabs stay put
+     while a card ends where its content ends. */
+  top: 21vh;
   left: 0;
-  transform: translateY(-50%);
   z-index: 10;
 
   width: 18vw;
   min-width: 288px;
-  height: 58vh;
+  /* Room for the summary card, but it stops short of the strips in the
+     bottom corner (166px tall, 15px off the edge), which never move. */
+  --pod-panel-height: min(max(58vh, 560px), 79vh - 200px);
+  height: var(--pod-panel-height);
 
   padding: 0;
   background: var(--panel-from);
@@ -28,11 +32,11 @@
 
 @keyframes pod-panel-slide-in {
   from {
-    transform: translate(-110%, -50%);
+    transform: translateX(-110%);
     opacity: 0;
   }
   to {
-    transform: translate(0, -50%);
+    transform: translateX(0);
     opacity: 1;
   }
 }
@@ -44,26 +48,37 @@
 
 @keyframes pod-panel-slide-out {
   from {
-    transform: translate(0, -50%);
+    transform: translateX(0);
     opacity: 1;
   }
   to {
-    transform: translate(-110%, -50%);
+    transform: translateX(-110%);
     opacity: 0;
   }
 }
 
+/* The summary and the external card: the panel ends with its content and
+   scrolls only past the height the other tabs use. */
+.pod-info-panel-fit {
+  height: auto;
+  max-height: var(--pod-panel-height);
+}
+
+.pod-info-panel-fit .pod-body {
+  overflow-y: auto;
+}
+
 /* Scrollbar moderno */
-.pod-info-panel::-webkit-scrollbar {
+.pod-body::-webkit-scrollbar {
   width: 8px;
 }
 
-.pod-info-panel::-webkit-scrollbar-thumb {
+.pod-body::-webkit-scrollbar-thumb {
   background-color: #bbb;
   border-radius: var(--radius-sm);
 }
 
-.pod-info-panel::-webkit-scrollbar-thumb:hover {
+.pod-body::-webkit-scrollbar-thumb:hover {
   background-color: var(--text-subtle);
 }
 
@@ -1264,122 +1279,33 @@
   background: #e3edf8;
 }
 
-/* Metrics block in summary */
-.pod-metrics-hint {
-  text-align: right;
-  font-size: 0.62rem;
-  color: #b0bac8;
-  margin: 0 1rem 0.2rem 1rem;
-  font-style: italic;
-}
-
-.pod-metrics-block {
+/* The usage line of the summary, the values with their unit muted. */
+.pod-metrics {
   display: flex;
-  gap: 0;
-  margin: 0.35rem 1rem 0.1rem 1rem;
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
-  /* NO overflow:hidden, needed so tooltip can escape the block */
-  background: #fff;
-}
-
-.pod-metrics-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 0.45rem 0.5rem;
-  gap: 0.15rem;
-  position: relative;
-  /* clip item backgrounds to rounded corners individually */
-}
-
-.pod-metrics-item:first-child {
-  border-right: 1px solid var(--border-light);
-  border-radius: 8px 0 0 8px;
-}
-
-.pod-metrics-item:last-child {
-  border-radius: 0 8px 8px 0;
-}
-
-.pod-metrics-label {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--text-subtle);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  flex-wrap: wrap;
+  gap: 0 0.9rem;
 }
 
 .pod-metrics-value {
-  font-size: 0.9rem;
   font-weight: 600;
   color: var(--text-heading);
+  white-space: nowrap;
 }
 
 .pod-metrics-value em {
   font-style: normal;
-  font-size: 0.72rem;
-  color: var(--text-subtle);
+  font-size: 0.78rem;
   font-weight: 400;
+  color: var(--text-subtle);
 }
 
-.pod-metrics-loading {
-  color: #bbb;
-  font-weight: 400;
+.pod-metrics-loading,
+.pod-metrics-na {
+  color: var(--text-subtle);
 }
 
 .pod-metrics-na {
-  color: #bbb;
   cursor: help;
-  position: relative;
-}
-
-.pod-metrics-tooltip {
-  display: none;
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
-  width: 170px;
-  white-space: normal;
-  background: #f0f4f9;
-  color: var(--text-heading);
-  border: 1px solid var(--border);
-  font-size: 0.72rem;
-  font-weight: 400;
-  padding: 0.45rem 0.6rem;
-  border-radius: var(--radius-sm);
-  z-index: 9999;
-  pointer-events: none;
-  line-height: 1.55;
-  text-align: center;
-  box-shadow: 0 3px 12px rgba(25, 118, 210, 0.13);
-}
-
-.pod-metrics-tooltip::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 5px solid transparent;
-  border-top-color: var(--border);
-}
-
-.pod-metrics-tooltip::before {
-  content: '';
-  position: absolute;
-  top: calc(100% + 1px);
-  left: 50%;
-  transform: translateX(-50%);
-  border: 5px solid transparent;
-  border-top-color: #f0f4f9;
-  z-index: 1;
-}
-
-.pod-metrics-na:hover .pod-metrics-tooltip {
-  display: block;
 }
 
 /* Restart counter inside restart-btn */

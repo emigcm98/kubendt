@@ -2,8 +2,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import './NamespaceNavbar.css'; // reuse styles
-import { ReactComponent as HomeIcon } from '../assets/images/icons/home.svg';
 import { ReactComponent as TopologyIcon } from '../assets/images/icons/topology.svg';
+import { ReactComponent as HomeIcon } from '../assets/images/icons/home.svg';
 import kubendtLogo from '../assets/images/kubendt-logo.svg';
 
 function NamespaceFilesNavbar({ namespace }) {
@@ -12,40 +12,43 @@ function NamespaceFilesNavbar({ namespace }) {
   return (
     <div className="navbar-container">
       <div className="navbar-left">
-        <button className="navbar-button" onClick={() => navigate(`/`)}>
-          <HomeIcon className="app-icon" aria-hidden="true" />
-          Home
+        <button
+          type="button"
+          className="navbar-brand"
+          onClick={() => navigate('/')}
+          title="KubeNDT"
+        >
+          <img src={kubendtLogo} alt="KubeNDT" className="navbar-brand-logo" />
         </button>
         <button
-          className="navbar-button navbar-button-graph"
-          onClick={() => {
-            sessionStorage.setItem(`kubendt.restoreCache.${namespace}`, 'true');
-            navigate(`/${namespace}`);
-          }}
+          className="navbar-button"
+          onClick={() => navigate('/')}
+          title="Back to the namespace list"
         >
-          <TopologyIcon className="app-icon" aria-hidden="true" />
-          Go to graph
+          <HomeIcon className="app-icon" aria-hidden="true" />
+          Home
         </button>
       </div>
 
       <div className="navbar-center navbar-center-static" title={`Namespace: ${namespace}`}>
         <TopologyIcon className="navbar-ns-icon" aria-hidden="true" />
         <div className="navbar-center-text">
-          <span className="navbar-label">Namespace</span>
           <span className="navbar-namespace">{namespace}</span>
         </div>
       </div>
 
       <div className="navbar-right">
-        <a
-          className="navbar-brand"
-          href="https://github.com/emigcm98/kubendt"
-          target="_blank"
-          rel="noopener noreferrer"
-          title="View KubeNDT on GitHub"
+        <button
+          className="navbar-button"
+          onClick={() => {
+            sessionStorage.setItem(`kubendt.restoreCache.${namespace}`, 'true');
+            navigate(`/${namespace}`);
+          }}
+          title="Back to the graph of this namespace"
         >
-          <img src={kubendtLogo} alt="KubeNDT" className="navbar-brand-logo" />
-        </a>
+          <TopologyIcon className="app-icon" aria-hidden="true" />
+          Graph
+        </button>
       </div>
     </div>
   );

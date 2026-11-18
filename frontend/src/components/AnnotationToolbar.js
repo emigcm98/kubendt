@@ -5,7 +5,7 @@ import { ReactComponent as NoteIcon } from '../assets/images/icons/note.svg';
 import { ReactComponent as SquareIcon } from '../assets/images/icons/square.svg';
 import { ReactComponent as CircleIcon } from '../assets/images/icons/circle.svg';
 
-// The tools, a strip of their own above the graph's controls. Select is
+// The tools, a strip of their own beside the graph's controls. Select is
 // the resting state. A drawing tool stays lit while it is picked, and
 // drawing a shape, Esc or clicking it again goes back to select. The delete
 // tool stays until Esc or a second click, to take several shapes in a row.

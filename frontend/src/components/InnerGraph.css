@@ -17,7 +17,7 @@
    the same panel in a tinted shade so the two groups read apart. */
 .graph-controls-stack {
   display: flex;
-  flex-direction: column;
+  align-items: flex-end;
   gap: 8px;
 }
 

@@ -107,29 +107,26 @@ const SummaryTab = ({
       <span className="pod-label">Uptime:</span>
       <span className="pod-value">{pod.uptime}</span>
     </div>
-    <hr />
-    <div className="pod-metrics-hint">updated every 10s</div>
-    <div className="pod-metrics-block">
-      {[
-        ['CPU', (m) => `${(m.cpu_milli / 1000).toFixed(2)}`, 'vCPU'],
-        ['RAM', (m) => `${m.memory_mib}`, 'MiB'],
-      ].map(([label, value, unit]) => (
-        <div className="pod-metrics-item" key={label}>
-          <span className="pod-metrics-label">{label}</span>
-          {podMetrics === null ? (
-            <span className="pod-metrics-value pod-metrics-loading">…</span>
-          ) : podMetrics === false ? (
-            <span className="pod-metrics-value pod-metrics-na">
-              n/a
-              <span className="pod-metrics-tooltip">Error: metrics-server not available.</span>
-            </span>
-          ) : (
+    <div className="pod-line" title="CPU and memory from metrics-server, read every 10 s">
+      <span className="pod-label">Usage:</span>
+      <span className="pod-value pod-metrics">
+        {podMetrics === null ? (
+          <span className="pod-metrics-loading">…</span>
+        ) : podMetrics === false ? (
+          <span className="pod-metrics-na" title="metrics-server is not available">
+            n/a
+          </span>
+        ) : (
+          <>
             <span className="pod-metrics-value">
-              {value(podMetrics)} <em>{unit}</em>
+              {(podMetrics.cpu_milli / 1000).toFixed(2)} <em>vCPU</em>
             </span>
-          )}
-        </div>
-      ))}
+            <span className="pod-metrics-value">
+              {podMetrics.memory_mib} <em>MiB</em>
+            </span>
+          </>
+        )}
+      </span>
     </div>
   </>
 );
