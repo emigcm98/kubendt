@@ -27,7 +27,7 @@ const ExternalNodeInfoPanel = ({
   return (
     <div className="panel-wrapper">
       <div
-        className={`pod-info-panel external-info-panel${isClosing ? ' is-closing' : ''}`}
+        className={`pod-info-panel pod-info-panel-fit external-info-panel${isClosing ? ' is-closing' : ''}`}
         onAnimationEnd={handleAnimationEnd}
       >
         {onDeleteExternal && (

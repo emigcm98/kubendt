@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { MiniMap } from 'reactflow';
-import { ReactComponent as MinusIcon } from '../assets/images/icons/minus.svg';
+import { ReactComponent as MinimizeIcon } from '../assets/images/icons/minimize.svg';
 import { ReactComponent as MaximizeIcon } from '../assets/images/icons/maximize.svg';
 import './MiniMapOverlay.css';
 
@@ -86,7 +86,7 @@ const MiniMapOverlay = ({ selectedNodeId }) => {
         aria-label="Hide the minimap"
         onClick={toggle}
       >
-        <MinusIcon className="app-icon" />
+        <MinimizeIcon className="app-icon" />
       </button>
       <MiniMap
         nodeColor={getColor}

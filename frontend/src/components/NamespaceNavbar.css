@@ -1,11 +1,15 @@
+/* The namespace bar: the brand blue with one glass chip for each thing you
+   can do on it, the namespace in the middle, the mark on the right. The
+   destructive actions sit under the dots menu, red only there. */
 .navbar-container {
   position: relative;
+  /* above the page, so the dots menu drops over the graph's top bar */
+  z-index: 20;
   display: flex;
   align-items: center;
   background: linear-gradient(to bottom, var(--brand), var(--brand-edge));
   border-bottom: 2px solid var(--brand-edge);
   padding: 0.4rem 1rem;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   box-shadow: 0 2px 8px rgba(28, 116, 192, 0.25);
   min-height: 48px;
 }
@@ -14,7 +18,7 @@
 .navbar-right {
   display: flex;
   align-items: center;
-  gap: 0.8rem;
+  gap: 8px;
   z-index: 1;
 }
 
@@ -27,24 +31,23 @@
   margin-left: auto;
 }
 
-/* Logo on a white chip so the blue mark stays crisp on the blue navbar. */
+/* The mark on a white chip, so the blue stays crisp on the blue bar. It is
+   the way home, as a brand is. */
 .navbar-brand {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  padding: 3px 8px;
+  border: 0;
   background: var(--surface);
-  padding: 4px 9px;
   border-radius: var(--radius-md);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
-  text-decoration: none;
-  transition:
-    transform 0.15s ease,
-    box-shadow 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
   cursor: pointer;
+  transition: box-shadow 0.15s ease;
 }
 
 .navbar-brand-logo {
-  height: 44px;
+  height: 34px;
   width: auto;
   display: block;
   /* The logo SVG uses light-dark() strokes; force the light (dark-ink) variant
@@ -52,13 +55,11 @@
   color-scheme: light;
 }
 
-a.navbar-brand:hover {
-  transform: translateY(-1px);
+.navbar-brand:hover {
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
-  text-decoration: none;
 }
 
-a.navbar-brand:focus-visible {
+.navbar-brand:focus-visible {
   outline: 2px solid rgba(255, 255, 255, 0.7);
   outline-offset: 2px;
 }
@@ -95,14 +96,6 @@ a.navbar-brand:focus-visible {
   min-width: 0;
 }
 
-.navbar-label {
-  font-size: 0.54rem;
-  color: rgba(255, 255, 255, 0.72);
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  font-weight: 800;
-}
-
 .navbar-ns-icon {
   width: 20px;
   height: 20px;
@@ -111,7 +104,7 @@ a.navbar-brand:focus-visible {
 }
 
 .navbar-namespace {
-  font-size: 1.05rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: white;
   letter-spacing: 0.3px;
@@ -152,70 +145,116 @@ a.navbar-brand:focus-visible {
   cursor: not-allowed;
 }
 
-/* Tonal chips on the blue bar: soft tinted fill + matching text/icon, one hue
-   per action, so each has personality and reads cleanly against the brand blue.
-   Neutral (Home) is the default; the rest are set by class below. */
+/* A glass chip on the blue: white text, a faint fill, a hairline. */
 .navbar-button {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 0.5rem 1rem;
+  height: 32px;
+  padding: 0 12px;
+  font-family: inherit;
   font-size: 0.85rem;
-  background: var(--surface);
-  color: var(--text-body);
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
   font-weight: 600;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-  transition: all 0.18s ease;
+  white-space: nowrap;
+  transition: background 0.15s ease;
 }
 
 .navbar-button .app-icon {
   width: 1.05em;
   height: 1.05em;
+  flex-shrink: 0;
 }
 
-.navbar-button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
-  filter: brightness(0.97);
-}
-
-/* Delete namespace / Delete history: red tonal (destructive). Targeted by class,
-   not position, so it never bleeds onto other bars' buttons. */
-.navbar-button-danger {
-  background: color-mix(in srgb, var(--danger-bg), var(--danger) var(--tonal-btn-tint));
-  color: var(--danger-strong);
-}
-
-/* Delete history: lower-stakes cleanup (just the driver op log), so a neutral
-   fill with red text keeps the destructive cue without a second loud red beside
-   Delete namespace. */
-.navbar-button-namespace-history {
-  background: var(--border-light);
-  color: var(--danger-strong);
-}
-
-/* File Manager: amber tonal. */
-.navbar-button-files {
-  background: color-mix(in srgb, var(--warning-bg), var(--warning) var(--tonal-btn-tint));
-  color: var(--warning-strong);
-}
-
-/* Go to graph: teal tonal, matching the topology accent. */
-.navbar-button-graph {
-  background: color-mix(in srgb, var(--teal-bg), var(--teal) var(--tonal-btn-tint));
-  color: var(--teal);
+.navbar-button:hover:not(:disabled),
+.navbar-button-open {
+  background: rgba(255, 255, 255, 0.26);
 }
 
 .navbar-button:active:not(:disabled) {
-  transform: translateY(0);
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .navbar-button:disabled {
   opacity: 0.5;
-  cursor: not-allowed;
+  cursor: default;
+}
+
+.navbar-caret {
+  width: 12px !important;
+  height: 12px !important;
+  margin-left: -2px;
+}
+
+/* The dots menu: the history and the namespace, the namespace in red. */
+.navbar-menu-anchor {
+  position: relative;
+}
+
+.navbar-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 1200;
+  min-width: 230px;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+}
+
+.navbar-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-body);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.navbar-menu-item .app-icon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.navbar-menu-item:hover:not(:disabled) {
+  background: var(--panel-header-from);
+}
+
+.navbar-menu-item-danger {
+  color: var(--danger);
+}
+
+.navbar-menu-item-danger:hover:not(:disabled) {
+  background: var(--danger-bg);
+}
+
+.navbar-menu-item:disabled {
+  color: var(--text-subtle);
+  cursor: default;
+}
+
+.navbar-menu-sub {
+  margin-left: auto;
+  padding-left: 12px;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-subtle);
 }
 
 /* Deletion confirmation modal */

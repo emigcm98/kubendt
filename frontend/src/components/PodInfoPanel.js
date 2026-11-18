@@ -599,7 +599,7 @@ const PodInfoPanel = ({
     <div className="panel-wrapper">
       {showInteractiveShell && <div className="panel-overlay" />}
       <div
-        className={`pod-info-panel${isClosing ? ' is-closing' : ''}`}
+        className={`pod-info-panel${activeTab === 'summary' ? ' pod-info-panel-fit' : ''}${isClosing ? ' is-closing' : ''}`}
         onAnimationEnd={handleAnimationEnd}
       >
         <button
