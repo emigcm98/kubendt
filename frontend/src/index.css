@@ -21,15 +21,6 @@
   --panel-header-from: #e3eaf3;
   --panel-header-to: #d8e2ee;
 
-  /* Context menus (dark surface) */
-  --menu-from: #1e1e2e;
-  --menu-to: #2a2a3e;
-  --menu-border: rgba(88, 166, 255, 0.3);
-  --menu-accent: #58a6ff;
-  --menu-text: #e0e0e0;
-  --menu-hover: rgba(88, 166, 255, 0.15);
-  --menu-danger: #ff6b6b;
-
   /* Tool panels (dark floating tools over the graph: capture, traceroute).
      One shared palette so the panels read as siblings. Component-specific
      semantic colors (protocol rows, hop kinds) stay in their stylesheets. */

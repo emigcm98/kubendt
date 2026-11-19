@@ -1,15 +1,8 @@
 /* Reuses .pod-info-panel + .panel-wrapper + .close-btn from PodInfoPanel.css */
 
-.link-info-title {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-}
-
 .link-info-title-icon {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
 }
 
@@ -176,9 +169,9 @@
   flex: 1 1 0;
   min-width: 0;
   padding: 5px 8px;
-  background: var(--info-bg);
+  background: var(--surface);
   border: 1px solid var(--border);
-  color: var(--primary);
+  color: var(--text-body);
   border-radius: var(--radius-sm);
   font-size: 0.8rem;
   font-weight: 600;
@@ -189,8 +182,8 @@
 }
 
 .link-capture-btn:hover {
-  background: var(--info-bg);
-  border-color: var(--primary);
+  background: var(--panel-header-from);
+  color: var(--text-heading);
 }
 
 .link-tc-btn {
@@ -201,9 +194,9 @@
   flex: 1 1 0;
   min-width: 0;
   padding: 5px 8px;
-  background: var(--info-bg);
+  background: var(--surface);
   border: 1px solid var(--border);
-  color: var(--primary);
+  color: var(--text-body);
   border-radius: var(--radius-sm);
   font-size: 0.8rem;
   font-weight: 600;
@@ -214,8 +207,8 @@
 }
 
 .link-tc-btn:hover {
-  background: var(--info-bg);
-  border-color: var(--primary);
+  background: var(--panel-header-from);
+  color: var(--text-heading);
 }
 
 /* Counters of this end, under its addresses. */

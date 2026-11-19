@@ -1,41 +1,36 @@
+/* The right-click menus of the graph, in the language of the top bar's
+   Export menu: a white sheet, quiet rows, red only on the destructive one. */
 .graph-context-menu {
-  background: linear-gradient(135deg, var(--menu-from) 0%, var(--menu-to) 100%);
-  border: 1px solid rgba(88, 166, 255, 0.3);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.5),
-    0 0 16px rgba(88, 166, 255, 0.15);
+  box-shadow: var(--panel-shadow);
   z-index: 10000;
-  min-width: 240px;
-  overflow: hidden;
-  backdrop-filter: blur(10px);
-  animation: slideIn 0.15s ease-out;
+  min-width: 230px;
+  padding: 4px 6px;
+  animation: slideIn 0.12s ease-out;
 }
 
 @keyframes slideIn {
   from {
     opacity: 0;
-    transform: scale(0.95) translateY(-5px);
+    transform: translateY(-3px);
   }
   to {
     opacity: 1;
-    transform: scale(1) translateY(0);
+    transform: translateY(0);
   }
 }
 
 .graph-context-menu-header {
-  padding: 10px 16px;
-  background: rgba(88, 166, 255, 0.1);
-  border-bottom: 1px solid rgba(88, 166, 255, 0.2);
+  padding: 7px 10px 5px;
 }
 
 .graph-context-menu-title {
-  color: var(--menu-accent);
-  font-weight: 600;
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
   display: block;
+  color: var(--text-heading);
+  font-weight: 700;
+  font-size: 13px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -43,28 +38,26 @@
 
 .graph-context-menu-divider {
   height: 1px;
-  background: rgba(88, 166, 255, 0.15);
-  margin: 4px 0;
+  margin: 4px 2px;
+  background: var(--border-light);
 }
 
 .graph-context-menu-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 16px;
-  color: #e0e0e0;
-  cursor: pointer;
+  gap: 9px;
+  min-height: 32px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--text-body);
   font-size: 13px;
-  transition: all 0.15s ease;
+  cursor: pointer;
   user-select: none;
-  min-height: 36px;
   white-space: nowrap;
 }
 
 .graph-context-menu-item:hover {
-  background: rgba(88, 166, 255, 0.15);
-  color: var(--menu-accent);
-  padding-left: 18px;
+  background: var(--panel-header-from);
 }
 
 .graph-context-menu-icon {
@@ -75,15 +68,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--text-muted);
 }
 
 .graph-context-menu-icon > svg {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
 }
 
-/* Wide icons (e.g. the PCAP tag) must escape the fixed 18px square, otherwise
-   they get squashed to a sliver. */
+/* Wide icons (the PCAP tag) escape the fixed square, or they get squashed. */
 .graph-context-menu-icon-pcap {
   width: auto;
   min-width: auto;
@@ -100,7 +93,6 @@
   color: var(--text-subtle);
   background: transparent;
   cursor: default;
-  padding-left: 16px;
 }
 
 .graph-context-menu-warn {
@@ -113,20 +105,18 @@
 
 /* An entry that opens a submenu keeps its highlight while the submenu shows. */
 .graph-context-menu-item-open {
-  background: var(--menu-hover);
-  color: var(--menu-accent);
+  background: var(--panel-header-from);
 }
 
 .graph-context-menu-chevron {
   width: 14px;
   height: 14px;
   margin-left: 4px;
-  opacity: 0.7;
+  color: var(--text-subtle);
 }
 
 .graph-context-menu-sub {
   min-width: 180px;
-  padding: 4px 0;
   z-index: 10001;
 }
 
@@ -139,10 +129,14 @@
 }
 
 .graph-context-menu-item-danger {
-  color: var(--menu-danger);
+  color: var(--danger);
+}
+
+.graph-context-menu-item-danger .graph-context-menu-icon {
+  color: inherit;
 }
 
 .graph-context-menu-item-danger:hover {
-  background: rgba(255, 107, 107, 0.2);
-  color: #ff8787;
+  background: var(--danger-bg);
+  color: var(--danger-strong);
 }

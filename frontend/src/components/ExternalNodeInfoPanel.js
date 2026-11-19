@@ -30,23 +30,31 @@ const ExternalNodeInfoPanel = ({
         className={`pod-info-panel pod-info-panel-fit external-info-panel${isClosing ? ' is-closing' : ''}`}
         onAnimationEnd={handleAnimationEnd}
       >
-        {onDeleteExternal && (
-          <button
-            className="delete-btn"
-            onClick={() => onDeleteExternal(node)}
-            title={
-              isBusy ? 'Operation in progress…' : 'Delete external network (remove all links to it)'
-            }
-            disabled={isBusy}
-          >
-            <TrashIcon className="app-icon" />
-          </button>
-        )}
-        <button className="close-btn" onClick={requestClose} title="Close panel">
-          <CloseIcon className="app-icon" />
-        </button>
-
-        <h3>{node.baseName || node.name}</h3>
+        <div className="pod-panel-head">
+          <h3 className="pod-panel-title" title={node.baseName || node.name}>
+            <span className="pod-panel-name">{node.baseName || node.name}</span>
+          </h3>
+          <div className="pod-panel-actions">
+            {onDeleteExternal && (
+              <button
+                className="delete-btn"
+                onClick={() => onDeleteExternal(node)}
+                title={
+                  isBusy
+                    ? 'Operation in progress…'
+                    : 'Delete external network (remove all links to it)'
+                }
+                disabled={isBusy}
+              >
+                <TrashIcon className="app-icon" />
+              </button>
+            )}
+            <span className="pod-panel-sep" />
+            <button className="close-btn" onClick={requestClose} title="Close panel">
+              <CloseIcon className="app-icon" />
+            </button>
+          </div>
+        </div>
 
         <div className="pod-body external-info-body">
           <p className="external-description">

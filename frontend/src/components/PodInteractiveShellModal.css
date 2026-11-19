@@ -121,7 +121,7 @@
 
 .shell-modal-reconnect-btn:hover {
   background: rgba(86, 156, 214, 0.12);
-  color: var(--menu-accent);
+  color: var(--tool-accent);
 }
 
 /* Tiny dot in the title showing socket state */

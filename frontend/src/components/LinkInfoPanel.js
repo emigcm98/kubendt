@@ -263,24 +263,30 @@ const LinkInfoPanel = ({
         className={`pod-info-panel link-info-panel${isClosing ? ' is-closing' : ''}`}
         onAnimationEnd={handleAnimationEnd}
       >
-        {onDeleteLink && (
-          <button
-            className="delete-btn link-delete-btn"
-            onClick={() => onDeleteLink(link)}
-            title={isBusy ? 'Operation in progress…' : 'Delete link (remove from topology)'}
-            disabled={isBusy}
-          >
-            <TrashIcon className="app-icon" />
-          </button>
-        )}
-        <button className="close-btn" onClick={requestClose} title="Close panel">
-          <CloseIcon className="app-icon" />
-        </button>
-
-        <h3 className="link-info-title">
-          <LinkIcon className="link-info-title-icon" />
-          {link?.data?.linkName ? link.data.linkName : 'Link'}
-        </h3>
+        <div className="pod-panel-head">
+          <h3 className="pod-panel-title">
+            <LinkIcon className="link-info-title-icon" />
+            <span className="pod-panel-name">
+              {link?.data?.linkName ? link.data.linkName : 'Link'}
+            </span>
+          </h3>
+          <div className="pod-panel-actions">
+            {onDeleteLink && (
+              <button
+                className="delete-btn"
+                onClick={() => onDeleteLink(link)}
+                title={isBusy ? 'Operation in progress…' : 'Delete link (remove from topology)'}
+                disabled={isBusy}
+              >
+                <TrashIcon className="app-icon" />
+              </button>
+            )}
+            <span className="pod-panel-sep" />
+            <button className="close-btn" onClick={requestClose} title="Close panel">
+              <CloseIcon className="app-icon" />
+            </button>
+          </div>
+        </div>
 
         <div className="pod-body link-info-body">
           <div className="pod-line">
