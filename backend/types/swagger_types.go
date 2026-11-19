@@ -267,6 +267,8 @@ type NetworkTopologyResponse struct {
 	Links []LinkSpec `json:"links"`
 	// The graph's layout, with ?layout=true and when there is one.
 	Layout *Layout `json:"layout,omitempty"`
+	// The placement the namespace was deployed with, when any.
+	Placement string `json:"placement,omitempty" example:"pack"`
 }
 
 // DeployTimingResponse breaks down deployment duration by phase.

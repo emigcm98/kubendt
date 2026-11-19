@@ -1,4 +1,5 @@
 {
+    "placement": "pack",
     "nodes": [
         {
             "name": "h1",

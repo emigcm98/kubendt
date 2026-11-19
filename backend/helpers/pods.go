@@ -462,6 +462,9 @@ func CreateNetworkStatefulSet(namespace string, node types.NodeSpec, validMounts
 		TerminationGracePeriodSeconds: ptr.To(gracePeriod),
 		NodeSelector:                  node.NodeSelector,
 		NodeName:                      node.NodeName,
+		// The namespace's placement, read here so a modify's add follows
+		// what the deploy chose.
+		Affinity: placementAffinity(NamespacePlacement(namespace)),
 	}
 
 	// if type==router, qemu, has devices, or is explicitly requested, activate privileges
