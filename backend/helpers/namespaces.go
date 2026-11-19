@@ -158,6 +158,12 @@ func CreateNamespace(namespace string) error {
 	if err := DeleteNamespaceLinkAttributes(namespace); err != nil {
 		log.Printf("⚠️ Could not clear leftover link attributes for new namespace %s: %v", namespace, err)
 	}
+	// A namesake deleted keeping its layout left it in the attic.
+	if restored, err := RestoreLayoutFromAttic(namespace); err != nil {
+		log.Printf("⚠️ Could not restore the layout of namespace %s from the attic: %v", namespace, err)
+	} else if restored {
+		log.Printf("ℹ️ Namespace %s took its layout back from the attic", namespace)
+	}
 
 	// Create files directory associated with namespace
 	if err := CreateNamespaceFileDir(namespace); err != nil {
@@ -181,6 +187,16 @@ func DeleteNamespace(namespace string, deletePositions, deleteFiles bool) error 
 		return fmt.Errorf("namespace %s does not have the label 'kubendt/enabled=true'", namespace)
 	}
 
+	// The layout dies with the namespace unless it is kept, in which case it
+	// waits in the attic for a namespace of the same name.
+	if deletePositions {
+		if err := DropLayoutAttic(namespace); err != nil {
+			log.Printf("⚠️ Could not drop the attic layout of %s: %v", namespace, err)
+		}
+	} else if err := StoreLayoutInAttic(namespace); err != nil {
+		log.Printf("⚠️ Could not keep the layout of %s in the attic: %v", namespace, err)
+	}
+
 	// Delete the namespace
 	err = kubeclient.Clientset.CoreV1().Namespaces().Delete(context.TODO(), namespace, metav1.DeleteOptions{})
 	if err != nil {
@@ -202,14 +218,6 @@ func DeleteNamespace(namespace string, deletePositions, deleteFiles bool) error 
 		if err := DeleteNamespaceFileDir(namespace); err != nil {
 			log.Printf("⚠️ Could not cleanup namespace files folder %s: %v", namespace, err)
 		}
-	}
-
-	if err := DeleteNamespaceState(namespace); err != nil {
-		log.Printf("⚠️ Could not cleanup namespace state for %s: %v", namespace, err)
-	}
-
-	if err := DeleteNamespaceLinkUIDRegistry(namespace); err != nil {
-		log.Printf("⚠️ Could not cleanup link UID registry for %s: %v", namespace, err)
 	}
 
 	if err := DeleteNamespaceDriverOperationHistory(namespace); err != nil {

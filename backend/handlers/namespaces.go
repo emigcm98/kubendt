@@ -40,11 +40,7 @@ func ListNamespaces(c *gin.Context) {
 			status = "Terminating"
 		}
 
-		// Resolve against reality: DB row first, then Topology CRDs in
-		// kube-api. This also refreshes the DB row so future reads via the
-		// cheap NamespaceHasTopology() stay accurate (handy after a backend
-		// restart or when topologies were created before the column existed).
-		hasTopology, err := helpers.SyncNamespaceTopologyState(namespace.Name)
+		hasTopology, err := helpers.NamespaceHasTopology(namespace.Name)
 		if err != nil {
 			log.Printf("⚠️ Could not sync topology state for '%s': %v", namespace.Name, err)
 			hasTopology = false
@@ -212,9 +208,9 @@ func GetNamespaceSummary(c *gin.Context) {
 		return
 	}
 
-	hasTopology, err := helpers.SyncNamespaceTopologyState(namespace)
+	hasTopology, err := helpers.NamespaceHasTopology(namespace)
 	if err != nil {
-		log.Printf("⚠️ Could not sync namespace topology state for '%s': %v", namespace, err)
+		log.Printf("⚠️ Could not read the topology state of '%s': %v", namespace, err)
 		hasTopology = len(stsList.Items) > 0 || len(topologyList.Items) > 0
 	}
 

@@ -6,7 +6,7 @@ import React from 'react';
 function DeleteExtrasCheckboxes({
   positionsChecked,
   onPositionsChange,
-  positionsLabel = 'Also delete saved node positions',
+  positionsLabel = 'Also delete the saved layout (positions and annotations)',
   filesChecked,
   onFilesChange,
 }) {

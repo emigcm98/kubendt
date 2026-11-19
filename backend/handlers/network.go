@@ -183,7 +183,7 @@ func ModifyNetwork(c *gin.Context) {
 		}
 	}()
 
-	hasTopology, err := helpers.SyncNamespaceTopologyState(namespace)
+	hasTopology, err := helpers.NamespaceHasTopology(namespace)
 	if err != nil {
 		log.Printf("❌ Error checking namespace topology state: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read topology state"})
@@ -633,13 +633,6 @@ func ModifyNetwork(c *gin.Context) {
 		}
 	}
 
-	if _, err := helpers.SyncNamespaceTopologyState(namespace); err != nil {
-		log.Printf("⚠️ Could not refresh topology state after modify in namespace '%s': %v", namespace, err)
-	}
-	if err := helpers.SyncNamespaceLinkUIDRegistry(namespace); err != nil {
-		log.Printf("⚠️ Could not refresh link UID registry after modify in namespace '%s': %v", namespace, err)
-	}
-
 	c.JSON(http.StatusOK, gin.H{
 		"message": "network-modify applied successfully",
 		"took_time": gin.H{
@@ -753,7 +746,7 @@ func DeployNetwork(c *gin.Context) {
 		}
 	}()
 
-	hasTopology, err := helpers.SyncNamespaceTopologyState(namespace)
+	hasTopology, err := helpers.NamespaceHasTopology(namespace)
 	if err != nil {
 		log.Printf("❌ Error checking namespace topology state: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read topology state"})
@@ -1092,13 +1085,6 @@ func DeployNetwork(c *gin.Context) {
 	// operation so a restart replays it.
 	warnings = append(warnings, helpers.ApplyLinkAttributes(namespace, request.Links, request.Nodes)...)
 
-	if err := helpers.SetNamespaceHasTopology(namespace, true); err != nil {
-		log.Printf("⚠️ Could not persist topology state for namespace '%s': %v", namespace, err)
-	}
-	if err := helpers.SyncNamespaceLinkUIDRegistry(namespace); err != nil {
-		log.Printf("⚠️ Could not refresh link UID registry after deploy in namespace '%s': %v", namespace, err)
-	}
-
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Network infrastructure deployed successfully",
 		"took_time": gin.H{
@@ -1162,12 +1148,6 @@ func ClearTopology(c *gin.Context) {
 		return
 	}
 
-	if _, err := helpers.SyncNamespaceTopologyState(namespace); err != nil {
-		log.Printf("⚠️ Could not refresh topology state after clear in namespace '%s': %v", namespace, err)
-	}
-	if err := helpers.DeleteNamespaceLinkUIDRegistry(namespace); err != nil {
-		log.Printf("⚠️ Could not cleanup link UID registry after clear in namespace '%s': %v", namespace, err)
-	}
 	if err := helpers.DeleteNamespaceDriverOperationHistory(namespace); err != nil {
 		log.Printf("⚠️ Could not cleanup driver operation history after clear in namespace '%s': %v", namespace, err)
 	}

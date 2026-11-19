@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- A system namespace, `kubendt-system` (`KUBENDT_SYSTEM_NAMESPACE`), where a namespace deleted keeping its layout leaves it until a namespace of the same name takes it back.
+
+### Changed
+
+- The operation lock is a Lease in the namespace, renewed while the operation runs and taken over once it expires, so two backends can share a cluster. Whether a namespace has a topology and which link uids are in use are read from the cluster, not kept in SQLite.
+
 ## [1.11.0] - 2026-11-19
 
 ### Added

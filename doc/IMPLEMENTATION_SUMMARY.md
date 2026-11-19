@@ -112,10 +112,8 @@ KubeNDT implements network topology management for Kubernetes through five inter
 **Persistence Model**:
 
 - **SQLite database** (`kubendt.db`, configurable path)
-- **Five tables**:
-  - `namespace_state`: topology deployment flag per namespace
-  - `namespace_operations`: operation lock (single row per namespace, prevents concurrent ops)
-  - `link_uid_registry`: stable UIDs for links (deterministic across deploys)
+- **In the cluster**: the layout ConfigMap of each namespace, the operation lock as a `kubendt-internal-lock` Lease per namespace, whether a namespace has a topology (its StatefulSets and Topology objects), the link uids in use (the Topology objects), and the system namespace `kubendt-system` with the layouts of deleted namespaces
+- **Tables**:
   - `driver_operation_history`: audit trail of all pod actions (indexed by namespace, pod_name, timestamp)
   - `node_positions`: frontend visualization coordinates
 
