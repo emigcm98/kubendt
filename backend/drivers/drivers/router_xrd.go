@@ -31,6 +31,7 @@ func NewXRDRouterDriver() *XRDRouterDriver {
 var _ capabilities.L2Capable = (*XRDRouterDriver)(nil)
 var _ capabilities.L3Capable = (*XRDRouterDriver)(nil)
 var _ drivers_meta.EffectiveInterfaceInspector = (*XRDRouterDriver)(nil)
+var _ drivers_meta.PodBoundPlanner = (*XRDRouterDriver)(nil)
 var _ drivers_meta.EffectiveSingleInterfaceInspector = (*XRDRouterDriver)(nil)
 var _ drivers_meta.EffectiveInterfaceStateInspector = (*XRDRouterDriver)(nil)
 var _ drivers_meta.GuestInterfaceMapper = (*XRDRouterDriver)(nil)
@@ -171,6 +172,10 @@ func (d *XRDRouterDriver) GuestInterface(namespace, podName, podInterface string
 	}
 	return g, nil
 }
+
+// PlansFromPod: the XR interface names come from the pod's map, so no
+// action resolves without one.
+func (*XRDRouterDriver) PlansFromPod() bool { return true }
 
 // xrCIDRToIPMask convierte "10.0.0.1/24" a ("10.0.0.1", "255.255.255.0", nil).
 // IOS-XR does not accept CIDR notation in interface commands.

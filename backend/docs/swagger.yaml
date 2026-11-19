@@ -693,6 +693,12 @@ definitions:
     type: object
   types.DriverInfo:
     properties:
+      aliases:
+        example:
+        - BasicHostDriver
+        items:
+          type: string
+        type: array
       capabilities:
         items:
           $ref: '#/definitions/types.CapabilityEntry'
@@ -705,9 +711,19 @@ definitions:
       isDefault:
         example: true
         type: boolean
+      knownImages:
+        example:
+        - quay.io/frrouting/frr:10.7.1
+        items:
+          type: string
+        type: array
       name:
         example: frr-router
         type: string
+      shells:
+        items:
+          $ref: '#/definitions/types.DriverShellEntry'
+        type: array
       tools:
         example:
         - trace
@@ -721,6 +737,8 @@ definitions:
     type: object
   types.DriverMethodEntry:
     properties:
+      example:
+        $ref: '#/definitions/types.DriverMethodExampleEntry'
       label:
         example: Bring interface up
         type: string
@@ -731,6 +749,18 @@ definitions:
         items:
           $ref: '#/definitions/types.DriverMethodParamEntry'
         type: array
+    type: object
+  types.DriverMethodExampleEntry:
+    properties:
+      commands:
+        example:
+        - ip link set eth1 up
+        items:
+          type: string
+        type: array
+      params:
+        additionalProperties: true
+        type: object
     type: object
   types.DriverMethodParamEntry:
     properties:
@@ -781,6 +811,15 @@ definitions:
       total:
         example: 3
         type: integer
+    type: object
+  types.DriverShellEntry:
+    properties:
+      label:
+        example: vtysh console
+        type: string
+      mode:
+        example: vtysh
+        type: string
     type: object
   types.DriversListResponse:
     properties:
@@ -3128,8 +3167,10 @@ paths:
       - drivers
   /drivers/{driver}:
     get:
-      description: Returns the full info (type, executor, capabilities and interface-name
-        constraints) for one registered driver. Same per-item shape used by `GET /drivers/`.
+      description: Returns the full info (type, executor, capabilities with their
+        actions and inspections, interface-name constraints, images tried, tools,
+        shells and deprecated aliases) for one registered driver. Same per-item shape
+        used by `GET /drivers/`.
       parameters:
       - description: Driver name
         in: path

@@ -98,11 +98,8 @@ const PodInfoPanel = ({
   // The driver's capabilities, read once per driver: the config tab's
   // reference and grouping, the state tab's section titles, the links tab.
   const [driverCaps, setDriverCaps] = useState([]);
-  const [driverExecutor, setDriverExecutor] = useState('');
-  const [driverInterfaceConstraints, setDriverInterfaceConstraints] = useState(null);
   const [driverKnownImages, setDriverKnownImages] = useState([]);
   const [loadingDriverCaps, setLoadingDriverCaps] = useState(false);
-  const [errorDriverCaps, setErrorDriverCaps] = useState(null);
 
   // --- METRICS ---
   const [podMetrics, setPodMetrics] = useState(null); // null = loading, false = unavailable, object = data
@@ -241,25 +238,16 @@ const PodInfoPanel = ({
   const loadDriverCaps = async () => {
     if (!pod?.driver) {
       setDriverCaps([]);
-      setDriverExecutor('');
-      setDriverInterfaceConstraints(null);
       setDriverKnownImages([]);
-      setErrorDriverCaps(null);
       return;
     }
 
     setLoadingDriverCaps(true);
-    setErrorDriverCaps(null);
 
     try {
       const res = await fetch(`${API_BASE_URL}/drivers/${pod.driver}`);
       if (!res.ok) throw new Error(`Error ${res.status}`);
       const data = await res.json();
-      setDriverExecutor(data?.executor || '');
-      // Backend omits this field when the driver imposes no extra rules
-      // beyond Linux kernel naming, so a null here is the normal case
-      // for hosts and generic switches.
-      setDriverInterfaceConstraints(data?.interfaceNameConstraints || null);
       setDriverKnownImages(Array.isArray(data?.knownImages) ? data.knownImages : []);
 
       const normalizedCaps = (data.capabilities || []).map((cap) => {
@@ -290,10 +278,7 @@ const PodInfoPanel = ({
     } catch (err) {
       console.error('❌ Error loading driver capabilities:', err);
       setDriverCaps([]);
-      setDriverExecutor('');
-      setDriverInterfaceConstraints(null);
       setDriverKnownImages([]);
-      setErrorDriverCaps('Error loading driver capabilities');
     } finally {
       setLoadingDriverCaps(false);
     }
@@ -472,7 +457,6 @@ const PodInfoPanel = ({
 
   useEffect(() => {
     setDriverCaps([]);
-    setErrorDriverCaps(null);
     setDriverHistory([]);
     setLoadingDriverHistory(false);
     setErrorDriverHistory(null);
@@ -686,11 +670,7 @@ const PodInfoPanel = ({
             <ConfigTab
               driverDisplay={driverDisplay}
               driverCaps={driverCaps}
-              driverExecutor={driverExecutor}
-              driverInterfaceConstraints={driverInterfaceConstraints}
-              driverKnownImages={driverKnownImages}
-              loadingDriverCaps={loadingDriverCaps}
-              errorDriverCaps={errorDriverCaps}
+              driverName={pod.driver}
               driverHistory={driverHistory}
               loadingDriverHistory={loadingDriverHistory}
               errorDriverHistory={errorDriverHistory}

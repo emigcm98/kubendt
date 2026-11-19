@@ -734,7 +734,7 @@ const docTemplate = `{
         },
         "/drivers/{driver}": {
             "get": {
-                "description": "Returns the full info (type, executor, capabilities and interface-name constraints) for one registered driver. Same per-item shape used by ` + "`" + `GET /drivers/` + "`" + `.",
+                "description": "Returns the full info (type, executor, capabilities with their actions and inspections, interface-name constraints, images tried, tools, shells and deprecated aliases) for one registered driver. Same per-item shape used by ` + "`" + `GET /drivers/` + "`" + `.",
                 "produces": [
                     "application/json"
                 ],
@@ -3909,6 +3909,15 @@ const docTemplate = `{
         "types.DriverInfo": {
             "type": "object",
             "properties": {
+                "aliases": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "BasicHostDriver"
+                    ]
+                },
                 "capabilities": {
                     "type": "array",
                     "items": {
@@ -3926,9 +3935,24 @@ const docTemplate = `{
                     "type": "boolean",
                     "example": true
                 },
+                "knownImages": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "quay.io/frrouting/frr:10.7.1"
+                    ]
+                },
                 "name": {
                     "type": "string",
                     "example": "frr-router"
+                },
+                "shells": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.DriverShellEntry"
+                    }
                 },
                 "tools": {
                     "type": "array",
@@ -3949,6 +3973,9 @@ const docTemplate = `{
         "types.DriverMethodEntry": {
             "type": "object",
             "properties": {
+                "example": {
+                    "$ref": "#/definitions/types.DriverMethodExampleEntry"
+                },
                 "label": {
                     "type": "string",
                     "example": "Bring interface up"
@@ -3962,6 +3989,24 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/types.DriverMethodParamEntry"
                     }
+                }
+            }
+        },
+        "types.DriverMethodExampleEntry": {
+            "type": "object",
+            "properties": {
+                "commands": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "ip link set eth1 up"
+                    ]
+                },
+                "params": {
+                    "type": "object",
+                    "additionalProperties": true
                 }
             }
         },
@@ -4033,6 +4078,19 @@ const docTemplate = `{
                 "total": {
                     "type": "integer",
                     "example": 3
+                }
+            }
+        },
+        "types.DriverShellEntry": {
+            "type": "object",
+            "properties": {
+                "label": {
+                    "type": "string",
+                    "example": "vtysh console"
+                },
+                "mode": {
+                    "type": "string",
+                    "example": "vtysh"
                 }
             }
         },

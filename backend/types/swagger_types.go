@@ -491,6 +491,15 @@ type DriverInfo struct {
 	Capabilities             []CapabilityEntry            `json:"capabilities"`
 	InterfaceNameConstraints *InterfaceNameConstraintsDoc `json:"interfaceNameConstraints,omitempty"`
 	Tools                    []string                     `json:"tools" example:"trace,iperf"`
+	KnownImages              []string                     `json:"knownImages" example:"quay.io/frrouting/frr:10.7.1"`
+	Shells                   []DriverShellEntry           `json:"shells"`
+	Aliases                  []string                     `json:"aliases" example:"BasicHostDriver"`
+}
+
+// DriverShellEntry is one shell a driver's nodes open, by its mode.
+type DriverShellEntry struct {
+	Mode  string `json:"mode" example:"vtysh"`
+	Label string `json:"label" example:"vtysh console"`
 }
 
 // DriversListResponse is returned by GET /drivers/.
@@ -509,9 +518,17 @@ type DriverMethodParamEntry struct {
 
 // DriverMethodEntry describes one action a driver supports.
 type DriverMethodEntry struct {
-	Name   string                   `json:"name" example:"link_up"`
-	Label  string                   `json:"label" example:"Bring interface up"`
-	Params []DriverMethodParamEntry `json:"params"`
+	Name    string                    `json:"name" example:"link_up"`
+	Label   string                    `json:"label" example:"Bring interface up"`
+	Params  []DriverMethodParamEntry  `json:"params"`
+	Example *DriverMethodExampleEntry `json:"example,omitempty"`
+}
+
+// DriverMethodExampleEntry is what the action resolves to for sample
+// parameters, absent for a driver that plans from the pod.
+type DriverMethodExampleEntry struct {
+	Params   map[string]interface{} `json:"params"`
+	Commands []string               `json:"commands" example:"ip link set eth1 up"`
 }
 
 // CapabilityEntry describes one capability of a driver.

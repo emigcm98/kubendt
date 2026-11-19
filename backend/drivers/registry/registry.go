@@ -2,6 +2,7 @@ package drivers_registry
 
 import (
 	"fmt"
+	"sort"
 
 	caps "kubendt/capabilities"
 )
@@ -57,6 +58,18 @@ func Canonical(name string) (string, bool) {
 		return target, true
 	}
 	return name, false
+}
+
+// AliasesOf lists the deprecated names that resolve to name, sorted.
+func AliasesOf(name string) []string {
+	var out []string
+	for alias, target := range driverAliases {
+		if target == name {
+			out = append(out, alias)
+		}
+	}
+	sort.Strings(out)
+	return out
 }
 
 // Register takes a typed constructor (func() T) whose T satisfies Driver.

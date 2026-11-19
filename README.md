@@ -8,7 +8,7 @@
    <a href="https://doi.org/10.5281/zenodo.21276320"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.21276320.svg" alt="DOI" /></a>
 </p>
 
-> Last reviewed: 18 Nov 2026
+> Last reviewed: 19 Nov 2026
 
 **KubeNDT** is a platform for deploying and operating virtual network topologies on Kubernetes.
 
@@ -292,7 +292,7 @@ View live at: http://localhost:8080/swagger/index.html
 
 1. Define the interface and declare its actions in `backend/capabilities/your_capability.go`: one `actions.Action` per action with its type, label, params and the method it calls
 2. Create a base implementation for reuse across drivers
-3. Add a sample of each action to `backend/helpers/testdata/actions.json` and regenerate the expected plans with `go test ./helpers -run TestActionPlans -update`
+3. Add a sample of each action to `backend/helpers/action_samples.json` and regenerate the expected plans with `go test ./helpers -run TestActionPlans -update`
 4. Use it in network configuration via POST `/network/configure`. Dispatch, validation and `GET /drivers` follow from the declaration
 
 ### QEMU Image Documentation

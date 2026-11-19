@@ -23,6 +23,14 @@ type MethodInfo struct {
 	Name   string      `json:"name"`
 	Label  string      `json:"label"`
 	Params []ParamInfo `json:"params"`
+	// What the action resolves to for sample parameters, when the driver
+	// plans without a pod.
+	Example *ActionExampleInfo `json:"example,omitempty"`
+}
+
+type ActionExampleInfo struct {
+	Params   map[string]any `json:"params"`
+	Commands []string       `json:"commands"`
 }
 
 type CapabilityInfo struct {
@@ -58,6 +66,16 @@ type DriverWithCapabilities struct {
 	// The images the driver was tried with; a node on another one deploys
 	// with an image_untested warning. Empty for a driver that takes any.
 	KnownImages []string `json:"knownImages"`
+	// The shells its nodes open: the pod shell, the serial console of a
+	// guest VM and what the driver declares.
+	Shells []ShellInfo `json:"shells"`
+	// Names kept from an earlier version that resolve to this driver.
+	Aliases []string `json:"aliases"`
+}
+
+type ShellInfo struct {
+	Mode  string `json:"mode"`
+	Label string `json:"label"`
 }
 
 type DriverOperationHistoryEntry struct {
@@ -124,7 +142,11 @@ func driverCapsToResponse(d helpers.DriverCaps) DriverWithCapabilities {
 			for _, p := range act.Params {
 				params = append(params, ParamInfo{Name: p.Name, Type: string(p.Kind), Required: p.Required})
 			}
-			methods = append(methods, MethodInfo{Name: act.Type, Label: act.Label, Params: params})
+			m := MethodInfo{Name: act.Type, Label: act.Label, Params: params}
+			if ex, ok := d.Examples[act.Type]; ok {
+				m.Example = &ActionExampleInfo{Params: ex.Params, Commands: ex.Commands}
+			}
+			methods = append(methods, m)
 		}
 		inspections := make([]types.InspectionInfo, 0, len(cd.Inspections))
 		for _, in := range cd.Inspections {
@@ -156,6 +178,11 @@ func driverCapsToResponse(d helpers.DriverCaps) DriverWithCapabilities {
 		}
 	}
 
+	shells := make([]ShellInfo, 0, len(d.Shells))
+	for _, s := range d.Shells {
+		shells = append(shells, ShellInfo{Mode: s.Mode, Label: s.Label})
+	}
+
 	return DriverWithCapabilities{
 		Name:                     d.Name,
 		Type:                     d.Type,
@@ -165,6 +192,8 @@ func driverCapsToResponse(d helpers.DriverCaps) DriverWithCapabilities {
 		InterfaceNameConstraints: constraints,
 		Tools:                    d.Tools,
 		KnownImages:              append([]string{}, d.KnownImages...),
+		Shells:                   shells,
+		Aliases:                  append([]string{}, d.Aliases...),
 	}
 }
 

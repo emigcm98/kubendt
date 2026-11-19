@@ -507,14 +507,6 @@
   font-size: 0.85rem;
 }
 
-.cap-code {
-  background: var(--info-bg);
-  padding: 0.05rem 0.3rem;
-  border-radius: var(--radius-sm);
-  font-size: 0.82rem;
-  color: var(--text-heading);
-}
-
 /* Section headers inside the capability / interface detail card. */
 .details-scroll h5 {
   margin: 0.75rem 0 0.3rem;
@@ -743,128 +735,6 @@
 }
 
 /* Lista de métodos bonica */
-.cap-methods-list {
-  margin: 0.25rem 0 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-
-.cap-methods-list li,
-.method-item {
-  position: relative;
-  display: flex !important;
-  align-items: baseline;
-  gap: 0.4rem;
-  font-size: 0.85rem;
-}
-
-.method-code {
-  flex-shrink: 0;
-  padding: 2px 8px;
-  cursor: pointer;
-  background: var(--info-bg);
-  color: var(--primary);
-  border-radius: var(--radius-pill);
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 0.78rem;
-  font-weight: 600;
-  transition:
-    background-color 0.15s ease,
-    color 0.15s ease;
-}
-
-.method-code:hover {
-  background: var(--primary);
-  color: var(--text-on-brand);
-}
-
-.method-signature {
-  color: var(--text-muted);
-  font-size: 0.8rem;
-}
-
-.method-popover {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  padding: 0;
-  min-width: 240px;
-  max-width: 280px;
-  animation: popoverFadeIn 0.2s ease-out;
-  white-space: normal;
-  overflow: visible;
-}
-
-@keyframes popoverFadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.popover-content {
-  padding: 8px 12px;
-}
-
-.popover-header {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--primary);
-  margin-bottom: 8px;
-  border-bottom: 1px solid var(--border-light);
-  padding-bottom: 6px;
-}
-
-.popover-params {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-}
-
-.params-label {
-  font-weight: 600;
-  color: var(--text-body);
-  margin-bottom: 4px;
-  font-size: 0.8rem;
-  text-transform: uppercase;
-}
-
-.param-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 4px 0;
-  padding: 4px 4px;
-  background: #f5f5f5;
-  border-radius: 3px;
-}
-
-.param-name {
-  font-weight: 600;
-  color: var(--primary);
-  font-family: monospace;
-}
-
-.param-type {
-  font-size: 0.75rem;
-  color: var(--text-subtle);
-  background: #efefef;
-  padding: 2px 6px;
-  border-radius: 2px;
-  font-family: monospace;
-}
-
-.cap-desc {
-  color: var(--text-muted);
-  margin-top: 0.2rem;
-  margin-bottom: 0.6rem;
-}
-
 .driver-header {
   position: sticky;
   top: 0;
@@ -1363,93 +1233,28 @@
 .config-group-label {
   flex: 1;
 }
-.config-reference {
-  margin-top: 0.4rem;
-  border-top: 1px solid var(--border-light);
-  padding-top: 0.4rem;
-}
-.config-reference-toggle {
-  display: flex;
+/* The link to the driver's page, under the history. */
+.config-reference-link {
+  display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  cursor: pointer;
-  user-select: none;
-  font-size: 0.82rem;
+  gap: 7px;
+  margin: 0.6rem 0.8rem 0;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.85rem;
   font-weight: 600;
-  color: var(--text-muted);
-}
-.config-reference-toggle:hover {
-  color: var(--primary);
-}
-.config-reference-body {
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-  padding-top: 0.45rem;
-  font-size: 0.82rem;
-}
-.config-reference-facts {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-}
-.config-reference-image + .config-reference-image {
-  margin-left: 0.3rem;
-}
-.config-reference-caps {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-}
-.config-cap-chip {
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text-heading);
-  border-radius: 999px;
-  padding: 0.15rem 0.55rem;
-  font-size: 0.76rem;
   cursor: pointer;
-}
-.config-cap-chip:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-}
-.config-cap-chip.active {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: var(--text-on-brand);
-}
-/* The universal ones (tc, custom) run on any node outside the driver: a
-   row of their own, dashed and muted, so they do not read as the driver's. */
-.config-reference-universal {
-  align-items: center;
-}
-.config-reference-universal-label {
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-subtle);
-}
-.config-cap-chip.universal {
-  border-style: dashed;
-  color: var(--text-muted);
-}
-.config-cap-chip.universal.active {
-  background: var(--text-muted);
-  border-color: var(--text-muted);
-  border-style: solid;
-  color: var(--text-on-brand);
-}
-.config-reference-detail {
-  background: var(--surface);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
-  padding: 0.5rem 0.6rem;
 }
 
-/* The clear of one capability's operations: text, so it does not read as
-   one more trash icon next to the rows'. */
+.config-reference-link:hover {
+  background: var(--panel-header-from);
+  color: var(--text-heading);
+}
+
 .config-group-clear {
   border: none;
   background: none;
