@@ -9,14 +9,14 @@ import (
 // What each driver offers to read, by capability.
 func TestInspectionsPerDriver(t *testing.T) {
 	want := map[string]map[string][]string{
-		"HostDriver":             {"L3Capable": {"neighbors", "routes"}},
-		"FaucetControllerDriver": {"L3Capable": {"neighbors", "routes"}, "SDNControllerCapable": {"datapath_ports", "datapaths", "learned_hosts"}},
-		"LinuxSwitchDriver":      {"L3Capable": {"neighbors", "routes"}, "SwitchCapable": {"bridge_fdb"}, "VLANCapable": {"vlan_ports"}, "STPCapable": {"stp_bridges", "stp_ports"}},
-		"OpenVSwitchDriver":      {"SwitchCapable": {"bridge_fdb"}, "VLANCapable": {"vlan_ports"}, "STPCapable": {"stp_bridges", "stp_ports"}, "OpenFlowCapable": {"openflow_bridges", "openflow_flows"}},
-		"P4SwitchDriver":         {"P4Capable": {"p4_counters", "p4_entries", "p4_multicast_groups", "p4_ports", "p4_registers", "p4_tables"}},
-		"LinuxRouterDriver":      {"L3Capable": {"neighbors", "routes"}, "NATCapable": {"nat_rules"}, "SwitchCapable": {"bridge_fdb"}, "VLANCapable": {"vlan_ports"}, "STPCapable": {"stp_bridges", "stp_ports"}},
-		"FRRRouterDriver":        {"L3Capable": {"neighbors", "routes"}, "NATCapable": {"nat_rules"}, "SwitchCapable": {"bridge_fdb"}, "VLANCapable": {"vlan_ports"}, "STPCapable": {"stp_bridges", "stp_ports"}, "OSPFCapable": {"ospf_interfaces", "ospf_neighbors"}, "OSPF6Capable": {"ospf6_neighbors"}, "RIPCapable": {"rip_routes"}, "BGPCapable": {"bgp_summary"}, "ISISCapable": {"isis_neighbors"}},
-		"VyOSRouterDriver":       {"L3Capable": {"neighbors", "routes"}, "NATCapable": {"nat_rules"}, "OSPFCapable": {"ospf_interfaces", "ospf_neighbors"}, "OSPF6Capable": {"ospf6_neighbors"}, "RIPCapable": {"rip_routes"}, "BGPCapable": {"bgp_summary"}, "ISISCapable": {"isis_neighbors"}},
+		"HostDriver":             {"L2Capable": {"interfaces"}, "L3Capable": {"neighbors", "routes"}},
+		"FaucetControllerDriver": {"L2Capable": {"interfaces"}, "L3Capable": {"neighbors", "routes"}, "SDNControllerCapable": {"datapath_ports", "datapaths", "learned_hosts"}},
+		"LinuxSwitchDriver":      {"L2Capable": {"interfaces"}, "L3Capable": {"neighbors", "routes"}, "SwitchCapable": {"bridge_fdb"}, "VLANCapable": {"vlan_ports"}, "STPCapable": {"stp_bridges", "stp_ports"}},
+		"OpenVSwitchDriver":      {"L2Capable": {"interfaces"}, "SwitchCapable": {"bridge_fdb"}, "VLANCapable": {"vlan_ports"}, "STPCapable": {"stp_bridges", "stp_ports"}, "OpenFlowCapable": {"openflow_bridges", "openflow_flows"}},
+		"P4SwitchDriver":         {"L2Capable": {"interfaces"}, "P4Capable": {"p4_counters", "p4_entries", "p4_multicast_groups", "p4_ports", "p4_registers", "p4_tables"}},
+		"LinuxRouterDriver":      {"L2Capable": {"interfaces"}, "L3Capable": {"neighbors", "routes"}, "NATCapable": {"nat_rules"}, "SwitchCapable": {"bridge_fdb"}, "VLANCapable": {"vlan_ports"}, "STPCapable": {"stp_bridges", "stp_ports"}},
+		"FRRRouterDriver":        {"L2Capable": {"interfaces"}, "L3Capable": {"neighbors", "routes"}, "NATCapable": {"nat_rules"}, "SwitchCapable": {"bridge_fdb"}, "VLANCapable": {"vlan_ports"}, "STPCapable": {"stp_bridges", "stp_ports"}, "OSPFCapable": {"ospf_interfaces", "ospf_neighbors"}, "OSPF6Capable": {"ospf6_neighbors"}, "RIPCapable": {"rip_routes"}, "BGPCapable": {"bgp_summary"}, "ISISCapable": {"isis_neighbors"}},
+		"VyOSRouterDriver":       {"L2Capable": {"interfaces"}, "L3Capable": {"neighbors", "routes"}, "NATCapable": {"nat_rules"}, "OSPFCapable": {"ospf_interfaces", "ospf_neighbors"}, "OSPF6Capable": {"ospf6_neighbors"}, "RIPCapable": {"rip_routes"}, "BGPCapable": {"bgp_summary"}, "ISISCapable": {"isis_neighbors"}},
 		"EXOSSwitchDriver":       {"SwitchCapable": {"bridge_fdb"}, "VLANCapable": {"vlan_ports"}, "STPCapable": {"stp_bridges", "stp_ports"}},
 	}
 	drivers := map[string]any{

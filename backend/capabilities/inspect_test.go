@@ -23,6 +23,57 @@ func TestParseIPRouteBusyBoxAndIproute2(t *testing.T) {
 	}
 }
 
+func TestParseIPAddr(t *testing.T) {
+	text := `1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet 10.255.0.1/32 scope global lo
+       valid_lft forever preferred_lft forever
+2: eth0@if40: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue state UP group default
+    link/ether 3a:11:22:33:44:55 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet 10.244.2.150/24 brd 10.244.2.255 scope global eth0
+       valid_lft forever preferred_lft forever
+3: eth1@if41: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue master br0 state UP group default qlen 1000
+    link/ether 02:00:00:00:00:01 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet6 fe80::1/64 scope link
+       valid_lft forever preferred_lft forever
+4: eth1.10@eth1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue state UP group default qlen 1000
+    link/ether 02:00:00:00:00:01 brd ff:ff:ff:ff:ff:ff
+    inet 10.10.0.1/24 scope global eth1.10
+       valid_lft forever preferred_lft forever
+    inet6 fd00:10::1/64 scope global
+       valid_lft forever preferred_lft forever
+    inet6 fe80::1/64 scope link
+       valid_lft forever preferred_lft forever
+5: br0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue state UP group default qlen 1000
+    link/ether 02:00:00:00:00:01 brd ff:ff:ff:ff:ff:ff
+6: eth2@if42: <BROADCAST,MULTICAST> mtu 1450 qdisc noop state DOWN group default qlen 1000
+    link/ether 02:00:00:00:00:02 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+`
+	rows := parseIPAddr(text)
+	if len(rows) != 5 {
+		t.Fatalf("rows: %v", rows)
+	}
+	if rows[0]["interface"] != "lo" || rows[0]["state"] != "UP" || rows[0]["addresses"] != "127.0.0.1/8, 10.255.0.1/32" || rows[0]["mac"] != "" {
+		t.Errorf("lo: %v", rows[0])
+	}
+	if rows[1]["interface"] != "br0" || rows[2]["interface"] != "eth1" || rows[2]["master"] != "br0" || rows[2]["parent"] != "" || rows[2]["addresses"] != "" || rows[2]["mac"] != "02:00:00:00:00:01" {
+		t.Errorf("bridge and its port: %v %v", rows[1], rows[2])
+	}
+	if rows[3]["interface"] != "eth1.10" || rows[3]["parent"] != "eth1" || rows[3]["addresses"] != "10.10.0.1/24, fd00:10::1/64" || rows[3]["mtu"] != "1450" {
+		t.Errorf("a vlan subinterface: %v", rows[3])
+	}
+	if rows[4]["interface"] != "eth2" || rows[4]["state"] != "DOWN" {
+		t.Errorf("a down port: %v", rows[4])
+	}
+	busybox := "1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue qlen 1000\n    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00\n    inet 127.0.0.1/8 scope host lo\n2: eth1@if7: <BROADCAST,MULTICAST,UP,LOWER_UP,M-DOWN> mtu 1450 qdisc noqueue \n    link/ether 02:00:00:00:00:03 brd ff:ff:ff:ff:ff:ff\n    inet 10.0.0.2/24 brd 10.0.0.255 scope global eth1\n3: eth2@if8: <BROADCAST,MULTICAST> mtu 1450 qdisc noop \n    link/ether 02:00:00:00:00:04 brd ff:ff:ff:ff:ff:ff\n"
+	rows = parseIPAddr(busybox)
+	if len(rows) != 3 || rows[1]["state"] != "UP" || rows[1]["addresses"] != "10.0.0.2/24" || rows[2]["state"] != "DOWN" {
+		t.Errorf("busybox, no state word: %v", rows)
+	}
+}
+
 func TestParseIPNeigh(t *testing.T) {
 	rows := parseIPNeigh("172.22.48.1 dev eth1 lladdr fe:6d:2a:97:bb:bd used 0/0/0 probes 1 STALE\n172.22.17.1 dev eth1 lladdr ce:77:8b:91:55:e5 STALE proto zebra\nfe80::1 dev eth1 lladdr 02:00:00:00:00:01 router REACHABLE\nfe80::2 dev eth0 lladdr 02:00:00:00:00:02 STALE\n")
 	if len(rows) != 3 || rows[0]["mac"] != "fe:6d:2a:97:bb:bd" || rows[0]["state"] != "STALE" || rows[1]["state"] != "STALE" || rows[2]["state"] != "REACHABLE" || rows[2]["interface"] != "eth1" {

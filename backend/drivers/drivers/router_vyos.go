@@ -509,6 +509,23 @@ func (VyOSRouterDriver) Neighbors(namespace, pod string) (capabilities.Rows, err
 	return out, nil
 }
 
+// Interfaces reads the guest's, without the slirp management NIC either.
+func (VyOSRouterDriver) Interfaces(namespace, pod string) (capabilities.Rows, error) {
+	rows, err := capabilities.LinuxInterfacesThrough(func(argv []string) ([]byte, error) {
+		return executor.ExecAndGet(namespace, pod, append([]string{"ssh_qemu", "sudo"}, argv...))
+	})
+	if err != nil {
+		return nil, err
+	}
+	out := rows[:0]
+	for _, r := range rows {
+		if r["interface"] != vyosInternalMgmtIface {
+			out = append(out, r)
+		}
+	}
+	return out, nil
+}
+
 func (d VyOSRouterDriver) OSPFNeighbors(namespace, pod string) (capabilities.Rows, error) {
 	return capabilities.FRROSPFNeighbors(d, namespace, pod)
 }
