@@ -1,6 +1,7 @@
 package capabilities
 
 import (
+	"sort"
 	"strings"
 
 	"kubendt/executor"
@@ -90,6 +91,80 @@ func parseIPNeigh(text string) Rows {
 	return rows
 }
 
+// parseIPAddr reads `ip addr show`: a header per interface ("2: eth1@if9:
+// <FLAGS> mtu 1450 ... master br0 state UP") and, indented under it, its
+// link, inet and inet6 lines. The cluster interface is left out, and so are
+// link-local addresses.
+func parseIPAddr(text string) Rows {
+	var rows Rows
+	var cur map[string]string
+	var addrs []string
+	flush := func() {
+		if cur != nil {
+			cur["addresses"] = strings.Join(addrs, ", ")
+			rows = append(rows, cur)
+		}
+		cur, addrs = nil, nil
+	}
+	for _, line := range strings.Split(text, "\n") {
+		tokens := strings.Fields(line)
+		if len(tokens) == 0 {
+			continue
+		}
+		if !strings.HasPrefix(line, " ") && len(tokens) >= 3 && strings.HasSuffix(tokens[1], ":") {
+			flush()
+			name := strings.TrimSuffix(tokens[1], ":")
+			parent := ""
+			if at := strings.Index(name, "@"); at >= 0 {
+				// A VLAN rides on a named parent; a veth names its peer by index.
+				if p := name[at+1:]; !strings.HasPrefix(p, "if") {
+					parent = p
+				}
+				name = name[:at]
+			}
+			if name == "eth0" {
+				continue
+			}
+			flags := strings.Trim(tokens[2], "<>")
+			kv := keyed(tokens[3:], "mtu", "qdisc", "master", "state", "group", "qlen", "link-netnsid", "minmtu", "maxmtu")
+			state := kv["state"]
+			if state == "" || state == "UNKNOWN" {
+				// BusyBox prints no state, and a VXLAN or a dummy has none in
+				// the kernel: the carrier flag tells it.
+				state = "DOWN"
+				if strings.Contains(flags, "LOWER_UP") {
+					state = "UP"
+				}
+			}
+			cur = map[string]string{"interface": name, "state": state, "mtu": kv["mtu"], "mac": "", "master": kv["master"], "parent": parent}
+			continue
+		}
+		if cur == nil {
+			continue
+		}
+		switch tokens[0] {
+		case "link/ether":
+			if len(tokens) > 1 {
+				cur["mac"] = tokens[1]
+			}
+		case "inet", "inet6":
+			if len(tokens) > 1 && keyed(tokens[2:], "scope", "brd", "peer")["scope"] != "link" {
+				addrs = append(addrs, tokens[1])
+			}
+		}
+	}
+	flush()
+	// By name, the loopback first, whatever order the kernel indexed them in.
+	sort.SliceStable(rows, func(i, j int) bool {
+		a, b := rows[i]["interface"], rows[j]["interface"]
+		if (a == "lo") != (b == "lo") {
+			return a == "lo"
+		}
+		return a < b
+	})
+	return rows
+}
+
 func parseBridgeFDB(text string) Rows {
 	var rows Rows
 	for _, line := range strings.Split(text, "\n") {
@@ -124,6 +199,14 @@ func parseNATRules(text, family string) Rows {
 		rows = append(rows, map[string]string{"family": family, "chain": tokens[1], "rule": strings.Join(tokens[2:], " ")})
 	}
 	return rows
+}
+
+func linuxInterfaces(read linuxReader) (Rows, error) {
+	out, err := read([]string{"ip", "addr", "show"})
+	if err != nil {
+		return nil, err
+	}
+	return parseIPAddr(string(out)), nil
 }
 
 func linuxRoutes(read linuxReader) (Rows, error) {
@@ -166,6 +249,10 @@ func linuxFDB(read linuxReader) (Rows, error) {
 	return parseBridgeFDB(string(out)), nil
 }
 
+func (L2Base) Interfaces(namespace, pod string) (Rows, error) {
+	return linuxInterfaces(netnsReader(namespace, pod))
+}
+
 func (L3Base) Routes(namespace, pod string) (Rows, error) {
 	return linuxRoutes(netnsReader(namespace, pod))
 }
@@ -186,4 +273,9 @@ func (SwitchBase) BridgeFDB(namespace, pod string) (Rows, error) {
 // driver's own, a guest wrapper for a VM.
 func LinuxNeighborsThrough(read func(argv []string) ([]byte, error)) (Rows, error) {
 	return linuxNeighbors(read)
+}
+
+// LinuxInterfacesThrough reads the interfaces the same way.
+func LinuxInterfacesThrough(read func(argv []string) ([]byte, error)) (Rows, error) {
+	return linuxInterfaces(read)
 }

@@ -13,6 +13,10 @@ type Rows = []map[string]string
 // The inspector interfaces. A driver offers an inspection by implementing
 // the interface; the bases below give the Linux reads, FRR and VyOS read
 // through vtysh.
+type InterfaceInspector interface {
+	Interfaces(namespace, pod string) (Rows, error)
+}
+
 type RouteInspector interface {
 	Routes(namespace, pod string) (Rows, error)
 }
@@ -86,6 +90,9 @@ func cols(pairs ...string) []actions.Column {
 }
 
 func init() {
+	actions.RegisterInspections[InterfaceInspector]("L2Capable",
+		actions.Inspection[InterfaceInspector]{ID: "interfaces", Label: "Interfaces", Columns: append(cols("interface", "Interface", "state", "State", "mtu", "MTU", "mac", "MAC"), actions.Column{Name: "addresses", Label: "Addresses", Description: "Global addresses, link-locals left out"}, actions.Column{Name: "master", Label: "Master", Description: "The bridge the interface is a port of"}, actions.Column{Name: "parent", Label: "Parent", Description: "The interface a VLAN subinterface rides on"}),
+			Run: func(c InterfaceInspector, ns, pod string) (Rows, error) { return c.Interfaces(ns, pod) }})
 	actions.RegisterInspections[RouteInspector]("L3Capable",
 		actions.Inspection[RouteInspector]{ID: "routes", Label: "Routing table", Columns: append(cols("destination", "Destination", "protocol", "Protocol", "gateway", "Gateway", "interface", "Interface"), actions.Column{Name: "distance", Label: "AD", Description: "Administrative distance"}, actions.Column{Name: "metric", Label: "Metric", Description: "The protocol's own metric"}, actions.Column{Name: "status", Label: "Status"}),
 			Run: func(c RouteInspector, ns, pod string) (Rows, error) { return c.Routes(ns, pod) }})
