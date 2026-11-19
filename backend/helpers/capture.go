@@ -4,10 +4,39 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
+
+const (
+	CaptureMaxMBEnv     = "KUBENDT_CAPTURE_MAX_MB"
+	DefaultCaptureMaxMB = 100
+)
+
+// CaptureMaxMB is the size a capture's pcap may reach before tshark stops it.
+// The file lives in the toolbox's writable layer, which counts as the pod's
+// ephemeral storage on the worker, so without a cap a capture left running
+// fills the disk and the kubelet evicts the lab. An unusable value is an
+// error, as with the MTU: it is a cluster setting and a silent default would
+// hide the typo.
+func CaptureMaxMB() (int, error) {
+	return parseCaptureMaxMB(os.Getenv(CaptureMaxMBEnv))
+}
+
+func parseCaptureMaxMB(raw string) (int, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return DefaultCaptureMaxMB, nil
+	}
+	n, err := strconv.Atoi(raw)
+	if err != nil || n < 1 || n > 100000 {
+		return 0, fmt.Errorf("%s=%q is not a size in MB between 1 and 100000", CaptureMaxMBEnv, raw)
+	}
+	return n, nil
+}
 
 // CapturePcapPathFor returns the in-container path where a capture run writes
 // its pcap. Each run has its own file so a freshly started tshark never shares
@@ -59,12 +88,14 @@ func ParseFrameRanges(s string) ([]string, bool) {
 // disk (for later download / re-dissection) and streams the standard Wireshark
 // columns (No/Time/Source/Destination/Protocol/Length/Info) as tab-separated
 // lines on stdout. An optional BPF capture filter is appended as a single argv
-// element, so it never touches a shell.
-func BuildCaptureCommand(iface, bpf, pcapPath string) []string {
+// element, so it never touches a shell. tshark stops by itself once the file
+// reaches maxMB.
+func BuildCaptureCommand(iface, bpf, pcapPath string, maxMB int) []string {
 	cmd := []string{
 		"tshark",
 		"-i", iface,
 		"-w", pcapPath, // write the pcap alongside the live stream
+		"-a", fmt.Sprintf("filesize:%d", maxMB*1000), // tshark counts kB
 		"-F", "pcap", // classic pcap (not pcapng) so it opens anywhere
 		"-P", // force per-packet printing even though -w is set
 		"-l", // line-buffer stdout so rows arrive live

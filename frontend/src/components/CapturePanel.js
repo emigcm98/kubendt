@@ -149,6 +149,8 @@ const CapturePanel = ({
   const [tick, setTick] = useState(0);
   const [state, setState] = useState('connecting'); // connecting|starting|capturing|stopped|lost|error
   const [errorMsg, setErrorMsg] = useState(null);
+  // Why the last run stopped by itself, the size cap for now.
+  const [notice, setNotice] = useState(null);
   const [container, setContainer] = useState(null);
   const [displayFilter, setDisplayFilter] = useState('');
   const [filterInput, setFilterInput] = useState('');
@@ -235,8 +237,11 @@ const CapturePanel = ({
               capContainerRef.current = msg.container;
               capPcapRef.current = msg.pcap;
               setContainer(msg.container);
-            } else if (msg.type === 'status') setState(msg.state);
-            else if (msg.type === 'error') {
+            } else if (msg.type === 'status') {
+              setState(msg.state);
+              if (msg.reason === 'size_cap')
+                setNotice(`Capture stopped at the ${msg.max_mb} MB cap.`);
+            } else if (msg.type === 'error') {
               setErrorMsg(msg.message);
               setState('error');
             }
@@ -260,6 +265,7 @@ const CapturePanel = ({
     intentionalCloseRef.current = true;
     cleanupSocket();
     clearMemory();
+    setNotice(null);
     connect();
   }, [cleanupSocket, clearMemory, connect]);
 
@@ -478,7 +484,7 @@ const CapturePanel = ({
       connecting: 'connecting…',
       starting: 'starting container…',
       capturing: 'capturing',
-      stopped: 'stopped',
+      stopped: notice ? 'stopped at the cap' : 'stopped',
       lost: 'disconnected',
       error: 'error',
     }[state] || state;
@@ -499,7 +505,7 @@ const CapturePanel = ({
           <span className="cap-title-pod">{pod}</span>
           <span className="cap-title-iface">· {iface}</span>
         </span>
-        <span className="cap-meta">
+        <span className="cap-meta" title={notice || undefined}>
           {count} pkts · {statusLabel}
         </span>
         <div className="cap-header-btns">
@@ -648,7 +654,9 @@ const CapturePanel = ({
                   : state === 'error'
                     ? errorMsg || 'Capture error'
                     : state === 'stopped'
-                      ? 'Capture stopped. Press Start to capture again.'
+                      ? notice
+                        ? `${notice} Download it, or press Start for a new run.`
+                        : 'Capture stopped. Press Start to capture again.'
                       : state === 'lost'
                         ? 'Disconnected. Press Start to reconnect.'
                         : 'No packets'}

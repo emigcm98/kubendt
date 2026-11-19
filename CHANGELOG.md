@@ -30,6 +30,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Fixed
 
 - The cluster guide's kubeadm option installs flannel before Meshnet and points at a Kubernetes repository that reads its `v1beta4` configuration.
+- A capture stops by itself at a size cap, `KUBENDT_CAPTURE_MAX_MB` (100 by default), so one left running cannot fill a worker's disk and get the lab evicted.
 
 ## [1.10.0] - 2026-11-13
 
