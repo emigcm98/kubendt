@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.11.0] - 2026-11-19
+
 ### Added
 
 - `GET` and `PUT /network/layout/{namespace}`: the graph's node positions and annotations as one document kept in the namespace, the `kubendt-internal-layout` ConfigMap, so a lab carries its layout and any backend sees it. `/network/positions` works on the same document, and the SQLite rows fill it once and mirror it while a database is open.
@@ -357,7 +359,8 @@ Initial public release. KubeNDT deploys and operates virtual network topologies 
 - Health, readiness and version endpoints, and Swagger docs at `/swagger`.
 - Container images published to GHCR and a Docker Compose deployment.
 
-[Unreleased]: https://github.com/emigcm98/kubendt/compare/v1.10.0...HEAD
+[Unreleased]: https://github.com/emigcm98/kubendt/compare/v1.11.0...HEAD
+[1.11.0]: https://github.com/emigcm98/kubendt/compare/v1.10.0...v1.11.0
 [1.10.0]: https://github.com/emigcm98/kubendt/compare/v1.9.0...v1.10.0
 [1.9.0]: https://github.com/emigcm98/kubendt/compare/v1.8.0...v1.9.0
 [1.8.0]: https://github.com/emigcm98/kubendt/compare/v1.7.0...v1.8.0
