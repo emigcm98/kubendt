@@ -549,7 +549,7 @@ func swaggerGetDrivers() {}
 // swaggerGetDriver godoc
 //
 //	@Summary      Get a single driver
-//	@Description  Returns the full info (type, executor, capabilities and interface-name constraints) for one registered driver. Same per-item shape used by `GET /drivers/`.
+//	@Description  Returns the full info (type, executor, capabilities with their actions and inspections, interface-name constraints, images tried, tools, shells and deprecated aliases) for one registered driver. Same per-item shape used by `GET /drivers/`.
 //	@Tags         drivers
 //	@Produce      json
 //	@Param        driver  path      string  true  "Driver name"

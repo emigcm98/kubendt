@@ -58,29 +58,15 @@ func loadDriver(t *testing.T, name string) any {
 // knownActionTypes is every registered action, driver bound or universal.
 func knownActionTypes() []string { return actions.Types() }
 
-// loadFixtures reads testdata/actions.json and checks it holds exactly one
-// sample per known action type, so a new action cannot land without one.
+// loadFixtures is the sample of every action, checked to hold one per known
+// action type, so a new action cannot land without one.
 func loadFixtures(t *testing.T) map[string]types.ActionEntry {
 	t.Helper()
-	raw, err := os.ReadFile(filepath.Join("testdata", "actions.json"))
-	if err != nil {
-		t.Fatalf("reading fixtures: %v", err)
-	}
-	var entries []types.ActionEntry
-	if err := json.Unmarshal(raw, &entries); err != nil {
-		t.Fatalf("parsing fixtures: %v", err)
-	}
-	byType := map[string]types.ActionEntry{}
-	for _, e := range entries {
-		if _, dup := byType[e.Type]; dup {
-			t.Errorf("fixture %q appears twice in testdata/actions.json", e.Type)
-		}
-		byType[e.Type] = e
-	}
+	byType := helpers.ActionSamples()
 	known := knownActionTypes()
 	for _, actionType := range known {
 		if _, ok := byType[actionType]; !ok {
-			t.Errorf("action %q has no sample in testdata/actions.json", actionType)
+			t.Errorf("action %q has no sample in action_samples.json", actionType)
 		}
 	}
 	knownSet := map[string]bool{}
@@ -89,7 +75,7 @@ func loadFixtures(t *testing.T) map[string]types.ActionEntry {
 	}
 	for actionType := range byType {
 		if !knownSet[actionType] {
-			t.Errorf("fixture %q is not a known action", actionType)
+			t.Errorf("sample %q is not a known action", actionType)
 		}
 	}
 	return byType
@@ -213,6 +199,35 @@ func TestActionPlans(t *testing.T) {
 			if _, ok := got[actionType]; !ok {
 				t.Errorf("%s: testdata has %s, which is no longer an action", driverName, actionType)
 			}
+		}
+	}
+}
+
+// TestActionExamplesFollowThePlans: the drivers listing shows, for every
+// action, the commands of its sample, and plannedDrivers is exactly the set
+// of drivers that plan without a pod.
+func TestActionExamplesFollowThePlans(t *testing.T) {
+	registerDrivers.Do(drivers_base.RegisterAllDrivers)
+	planned := map[string]bool{}
+	for _, name := range plannedDrivers {
+		planned[name] = true
+	}
+	for _, d := range drivers_registry.ListAll() {
+		if offline := helpers.PlansOffline(loadDriver(t, d.Name)); offline != planned[d.Name] {
+			t.Errorf("%s: plans offline %v, in plannedDrivers %v", d.Name, offline, planned[d.Name])
+		}
+	}
+	fixtures := loadFixtures(t)
+	for _, name := range plannedDrivers {
+		driver := loadDriver(t, name)
+		p := planFor(t, name, driver, fixtures["set_ip"])
+		if p.Unsupported {
+			continue
+		}
+		want := helpers.PlannedAction{Executor: p.Executor, Commands: p.Commands}.CommandStrings()
+		ex := helpers.ActionExamples(name, driver)["set_ip"]
+		if !reflect.DeepEqual(ex.Commands, want) || ex.Params["iface"] != "eth1" {
+			t.Errorf("%s set_ip example: got %v %v, want %v", name, ex.Params, ex.Commands, want)
 		}
 	}
 }

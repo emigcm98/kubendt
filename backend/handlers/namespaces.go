@@ -63,6 +63,10 @@ func ListNamespaces(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"namespaces": namespaceList})
 }
 
+// Names the frontend routes as pages of its own: a namespace called like
+// one could never be opened. The list grows with the pages.
+var reservedNamespaceNames = map[string]bool{"drivers": true}
+
 func CreateNamespace(c *gin.Context) {
 	var request struct {
 		Namespace string `json:"namespace"`
@@ -75,6 +79,10 @@ func CreateNamespace(c *gin.Context) {
 	}
 
 	namespace := request.Namespace
+	if reservedNamespaceNames[namespace] {
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("'%s' is a page of the UI, choose another name", namespace)})
+		return
+	}
 
 	err := helpers.CreateNamespace(namespace)
 	if err != nil {

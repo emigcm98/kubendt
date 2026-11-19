@@ -22,6 +22,9 @@ type DriverCaps struct {
 	InterfaceNameConstraints *drivers_meta.InterfaceNameConstraints
 	Tools                    []string
 	KnownImages              []string
+	Shells                   []drivers_meta.ShellSpec
+	Aliases                  []string
+	Examples                 map[string]ActionExample
 }
 
 // ResolveDriverCaps: resolves type + capabilities for a driver by name.
@@ -53,6 +56,9 @@ func ResolveDriverCaps(name string) (DriverCaps, error) {
 		InterfaceNameConstraints: constraints,
 		Tools:                    DriverTools(inst),
 		KnownImages:              knownImages(inst),
+		Shells:                   shellsFor(inst, isGuestVM(inst)),
+		Aliases:                  drvreg.AliasesOf(name),
+		Examples:                 ActionExamples(name, inst),
 	}, nil
 }
 

@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - A modify takes the graph with it: `add.annotations` draws shapes or replaces the ones with their id, `delete.annotations` removes them by id, and `positions` places nodes, merged per pod.
 - Export image in the top bar: the graph painted as a picture of its own, a plain SVG, a vector PDF or a PNG at the scale picked, nodes, links, interface labels and annotations with the margin asked around them, on a white or a transparent background.
 - An `interfaces` inspection on every node: state, MTU, MAC, addresses, bridge and VLAN parent, so subinterfaces and SVIs show in the State tab.
+- A Drivers page from the Home header with what every driver offers, each action with the commands it runs for sample parameters, where the node panel's driver reference now points. `GET /drivers` adds `shells`, `aliases` and those examples, and `drivers` is a reserved namespace name.
 
 ### Changed
 

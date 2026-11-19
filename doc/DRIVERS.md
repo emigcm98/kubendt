@@ -82,7 +82,7 @@ A guest that declares `trace` ships `traceroute`, `tcptraceroute` for the tcp me
 
 - `go test ./drivers/...` runs the contract test: the registry refuses a driver that lacks the capabilities of its type.
 - The expected plans pin what every driver sends for every action. Add the driver to `plannedDrivers` in `backend/helpers/action_plan_test.go`, run `go test ./helpers -run TestActionPlans -update`, and review the new `backend/helpers/testdata/plans/<Driver>.json` before committing it: those rows are what the pods will receive. A driver whose plan needs the cluster, one that maps interface names from the pod for every action, stays out of that list.
-- `GET /drivers` shows the result: capabilities with their actions and parameters, the executor, the constraints and the tools.
+- `GET /drivers` shows the result, and the Drivers page of the UI (from the Home header, `/drivers/<name>`) reads it: capabilities with their actions, parameters and reads, each action with the commands it runs for the sample parameters of `action_samples.json`, the executor, the naming rules, the images tried, the tools and the shells.
 - A driver that ships with an image gets an example under `deploy/examples/`, or extends one, and a block in `experiments/regression.py`, which is the release gate.
 - A line in `CHANGELOG.md` under `Added`.
 
