@@ -49,7 +49,7 @@ The FRR and VyOS routers establish an OSPF adjacency over the transit link and a
 
 - `topology-network-test-modify-ospf.json`: initial topology inventory and links.
 - `network_conf.json`: initial network configuration. Sets up OVS bridges, announces OSPF networks on both routers, and assigns default routes to the initial hosts.
-- `modify-phase2-scaleup.json`: scales `alpine-host` from 1 to 3 replicas and declares the new links for `alpine-host-1` and `alpine-host-2`.
+- `modify-phase2-scaleup.json`: scales `alpine-host` from 1 to 3 replicas and declares the new links for `alpine-host-1` and `alpine-host-2`. The modify steps also carry the graph's side of each change, the positions of the pods they add and the annotations they touch, so the picture follows the phases.
 - `network_conf-phase2.json`: post-scale-up configuration. Adds the new interfaces to `switch-1` bridge and sets the default route on the new replicas.
 - `modify-phase3-add.json`: adds a new `debian-host` node attached to `switch-0`.
 - `network_conf-phase3.json`: post-add configuration. Adds the new interface to `switch-0` bridge and sets the default route on `debian-host-0`.
@@ -185,4 +185,4 @@ No manual reconfiguration is required in either case. The switch ports facing th
 - If `alpine-host-1` or `alpine-host-2` does not get an IP on `eth1`, verify that the corresponding link entry exists in `modify-phase2-scaleup.json` and that `switch-1` bridge includes the new interface.
 - If after deleting a router pod the OSPF neighbor never returns to `Full`, check the KubeNDT backend logs for replay results. The expected sequence after restart is: IP assignment on `eth1` and `eth2`, then the `ospf_*` actions on both LAN and transit subnets.
 
-> Last reviewed: 4 Nov 2026
+> Last reviewed: 19 Nov 2026

@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - An `interfaces` inspection on every node: state, MTU, MAC, addresses, bridge and VLAN parent, so subinterfaces and SVIs show in the State tab.
 - A Drivers page from the Home header with what every driver offers, each action with the commands it runs for sample parameters, where the node panel's driver reference now points. `GET /drivers` adds `shells`, `aliases` and those examples, and `drivers` is a reserved namespace name.
 - A `placement` on the topology, `pack` or `spread`, with `KUBENDT_PLACEMENT` as the default, so a lab that fits lands on one worker with every link a veth. It is kept on the namespace, a modify's add follows it and the export carries it.
+- The examples' topologies carry their layout, with annotations where they help, and their README pictures come from the graph's own image export through `experiments/pictures`. The topology export leaves link uids out unless asked.
 
 ### Changed
 

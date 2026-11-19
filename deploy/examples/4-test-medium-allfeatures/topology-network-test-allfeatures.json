@@ -267,5 +267,120 @@
       "peerIntf": "eth1",
       "peerIp": "192.168.1.11/24"
     }
-  ]
+  ],
+  "layout": {
+    "positions": {
+      "svc-router-0": {
+        "x": 667,
+        "y": 191
+      },
+      "user-3": {
+        "x": 842,
+        "y": 417
+      },
+      "web-internal-0": {
+        "x": 664,
+        "y": -73
+      },
+      "iperf-server-1": {
+        "x": 495,
+        "y": 62
+      },
+      "room-router-0": {
+        "x": 502,
+        "y": 363
+      },
+      "room-sw-1": {
+        "x": 672,
+        "y": 362
+      },
+      "External Network": {
+        "x": -17,
+        "y": 181
+      },
+      "dist-sw-0": {
+        "x": 497,
+        "y": 187
+      },
+      "dmz-sw-0": {
+        "x": 308,
+        "y": 58
+      },
+      "dns-server-0": {
+        "x": 836,
+        "y": 68
+      },
+      "room-sw-0": {
+        "x": 313,
+        "y": 361
+      },
+      "svc-sw-0": {
+        "x": 664,
+        "y": 65
+      },
+      "user-0": {
+        "x": 146,
+        "y": 319
+      },
+      "user-2": {
+        "x": 842,
+        "y": 320
+      },
+      "web-public-0": {
+        "x": 306,
+        "y": -76
+      },
+      "core-sw-0": {
+        "x": 308,
+        "y": 186
+      },
+      "edge-router-0": {
+        "x": 144,
+        "y": 182
+      },
+      "iperf-server-0": {
+        "x": 147,
+        "y": 58
+      },
+      "user-1": {
+        "x": 150,
+        "y": 415
+      }
+    },
+    "annotations": [
+      {
+        "id": "dmz",
+        "type": "rect",
+        "x": 119,
+        "y": -116,
+        "width": 281,
+        "height": 284,
+        "text": "DMZ",
+        "border": "dashed",
+        "text_anchor": "top-left"
+      },
+      {
+        "id": "services",
+        "type": "rect",
+        "x": 467,
+        "y": -113,
+        "width": 461,
+        "height": 291,
+        "text": "Services",
+        "border": "dashed",
+        "text_anchor": "top-left"
+      },
+      {
+        "id": "users",
+        "type": "rect",
+        "x": 118,
+        "y": 285,
+        "width": 816,
+        "height": 242,
+        "text": "Users",
+        "border": "dashed",
+        "text_anchor": "top-left"
+      }
+    ]
+  }
 }

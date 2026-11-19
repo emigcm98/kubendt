@@ -38,6 +38,7 @@ import { ReactComponent as ImageIcon } from '../assets/images/icons/image.svg';
 import { ReactComponent as ChevronDownIcon } from '../assets/images/icons/chevron-down.svg';
 import { ReactComponent as FileIcon } from '../assets/images/icons/file.svg';
 import { pictureToPng, pictureToPdf, svgDataUrl } from './graphPicture';
+import { topologyFile } from './topologyExport';
 import InnerGraph from './InnerGraph';
 import { useLayout, isAnnotationId, nodeToAnnotation } from './useLayout';
 import LoadingOverlay from './LoadingOverlay';
@@ -1283,6 +1284,10 @@ const NetworkGraph = ({
     scale: 2,
   });
   const imageExportRef = useRef({ format: 'png', transparent: false, margin: 40, scale: 2 });
+  // The topology export leaves the link uids out unless asked, so a file
+  // deploys anywhere with fresh ones.
+  const [topologyExport, setTopologyExport] = useState({ keepUids: false });
+  const topologyExportRef = useRef({ keepUids: false });
   const exportImageRef = useRef(null);
   // The export menu under its button, closed by a click elsewhere or Esc.
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
@@ -2219,15 +2224,15 @@ const NetworkGraph = ({
     });
   };
 
-  const handleExportTopology = async () => {
-    if (!namespace) return;
-
+  const exportTopologyNow = async () => {
     try {
       // The file carries the layout too, so a deploy of it brings the picture back.
       const res = await fetch(`${API_BASE_URL}/network/get-network/${namespace}?layout=true`);
       const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+      const file = topologyFile(data, topologyExportRef.current);
 
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const blob = new Blob([JSON.stringify(file, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -2238,6 +2243,25 @@ const NetworkGraph = ({
       console.error('❌ Error exporting topology:', err);
       showError('Export failed', err.message || 'Could not export the current topology.');
     }
+  };
+
+  const handleExportTopology = () => {
+    if (!namespace) return;
+    setAlertModal({
+      isOpen: true,
+      type: 'confirm',
+      title: 'Export topology',
+      message: 'The nodes, links and layout as a file the deploy takes.',
+      confirmText: 'Export',
+      cancelText: 'Cancel',
+      showTopologyOptions: true,
+      onConfirm: () => {
+        setAlertModal((prev) => ({ ...prev, isOpen: false, showTopologyOptions: false }));
+        exportTopologyNow();
+      },
+      onCancel: () =>
+        setAlertModal((prev) => ({ ...prev, isOpen: false, showTopologyOptions: false })),
+    });
   };
 
   // Downloads the configuration applied in this namespace as a network_conf
@@ -4615,6 +4639,22 @@ const NetworkGraph = ({
         confirmText={alertModal.confirmText}
         cancelText={alertModal.cancelText}
         extraContent={(() => {
+          if (alertModal.showTopologyOptions) {
+            return (
+              <label>
+                <input
+                  type="checkbox"
+                  checked={topologyExport.keepUids}
+                  onChange={(e) => {
+                    const next = { keepUids: e.target.checked };
+                    topologyExportRef.current = next;
+                    setTopologyExport(next);
+                  }}
+                />
+                Keep link uids
+              </label>
+            );
+          }
           if (alertModal.showImageOptions) {
             const pick = (patch) => {
               const next = { ...imageExportRef.current, ...patch };

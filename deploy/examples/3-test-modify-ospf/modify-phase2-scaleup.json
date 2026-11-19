@@ -1,6 +1,9 @@
 {
   "scale": [
-    { "name": "alpine-host", "replicas": 3 }
+    {
+      "name": "alpine-host",
+      "replicas": 3
+    }
   ],
   "add": {
     "links": [
@@ -20,6 +23,29 @@
         "localIp": "10.0.2.13/24",
         "peerIp": ""
       }
+    ],
+    "annotations": [
+      {
+        "id": "lan-b",
+        "type": "rect",
+        "x": 232,
+        "y": 260,
+        "width": 380,
+        "height": 390,
+        "text": "LAN B",
+        "border": "dashed",
+        "text_anchor": "top-left"
+      }
     ]
+  },
+  "positions": {
+    "alpine-host-1": {
+      "x": 520,
+      "y": 420
+    },
+    "alpine-host-2": {
+      "x": 520,
+      "y": 540
+    }
   }
 }

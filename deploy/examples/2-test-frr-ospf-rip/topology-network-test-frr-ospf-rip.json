@@ -127,5 +127,85 @@
             "localIp": "192.168.3.1/24",
             "peerIp": ""
         }
-    ]
+    ],
+    "layout": {
+        "positions": {
+            "switch-2": {
+                "x": -123,
+                "y": -196
+            },
+            "web-0": {
+                "x": 30,
+                "y": -196
+            },
+            "host-2": {
+                "x": 35,
+                "y": -15
+            },
+            "router-0": {
+                "x": -387,
+                "y": -85
+            },
+            "router-2": {
+                "x": -120,
+                "y": -88
+            },
+            "switch-0": {
+                "x": -390,
+                "y": 24
+            },
+            "switch-1": {
+                "x": -119,
+                "y": 26
+            },
+            "switch-3": {
+                "x": -387,
+                "y": -200
+            },
+            "host-0": {
+                "x": -530,
+                "y": -36
+            },
+            "host-1": {
+                "x": -529,
+                "y": 75
+            },
+            "host-3": {
+                "x": 39,
+                "y": 81
+            },
+            "printer-0": {
+                "x": -535,
+                "y": -200
+            },
+            "router-1": {
+                "x": -253,
+                "y": -86
+            }
+        },
+        "annotations": [
+            {
+                "id": "ospf-side",
+                "type": "rect",
+                "x": -563,
+                "y": -240,
+                "width": 268,
+                "height": 425,
+                "text": "OSPF side",
+                "border": "dashed",
+                "text_anchor": "top-left"
+            },
+            {
+                "id": "rip-side",
+                "type": "rect",
+                "x": -151,
+                "y": -236,
+                "width": 282,
+                "height": 427,
+                "text": "RIP side",
+                "border": "dashed",
+                "text_anchor": "top-left"
+            }
+        ]
+    }
 }

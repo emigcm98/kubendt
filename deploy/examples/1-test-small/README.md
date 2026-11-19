@@ -47,7 +47,7 @@ Network segments:
   - `ENV2`
 - `pc-*` replicas mount `test.sh` as read-only at `/mnt/test.sh` (ConfigMap-backed)
 - `server-0` mounts `secret.env` at `/etc/kubendt/secret.env` (Secret-backed, see step 4 below)
-- Links include explicit `uid` values for stable link identity
+- Link uids are left to the backend, which assigns one per link; a file may pin them, but a pinned uid already in use elsewhere on the cluster refuses the deploy
 - Configuration file intentionally uses both reference styles:
   - explicit pod names (`pc-0`, `r1-0`, `sw-0`)
   - single-replica base names (`server`, `ovs`)
@@ -214,4 +214,4 @@ Open the info panel of any `pc-*` and go to the last tab, `Files/Vars`. It summa
 - If a target name in `network_conf.json` is ambiguous (multi-replica), use the explicit `-N` pod name.
 - If `cat /etc/kubendt/secret.env` on `server-0` is missing, the topology was imported before the file existed. Create it, mark sensitive, then redeploy or restart `server-0`.
 
-> Last reviewed: 14 Nov 2026
+> Last reviewed: 19 Nov 2026

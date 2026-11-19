@@ -1,0 +1,11 @@
+{
+  "name": "kubendt-example-pictures",
+  "private": true,
+  "description": "Pictures of the examples' graphs for their READMEs, through the UI's own image export",
+  "scripts": {
+    "pictures": "node pictures.js"
+  },
+  "dependencies": {
+    "puppeteer-core": "24.43.1"
+  }
+}

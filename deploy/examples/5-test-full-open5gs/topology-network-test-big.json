@@ -621,5 +621,124 @@
       "localIp": "10.6.0.1/24",
       "peerIp": "10.6.0.2/24"
     }
-  ]
+  ],
+  "layout": {
+    "positions": {
+      "scp-0": {
+        "x": 509,
+        "y": -115
+      },
+      "udsf-0": {
+        "x": 772,
+        "y": 47
+      },
+      "External Network": {
+        "x": 190,
+        "y": 230
+      },
+      "amf-0": {
+        "x": 425,
+        "y": 44
+      },
+      "ausf-0": {
+        "x": 597,
+        "y": -116
+      },
+      "router-0": {
+        "x": 362,
+        "y": 235
+      },
+      "router-1": {
+        "x": 778,
+        "y": 235
+      },
+      "udr-0": {
+        "x": 772,
+        "y": -117
+      },
+      "webui-0": {
+        "x": 183,
+        "y": 78
+      },
+      "nrf-0": {
+        "x": 423,
+        "y": -109
+      },
+      "pcf-0": {
+        "x": 772,
+        "y": -28
+      },
+      "smf-0": {
+        "x": 424,
+        "y": -31
+      },
+      "switch-1": {
+        "x": 361,
+        "y": 378
+      },
+      "udm-0": {
+        "x": 684,
+        "y": -116
+      },
+      "ue-0": {
+        "x": -53,
+        "y": 230
+      },
+      "upf-0": {
+        "x": 574,
+        "y": 378
+      },
+      "gnb-0": {
+        "x": 67,
+        "y": 230
+      },
+      "switch-0": {
+        "x": 602,
+        "y": 45
+      },
+      "switch-2": {
+        "x": 782,
+        "y": 379
+      },
+      "switch-3": {
+        "x": 322,
+        "y": 82
+      }
+    },
+    "annotations": [
+      {
+        "id": "ran",
+        "type": "rect",
+        "x": -81,
+        "y": 190,
+        "width": 240,
+        "height": 150,
+        "text": "RAN",
+        "border": "dashed",
+        "text_anchor": "top-left"
+      },
+      {
+        "id": "core",
+        "type": "rect",
+        "x": 395,
+        "y": -157,
+        "width": 469,
+        "height": 314,
+        "text": "5G core, control plane",
+        "border": "dashed",
+        "text_anchor": "top-left"
+      },
+      {
+        "id": "user-plane",
+        "type": "rect",
+        "x": 333,
+        "y": 348,
+        "width": 541,
+        "height": 141,
+        "text": "User plane",
+        "border": "dashed",
+        "text_anchor": "top-left"
+      }
+    ]
+  }
 }

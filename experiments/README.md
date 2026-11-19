@@ -31,6 +31,18 @@ Every script takes `--runs`, `--out`, `--keep` and `--help`. Namespaces are name
 
 `common.py` holds the API client, the kubectl helpers, the timeline math and the result recorder.
 
+## Pictures of the examples
+
+`pictures/pictures.js` makes the graph pictures the example READMEs show (`doc/images/tests/`). It deploys each example on the cluster the backend points at, with the layout its topology file carries, exports the graph through the UI's own Export > Image (PNG at 2x, white background, a 24 px margin), applies the modify steps an example's second picture needs, and deletes the namespace. It needs a backend, the UI and Chromium:
+
+```bash
+cd experiments/pictures && npm ci
+KUBENDT_API=http://localhost:8080 KUBENDT_UI=http://localhost:3000 KUBENDT_PASSWORD=admin123 node pictures.js            # all the examples
+node pictures.js 2-test-frr-ospf-rip 3-test-modify-ospf                                                                  # some of them
+```
+
+`CHROME` names the browser (default `/usr/bin/chromium-browser`), `OUT` the folder the pictures land in, `--keep` leaves the namespaces deployed. The namespaces are the ones the READMEs use, so a namespace that already exists stops the run.
+
 ## Output
 
 Each run writes `results/<script>/<timestamp>/` with `meta.json` (backend version, repository commit, cluster nodes, arguments with any password or token redacted), `rows.jsonl` appended as the run goes, `rows.csv` and `summary.json` at the end, `notes.log`, and the raw API responses the run relied on. `results/` is ignored by git. The data behind the paper lives in its artifacts repository, not here.
