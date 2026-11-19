@@ -38,17 +38,6 @@ func main() {
 		log.Fatalf("❌ Could not initialize authentication: %v", err)
 	}
 
-	// Any namespace_operations row that survived a previous run is stale by
-	// definition (no operation is in flight on a freshly-booted process).
-	// Wiping them here covers Ctrl-C, OOM-kill, panics, and any other path
-	// that skips the per-handler `defer release`, so a namespace never gets
-	// stuck "operation in progress" across restarts.
-	if cleared, err := helpers.ClearAllNamespaceOperationLocks(); err != nil {
-		log.Printf("⚠️ Could not clear stale operation locks at startup: %v", err)
-	} else if cleared > 0 {
-		log.Printf("🧹 Cleared %d stale namespace operation lock(s) from previous run", cleared)
-	}
-
 	// Initialize Kubernetes client. This is non-fatal: with no kubeconfig the
 	// server still starts and serves the endpoints needed to load one; the
 	// gate middleware returns 503 for cluster operations until then.
@@ -62,8 +51,8 @@ func main() {
 		if err := helpers.RecordActiveCluster(); err != nil {
 			log.Printf("⚠️ Could not record active cluster in registry: %v", err)
 		}
-		if err := helpers.SyncLinkUIDRegistryFromCluster(); err != nil {
-			log.Printf("⚠️ Could not sync link UID registry from cluster: %v", err)
+		if err := helpers.EnsureSystemNamespace(); err != nil {
+			log.Printf("⚠️ Could not ensure the system namespace: %v", err)
 		}
 	}
 

@@ -77,13 +77,12 @@ KubeNDT stores control-plane state in SQLite (var `KUBENDT_DB_PATH`) and per-nam
 SQLite tables:
 
 - `node_positions` — a mirror of the layout, which lives in the namespace as the `kubendt-internal-layout` ConfigMap (`GET` and `PUT /network/layout/:namespace`, the positions endpoints on the same document)
-- `namespace_state`
-- `namespace_operations`
-- `link_uid_registry`
 - `driver_operation_history`
 - `namespace_file_meta` — per-file flags (e.g. `sensitive`, which materialises a file as a Secret instead of a ConfigMap)
 - `clusters` — registry of known clusters (see below)
 - `auth_config`, `sessions`, `api_tokens`
+
+The rest of the control-plane state lives in the cluster. The operation lock of a namespace is a Lease named `kubendt-internal-lock` in it, created to acquire, renewed while the operation runs, deleted to release and taken over once it expires, so two backends can share a cluster. Whether a namespace has a topology is read from its StatefulSets and Topology objects, and the link uids in use from the Topology objects of every namespace. The system namespace (`KUBENDT_SYSTEM_NAMESPACE`, `kubendt-system` by default, created at start) holds what belongs to no lab: a namespace deleted keeping its layout leaves it there as `kubendt-internal-layout-<namespace>`, and a namespace created with that name takes it back.
 
 Driver history is replayed when KubeNDT recreates a pod (restart, modify, heal pass), and the neighbours of that pod get the operations that touch the interface Meshnet recreated re-applied too, since a veth dies with the old netns and a VXLAN device is rebuilt on the next CNI ADD. Recreations that do not go through KubeNDT (a raw `kubectl delete pod`, an eviction) are not replayed. The history is also pruned of operations the current driver no longer supports.
 

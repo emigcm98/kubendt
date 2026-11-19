@@ -21,12 +21,6 @@ func RollbackNamespaceTopology(namespace string) {
 	if err := ClearNamespaceTopologyResources(namespace, false, false); err != nil {
 		log.Printf("⚠️ Rollback incomplete for '%s': %v", namespace, err)
 	}
-	if _, err := SyncNamespaceTopologyState(namespace); err != nil {
-		log.Printf("⚠️ Could not refresh topology state during rollback for '%s': %v", namespace, err)
-	}
-	if err := DeleteNamespaceLinkUIDRegistry(namespace); err != nil {
-		log.Printf("⚠️ Could not clean link UID registry during rollback for '%s': %v", namespace, err)
-	}
 	if err := DeleteNamespaceDriverOperationHistory(namespace); err != nil {
 		log.Printf("⚠️ Could not clean driver history during rollback for '%s': %v", namespace, err)
 	}
@@ -124,14 +118,6 @@ func ClearNamespaceTopologyResources(namespace string, deletePositions, deleteFi
 		if err := DeleteNamespaceFilesAll(namespace); err != nil {
 			return fmt.Errorf("error deleting files for namespace %s: %w", namespace, err)
 		}
-	}
-
-	if err := DeleteNamespaceLinkUIDRegistry(namespace); err != nil {
-		return fmt.Errorf("error deleting link UID registry for namespace %s: %w", namespace, err)
-	}
-
-	if err := SetNamespaceHasTopology(namespace, false); err != nil {
-		return fmt.Errorf("error resetting topology state: %w", err)
 	}
 
 	return nil

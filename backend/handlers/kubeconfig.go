@@ -87,6 +87,9 @@ func SetKubeContext(c *gin.Context) {
 	if err := helpers.RecordActiveCluster(); err != nil {
 		log.Printf("⚠️ Could not record active cluster after context switch: %v", err)
 	}
+	if err := helpers.EnsureSystemNamespace(); err != nil {
+		log.Printf("⚠️ Could not ensure the system namespace after context switch: %v", err)
+	}
 
 	c.JSON(http.StatusOK, gin.H{"current_context": req.Context})
 }

@@ -61,6 +61,24 @@ Configuration lives **inline** in each compose file's `environment:` block. The 
 
 File storage and the SQLite database are persisted in named Docker volumes (`kubendt-files` and `backend-db`). They survive container restarts and rebuilds.
 
+## What the backend asks of the cluster
+
+Kubernetes 1.25 or newer, 1.30 recommended. What sets the floor, by API, with the version it has been stable since:
+
+| API or feature | Stable since | Used for |
+| --- | --- | --- |
+| Ephemeral containers (`pods/ephemeralcontainers`) | 1.25 (beta on by default since 1.23) | the toolbox injected for captures, traceroute, traffic control, throughput tests and the actions an image lacks a binary for |
+| Pod exec over WebSocket | 1.30 (beta on by default), 1.31 | every exec; an older API server falls back to SPDY with `KUBENDT_EXEC_TRANSPORT=spdy` |
+| CustomResourceDefinitions `apiextensions.k8s.io/v1` | 1.16 | Meshnet's `Topology` objects and the network attachment definition |
+| Leases `coordination.k8s.io/v1` | 1.14 | the operation lock of a namespace, `kubendt-internal-lock` |
+| Pod sysctls with the kubelet's `allowedUnsafeSysctls` | 1.11 | forwarding on router and switch pods |
+| StatefulSets `apps/v1` | 1.9 | every node |
+| Pod affinity and anti-affinity | 1.6 | the `placement` of a topology |
+| Pods, ConfigMaps, Secrets, Namespaces, Nodes, Events, Services `v1` | always | everything else |
+| metrics-server (`metrics.k8s.io`) | optional | the cluster page's CPU and memory; the page says when it is missing |
+
+The backend's credentials (the kubeconfig, or the ServiceAccount in the cluster) need those resources in the lab namespaces, Namespaces and ConfigMaps in `kubendt-system`, and Nodes cluster-wide. The backend is built with client-go 0.35, which Kubernetes supports against servers within one minor on either side and which works against the 1.32 and 1.37 clusters it is tried on. A worker with `/dev/kvm` is needed only for VM nodes (VyOS, EXOS).
+
 ## Environment Variables Reference
 
 ### Backend
@@ -71,6 +89,7 @@ File storage and the SQLite database are persisted in named Docker volumes (`kub
 - `CORS_ALLOWED_ORIGINS`: comma-separated list of allowed frontend origins (default: `http://localhost:3000`).
 - `FILES_BASE_PATH`: namespace files base folder (default: `files` relative to cwd).
 - `KUBENDT_DB_PATH`: SQLite database path (default: `kubendt.db` in cwd).
+- `KUBENDT_SYSTEM_NAMESPACE`: the namespace the platform keeps its own objects in, created at start (default `kubendt-system`); today the layouts of deleted namespaces wait there for a namespace of the same name. The backend's credentials need Leases in every lab namespace, the operation lock, and Namespaces and ConfigMaps in this one.
 - `KUBECTL_EXEC_TIMEOUT_SECONDS`: max wall-clock seconds for any single in-pod exec (kubectl exec, `ssh_qemu` into a QEMU guest, batched VyOS commits, the one script that runs a pod's consecutive Linux actions in a configure or a replay). Default `30`. Bump it if you run against a slow cluster or busy guests and start seeing "exec timeout" errors from network-configure or modify operations. The SSH layer detects dead sessions independently within ~11s, so this deadline only bounds genuinely-long commands.
 - `KUBENDT_K8S_QPS` / `KUBENDT_K8S_BURST`: client-side rate limit for requests to the Kubernetes API (default `100` requests per second, burst `200`). client-go's own default is 5/10, which queues per-pod operations for tens of seconds on large topologies. Lower them only on a shared API server under pressure; it applies its own priority and fairness on top.
 - `SWAGGER_BASE_PATH`: base path prefix for Swagger UI (e.g. `/api/` when served behind a proxy).

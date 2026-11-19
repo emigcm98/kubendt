@@ -10,18 +10,18 @@ What KubeNDT survives, what it loses, and what you have to fix by hand. The shor
 | Configuration applied to nodes (routes, bridges, OSPF, NAT, qdiscs) | inside the pods, plus one history row per applied action in SQLite | yes | the pods keep it, the history is gone |
 | Operation history (what replay uses) | SQLite `driver_operation_history` | yes | no |
 | Link attributes (the shaping, `mtu` and extra addresses a link declares) | SQLite `link_attributes` | yes | no, a pod recreated afterwards comes back with the namespace MTU and the first address of each end |
-| Node positions and annotations of the graph | the `kubendt-internal-layout` ConfigMap of the namespace, mirrored into SQLite `node_positions` while a database is open | yes | yes, it is in the cluster |
+| Node positions and annotations of the graph | the `kubendt-internal-layout` ConfigMap of the namespace, mirrored into SQLite `node_positions` while a database is open, and `kubendt-internal-layout-<namespace>` in the `kubendt-system` namespace once the namespace is deleted keeping it | yes | yes, it is in the cluster |
 | Files of the namespace file manager | disk under `FILES_BASE_PATH` (`kubendt-files` volume in compose) | yes | no, mounted ConfigMaps and Secrets stay in the cluster and the file manager flags them as missing their source |
 | `sensitive` flag of files | SQLite `namespace_file_meta` | yes | no |
-| Link UID registry | SQLite `link_uid_registry`, rebuilt from the CRDs on every sync | yes | re-synced |
-| Operation locks | SQLite `namespace_operations` | wiped at startup on purpose | wiped |
+| Link uids | read from the Topology objects of every namespace when a deploy needs one | nothing kept | nothing to lose |
+| Operation locks | a `kubendt-internal-lock` Lease in the namespace, renewed while the operation runs | yes | taken over by the next operation once it expires, a minute at most |
 | Admin password, sessions, API tokens | SQLite `auth_config`, `sessions`, `api_tokens` | yes | no, the password comes back from `KUBENDT_ADMIN_PASSWORD` or is generated and printed once, tokens must be recreated |
 
 SQLite lives at `KUBENDT_DB_PATH` (`./kubendt.db` by default, `/data/kubendt.db` on the `backend-db` volume in compose). It is a single local file, not replicated. Rows are scoped by cluster id, so one backend can serve several clusters without mixing their state, and a backend pointed at a cluster it has never seen simply starts with an empty history for it.
 
 ## Backend failures
 
-**Process restart** (crash, OOM, upgrade). Nothing is lost. At startup the backend wipes every operation lock, since no operation can be in flight in a freshly started process, and lists namespaces by the `kubendt/enabled` label and topologies from the CRDs, so it sees and operates whatever is deployed. A replacement backend on another machine does the same as long as it has the kubeconfig. It only lacks what its own database never had, see the table.
+**Process restart** (crash, OOM, upgrade). Nothing is lost. A lock a dead backend left behind is a Lease that expires within a minute and the next operation takes it over, and the backend lists namespaces by the `kubendt/enabled` label and topologies from the CRDs, so it sees and operates whatever is deployed. A replacement backend on another machine does the same as long as it has the kubeconfig. It only lacks what its own database never had, see the table.
 
 **Interrupted operation.** A deploy that dies half way leaves the resources it created in the cluster. The next deploy into that namespace is refused with `409 already has a deployed topology`, because the guard looks at the CRDs, not at the database. Recovery is one call: `DELETE /network/clear-topology/{namespace}` removes StatefulSets, Topology CRDs, ConfigMaps, Secrets, the UID registry and the history for that namespace, and the deploy can be repeated. A deploy whose pods never become Ready rolls itself back the same way. A modify or a restart that dies mid way leaves the affected pods in whatever state Kubernetes left them, and the heal pass of the next modify, or a Restart of the pod, brings them back.
 

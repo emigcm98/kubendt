@@ -241,9 +241,9 @@ HealMissingInterfaces(namespace, nodes, links, maxRounds=2)
         │
         ↓
  ┌──────────────────────────┐
- │ Persist State (SQLite)   │
- │ - namespace_state        │
- │ - link_uid_registry      │
+ │ Release the lock (Lease) │
+ │ - state read from cluster│
+ │ - link uids from the CRDs│
  └──────┬───────────────────┘
         │
         ↓
