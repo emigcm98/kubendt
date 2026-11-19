@@ -892,6 +892,16 @@ func DeployNetwork(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	placement, err := helpers.ResolvePlacement(request.Placement)
+	if err != nil {
+		log.Printf("❌ %v", err)
+		status := http.StatusBadRequest
+		if request.Placement == "" {
+			status = http.StatusInternalServerError
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
 
 	// 5b. Ensure each link has a stable UID for this whole deploy request.
 	// This avoids generating different UIDs per endpoint when creating per-pod Topology CRDs.
@@ -972,7 +982,13 @@ func DeployNetwork(c *gin.Context) {
 		log.Printf("⚠️ Could not update iface counts ConfigMap: %v (entrypoints will fall back to fixed sleep)", err)
 	}
 
-	// 8. Create StatefulSet for each node
+	// 8. The placement goes on the namespace first, the pod templates read it
+	// from there; then a StatefulSet for each node.
+	if err := helpers.SetNamespacePlacement(namespace, placement); err != nil {
+		log.Printf("❌ Could not set the placement of namespace '%s': %v", namespace, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Could not set the placement of namespace '%s': %v", namespace, err)})
+		return
+	}
 	for _, node := range request.Nodes {
 		mounts := validMountsMap[node.Name]
 		err := helpers.CreateNetworkStatefulSet(namespace, node, mounts, request.Links)
@@ -1471,6 +1487,7 @@ func GetNetwork(c *gin.Context) {
 		Nodes: nodes,
 		Links: links,
 	}
+	response.Placement = helpers.NamespacePlacement(namespace)
 	// With ?layout=true the file carries the graph's layout too, so it
 	// replicates the scenario with its picture.
 	if c.Query("layout") == "true" {

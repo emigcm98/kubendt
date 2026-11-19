@@ -236,7 +236,7 @@ func swaggerGetNamespaceMetrics() {}
 // swaggerDeployNetwork godoc
 //
 //	@Summary      Deploy network topology
-//	@Description  Deploys a full network topology (nodes + links) into a namespace. In links, use the reserved name "external" for either node or peerNode to create a host uplink (external network connection). Both ends of a link cannot be "external" simultaneously. An optional layout (positions and annotations, what the export writes) is applied once the pods are up: what it brings replaces that part of the namespace's layout, what it leaves out stays.
+//	@Description  Deploys a full network topology (nodes + links) into a namespace. In links, use the reserved name "external" for either node or peerNode to create a host uplink (external network connection). Both ends of a link cannot be "external" simultaneously. An optional layout (positions and annotations, what the export writes) is applied once the pods are up: what it brings replaces that part of the namespace's layout, what it leaves out stays. An optional placement, pack or spread, prefers one worker for the whole namespace or a different one per pod; it is kept on the namespace, a later modify follows it and get-network returns it.
 //	@Tags         network
 //	@Accept       json
 //	@Produce      json

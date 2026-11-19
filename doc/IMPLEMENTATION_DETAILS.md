@@ -224,6 +224,7 @@ Right after the heal pass of a deploy, and on a restart or a modify before the h
 
 7. Normalize replicas (0→1, cap at 128) and terminationGracePeriodSeconds (unset→2, must be >= 1)
    - Validate nodeName / nodeSelector against the cluster's nodes (one list per request, 400 on a miss)
+   - Resolve the placement: the request's `placement`, else `KUBENDT_PLACEMENT`, else none (400 on a word that is neither pack nor spread); it is written on the namespace as the `kubendt/placement` annotation before any StatefulSet exists
 
 8. Prepare link UIDs
    - Generate or retrieve unique UIDs per link from link_uid_registry
@@ -250,6 +251,7 @@ Right after the heal pass of a deploy, and on a restart or a modify before the h
     - Annotation: k8s.v1.cni.cncf.io/networks = meshnet
     - terminationGracePeriodSeconds from the node (default 2 s, not the Kubernetes 30 s)
     - nodeSelector / nodeName from the node, when set
+    - a preferred pod affinity (pack) or anti-affinity (spread) toward the namespace's own pods on `kubernetes.io/hostname`, weight 100, from the namespace's placement; a modify's add reads the same annotation, a clear removes it
     - QEMU pods: Stdin=true, TTY=true, /dev/kvm added, Privileged=true
     - Any node without `commands`: Stdin=true, TTY=true, so an image whose entrypoint is a shell stays up
     - Non-QEMU pods: NET_ADMIN capability

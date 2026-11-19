@@ -77,6 +77,9 @@ func ClearNamespaceTopologyResources(namespace string, deletePositions, deleteFi
 			return fmt.Errorf("error deleting StatefulSet %s: %w", sts.Name, err)
 		}
 	}
+	if err := SetNamespacePlacement(namespace, ""); err != nil {
+		log.Printf("⚠️ Could not drop the placement of namespace '%s': %v", namespace, err)
+	}
 
 	topologyList, err := kubeclient.DynamicClient.Resource(TopologyGVR).Namespace(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {

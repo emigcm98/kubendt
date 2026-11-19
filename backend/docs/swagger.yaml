@@ -665,6 +665,14 @@ definitions:
         items:
           $ref: '#/definitions/types.NodeSpec'
         type: array
+      placement:
+        description: |-
+          How the pods spread over the workers: "pack" prefers one worker for
+          the whole namespace (every link a veth, no VXLAN), "spread" a different
+          worker per pod, empty leaves it to the scheduler or to
+          KUBENDT_PLACEMENT. A node's own nodeName and nodeSelector still win.
+        example: pack
+        type: string
     type: object
   types.DeployTimingResponse:
     properties:
@@ -1764,6 +1772,10 @@ definitions:
         items:
           $ref: '#/definitions/types.NodeSpec'
         type: array
+      placement:
+        description: The placement the namespace was deployed with, when any.
+        example: pack
+        type: string
     type: object
   types.NodeAddressDoc:
     properties:
@@ -4133,7 +4145,10 @@ paths:
         create a host uplink (external network connection). Both ends of a link cannot
         be "external" simultaneously. An optional layout (positions and annotations,
         what the export writes) is applied once the pods are up: what it brings replaces
-        that part of the namespace''s layout, what it leaves out stays.'
+        that part of the namespace''s layout, what it leaves out stays. An optional
+        placement, pack or spread, prefers one worker for the whole namespace or a
+        different one per pod; it is kept on the namespace, a later modify follows
+        it and get-network returns it.'
       parameters:
       - description: Namespace name
         in: path

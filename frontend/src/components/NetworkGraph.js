@@ -2280,13 +2280,16 @@ const NetworkGraph = ({
     if (!json || typeof json !== 'object' || Array.isArray(json)) {
       throw new Error('Topology JSON must be an object.');
     }
-    const allowedKeys = new Set(['nodes', 'links', 'layout']);
+    const allowedKeys = new Set(['nodes', 'links', 'layout', 'placement']);
     for (const key of Object.keys(json)) {
       if (!allowedKeys.has(key)) {
         throw new Error(
-          `Unrecognized root-level field: '${key}'. Only 'nodes', 'links' and 'layout' are allowed.`
+          `Unrecognized root-level field: '${key}'. Only 'nodes', 'links', 'layout' and 'placement' are allowed.`
         );
       }
+    }
+    if (json.placement !== undefined && !['pack', 'spread'].includes(json.placement)) {
+      throw new Error("'placement' must be 'pack' or 'spread'.");
     }
     if (!Array.isArray(json.nodes) || json.nodes.length < 1) {
       throw new Error('Must have at least 1 node.');
