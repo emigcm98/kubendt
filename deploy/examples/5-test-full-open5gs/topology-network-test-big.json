@@ -8,7 +8,7 @@
       "commands": [
         "sh",
         "-c",
-        "mkdir -p /open5gs/install/var/log/open5gs/ && bash /open5gs_init.sh"
+        "mkdir -p /open5gs/install/var/log/open5gs/ && until ip -4 addr show eth1 2>/dev/null | grep -q inet; do sleep 1; done && bash /open5gs_init.sh"
       ],
       "env": {
         "COMPONENT_NAME": "amf",
@@ -43,7 +43,7 @@
       "commands": [
         "sh",
         "-c",
-        "mkdir -p /open5gs/install/var/log/open5gs/ && bash /open5gs_init.sh"
+        "mkdir -p /open5gs/install/var/log/open5gs/ && until ip -4 addr show eth1 2>/dev/null | grep -q inet; do sleep 1; done && bash /open5gs_init.sh"
       ],
       "env": {
         "COMPONENT_NAME": "smf",
@@ -84,7 +84,7 @@
       "commands": [
         "sh",
         "-c",
-        "mkdir -p /open5gs/install/var/log/open5gs/ && bash /open5gs_init.sh"
+        "mkdir -p /open5gs/install/var/log/open5gs/ && until ip -4 addr show eth1 2>/dev/null | grep -q inet; do sleep 1; done && bash /open5gs_init.sh"
       ],
       "env": {
         "COMPONENT_NAME": "nrf",
@@ -116,7 +116,7 @@
       "commands": [
         "sh",
         "-c",
-        "mkdir -p /open5gs/install/var/log/open5gs/ && bash /open5gs_init.sh"
+        "mkdir -p /open5gs/install/var/log/open5gs/ && until ip -4 addr show eth1 2>/dev/null | grep -q inet; do sleep 1; done && bash /open5gs_init.sh"
       ],
       "env": {
         "COMPONENT_NAME": "scp",
@@ -147,7 +147,7 @@
       "commands": [
         "sh",
         "-c",
-        "mkdir -p /open5gs/install/var/log/open5gs/ && bash /open5gs_init.sh"
+        "mkdir -p /open5gs/install/var/log/open5gs/ && until ip -4 addr show eth1 2>/dev/null | grep -q inet; do sleep 1; done && bash /open5gs_init.sh"
       ],
       "env": {
         "COMPONENT_NAME": "ausf",
@@ -179,7 +179,7 @@
       "commands": [
         "sh",
         "-c",
-        "mkdir -p /open5gs/install/var/log/open5gs/ && bash /open5gs_init.sh"
+        "mkdir -p /open5gs/install/var/log/open5gs/ && until ip -4 addr show eth1 2>/dev/null | grep -q inet; do sleep 1; done && bash /open5gs_init.sh"
       ],
       "env": {
         "COMPONENT_NAME": "udm",
@@ -221,7 +221,7 @@
       "commands": [
         "sh",
         "-c",
-        "mkdir -p /open5gs/install/var/log/open5gs/ && bash /open5gs_init.sh"
+        "mkdir -p /open5gs/install/var/log/open5gs/ && until ip -4 addr show eth1 2>/dev/null | grep -q inet; do sleep 1; done && bash /open5gs_init.sh"
       ],
       "env": {
         "COMPONENT_NAME": "udr",
@@ -254,7 +254,7 @@
       "commands": [
         "sh",
         "-c",
-        "mkdir -p /open5gs/install/var/log/open5gs/ && bash /open5gs_init.sh"
+        "mkdir -p /open5gs/install/var/log/open5gs/ && until ip -4 addr show eth1 2>/dev/null | grep -q inet; do sleep 1; done && bash /open5gs_init.sh"
       ],
       "env": {
         "COMPONENT_NAME": "pcf",
@@ -307,7 +307,7 @@
       "commands": [
         "sh",
         "-c",
-        "mkdir -p /open5gs/install/var/log/open5gs/ && bash /open5gs_init.sh"
+        "mkdir -p /open5gs/install/var/log/open5gs/ && until ip -4 addr show eth1 2>/dev/null | grep -q inet; do sleep 1; done && bash /open5gs_init.sh"
       ],
       "env": {
         "COMPONENT_NAME": "upf",
@@ -357,7 +357,7 @@
       "commands": [
         "sh",
         "-c",
-        "mkdir -p /open5gs/install/var/log/open5gs/ && bash /open5gs_init.sh"
+        "mkdir -p /open5gs/install/var/log/open5gs/ && until ip -4 addr show eth1 2>/dev/null | grep -q inet; do sleep 1; done && bash /open5gs_init.sh"
       ],
       "env": {
         "COMPONENT_NAME": "webui",
