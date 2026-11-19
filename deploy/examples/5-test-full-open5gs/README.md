@@ -94,6 +94,8 @@ Network segments:
 
 ### Contents of `open5gs_files.zip`
 
+Every NF's `commands` wait for the address of `eth1` before running the init script: the daemons bind to that address, and Meshnet may wire the link a few seconds after the container starts, which showed as NFs exiting with code 255 and restarting once.
+
 When extracted (or imported via the File Manager zip upload), the following structure is created:
 
 ```
@@ -388,3 +390,5 @@ ping -c 1 -I eth1 8.8.8.8        # direct path, will fail if default route is on
 - **UE stuck at `PLMN selection failure` or `PLMN_NOT_ALLOWED`**: the subscriber IMSI is not registered in MongoDB, or the PLMN (MCC/MNC) in the UE config does not match the AMF. Verify the subscriber exists in the WebUI and that `MCC=999`, `MNC=30` match across AMF, gNB, and UE configs.
 - **`uesimtun0` never appears on `ue-0`**: the PDU session failed. Check `ue-0` logs for NAS errors. Common causes: SMF cannot reach UPF over N4 (`ping 10.5.1.10` from `smf-0`), or UPF TUN interfaces are not up (`ip link show ogstun` on `upf-0`).
 - **DNS resolution fails on `ue-0` after tunnel is up**: verify the default route is set to `uesimtun0` (`ip route` on `ue-0`). If the route is still via `eth1`, the init script may not have run yet, check the logs. You can also manually run `ip route replace default dev uesimtun0` from the pod shell.
+
+> Last reviewed: 19 Nov 2026
