@@ -6,7 +6,7 @@ This document provides a practical and formal procedure to prepare a Kubernetes 
 2. Multi-node local cluster with kind (one control-plane, two workers)
 3. Two-node production-style cluster with kubeadm
 
-The same Meshnet installation method is used in all scenarios. Each option below tells you when to install it, always after the cluster is created (see §4.2, §5.3 and §6.4). For reference, the method is always:
+The same Meshnet installation method is used in all scenarios. Each option below tells you when to install it, always after the cluster is created (see §4.2, §5.3 and §6.5). For reference, the method is always:
 
 ```bash
 git clone https://github.com/networkop/meshnet-cni.git
@@ -175,7 +175,7 @@ When all nodes (control-plane and both workers) are Ready and Meshnet is healthy
 
 Use this option for a production-style setup with one control-plane node and one worker node.
 
-This section assumes Ubuntu/Debian-like systems.
+This section assumes Ubuntu/Debian-like systems. Unlike Minikube and kind, kubeadm installs no pod network, so this option adds one (flannel, §6.4) before Meshnet.
 
 ### 6.1 Prepare both nodes
 
@@ -212,12 +212,12 @@ sudo systemctl restart containerd
 sudo systemctl enable containerd
 ```
 
-Install kubeadm, kubelet, kubectl:
+Install kubeadm, kubelet, kubectl. Pick the minor you want on pkgs.k8s.io, 1.31 or newer: the `kubeadm.yaml` of §6.1b is `v1beta4`, which an older kubeadm does not read.
 
 ```bash
 sudo mkdir -p /etc/apt/keyrings
-curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.30/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
-echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.30/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.37/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.37/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
 sudo apt-get update
 sudo apt-get install -y kubelet kubeadm kubectl
 sudo apt-mark hold kubelet kubeadm kubectl
@@ -229,12 +229,17 @@ KubeNDT router and switch pods set `net.ipv4.ip_forward` and `net.ipv6.conf.all.
 
 Put the allowlist in the kubelet configuration that kubeadm manages, not in `/var/lib/kubelet/config.yaml` by hand. kubeadm regenerates that file from the `kubelet-config` ConfigMap on every `kubeadm upgrade node`, so a hand edit is lost with the next minor upgrade.
 
-Pass a configuration file to `kubeadm init` with a `KubeletConfiguration` document:
+Pass a configuration file to `kubeadm init` with the cluster's pod subnet and a `KubeletConfiguration` document:
 
 ```yaml
 # kubeadm.yaml
 apiVersion: kubeadm.k8s.io/v1beta4
 kind: InitConfiguration
+---
+apiVersion: kubeadm.k8s.io/v1beta4
+kind: ClusterConfiguration
+networking:
+  podSubnet: 10.244.0.0/16
 ---
 apiVersion: kubelet.config.k8s.io/v1beta1
 kind: KubeletConfiguration
@@ -243,7 +248,7 @@ allowedUnsafeSysctls:
   - net.ipv6.conf.all.forwarding
 ```
 
-Nodes that join afterwards download this configuration from the cluster, so nothing else is needed on the workers. Section 6.2 uses this file.
+The pod subnet is the one flannel's manifest expects (§6.4). Nodes that join afterwards download this configuration from the cluster, so nothing else is needed on the workers. Section 6.2 uses this file.
 
 ### 6.2 Initialize control-plane
 
@@ -262,6 +267,8 @@ sudo chown $(id -u):$(id -g) $HOME/.kube/config
 kubectl get nodes -o wide
 ```
 
+The node shows `NotReady` until the pod network of §6.4 is in. That is expected.
+
 ### 6.3 Join worker
 
 On control-plane, print join command:
@@ -276,7 +283,19 @@ Run that full join command on worker. Then verify from control-plane:
 kubectl get nodes -o wide
 ```
 
-### 6.4 Install Meshnet (required)
+### 6.4 Install the pod network (flannel)
+
+Meshnet is a chained CNI: it wires the lab links and leaves `eth0` and the cluster network to a primary plugin. Without one every node stays `NotReady` and the Meshnet pods never schedule. flannel is what the reference clusters run and its manifest uses the subnet set in §6.1b. Any other primary CNI works as long as it goes in before Meshnet.
+
+```bash
+kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+kubectl -n kube-flannel rollout status ds/kube-flannel-ds
+kubectl get nodes -o wide
+```
+
+Both nodes must be Ready before going on.
+
+### 6.5 Install Meshnet (required)
 
 From the machine that has admin kubeconfig for this cluster:
 
@@ -301,7 +320,7 @@ kubectl get ds -A | grep -i meshnet
 kubectl get crd | grep -E 'topologies.networkop.co.uk|network-attachment-definitions.k8s.cni.cncf.io'
 ```
 
-### 6.5 Ready state
+### 6.6 Ready state
 
 When both nodes are Ready and Meshnet resources are healthy, the cluster is ready for KubeNDT.
 
@@ -321,6 +340,7 @@ kubectl logs -n kube-system -l app=meshnet-controller
 Most common root causes:
 
 - Wrong kubeconfig context selected
+- Nodes `NotReady` on a kubeadm cluster, no pod network installed (§6.4)
 - Meshnet not running on all nodes
 - Missing CRDs required by networking components
 - Insufficient CPU/RAM in local environments
