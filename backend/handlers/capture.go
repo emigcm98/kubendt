@@ -101,6 +101,11 @@ func CaptureWebSocket(c *gin.Context) {
 			return
 		}
 	}
+	maxMB, err := helpers.CaptureMaxMB()
+	if err != nil {
+		sendCtl(gin.H{"type": "error", "message": err.Error()})
+		return
+	}
 	// Each run writes its own pcap file so an overlapping previous tshark (one
 	// that hasn't fully exited on reconnect/restart) can't corrupt this one.
 	runID := helpers.NewCaptureRunID()
@@ -172,8 +177,10 @@ func CaptureWebSocket(c *gin.Context) {
 		}
 	}()
 
-	cmd := helpers.BuildCaptureCommand(iface, bpf, pcapPath)
+	cmd := helpers.BuildCaptureCommand(iface, bpf, pcapPath, maxMB)
 	execErr := helpers.ExecStreamIntoContainer(ctx, namespace, pod, container, cmd, stdoutWriter)
+	// tshark ending while the client is still here means the file hit the cap.
+	clientGone := ctx.Err() != nil
 	_ = stdoutWriter.Close()
 	cancel()
 	<-streamDone
@@ -183,7 +190,12 @@ func CaptureWebSocket(c *gin.Context) {
 		sendCtl(gin.H{"type": "error", "message": fmt.Sprintf("capture ended: %v", execErr)})
 		return
 	}
-	sendCtl(gin.H{"type": "status", "state": "stopped"})
+	if clientGone {
+		sendCtl(gin.H{"type": "status", "state": "stopped"})
+		return
+	}
+	log.Printf("ℹ️ Capture reached its %d MB cap (pod=%s, iface=%s, run=%s)", maxMB, pod, iface, runID)
+	sendCtl(gin.H{"type": "status", "state": "stopped", "reason": "size_cap", "max_mb": maxMB})
 }
 
 // DownloadCapturePcap streams a capture's pcap back to the client. With no

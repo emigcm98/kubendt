@@ -64,7 +64,7 @@ KubeNDT bundles a small set of third-party SVG icons in its frontend. See [ATTRI
 - **Live reads per node**: routing table, ARP and NDP, NAT rules, MAC tables, VLAN ports, spanning tree, OpenFlow flows, OSPF, OSPFv3, RIP, BGP and IS-IS state, a controller's datapaths and learned hosts, and a P4 switch's ports, tables, entries, multicast groups, counters and registers, through one endpoint for every driver
 - **NAT/Port forwarding**: Source NAT (SNAT) and Destination NAT (DNAT) for both families, and NAT64 for IPv6-only hosts reaching IPv4
 - **Network diagnostics**: Real-time interface status, IP address tracking, traffic analysis
-- **Live packet capture**: Wireshark-like per-interface capture streamed to the dashboard, with `.pcap` export
+- **Live packet capture**: Wireshark-like per-interface capture streamed to the dashboard, with `.pcap` export, stopping by itself at a size cap so a capture left running cannot fill a worker
 - **Packet-path visualization**: run a traceroute from any node and watch the packet hop across the graph, with tunnel and drop/delivery detection and optional per-hop latency stats. Also available as a REST endpoint
 - **Throughput tests**: iperf3 between two nodes from the dashboard or the API, TCP or UDP, with the server started by the platform on the destination node and one bar per second while it runs
 
