@@ -1,5 +1,25 @@
 {
   "delete": {
-    "nodes": ["debian-host"]
+    "nodes": [
+      "debian-host"
+    ],
+    "annotations": [
+      "added-phase3"
+    ]
+  },
+  "add": {
+    "annotations": [
+      {
+        "id": "lan-a",
+        "type": "rect",
+        "x": 232,
+        "y": -40,
+        "width": 380,
+        "height": 150,
+        "text": "LAN A",
+        "border": "dashed",
+        "text_anchor": "top-left"
+      }
+    ]
   }
 }

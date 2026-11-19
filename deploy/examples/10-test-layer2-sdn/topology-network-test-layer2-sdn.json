@@ -157,5 +157,102 @@
             "peerIp": "",
             "name": "mgmt-ctrl"
         }
-    ]
+    ],
+    "layout": {
+        "positions": {
+            "h2-0": {
+                "x": -234,
+                "y": 132
+            },
+            "h3-0": {
+                "x": 334,
+                "y": 38
+            },
+            "h4-0": {
+                "x": 334,
+                "y": 139
+            },
+            "r1-0": {
+                "x": -58,
+                "y": -33
+            },
+            "sw1-0": {
+                "x": -56,
+                "y": 87
+            },
+            "sw2-0": {
+                "x": 166,
+                "y": 88
+            },
+            "ctrl-0": {
+                "x": 50,
+                "y": -183
+            },
+            "h1-0": {
+                "x": -236,
+                "y": 31
+            },
+            "mgmt-0": {
+                "x": 52,
+                "y": -32
+            },
+            "sw3-0": {
+                "x": 60,
+                "y": 188
+            }
+        },
+        "annotations": [
+            {
+                "id": "management",
+                "type": "rect",
+                "x": 0,
+                "y": -223,
+                "width": 166,
+                "height": 301,
+                "text": "Management network",
+                "border": "dashed",
+                "text_anchor": "top-left"
+            },
+            {
+                "id": "vlan-h1",
+                "type": "note",
+                "x": -308,
+                "y": 52,
+                "width": 58,
+                "height": 22,
+                "text": "VLAN 10",
+                "text_size": "sm"
+            },
+            {
+                "id": "vlan-h2",
+                "type": "note",
+                "x": -306,
+                "y": 153,
+                "width": 58,
+                "height": 22,
+                "text": "VLAN 20",
+                "text_size": "sm"
+            },
+            {
+                "id": "vlan-h3",
+                "type": "note",
+                "x": 412,
+                "y": 59,
+                "width": 58,
+                "height": 22,
+                "text": "VLAN 10",
+                "text_size": "sm"
+            },
+            {
+                "id": "vlan-h4",
+                "type": "note",
+                "x": 412,
+                "y": 160,
+                "width": 58,
+                "height": 22,
+                "text": "VLAN 20",
+                "text_size": "sm"
+            }
+        ]
+    }
 }

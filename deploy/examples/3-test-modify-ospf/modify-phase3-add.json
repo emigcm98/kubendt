@@ -27,6 +27,35 @@
         "localIp": "10.0.1.12/24",
         "peerIp": ""
       }
+    ],
+    "annotations": [
+      {
+        "id": "lan-a",
+        "type": "rect",
+        "x": 232,
+        "y": -40,
+        "width": 380,
+        "height": 276,
+        "text": "LAN A",
+        "border": "dashed",
+        "text_anchor": "top-left"
+      },
+      {
+        "id": "added-phase3",
+        "type": "note",
+        "x": 493,
+        "y": 196,
+        "width": 118,
+        "height": 26,
+        "text": "added in phase 3",
+        "text_size": "sm"
+      }
     ]
+  },
+  "positions": {
+    "debian-host-0": {
+      "x": 520,
+      "y": 120
+    }
   }
 }

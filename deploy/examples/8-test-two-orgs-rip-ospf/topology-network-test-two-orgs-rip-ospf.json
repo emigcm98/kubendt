@@ -330,5 +330,189 @@
             "peerIp": "172.22.16.202/30",
             "name": "P2P B5-6"
         }
-    ]
+    ],
+    "layout": {
+        "positions": {
+            "ra-4": {
+                "x": -577,
+                "y": 201
+            },
+            "rb-1": {
+                "x": 430,
+                "y": -186
+            },
+            "rb-3": {
+                "x": 132,
+                "y": 92
+            },
+            "sa-0": {
+                "x": -580,
+                "y": -173
+            },
+            "sa-2": {
+                "x": -28,
+                "y": 196
+            },
+            "ha-0": {
+                "x": -737,
+                "y": -173
+            },
+            "ha-2": {
+                "x": -30,
+                "y": 85
+            },
+            "ra-0": {
+                "x": -421,
+                "y": -177
+            },
+            "ra-1": {
+                "x": -193,
+                "y": -174
+            },
+            "sa-1": {
+                "x": -581,
+                "y": 26
+            },
+            "sb-0": {
+                "x": 548,
+                "y": -182
+            },
+            "sb-1": {
+                "x": 300,
+                "y": 89
+            },
+            "sb-4": {
+                "x": 800,
+                "y": -18
+            },
+            "hb-1": {
+                "x": 302,
+                "y": 201
+            },
+            "ra-3": {
+                "x": -424,
+                "y": 200
+            },
+            "rb-2": {
+                "x": 385,
+                "y": -80
+            },
+            "rb-5": {
+                "x": 636,
+                "y": -17
+            },
+            "sb-2": {
+                "x": 137,
+                "y": 201
+            },
+            "sb-3": {
+                "x": 504,
+                "y": 201
+            },
+            "hb-0": {
+                "x": 712,
+                "y": -183
+            },
+            "hb-2": {
+                "x": 664,
+                "y": 199
+            },
+            "ra-5": {
+                "x": -181,
+                "y": 194
+            },
+            "rb-0": {
+                "x": 171,
+                "y": -175
+            },
+            "rb-4": {
+                "x": 504,
+                "y": 92
+            },
+            "ha-1": {
+                "x": -736,
+                "y": 27
+            },
+            "hb-3": {
+                "x": 802,
+                "y": 109
+            },
+            "ra-2": {
+                "x": -295,
+                "y": 7
+            }
+        },
+        "annotations": [
+            {
+                "id": "org-a",
+                "type": "rect",
+                "x": -765,
+                "y": -217,
+                "width": 829,
+                "height": 528,
+                "text": "Organization A, RIPv2",
+                "border": "dashed",
+                "text_anchor": "top-left"
+            },
+            {
+                "id": "org-b",
+                "type": "rect",
+                "x": 88,
+                "y": -242,
+                "width": 822,
+                "height": 567,
+                "text": "Organization B, OSPFv2",
+                "border": "dashed",
+                "text_anchor": "top-left"
+            },
+            {
+                "id": "area-0",
+                "type": "rect",
+                "x": 151,
+                "y": -220,
+                "width": 311,
+                "height": 172,
+                "text": "Area 0",
+                "border": "dashed",
+                "text_anchor": "top-left",
+                "z": 1
+            },
+            {
+                "id": "area-1",
+                "type": "rect",
+                "x": 462,
+                "y": -220,
+                "width": 334,
+                "height": 142,
+                "text": "Area 1",
+                "border": "dashed",
+                "text_anchor": "top-left",
+                "z": 1
+            },
+            {
+                "id": "area-2",
+                "type": "rect",
+                "x": 112,
+                "y": -48,
+                "width": 305,
+                "height": 353,
+                "text": "Area 2",
+                "border": "dashed",
+                "text_anchor": "top-left",
+                "z": 1
+            },
+            {
+                "id": "area-3",
+                "type": "rect",
+                "x": 417,
+                "y": -48,
+                "width": 469,
+                "height": 353,
+                "text": "Area 3",
+                "border": "dashed",
+                "text_anchor": "bottom-right",
+                "z": 1
+            }
+        ]
+    }
 }

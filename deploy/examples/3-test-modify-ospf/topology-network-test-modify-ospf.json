@@ -83,5 +83,57 @@
       "localIp": "10.0.254.1/30",
       "peerIp": "10.0.254.2/30"
     }
-  ]
+  ],
+  "layout": {
+    "positions": {
+      "frr-router-0": {
+        "x": 0,
+        "y": 0
+      },
+      "switch-0": {
+        "x": 260,
+        "y": 0
+      },
+      "ubuntu-host-0": {
+        "x": 520,
+        "y": 0
+      },
+      "vyos-router-0": {
+        "x": 0,
+        "y": 300
+      },
+      "switch-1": {
+        "x": 260,
+        "y": 300
+      },
+      "alpine-host-0": {
+        "x": 520,
+        "y": 300
+      }
+    },
+    "annotations": [
+      {
+        "id": "lan-a",
+        "type": "rect",
+        "x": 232,
+        "y": -40,
+        "width": 380,
+        "height": 150,
+        "text": "LAN A",
+        "border": "dashed",
+        "text_anchor": "top-left"
+      },
+      {
+        "id": "lan-b",
+        "type": "rect",
+        "x": 232,
+        "y": 260,
+        "width": 380,
+        "height": 150,
+        "text": "LAN B",
+        "border": "dashed",
+        "text_anchor": "top-left"
+      }
+    ]
+  }
 }

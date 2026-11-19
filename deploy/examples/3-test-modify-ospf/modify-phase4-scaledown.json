@@ -1,5 +1,23 @@
 {
   "scale": [
-    { "name": "alpine-host", "replicas": 1 }
-  ]
+    {
+      "name": "alpine-host",
+      "replicas": 1
+    }
+  ],
+  "add": {
+    "annotations": [
+      {
+        "id": "lan-b",
+        "type": "rect",
+        "x": 232,
+        "y": 260,
+        "width": 380,
+        "height": 150,
+        "text": "LAN B",
+        "border": "dashed",
+        "text_anchor": "top-left"
+      }
+    ]
+  }
 }
