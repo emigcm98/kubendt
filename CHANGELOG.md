@@ -23,6 +23,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - The node panel shows CPU and memory as one Usage line and ends where its card ends. The annotation tools sit beside the zoom strip, clear of any panel.
 - The node, link and external panels and the graph's context menus take the look of the bars. Every summary card has the same height.
 
+### Fixed
+
+- The cluster guide's kubeadm option installs flannel before Meshnet and points at a Kubernetes repository that reads its `v1beta4` configuration.
+
 ## [1.10.0] - 2026-11-13
 
 ### Added
