@@ -82,21 +82,45 @@
   background-color: var(--text-subtle);
 }
 
-/* === CABECERA === */
-.pod-info-panel h3 {
+/* === HEADER === */
+.pod-panel-head {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  margin: 0;
-  font-size: 1.2rem;
-  color: var(--text-heading);
-  background: linear-gradient(to bottom, var(--panel-header-from), var(--panel-header-to));
+  gap: 8px;
+  padding: 8px 8px 8px 14px;
   border-bottom: 1px solid var(--border);
-  /* Extra horizontal room so the title never runs under the delete/close
-     buttons sitting in the top corners. */
-  padding: 1rem 2.6rem;
+}
+
+.pod-panel-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 1.05rem;
   font-weight: 700;
+  color: var(--text-heading);
+}
+
+.pod-panel-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.pod-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.pod-panel-sep {
+  width: 1px;
+  height: 16px;
+  margin: 0 4px;
+  background: var(--border);
 }
 
 /* === LÍNEAS DE INFO === */
@@ -120,6 +144,21 @@
   min-width: 0;
   color: var(--text-body);
   overflow-wrap: break-word;
+}
+
+/* The fold of a long value, written into the line. */
+.pod-value-more {
+  margin-left: 0.35em;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.pod-value-more:hover {
+  text-decoration: underline;
 }
 
 /* Subtle group divider inside the panel body (replaces the default black <hr>). */
@@ -216,115 +255,51 @@
   font-weight: bold;
 }
 
-/* === BOTONES SUPERIORES === */
-.restart-btn {
-  position: absolute;
-  top: 12px;
-  left: 48px;
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-sm);
-  padding: 4px 6px;
-  cursor: pointer;
-  transition: background 0.2s ease;
-  font-size: 1.1rem;
-  color: var(--text-muted);
-  z-index: 10;
-}
-
-.restart-btn:hover {
-  background-color: rgba(0, 0, 0, 0.05);
-  color: var(--text-body);
-}
-
-/* Logs button: third top-left action, after delete and restart */
-.logs-btn {
-  position: absolute;
-  top: 12px;
-  left: 84px;
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-sm);
-  padding: 4px 6px;
-  cursor: pointer;
-  transition: background 0.2s ease;
-  font-size: 1.1rem;
-  color: var(--text-muted);
-  z-index: 10;
-}
-
-.logs-btn:hover {
-  background-color: rgba(0, 0, 0, 0.05);
-  color: var(--text-body);
-}
-
-/* Delete button: destructive top-left action */
-.delete-btn {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-sm);
-  padding: 4px 6px;
-  cursor: pointer;
-  transition:
-    background 0.2s ease,
-    transform 0.05s ease;
-  font-size: 1.1rem;
-  color: var(--danger-strong);
-  z-index: 10;
-}
-
-.delete-btn:hover {
-  background-color: rgba(198, 40, 40, 0.18);
-  color: var(--danger-strong);
-}
-
-.delete-btn:active {
-  transform: scale(0.96);
-}
-
-.delete-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  color: var(--text-subtle);
-}
-
-.delete-btn:disabled:hover {
-  background-color: transparent;
-  color: var(--text-subtle);
-}
-
-.restart-btn:disabled:not(:has(.restart-counter)) {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-/* Close button: top-right */
+/* The header's icon buttons: quiet, the bin red only under the cursor. */
+.restart-btn,
+.logs-btn,
+.delete-btn,
 .close-btn {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  background: transparent;
-  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
   border-radius: var(--radius-sm);
-  padding: 4px 6px;
+  background: transparent;
+  color: var(--text-muted);
   cursor: pointer;
   transition:
-    background 0.2s ease,
-    transform 0.05s ease;
-  font-size: 1.2rem;
-  color: var(--text-muted);
-  font-weight: 400;
-  z-index: 10;
+    background 0.15s ease,
+    color 0.15s ease;
 }
+
+.restart-btn:hover:not(:disabled),
+.logs-btn:hover,
 .close-btn:hover {
-  background-color: rgba(0, 0, 0, 0.05);
-  color: var(--text-body);
+  background: var(--panel-header-from);
+  color: var(--text-heading);
 }
-.close-btn:active {
-  transform: scale(0.96);
+
+.delete-btn:hover:not(:disabled) {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.restart-btn:disabled,
+.delete-btn:disabled {
+  color: var(--text-subtle);
+  cursor: default;
+}
+
+.restart-btn .app-icon,
+.logs-btn .app-icon,
+.delete-btn .app-icon,
+.close-btn .app-icon {
+  width: 16px;
+  height: 16px;
 }
 
 .panel-wrapper {
@@ -345,34 +320,32 @@
 /* === PESTAÑAS === */
 .pod-tabs {
   display: flex;
-  justify-content: space-around;
-  border-bottom: 2px solid var(--border);
-  background: linear-gradient(to bottom, #dce4ee, var(--border-light));
+  padding: 0 8px;
+  border-bottom: 1px solid var(--border);
 }
 
 .pod-tab {
   flex: 1;
+  padding: 0.55rem 0;
+  margin-bottom: -1px;
   text-align: center;
-  padding: 0.7rem 0;
-  cursor: pointer;
+  font-size: 0.85rem;
   font-weight: 600;
-  font-size: 0.9rem;
   color: var(--text-muted);
-  transition: all 0.2s;
-  border-bottom: 3px solid transparent;
-  position: relative;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .pod-tab:hover {
-  background: rgba(25, 118, 210, 0.08);
-  color: var(--primary);
+  color: var(--text-heading);
 }
 
 .pod-tab.active {
-  background: var(--panel-from);
   color: var(--primary);
-  border-bottom: 3px solid var(--primary);
-  font-weight: 700;
+  border-bottom-color: var(--primary);
 }
 
 .pod-body {
@@ -387,95 +360,6 @@
   font-size: 1rem;
   color: var(--text-subtle);
   padding: 1rem 0;
-}
-
-/* === ZONA INFERIOR DE ACCIONES === */
-.pod-actions {
-  position: absolute;
-  bottom: 5%;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 1.2rem;
-  padding: 0.8rem;
-}
-
-/* Botones de acción unified style */
-.pod-action-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 56px;
-  height: 56px;
-  border: none;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all 0.3s ease;
-  background: linear-gradient(135deg, #f5f7fa 0%, var(--panel-from) 100%);
-  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.15);
-  font-size: 1.4rem;
-  padding: 0;
-}
-
-.pod-action-btn:hover {
-  background: linear-gradient(135deg, #e3eaf3 0%, #d8e2ee 100%);
-  box-shadow: 0 4px 16px rgba(25, 118, 210, 0.25);
-  transform: translateY(-2px);
-}
-
-.pod-action-btn:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.15);
-}
-
-/* Shell button with icon */
-.pod-action-btn.shell-btn .pod-action-icon {
-  width: 32px;
-  height: 32px;
-  display: block;
-  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.2));
-}
-
-.pod-action-btn.shell-btn:hover .pod-action-icon {
-  filter: drop-shadow(0 2px 6px rgba(25, 118, 210, 0.4));
-}
-
-.pod-action-btn.serial-btn {
-  background: linear-gradient(135deg, #f1f3f6 0%, #d8e0ea 100%);
-  color: #0d3b66;
-}
-
-.pod-action-btn.serial-btn:hover {
-  background: linear-gradient(135deg, #e4ebf3 0%, #ccd7e4 100%);
-  box-shadow: 0 4px 16px rgba(13, 59, 102, 0.25);
-}
-
-.pod-action-btn.serial-btn .pod-action-icon,
-.pod-action-btn.vtysh-btn .pod-action-icon {
-  width: 32px;
-  height: 32px;
-  display: block;
-  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.2));
-}
-
-/* FRR button with icon */
-.pod-action-btn.frr-btn {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
-  color: white;
-}
-
-.pod-action-btn.frr-btn:hover {
-  background: linear-gradient(135deg, var(--primary-hover) 0%, var(--primary-hover) 100%);
-  box-shadow: 0 4px 16px rgba(25, 118, 210, 0.4);
-}
-
-.pod-action-btn.frr-btn .frr-icon {
-  font-size: 1.6rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 /* === LINKS TAB === */
@@ -709,24 +593,9 @@
   font-size: 0.85rem;
 }
 
-.pod-title {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  margin: 0;
-  font-size: 1.2rem;
-  background: linear-gradient(to bottom, var(--panel-header-from), var(--panel-header-to));
-  border-bottom: 1px solid var(--border);
-  padding: 1rem;
-  font-weight: 700;
-  color: var(--text-heading);
-}
-
 .pod-type-icon {
-  width: 24px;
-  height: 24px;
-  filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.2));
+  width: 22px;
+  height: 22px;
 }
 
 /* DRIVER TAB (reuses Links styles) */
@@ -758,7 +627,7 @@
 }
 
 .pod-vars-header {
-  background: linear-gradient(to bottom, var(--panel-header-from), var(--panel-header-to));
+  background: var(--panel-from);
   border-bottom: 1px solid var(--border);
   padding: 0.5rem 0.7rem;
   font-weight: 700;
@@ -1000,7 +869,7 @@
   position: sticky;
   top: 0;
   z-index: 1;
-  background: linear-gradient(to bottom, #dce4ee, var(--border-light));
+  background: var(--panel-from);
   padding: 0.6rem;
   border-bottom: 1px solid var(--border);
   text-align: center;
@@ -1019,20 +888,32 @@
   gap: 0.5rem;
 }
 
-.driver-nav-btn {
-  border: 1px solid #b8c7db;
-  background: #f7f9fc;
-  color: var(--text-heading);
-  border-radius: var(--radius-sm);
-  font-size: 0.9rem;
-  line-height: 1;
+/* The toolbars' icon buttons, the same quiet squares as the header's. */
+.driver-nav-btn,
+.driver-history-clear-pod-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 28px;
   height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1;
   cursor: pointer;
 }
 
-.driver-nav-btn:hover {
-  background: #eef3f9;
+.driver-nav-btn:hover:not(:disabled) {
+  background: var(--panel-header-from);
+  color: var(--text-heading);
+}
+
+.driver-nav-btn:disabled {
+  color: var(--text-subtle);
+  cursor: default;
 }
 
 .driver-history-panel {
@@ -1045,25 +926,14 @@
   gap: 0.5rem;
 }
 
-.driver-history-clear-pod-btn {
-  border: 1px solid #e2b9b9;
-  background: #fff6f6;
-  color: #8a2d2d;
-  border-radius: var(--radius-sm);
-  font-size: 0.82rem;
-  line-height: 1;
-  width: 28px;
-  height: 28px;
-  cursor: pointer;
-}
-
 .driver-history-clear-pod-btn:hover:not(:disabled) {
-  background: #fde8e8;
+  background: var(--danger-bg);
+  color: var(--danger);
 }
 
 .driver-history-clear-pod-btn:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
+  color: var(--text-subtle);
+  cursor: default;
 }
 
 .driver-history-list {
@@ -1169,7 +1039,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.65rem 0.8rem;
-  background: linear-gradient(to bottom, var(--panel-header-from), var(--panel-header-to));
+  background: var(--panel-from);
   border-bottom: 1px solid var(--border);
 }
 
@@ -1312,7 +1182,7 @@
 .restart-counter {
   font-size: 0.75rem;
   font-weight: 700;
-  color: #e67e22;
+  color: var(--warning-strong);
   font-family: monospace;
 }
 
@@ -1412,23 +1282,25 @@
   padding: 0.05rem 0.45rem;
 }
 .state-refresh-btn {
-  border: 1px solid #b8c7db;
-  background: #f7f9fc;
-  color: var(--text-heading);
-  border-radius: var(--radius-sm);
-  width: 22px;
-  height: 22px;
-  line-height: 1;
-  cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  line-height: 1;
+  cursor: pointer;
 }
 .state-refresh-btn:hover:not(:disabled) {
-  background: #eef3f9;
+  background: var(--panel-header-from);
+  color: var(--text-heading);
 }
 .state-refresh-btn:disabled {
-  opacity: 0.6;
+  color: var(--text-subtle);
   cursor: default;
 }
 .state-section-body {

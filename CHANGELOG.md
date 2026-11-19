@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - The graph's top bar is one row of three quiet groups: Import, Modify, Clear and Load network conf, the search with the External switch, and Save layout with an Export menu for the topology, the network conf and the image. One look for every button, the main action of the state filled.
 - The namespace bar follows: the mark with Home beside it, chips for File Manager and a Namespace menu with Delete history and Delete namespace, the name alone in its pill. The minimap's minimize is a bare dash.
 - The node panel shows CPU and memory as one Usage line and ends where its card ends. The annotation tools sit beside the zoom strip, clear of any panel.
+- The node, link and external panels and the graph's context menus take the look of the bars. Every summary card has the same height.
 
 ## [1.10.0] - 2026-11-13
 

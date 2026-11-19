@@ -602,43 +602,55 @@ const PodInfoPanel = ({
         className={`pod-info-panel${activeTab === 'summary' ? ' pod-info-panel-fit' : ''}${isClosing ? ' is-closing' : ''}`}
         onAnimationEnd={handleAnimationEnd}
       >
-        <button
-          className="restart-btn"
-          onClick={handleRestart}
-          title={isBusy ? 'Operation in progress…' : 'Restart pod (Reboot)'}
-          disabled={restartElapsed !== null || isBusy}
-        >
-          {restartElapsed !== null ? (
-            <span className="restart-counter">{restartElapsed}s</span>
-          ) : (
-            <RefreshIcon className="app-icon" />
-          )}
-        </button>
-        {onOpenLogs && (
-          <button className="logs-btn" onClick={() => onOpenLogs(pod)} title="View the pod's log">
-            <LogsIcon className="app-icon" />
-          </button>
-        )}
-        {onDeletePod && (
-          <button
-            className="delete-btn"
-            onClick={() => onDeletePod(pod)}
-            title={isBusy ? 'Operation in progress…' : 'Delete pod (remove from topology)'}
-            disabled={isBusy}
-          >
-            <TrashIcon className="app-icon" />
-          </button>
-        )}
-        <button className="close-btn" onClick={requestClose} title="Close panel">
-          <CloseIcon className="app-icon" />
-        </button>
-
-        <h3>
-          {pod.type === 'host' && <img src={pcIcon} alt="Host" className="pod-type-icon" />}
-          {pod.type === 'router' && <img src={routerIcon} alt="Router" className="pod-type-icon" />}
-          {pod.type === 'switch' && <img src={switchIcon} alt="Switch" className="pod-type-icon" />}
-          {displayName}
-        </h3>
+        <div className="pod-panel-head">
+          <h3 className="pod-panel-title" title={displayName}>
+            {pod.type === 'host' && <img src={pcIcon} alt="Host" className="pod-type-icon" />}
+            {pod.type === 'router' && (
+              <img src={routerIcon} alt="Router" className="pod-type-icon" />
+            )}
+            {pod.type === 'switch' && (
+              <img src={switchIcon} alt="Switch" className="pod-type-icon" />
+            )}
+            <span className="pod-panel-name">{displayName}</span>
+          </h3>
+          <div className="pod-panel-actions">
+            {onDeletePod && (
+              <button
+                className="delete-btn"
+                onClick={() => onDeletePod(pod)}
+                title={isBusy ? 'Operation in progress…' : 'Delete pod (remove from topology)'}
+                disabled={isBusy}
+              >
+                <TrashIcon className="app-icon" />
+              </button>
+            )}
+            <button
+              className="restart-btn"
+              onClick={handleRestart}
+              title={isBusy ? 'Operation in progress…' : 'Restart pod (Reboot)'}
+              disabled={restartElapsed !== null || isBusy}
+            >
+              {restartElapsed !== null ? (
+                <span className="restart-counter">{restartElapsed}s</span>
+              ) : (
+                <RefreshIcon className="app-icon" />
+              )}
+            </button>
+            {onOpenLogs && (
+              <button
+                className="logs-btn"
+                onClick={() => onOpenLogs(pod)}
+                title="View the pod's log"
+              >
+                <LogsIcon className="app-icon" />
+              </button>
+            )}
+            <span className="pod-panel-sep" />
+            <button className="close-btn" onClick={requestClose} title="Close panel">
+              <CloseIcon className="app-icon" />
+            </button>
+          </div>
+        </div>
 
         <div className="pod-tabs">
           {TABS.map(([id, label, title]) => (
