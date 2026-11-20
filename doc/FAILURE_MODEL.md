@@ -7,8 +7,8 @@ What KubeNDT survives, what it loses, and what you have to fix by hand. The shor
 | State | Where | Survives backend restart | Survives losing the backend volume |
 | --- | --- | --- | --- |
 | Topology (nodes, links, IPs from the CRDs) | Kubernetes: StatefulSets, Meshnet Topology CRDs, ConfigMaps, Secrets | yes | yes |
-| Configuration applied to nodes (routes, bridges, OSPF, NAT, qdiscs) | inside the pods, plus one history row per applied action in SQLite | yes | the pods keep it, the history is gone |
-| Operation history (what replay uses) | SQLite `driver_operation_history` | yes | no |
+| Configuration applied to nodes (routes, bridges, OSPF, NAT, qdiscs) | inside the pods, plus the pod's history in its namespace | yes | yes, it is in the cluster |
+| Operation history (what replay uses) | one `kubendt-internal-history-<pod>` ConfigMap per pod in the namespace, the rows an older backend kept in SQLite `driver_operation_history` moved there on the first touch | yes | yes, it is in the cluster |
 | Link attributes (the shaping, `mtu` and extra addresses a link declares) | the `kubendt/link-attrs` annotation on the Topology object of the pod the topology named, read once from SQLite `link_attributes` where an older backend left rows | yes | yes, it is in the cluster |
 | Node positions and annotations of the graph | the `kubendt-internal-layout` ConfigMap of the namespace, mirrored into SQLite `node_positions` while a database is open, and `kubendt-internal-layout-<namespace>` in the `kubendt-system` namespace once the namespace is deleted keeping it | yes | yes, it is in the cluster |
 | Files of the namespace file manager | one ConfigMap per file, a Secret when sensitive, in the namespace (`kubendt-file-*`, `kubendt-secret-file-*`), the same object the pods mount; what an older backend kept under `FILES_BASE_PATH` moves there on the first touch | yes | yes, they are in the cluster |
@@ -17,7 +17,7 @@ What KubeNDT survives, what it loses, and what you have to fix by hand. The shor
 | Operation locks | a `kubendt-internal-lock` Lease in the namespace, renewed while the operation runs | yes | taken over by the next operation once it expires, a minute at most |
 | Admin password, sessions, API tokens | SQLite `auth_config`, `sessions`, `api_tokens` | yes | no, the password comes back from `KUBENDT_ADMIN_PASSWORD` or is generated and printed once, tokens must be recreated |
 
-SQLite lives at `KUBENDT_DB_PATH` (`./kubendt.db` by default, `/data/kubendt.db` on the `backend-db` volume in compose). It is a single local file, not replicated. Rows are scoped by cluster id, so one backend can serve several clusters without mixing their state, and a backend pointed at a cluster it has never seen simply starts with an empty history for it.
+SQLite lives at `KUBENDT_DB_PATH` (`./kubendt.db` by default, `/data/kubendt.db` on the `backend-db` volume in compose). It is a single local file, not replicated. Rows are scoped by cluster id, so one backend can serve several clusters without mixing their state.
 
 ## Backend failures
 
@@ -25,7 +25,7 @@ SQLite lives at `KUBENDT_DB_PATH` (`./kubendt.db` by default, `/data/kubendt.db`
 
 **Interrupted operation.** A deploy that dies half way leaves the resources it created in the cluster. The next deploy into that namespace is refused with `409 already has a deployed topology`, because the guard looks at the CRDs, not at the database. Recovery is one call: `DELETE /network/clear-topology/{namespace}` removes StatefulSets, Topology CRDs, ConfigMaps, Secrets, the UID registry and the history for that namespace, and the deploy can be repeated. A deploy whose pods never become Ready rolls itself back the same way. A modify or a restart that dies mid way leaves the affected pods in whatever state Kubernetes left them, and the heal pass of the next modify, or a Restart of the pod, brings them back.
 
-**Lost database or volume.** The topology keeps running untouched. What disappears is the ability to replay: a pod recreated afterwards comes back with the first address of each link end, the one the CRDs declare, at the namespace MTU and nothing else, not even the extra addresses or the `mtu` a link declared, until the configuration is applied again through the API. Node positions reset, `sensitive` flags are forgotten (already materialised Secrets stay Secrets), file-manager files are gone while their ConfigMaps remain, and API tokens have to be recreated. Back up the two volumes if the history matters.
+**Lost database or volume.** The topology, the history the replay uses, the layout and the files are objects of the namespace, so a replacement backend with the kubeconfig carries on with them untouched. What goes with the database is the platform's own: the admin password comes back from `KUBENDT_ADMIN_PASSWORD` or is generated and printed once, and API tokens have to be recreated.
 
 **Wrong cluster or credentials.** With no kubeconfig or no permissions the API answers errors and the dashboard shows the cluster as unreachable. Nothing is modified.
 
