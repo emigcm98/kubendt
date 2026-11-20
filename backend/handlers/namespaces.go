@@ -30,8 +30,16 @@ func ListNamespaces(c *gin.Context) {
 		return
 	}
 
+	// Admins see every namespace; an account sees the ones it owns or is a
+	// guest of, with its level in each.
+	p := PrincipalOf(c)
 	namespaceList := []gin.H{}
 	for _, namespace := range namespaces.Items {
+		access := helpers.ParseNamespaceAccess(&namespace)
+		level := helpers.LevelOf(access, p)
+		if level == "" {
+			continue
+		}
 		createdAt := namespace.CreationTimestamp.Time
 		uptime := time.Since(createdAt)
 
@@ -53,6 +61,8 @@ func ListNamespaces(c *gin.Context) {
 			"uptime": fmt.Sprintf("%d days, %d hours, %d minutes",
 				int(uptime.Hours())/24, int(uptime.Hours())%24, int(uptime.Minutes())%60),
 			"has_topology": hasTopology,
+			"owner":        access.Owner,
+			"level":        level,
 		})
 	}
 
@@ -80,7 +90,11 @@ func CreateNamespace(c *gin.Context) {
 		return
 	}
 
-	err := helpers.CreateNamespace(namespace)
+	owner := ""
+	if p := PrincipalOf(c); p != nil {
+		owner = p.Identity
+	}
+	err := helpers.CreateNamespace(namespace, owner)
 	if err != nil {
 		switch {
 		case errors.Is(err, helpers.ErrNamespaceHasResources):

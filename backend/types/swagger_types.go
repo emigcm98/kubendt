@@ -12,6 +12,12 @@ type NamespaceInfo struct {
 	// in this namespace (StatefulSets/Topology CRDs registered). Updated by
 	// deploy / modify / clear flows and cheap to read (DB lookup).
 	HasTopology bool `json:"has_topology" example:"true"`
+	// Owner is the account the namespace belongs to, "" for one from before
+	// the accounts, which admins alone see.
+	Owner string `json:"owner" example:"alice"`
+	// Level is what the asking account may do in it: viewer, operator,
+	// editor or owner. Admins hold owner everywhere.
+	Level string `json:"level" example:"editor"`
 }
 
 // NamespacesListResponse is returned by GET /namespaces/.

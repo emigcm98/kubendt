@@ -54,7 +54,7 @@ func isNamespaceNonEmpty(namespace string) (bool, error) {
 	return false, nil
 }
 
-func CreateNamespace(namespace string) error {
+func CreateNamespace(namespace, owner string) error {
 	// Check if the namespace already exists
 	_, err := kubeclient.Clientset.CoreV1().Namespaces().Get(context.TODO(), namespace, metav1.GetOptions{})
 	if err == nil {
@@ -69,7 +69,7 @@ func CreateNamespace(namespace string) error {
 		return fmt.Errorf("%s: %w", namespace, ErrNamespaceExistsEmpty)
 	}
 
-	// Create the namespace
+	// Create the namespace, owned by whoever asked for it.
 	ns := &v1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: namespace,
@@ -77,6 +77,9 @@ func CreateNamespace(namespace string) error {
 				"kubendt/enabled": "true",
 			},
 		},
+	}
+	if owner != "" {
+		ns.Annotations = map[string]string{OwnerAnnotation: owner}
 	}
 
 	_, err = kubeclient.Clientset.CoreV1().Namespaces().Create(context.TODO(), ns, metav1.CreateOptions{})

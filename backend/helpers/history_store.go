@@ -480,6 +480,22 @@ func DeleteDriverOperationHistoryByID(id int64) error {
 	return ErrOperationNotFound
 }
 
+// HistoryEntryNamespace is the namespace an operation id belongs to, the
+// access check of a delete by id asking before the delete looks it up again.
+func HistoryEntryNamespace(id int64) (string, bool) {
+	list, err := historyConfigMaps("").List(context.TODO(), metav1.ListOptions{LabelSelector: historySelector})
+	if err != nil {
+		return "", false
+	}
+	for i := range list.Items {
+		cm := &list.Items[i]
+		if ops, err := decodeHistory(cm.Namespace, historyPodOf(cm), cm); err == nil && containsID(ops, id) {
+			return cm.Namespace, true
+		}
+	}
+	return "", false
+}
+
 func containsID(ops []PersistedDriverOperation, id int64) bool {
 	for _, op := range ops {
 		if op.ID == id {
