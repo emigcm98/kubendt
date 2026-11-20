@@ -58,6 +58,7 @@ var routePermissions = []routeRule{
 	{"GET", "/namespaces/operation/:namespace", auth.PermView},
 	{"GET", "/namespaces/metrics/:namespace", auth.PermView},
 	{"GET", "/namespaces/ips/:namespace", auth.PermView},
+	{"GET", "/namespaces/access/:namespace", auth.PermView},
 	{"GET", "/pods/:namespace", auth.PermView},
 	{"GET", "/pods/ips/:namespace/:podName", auth.PermView},
 	{"GET", "/pods/tc/:namespace/:podName/:interface", auth.PermView},
@@ -112,6 +113,7 @@ var routePermissions = []routeRule{
 
 	// Disposing of it.
 	{"DELETE", "/namespaces/:namespace", auth.PermOwn},
+	{"PUT", "/namespaces/access/:namespace", auth.PermOwn},
 	{"DELETE", "/network/clear-topology/:namespace", auth.PermOwn},
 }
 
