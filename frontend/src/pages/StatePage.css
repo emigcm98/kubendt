@@ -1,0 +1,340 @@
+/* The state browser: the namespaces and roles on the left, the objects in
+   the middle, the one picked on the right as YAML. */
+.state-root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--surface);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: var(--text-body);
+}
+
+.state-page {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+}
+
+.state-list {
+  width: 250px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  padding: 14px 12px;
+  background: var(--panel-from);
+  border-right: 1px solid var(--border);
+}
+
+.state-group + .state-group {
+  margin-top: 14px;
+}
+
+.state-group-title {
+  padding: 0 8px 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+
+.state-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-body);
+  font: inherit;
+  font-size: 0.86rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.state-item:hover {
+  background: var(--panel-header-from);
+}
+
+.state-item.active {
+  background: var(--surface);
+  color: var(--text-heading);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(25, 60, 100, 0.12);
+}
+
+.state-item-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.state-count {
+  padding: 0 7px;
+  border-radius: var(--radius-pill);
+  background: var(--info-bg);
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.state-tag {
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--info-bg);
+  color: var(--primary);
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.state-tag-pod,
+.state-tag-node,
+.state-tag-topology,
+.state-tag-namespace {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.state-tag-mount,
+.state-tag-layout-attic {
+  background: var(--warning-bg);
+  color: var(--warning-text);
+}
+
+.state-tag-user,
+.state-tag-token,
+.state-tag-session-key {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.state-main {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  padding: 16px 24px 40px;
+}
+
+.state-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.state-search {
+  flex: 0 1 360px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-body);
+  font: inherit;
+  font-size: 0.86rem;
+}
+
+.state-search:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.state-toolbar-count {
+  font-size: 0.82rem;
+  color: var(--text-subtle);
+}
+
+.state-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+
+.state-table th {
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--border-light);
+  text-align: left;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+
+.state-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border-light);
+  vertical-align: top;
+}
+
+.state-row {
+  cursor: pointer;
+}
+
+.state-row:hover td {
+  background: var(--panel-from);
+}
+
+.state-row.active td {
+  background: var(--info-bg);
+}
+
+.state-kind {
+  white-space: nowrap;
+  color: var(--text-muted);
+}
+
+.state-name {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.8rem;
+  color: var(--text-heading);
+  white-space: nowrap;
+}
+
+.state-num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.state-muted {
+  color: var(--text-subtle);
+}
+
+.state-detail-cell {
+  min-width: 160px;
+  max-width: 320px;
+}
+
+.state-note {
+  padding: 8px;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+.state-error {
+  color: var(--danger);
+}
+
+.state-detail {
+  width: 44%;
+  min-width: 360px;
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-left: 1px solid var(--border);
+  background: var(--panel-from);
+}
+
+.state-detail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px 8px;
+}
+
+.state-detail-title {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  font-size: 0.9rem;
+}
+
+.state-detail-title strong {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.86rem;
+  color: var(--text-heading);
+  word-break: break-all;
+}
+
+.state-detail-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.state-detail-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.state-detail-btn:hover:not(:disabled) {
+  background: var(--panel-header-from);
+  color: var(--text-heading);
+}
+
+.state-detail-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.state-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 0 14px 8px;
+}
+
+.state-labels code {
+  padding: 1px 6px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.state-yaml {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 12px 14px 24px;
+  overflow: auto;
+  border-top: 1px solid var(--border-light);
+  background: var(--surface);
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--text-body);
+  white-space: pre;
+}
+
+@media (max-width: 960px) {
+  .state-page {
+    flex-direction: column;
+  }
+
+  .state-list {
+    width: auto;
+    max-height: 30vh;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .state-detail {
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    max-height: 50vh;
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+}

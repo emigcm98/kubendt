@@ -914,3 +914,45 @@ type PodInspectionResponse struct {
 	// daemon behind the read not running for instance.
 	Note string `json:"note,omitempty" example:"bgpd is not running on this node"`
 }
+
+// StateObjectDoc is one row of the state browser.
+type StateObjectDoc struct {
+	Kind            string            `json:"kind" example:"ConfigMap"`
+	Name            string            `json:"name" example:"kubendt-internal-history-r1-0"`
+	Namespace       string            `json:"namespace,omitempty" example:"lab"`
+	Role            string            `json:"role" example:"history"`
+	Node            string            `json:"node,omitempty" example:"r1"`
+	Detail          string            `json:"detail,omitempty" example:"r1-0, 3 operations"`
+	Size            int               `json:"size" example:"1240"`
+	CreatedAt       string            `json:"created_at,omitempty" example:"2026-11-20T07:30:00Z"`
+	ResourceVersion string            `json:"resource_version" example:"184512"`
+	Labels          map[string]string `json:"labels,omitempty"`
+}
+
+// NamespaceStateDoc is a namespace of the state browser with its objects.
+type NamespaceStateDoc struct {
+	Name    string           `json:"name" example:"lab"`
+	Role    string           `json:"role" example:"lab"`
+	Objects []StateObjectDoc `json:"objects"`
+}
+
+// ClusterStateResponseDoc is returned by GET /state.
+type ClusterStateResponseDoc struct {
+	Namespaces []NamespaceStateDoc `json:"namespaces"`
+}
+
+// NamespaceStateResponseDoc is returned by GET /state/:namespace.
+type NamespaceStateResponseDoc struct {
+	Namespace string           `json:"namespace" example:"lab"`
+	Role      string           `json:"role" example:"lab"`
+	Objects   []StateObjectDoc `json:"objects"`
+}
+
+// StateObjectResponseDoc is returned by GET /state/:namespace/:kind/:name.
+type StateObjectResponseDoc struct {
+	Namespace string                 `json:"namespace" example:"lab"`
+	Kind      string                 `json:"kind" example:"configmap"`
+	Name      string                 `json:"name" example:"kubendt-internal-layout"`
+	Object    map[string]interface{} `json:"object"`
+	YAML      string                 `json:"yaml" example:"apiVersion: v1\nkind: ConfigMap\n..."`
+}

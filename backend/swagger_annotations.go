@@ -533,6 +533,48 @@ func swaggerRenameFile() {}
 //	@Router       /file-ops/{namespace}/export [get]
 func swaggerExportArchive() {}
 
+// ─── State browser ────────────────────────────────────────────────────────────
+
+// swaggerGetClusterState godoc
+//
+//	@Summary      Cluster state
+//	@Description  Every object KubeNDT creates or uses, per lab namespace and in the system namespace, each told for what it is to the platform.
+//	@Tags         state
+//	@Produce      json
+//	@Success      200  {object}  types.ClusterStateResponseDoc
+//	@Failure      500  {object}  types.ErrorResponse
+//	@Router       /state [get]
+func swaggerGetClusterState() {}
+
+// swaggerGetNamespaceState godoc
+//
+//	@Summary      Namespace state
+//	@Description  The objects of one namespace, a lab or the system one, with the role each plays for KubeNDT.
+//	@Tags         state
+//	@Produce      json
+//	@Param        namespace  path      string  true  "Namespace name"
+//	@Success      200        {object}  types.NamespaceStateResponseDoc
+//	@Failure      404        {object}  types.ErrorResponse
+//	@Failure      500        {object}  types.ErrorResponse
+//	@Router       /state/{namespace} [get]
+func swaggerGetNamespaceState() {}
+
+// swaggerGetStateObject godoc
+//
+//	@Summary      One object
+//	@Description  An object as the API server holds it, without managed fields and with a Secret's values replaced by their sizes, as a document and as YAML.
+//	@Tags         state
+//	@Produce      json
+//	@Param        namespace  path      string  true  "Namespace name"
+//	@Param        kind       path      string  true  "namespace, statefulset, pod, topology, configmap, secret or lease"
+//	@Param        name       path      string  true  "Object name"
+//	@Success      200        {object}  types.StateObjectResponseDoc
+//	@Failure      400        {object}  types.ErrorResponse
+//	@Failure      404        {object}  types.ErrorResponse
+//	@Failure      500        {object}  types.ErrorResponse
+//	@Router       /state/{namespace}/{kind}/{name} [get]
+func swaggerGetStateObject() {}
+
 // ─── Drivers ──────────────────────────────────────────────────────────────────
 
 // swaggerGetDrivers godoc

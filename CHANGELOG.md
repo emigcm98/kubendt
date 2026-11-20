@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Added
 
 - A system namespace, `kubendt-system` (`KUBENDT_SYSTEM_NAMESPACE`), where a namespace deleted keeping its layout leaves it until a namespace of the same name takes it back.
+- A state browser, `GET /state`, `/state/{namespace}` and `/state/{namespace}/{kind}/{name}`, and its page from Home and from a namespace: every Kubernetes object KubeNDT creates or uses, told for what it is to the platform, each opening as YAML with a Secret's values replaced by their sizes.
 
 ### Changed
 

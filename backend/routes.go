@@ -180,6 +180,14 @@ func SetupRoutes(router *gin.Engine) {
 		clusterGroup.GET("/nodes/:name", handlers.GetClusterNodeDetail)
 	}
 
+	// The state browser: every object KubeNDT creates or uses, read-only
+	stateGroup := router.Group("/state")
+	{
+		stateGroup.GET("", handlers.GetClusterState)
+		stateGroup.GET("/:namespace", handlers.GetNamespaceState)
+		stateGroup.GET("/:namespace/:kind/:name", handlers.GetStateObject)
+	}
+
 	kubeGroup := router.Group("/kube")
 	{
 		kubeGroup.GET("/config", handlers.GetKubeConfigInfo)

@@ -173,7 +173,9 @@ def teardown(ex):
     st, r = api("DELETE", f"/network/clear-topology/{ex.ns}")
     ex.check("clear topology", st == 200, r if st != 200 else "")
     if st == 200: ex.timing("clear.took_time", r.get("took_time"))
-    st, r = api("DELETE", f"/namespaces/{ex.ns}")
+    # The layout and the files go with the namespace, so a run leaves nothing
+    # behind in the system namespace.
+    st, r = api("DELETE", f"/namespaces/{ex.ns}?deletePositions=true&deleteFiles=true")
     ex.check("delete namespace", st == 200, r if st != 200 else "")
     ex.timing("total_s", round(time.time() - ex.t0, 1))
 

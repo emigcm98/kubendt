@@ -445,6 +445,13 @@ definitions:
         example: Ready
         type: string
     type: object
+  types.ClusterStateResponseDoc:
+    properties:
+      namespaces:
+        items:
+          $ref: '#/definitions/types.NamespaceStateDoc'
+        type: array
+    type: object
   types.ClusterStatusResponse:
     properties:
       avg_cpu_percentage:
@@ -1556,6 +1563,32 @@ definitions:
         example: frr-router-0
         type: string
     type: object
+  types.NamespaceStateDoc:
+    properties:
+      name:
+        example: lab
+        type: string
+      objects:
+        items:
+          $ref: '#/definitions/types.StateObjectDoc'
+        type: array
+      role:
+        example: lab
+        type: string
+    type: object
+  types.NamespaceStateResponseDoc:
+    properties:
+      namespace:
+        example: lab
+        type: string
+      objects:
+        items:
+          $ref: '#/definitions/types.StateObjectDoc'
+        type: array
+      role:
+        example: lab
+        type: string
+    type: object
   types.NamespaceSummaryDriversSection:
     properties:
       by_driver:
@@ -2551,6 +2584,61 @@ definitions:
     properties:
       current_context:
         example: my-cluster
+        type: string
+    type: object
+  types.StateObjectDoc:
+    properties:
+      created_at:
+        example: "2026-11-20T07:30:00Z"
+        type: string
+      detail:
+        example: r1-0, 3 operations
+        type: string
+      kind:
+        example: ConfigMap
+        type: string
+      labels:
+        additionalProperties:
+          type: string
+        type: object
+      name:
+        example: kubendt-internal-history-r1-0
+        type: string
+      namespace:
+        example: lab
+        type: string
+      node:
+        example: r1
+        type: string
+      resource_version:
+        example: "184512"
+        type: string
+      role:
+        example: history
+        type: string
+      size:
+        example: 1240
+        type: integer
+    type: object
+  types.StateObjectResponseDoc:
+    properties:
+      kind:
+        example: configmap
+        type: string
+      name:
+        example: kubendt-internal-layout
+        type: string
+      namespace:
+        example: lab
+        type: string
+      object:
+        additionalProperties: true
+        type: object
+      yaml:
+        example: |-
+          apiVersion: v1
+          kind: ConfigMap
+          ...
         type: string
     type: object
   types.TCClassEntry:
@@ -4873,6 +4961,94 @@ paths:
       summary: Interactive shell (WebSocket)
       tags:
       - shell
+  /state:
+    get:
+      description: Every object KubeNDT creates or uses, per lab namespace and in
+        the system namespace, each told for what it is to the platform.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.ClusterStateResponseDoc'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Cluster state
+      tags:
+      - state
+  /state/{namespace}:
+    get:
+      description: The objects of one namespace, a lab or the system one, with the
+        role each plays for KubeNDT.
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.NamespaceStateResponseDoc'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Namespace state
+      tags:
+      - state
+  /state/{namespace}/{kind}/{name}:
+    get:
+      description: An object as the API server holds it, without managed fields and
+        with a Secret's values replaced by their sizes, as a document and as YAML.
+      parameters:
+      - description: Namespace name
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: namespace, statefulset, pod, topology, configmap, secret or lease
+        in: path
+        name: kind
+        required: true
+        type: string
+      - description: Object name
+        in: path
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.StateObjectResponseDoc'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: One object
+      tags:
+      - state
   /trace/run/{namespace}/{podName}:
     get:
       description: Runs a traceroute (or mtr when metrics=1) from a source pod toward
