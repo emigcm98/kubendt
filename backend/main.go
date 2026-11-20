@@ -28,15 +28,10 @@ import (
 )
 
 func main() {
-	// Set-up database
+	// The database is optional, what an older backend kept moves to the
+	// cluster from it.
 	database.InitDB()
 	helpers.SetDB(database.DB)
-
-	// Initialize authentication (loads/generates the admin password, or runs
-	// unauthenticated if explicitly disabled).
-	if err := auth.Init(); err != nil {
-		log.Fatalf("❌ Could not initialize authentication: %v", err)
-	}
 
 	// Initialize Kubernetes client. This is non-fatal: with no kubeconfig the
 	// server still starts and serves the endpoints needed to load one; the
@@ -54,6 +49,12 @@ func main() {
 		if err := helpers.EnsureSystemNamespace(); err != nil {
 			log.Printf("⚠️ Could not ensure the system namespace: %v", err)
 		}
+	}
+
+	// Authentication binds to the cluster's system namespace (the admin, the
+	// tokens, the session key), or runs on its own until one is loaded.
+	if err := auth.Init(); err != nil {
+		log.Fatalf("❌ Could not initialize authentication: %v", err)
 	}
 
 	// Capabilities declare their actions at import time, drivers register here.

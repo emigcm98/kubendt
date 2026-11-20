@@ -27,10 +27,19 @@ const (
 	schemaVersion = 3
 )
 
+// InitDB opens the database named by KUBENDT_DB_PATH, or the default one
+// when it exists. Without either the backend runs with none: the state lives
+// in the cluster, and the file is only read to move what an older backend
+// kept there.
 func InitDB() {
 	var err error
 	dbPath := strings.TrimSpace(os.Getenv("KUBENDT_DB_PATH"))
 	if dbPath == "" {
+		if !fileExists(defaultDBPath) && !fileExists(legacyDBPath) {
+			DB = nil
+			log.Printf("ℹ️ No database: the state lives in the cluster (set KUBENDT_DB_PATH to open one)")
+			return
+		}
 		dbPath = defaultDBPath
 	}
 
@@ -285,4 +294,9 @@ func migrateLegacyDB(oldPath, newPath string) error {
 
 	log.Printf("ℹ️ Migrated legacy database from %s to %s", oldPath, newPath)
 	return nil
+}
+
+func fileExists(p string) bool {
+	_, err := os.Stat(p)
+	return err == nil
 }
