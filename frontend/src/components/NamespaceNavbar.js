@@ -6,6 +6,7 @@ import AlertModal from './AlertModal';
 import DeleteExtrasCheckboxes from './DeleteExtrasCheckboxes';
 import { ReactComponent as RefreshIcon } from '../assets/images/icons/refresh.svg';
 import { ReactComponent as FolderIcon } from '../assets/images/icons/folder.svg';
+import { ReactComponent as ClusterIcon } from '../assets/images/icons/cluster.svg';
 import { ReactComponent as HomeIcon } from '../assets/images/icons/home.svg';
 import { ReactComponent as TopologyIcon } from '../assets/images/icons/topology.svg';
 import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
@@ -189,6 +190,17 @@ function NamespaceNavbar({
           >
             <FolderIcon className="app-icon" aria-hidden="true" />
             File Manager
+          </button>
+          <button
+            className="navbar-button"
+            onClick={() => {
+              sessionStorage.setItem(`kubendt.restoreCache.${namespace}`, 'true');
+              navigate(`/${namespace}/state`);
+            }}
+            title="Every Kubernetes object of this namespace and what it is for KubeNDT"
+          >
+            <ClusterIcon className="app-icon" aria-hidden="true" />
+            State
           </button>
           <div className="navbar-menu-anchor" ref={menuRef}>
             <button

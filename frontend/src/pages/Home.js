@@ -22,6 +22,7 @@ import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
 import { ReactComponent as RefreshIcon } from '../assets/images/icons/refresh.svg';
 import { ReactComponent as BookIcon } from '../assets/images/icons/book.svg';
 import { ReactComponent as BoxIcon } from '../assets/images/icons/box.svg';
+import { ReactComponent as ClusterIcon } from '../assets/images/icons/cluster.svg';
 import './Home.css';
 
 Modal.setAppElement('#root');
@@ -550,6 +551,14 @@ const Home = () => {
           >
             <BoxIcon className="app-icon" aria-hidden="true" />
             Drivers
+          </button>
+          <button
+            className="open-api-btn"
+            onClick={() => navigate('/state')}
+            title="Every Kubernetes object KubeNDT keeps in this cluster"
+          >
+            <ClusterIcon className="app-icon" aria-hidden="true" />
+            State
           </button>
           <button className="open-api-btn" onClick={handleOpenSwagger}>
             <BookIcon className="app-icon" aria-hidden="true" />

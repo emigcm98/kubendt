@@ -8,7 +8,7 @@
    <a href="https://doi.org/10.5281/zenodo.21276320"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.21276320.svg" alt="DOI" /></a>
 </p>
 
-> Last reviewed: 19 Nov 2026
+> Last reviewed: 20 Nov 2026
 
 **KubeNDT** is a platform for deploying and operating virtual network topologies on Kubernetes.
 
@@ -72,6 +72,7 @@ KubeNDT bundles a small set of third-party SVG icons in its frontend. See [ATTRI
 
 - **Multi-namespace support** - isolate topologies per namespace
 - **Authentication** - password login, browser sessions and revocable API tokens
+- **State browser** - every Kubernetes object KubeNDT keeps in the cluster, told for what it is, per namespace or cluster-wide
 - **Horizontal scaling** - support for large clusters with many pods
 - **Prometheus-compatible** - database-backed state for monitoring integration
 - **RESTful API** - Swagger-documented API for programmatic topology management

@@ -2907,6 +2907,134 @@ const docTemplate = `{
                 "responses": {}
             }
         },
+        "/state": {
+            "get": {
+                "description": "Every object KubeNDT creates or uses, per lab namespace and in the system namespace, each told for what it is to the platform.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "state"
+                ],
+                "summary": "Cluster state",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.ClusterStateResponseDoc"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/state/{namespace}": {
+            "get": {
+                "description": "The objects of one namespace, a lab or the system one, with the role each plays for KubeNDT.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "state"
+                ],
+                "summary": "Namespace state",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.NamespaceStateResponseDoc"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/state/{namespace}/{kind}/{name}": {
+            "get": {
+                "description": "An object as the API server holds it, without managed fields and with a Secret's values replaced by their sizes, as a document and as YAML.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "state"
+                ],
+                "summary": "One object",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "namespace, statefulset, pod, topology, configmap, secret or lease",
+                        "name": "kind",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Object name",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.StateObjectResponseDoc"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/trace/run/{namespace}/{podName}": {
             "get": {
                 "description": "Runs a traceroute (or mtr when metrics=1) from a source pod toward an IP or hostname and returns the whole result as one JSON document, each hop resolved to a topology node. Blocks until the probe finishes. The source node must be L3-capable. The probe runs in the pod's toolbox, so the pod image needs no traceroute of its own. A live animated version streams the same hops over WebSocket at /trace/ws/{namespace}/{podName}.",
@@ -3559,6 +3687,17 @@ const docTemplate = `{
                 "status": {
                     "type": "string",
                     "example": "Ready"
+                }
+            }
+        },
+        "types.ClusterStateResponseDoc": {
+            "type": "object",
+            "properties": {
+                "namespaces": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.NamespaceStateDoc"
+                    }
                 }
             }
         },
@@ -5077,6 +5216,44 @@ const docTemplate = `{
                 }
             }
         },
+        "types.NamespaceStateDoc": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "example": "lab"
+                },
+                "objects": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.StateObjectDoc"
+                    }
+                },
+                "role": {
+                    "type": "string",
+                    "example": "lab"
+                }
+            }
+        },
+        "types.NamespaceStateResponseDoc": {
+            "type": "object",
+            "properties": {
+                "namespace": {
+                    "type": "string",
+                    "example": "lab"
+                },
+                "objects": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.StateObjectDoc"
+                    }
+                },
+                "role": {
+                    "type": "string",
+                    "example": "lab"
+                }
+            }
+        },
         "types.NamespaceSummaryDriversSection": {
             "type": "object",
             "properties": {
@@ -6430,6 +6607,78 @@ const docTemplate = `{
                 "current_context": {
                     "type": "string",
                     "example": "my-cluster"
+                }
+            }
+        },
+        "types.StateObjectDoc": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string",
+                    "example": "2026-11-20T07:30:00Z"
+                },
+                "detail": {
+                    "type": "string",
+                    "example": "r1-0, 3 operations"
+                },
+                "kind": {
+                    "type": "string",
+                    "example": "ConfigMap"
+                },
+                "labels": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "name": {
+                    "type": "string",
+                    "example": "kubendt-internal-history-r1-0"
+                },
+                "namespace": {
+                    "type": "string",
+                    "example": "lab"
+                },
+                "node": {
+                    "type": "string",
+                    "example": "r1"
+                },
+                "resource_version": {
+                    "type": "string",
+                    "example": "184512"
+                },
+                "role": {
+                    "type": "string",
+                    "example": "history"
+                },
+                "size": {
+                    "type": "integer",
+                    "example": 1240
+                }
+            }
+        },
+        "types.StateObjectResponseDoc": {
+            "type": "object",
+            "properties": {
+                "kind": {
+                    "type": "string",
+                    "example": "configmap"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "kubendt-internal-layout"
+                },
+                "namespace": {
+                    "type": "string",
+                    "example": "lab"
+                },
+                "object": {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "yaml": {
+                    "type": "string",
+                    "example": "apiVersion: v1\nkind: ConfigMap\n..."
                 }
             }
         },

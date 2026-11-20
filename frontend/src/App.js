@@ -5,6 +5,7 @@ import Home from './pages/Home';
 import DriversPage from './pages/DriversPage';
 import NamespacePage from './pages/NamespacePage';
 import NamespaceFilesPage from './pages/NamespaceFilesPage';
+import StatePage from './pages/StatePage';
 import ErrorPage from './pages/ErrorPage';
 
 function App() {
@@ -12,7 +13,9 @@ function App() {
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/drivers/:driver?" element={<DriversPage />} />
+      <Route path="/state" element={<StatePage />} />
       <Route path="/:namespace/files" element={<NamespaceFilesPage />} />
+      <Route path="/:namespace/state" element={<StatePage />} />
       <Route path="/:namespace" element={<NamespacePage />} />
       <Route path="*" element={<ErrorPage statusCode={404} rawMessage="Route not found" />} />
     </Routes>
