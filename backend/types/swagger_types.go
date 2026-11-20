@@ -876,6 +876,27 @@ type UserPatchRequest struct {
 	QuotaPods           *int    `json:"quota_pods,omitempty" example:"40"`
 }
 
+// DeleteUserResponse is returned by DELETE /users/{name}.
+type DeleteUserResponse struct {
+	Message           string `json:"message" example:"user deleted"`
+	NamespacesOwned   int    `json:"namespaces_owned" example:"2"`
+	NamespacesGuestOf int    `json:"namespaces_guest_of" example:"1"`
+	ReassignedTo      string `json:"reassigned_to" example:"alice"`
+}
+
+// NamespaceAccessDoc is who may do what in a namespace.
+type NamespaceAccessDoc struct {
+	Namespace string            `json:"namespace" example:"lab"`
+	Owner     string            `json:"owner" example:"alice"`
+	Guests    map[string]string `json:"guests" example:"bob:editor,carol:viewer"`
+}
+
+// NamespaceAccessRequest is the body for PUT /namespaces/access/{namespace}.
+type NamespaceAccessRequest struct {
+	Owner  string            `json:"owner" example:"alice"`
+	Guests map[string]string `json:"guests" example:"bob:editor,carol:viewer"`
+}
+
 // ResetPasswordRequest is the body for POST /users/{name}/password; empty
 // means a generated one.
 type ResetPasswordRequest struct {

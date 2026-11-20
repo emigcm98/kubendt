@@ -68,3 +68,44 @@ func TestNamespaceAccessLivesOnTheNamespace(t *testing.T) {
 		t.Error("no guests, no annotation")
 	}
 }
+
+func TestADeletedAccountLeavesEveryNamespace(t *testing.T) {
+	cs := fake.NewClientset(
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "mine", Labels: map[string]string{"kubendt/enabled": "true"},
+			Annotations: map[string]string{OwnerAnnotation: "alice", AccessAnnotation: "bob=editor,carol=viewer"}}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "theirs", Labels: map[string]string{"kubendt/enabled": "true"},
+			Annotations: map[string]string{OwnerAnnotation: "bob", AccessAnnotation: "alice=viewer,carol=operator"}}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "unrelated", Labels: map[string]string{"kubendt/enabled": "true"},
+			Annotations: map[string]string{OwnerAnnotation: "carol"}}},
+	)
+	prev := stateNamespaces
+	stateNamespaces = func() corev1client.NamespaceInterface { return cs.CoreV1().Namespaces() }
+	t.Cleanup(func() { stateNamespaces = prev })
+
+	owned, guested, err := RemoveAccountFromNamespaces("alice", "carol")
+	if err != nil || owned != 1 || guested != 1 {
+		t.Fatalf("owned %d guested %d err %v", owned, guested, err)
+	}
+	mine, _ := cs.CoreV1().Namespaces().Get(context.TODO(), "mine", metav1.GetOptions{})
+	theirs, _ := cs.CoreV1().Namespaces().Get(context.TODO(), "theirs", metav1.GetOptions{})
+	if mine.Annotations[OwnerAnnotation] != "carol" || mine.Annotations[AccessAnnotation] != "bob=editor" {
+		t.Errorf("mine went to carol, no longer its guest, the other guest kept: %v", mine.Annotations)
+	}
+	if theirs.Annotations[OwnerAnnotation] != "bob" || theirs.Annotations[AccessAnnotation] != "carol=operator" {
+		t.Errorf("alice left the guests of theirs: %v", theirs.Annotations)
+	}
+
+	// With nobody to take them, the namespaces go to the admins alone.
+	owned, guested, err = RemoveAccountFromNamespaces("bob", "")
+	if err != nil || owned != 1 || guested != 1 {
+		t.Fatalf("owned %d guested %d err %v", owned, guested, err)
+	}
+	theirs, _ = cs.CoreV1().Namespaces().Get(context.TODO(), "theirs", metav1.GetOptions{})
+	mine, _ = cs.CoreV1().Namespaces().Get(context.TODO(), "mine", metav1.GetOptions{})
+	if _, has := theirs.Annotations[OwnerAnnotation]; has {
+		t.Errorf("theirs has an owner still: %v", theirs.Annotations)
+	}
+	if _, has := mine.Annotations[AccessAnnotation]; has {
+		t.Errorf("mine has guests still: %v", mine.Annotations)
+	}
+}

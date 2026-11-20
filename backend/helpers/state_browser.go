@@ -272,6 +272,14 @@ func namespaceRow(ns *corev1.Namespace) StateObject {
 	if ns.Labels["kubendt/system"] == "true" {
 		detail = "the platform's own"
 	}
+	if access := ParseNamespaceAccess(ns); access.Owner != "" {
+		detail += " of " + access.Owner
+		if n := len(access.Guests); n > 0 {
+			detail += ", " + plural(n, "guest")
+		}
+	} else if ns.Labels["kubendt/system"] != "true" {
+		detail += ", no owner"
+	}
 	if ns.DeletionTimestamp != nil {
 		detail += ", terminating"
 	}

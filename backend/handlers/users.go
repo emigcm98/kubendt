@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"kubendt/auth"
+	"kubendt/helpers"
 
 	"github.com/gin-gonic/gin"
 )
@@ -84,13 +85,28 @@ func UpdateUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"user": u})
 }
 
-// DELETE /users/:name
+// DELETE /users/:name?reassign_to=<user>  -> the account goes, with its
+// tokens; the namespaces it owned pass to reassign_to, or to the admins
+// alone when nobody is named, and it leaves every guest list.
 func DeleteUser(c *gin.Context) {
-	if err := auth.DeleteUser(PrincipalOf(c), c.Param("name")); err != nil {
+	name := c.Param("name")
+	newOwner := strings.TrimSpace(c.Query("reassign_to"))
+	if newOwner != "" {
+		if _, ok := auth.GetUser(newOwner); !ok || newOwner == name {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "no such user to reassign to: " + newOwner})
+			return
+		}
+	}
+	if err := auth.DeleteUser(PrincipalOf(c), name); err != nil {
 		userError(c, err)
 		return
 	}
-	c.Status(http.StatusNoContent)
+	if owned, guested, err := helpers.RemoveAccountFromNamespaces(name, newOwner); err != nil {
+		c.JSON(http.StatusOK, gin.H{"message": "user deleted, but its namespaces could not all be updated", "error": err.Error()})
+		return
+	} else {
+		c.JSON(http.StatusOK, gin.H{"message": "user deleted", "namespaces_owned": owned, "namespaces_guest_of": guested, "reassigned_to": newOwner})
+	}
 }
 
 // POST /users/:name/password  -> a reset: the given password or a generated

@@ -1639,6 +1639,98 @@ const docTemplate = `{
                 }
             }
         },
+        "/namespaces/access/{namespace}": {
+            "get": {
+                "description": "The owner and the guests with their level, viewer, operator or editor.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "namespaces"
+                ],
+                "summary": "Who may do what in a namespace",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.NamespaceAccessDoc"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "The owner and the whole guest list, every account named existing; the owner is nobody's guest. The namespace's owner or an admin.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "namespaces"
+                ],
+                "summary": "Set who may do what in a namespace",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Namespace name",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The owner and the guests",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.NamespaceAccessRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.NamespaceAccessDoc"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/namespaces/ips/{namespace}": {
             "get": {
                 "description": "Returns IP, MAC, and NAT configuration for every pod in the namespace.",
@@ -3291,7 +3383,10 @@ const docTemplate = `{
                 }
             },
             "delete": {
-                "description": "Removes the account and its API tokens. The owner stays.",
+                "description": "Removes the account and its API tokens. The namespaces it owned pass to reassign_to, or to the admins alone when nobody is named, and it leaves every guest list. The owner stays.",
+                "produces": [
+                    "application/json"
+                ],
                 "tags": [
                     "users"
                 ],
@@ -3303,11 +3398,26 @@ const docTemplate = `{
                         "name": "name",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "The account its namespaces go to",
+                        "name": "reassign_to",
+                        "in": "query"
                     }
                 ],
                 "responses": {
-                    "204": {
-                        "description": "No Content"
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.DeleteUserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
                     },
                     "403": {
                         "description": "Forbidden",
@@ -4290,6 +4400,27 @@ const docTemplate = `{
                 "pod": {
                     "type": "string",
                     "example": "router1-0"
+                }
+            }
+        },
+        "types.DeleteUserResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "user deleted"
+                },
+                "namespaces_guest_of": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "namespaces_owned": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "reassigned_to": {
+                    "type": "string",
+                    "example": "alice"
                 }
             }
         },
@@ -5418,6 +5549,48 @@ const docTemplate = `{
                 "protocol": {
                     "type": "string",
                     "example": "tcp"
+                }
+            }
+        },
+        "types.NamespaceAccessDoc": {
+            "type": "object",
+            "properties": {
+                "guests": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    },
+                    "example": {
+                        "bob": "editor",
+                        "carol": "viewer"
+                    }
+                },
+                "namespace": {
+                    "type": "string",
+                    "example": "lab"
+                },
+                "owner": {
+                    "type": "string",
+                    "example": "alice"
+                }
+            }
+        },
+        "types.NamespaceAccessRequest": {
+            "type": "object",
+            "properties": {
+                "guests": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    },
+                    "example": {
+                        "bob": "editor",
+                        "carol": "viewer"
+                    }
+                },
+                "owner": {
+                    "type": "string",
+                    "example": "alice"
                 }
             }
         },

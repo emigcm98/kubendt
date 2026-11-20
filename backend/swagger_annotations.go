@@ -903,14 +903,45 @@ func swaggerUpdateUser() {}
 // swaggerDeleteUser godoc
 //
 //	@Summary      Delete an account
-//	@Description  Removes the account and its API tokens. The owner stays.
+//	@Description  Removes the account and its API tokens. The namespaces it owned pass to reassign_to, or to the admins alone when nobody is named, and it leaves every guest list. The owner stays.
 //	@Tags         users
-//	@Param        name  path  string  true  "Username"
-//	@Success      204  "No Content"
+//	@Produce      json
+//	@Param        name         path   string  true   "Username"
+//	@Param        reassign_to  query  string  false  "The account its namespaces go to"
+//	@Success      200  {object}  types.DeleteUserResponse
+//	@Failure      400  {object}  types.ErrorResponse
 //	@Failure      403  {object}  types.ErrorResponse
 //	@Failure      404  {object}  types.ErrorResponse
 //	@Router       /users/{name} [delete]
 func swaggerDeleteUser() {}
+
+// swaggerGetNamespaceAccess godoc
+//
+//	@Summary      Who may do what in a namespace
+//	@Description  The owner and the guests with their level, viewer, operator or editor.
+//	@Tags         namespaces
+//	@Produce      json
+//	@Param        namespace  path  string  true  "Namespace name"
+//	@Success      200  {object}  types.NamespaceAccessDoc
+//	@Failure      404  {object}  types.ErrorResponse
+//	@Router       /namespaces/access/{namespace} [get]
+func swaggerGetNamespaceAccess() {}
+
+// swaggerPutNamespaceAccess godoc
+//
+//	@Summary      Set who may do what in a namespace
+//	@Description  The owner and the whole guest list, every account named existing; the owner is nobody's guest. The namespace's owner or an admin.
+//	@Tags         namespaces
+//	@Accept       json
+//	@Produce      json
+//	@Param        namespace  path  string  true  "Namespace name"
+//	@Param        body  body  types.NamespaceAccessRequest  true  "The owner and the guests"
+//	@Success      200  {object}  types.NamespaceAccessDoc
+//	@Failure      400  {object}  types.ErrorResponse
+//	@Failure      403  {object}  types.ErrorResponse
+//	@Failure      404  {object}  types.ErrorResponse
+//	@Router       /namespaces/access/{namespace} [put]
+func swaggerPutNamespaceAccess() {}
 
 // swaggerResetUserPassword godoc
 //

@@ -126,6 +126,9 @@ func SetupRoutes(router *gin.Engine) {
 		nsGroup.DELETE("/:namespace", handlers.DeleteNamespace)
 		// 4. Get pod interface status
 		nsGroup.GET("/ips/:namespace", handlers.GetInterfacesInNamespace)
+		// Who may do what in it: read by anyone who sees it, written by its owner
+		nsGroup.GET("/access/:namespace", handlers.GetNamespaceAccess)
+		nsGroup.PUT("/access/:namespace", handlers.PutNamespaceAccess)
 	}
 
 	netGroup := router.Group("/network")

@@ -163,3 +163,52 @@ func SetNamespaceGuests(namespace string, guests map[string]string) error {
 	}
 	return patchNamespaceAnnotations(namespace, map[string]*string{AccessAnnotation: v})
 }
+
+// RemoveAccountFromNamespaces takes a deleted account out of every
+// namespace: the ones it owned go to newOwner, or to nobody (the admins')
+// when newOwner is "", and it leaves every guest list. Returns how many it
+// owned and how many it was a guest of.
+func RemoveAccountFromNamespaces(name, newOwner string) (owned, guested int, err error) {
+	list, err := stateNamespaces().List(context.TODO(), metav1.ListOptions{LabelSelector: "kubendt/enabled=true"})
+	if err != nil {
+		return 0, 0, fmt.Errorf("could not list the namespaces: %w", err)
+	}
+	for i := range list.Items {
+		ns := &list.Items[i]
+		access := ParseNamespaceAccess(ns)
+		patch := map[string]*string{}
+		guestsChanged := false
+		if access.Owner == name {
+			owned++
+			var v *string
+			if newOwner != "" {
+				v = &newOwner
+				// The new owner is nobody's guest.
+				if _, wasGuest := access.Guests[newOwner]; wasGuest {
+					delete(access.Guests, newOwner)
+					guestsChanged = true
+				}
+			}
+			patch[OwnerAnnotation] = v
+		}
+		if _, isGuest := access.Guests[name]; isGuest {
+			guested++
+			delete(access.Guests, name)
+			guestsChanged = true
+		}
+		if guestsChanged {
+			var v *string
+			if value := formatGuests(access.Guests); value != "" {
+				v = &value
+			}
+			patch[AccessAnnotation] = v
+		}
+		if len(patch) == 0 {
+			continue
+		}
+		if err := patchNamespaceAnnotations(ns.Name, patch); err != nil {
+			return owned, guested, err
+		}
+	}
+	return owned, guested, nil
+}
