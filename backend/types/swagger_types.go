@@ -788,24 +788,98 @@ type CreateNamespaceRequest struct {
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
-// LoginRequest is the body for POST /auth/login.
+// LoginRequest is the body for POST /auth/login. No username is the owner
+// account, admin.
 type LoginRequest struct {
+	Username string `json:"username,omitempty" example:"alice"`
 	Password string `json:"password" example:"admin123"`
 }
 
 // LoginResponse is returned on a successful login.
 type LoginResponse struct {
-	Authenticated bool     `json:"authenticated" example:"true"`
-	Identity      string   `json:"identity" example:"admin"`
-	Roles         []string `json:"roles" example:"admin"`
+	Authenticated       bool     `json:"authenticated" example:"true"`
+	Identity            string   `json:"identity" example:"admin"`
+	Username            string   `json:"username" example:"admin"`
+	Role                string   `json:"role" example:"owner"`
+	Roles               []string `json:"roles" example:"owner"`
+	MustChangePassword  bool     `json:"must_change_password" example:"false"`
+	CanCreateNamespaces bool     `json:"can_create_namespaces" example:"true"`
 }
 
 // AuthStatus is returned by GET /auth/me.
 type AuthStatus struct {
-	Enabled       bool     `json:"enabled" example:"true"`
-	Authenticated bool     `json:"authenticated" example:"true"`
-	Identity      string   `json:"identity" example:"admin"`
-	Roles         []string `json:"roles" example:"admin"`
+	Enabled             bool     `json:"enabled" example:"true"`
+	Authenticated       bool     `json:"authenticated" example:"true"`
+	Identity            string   `json:"identity" example:"admin"`
+	Username            string   `json:"username" example:"admin"`
+	Role                string   `json:"role" example:"owner"`
+	Roles               []string `json:"roles" example:"owner"`
+	MustChangePassword  bool     `json:"must_change_password" example:"false"`
+	CanCreateNamespaces bool     `json:"can_create_namespaces" example:"true"`
+}
+
+// ChangePasswordRequest is the body for PUT /auth/password.
+type ChangePasswordRequest struct {
+	CurrentPassword string `json:"current_password" example:"admin123"`
+	NewPassword     string `json:"new_password" example:"a-longer-one"`
+}
+
+// UserDoc is an account as the API shows it, never its hash.
+type UserDoc struct {
+	Username            string `json:"username" example:"alice"`
+	Role                string `json:"role" example:"user"`
+	Disabled            bool   `json:"disabled" example:"false"`
+	MustChangePassword  bool   `json:"must_change_password" example:"true"`
+	CanCreateNamespaces bool   `json:"can_create_namespaces" example:"false"`
+	QuotaNamespaces     int    `json:"quota_namespaces" example:"0"`
+	QuotaPods           int    `json:"quota_pods" example:"0"`
+	Source              string `json:"source" example:"local"`
+	CreatedAt           int64  `json:"created_at" example:"1782905018"`
+}
+
+// UserListResponse is returned by GET /users.
+type UserListResponse struct {
+	Users []UserDoc `json:"users"`
+}
+
+// CreateUserRequest is the body for POST /users. Without a password one is
+// generated and returned once; the role is user when absent.
+type CreateUserRequest struct {
+	Username            string `json:"username" example:"alice"`
+	Password            string `json:"password,omitempty" example:"first-one"`
+	Role                string `json:"role,omitempty" example:"user"`
+	CanCreateNamespaces bool   `json:"can_create_namespaces,omitempty" example:"false"`
+	QuotaNamespaces     int    `json:"quota_namespaces,omitempty" example:"0"`
+	QuotaPods           int    `json:"quota_pods,omitempty" example:"0"`
+}
+
+// UserResponse is returned by POST /users and PUT /users/{name}; the
+// password only when it was generated.
+type UserResponse struct {
+	User     UserDoc `json:"user"`
+	Password string  `json:"password,omitempty" example:"3f9c2a1b7d4e0f6a"`
+}
+
+// UserPatchRequest is the body for PUT /users/{name}; an absent field is
+// left alone.
+type UserPatchRequest struct {
+	Role                *string `json:"role,omitempty" example:"admin"`
+	Disabled            *bool   `json:"disabled,omitempty" example:"true"`
+	CanCreateNamespaces *bool   `json:"can_create_namespaces,omitempty" example:"true"`
+	QuotaNamespaces     *int    `json:"quota_namespaces,omitempty" example:"3"`
+	QuotaPods           *int    `json:"quota_pods,omitempty" example:"40"`
+}
+
+// ResetPasswordRequest is the body for POST /users/{name}/password; empty
+// means a generated one.
+type ResetPasswordRequest struct {
+	Password string `json:"password,omitempty" example:"a-new-one"`
+}
+
+// ResetPasswordResponse returns the generated password once, when there was one.
+type ResetPasswordResponse struct {
+	Message  string `json:"message" example:"password reset"`
+	Password string `json:"password,omitempty" example:"3f9c2a1b7d4e0f6a"`
 }
 
 // CreateTokenRequest is the body for POST /auth/tokens.
@@ -823,8 +897,9 @@ type CreateTokenResponse struct {
 
 // APIToken is the metadata of an API token (never its secret).
 type APIToken struct {
-	ID         int64  `json:"id" example:"1"`
+	ID         int64  `json:"id" example:"1795166265369580"`
 	Name       string `json:"name" example:"ci-pipeline"`
+	User       string `json:"user" example:"admin"`
 	CreatedAt  int64  `json:"created_at" example:"1782905018"`
 	LastUsedAt int64  `json:"last_used_at,omitempty" example:"1782905090"`
 	ExpiresAt  int64  `json:"expires_at,omitempty" example:"0"`
