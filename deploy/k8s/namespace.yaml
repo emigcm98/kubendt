@@ -1,0 +1,10 @@
+# The platform's own namespace: the backend runs here and keeps here what
+# belongs to no lab (the admin, the API tokens, the session key, the layouts
+# of deleted namespaces). The backend creates it when it is missing.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kubendt-system
+  labels:
+    app.kubernetes.io/managed-by: kubendt-backend
+    kubendt/system: "true"

@@ -1,0 +1,15 @@
+# KubeNDT in the cluster it manages: kubectl apply -k deploy/k8s
+# Pin a release by setting newTag to its version (1.12.0), latest otherwise.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: kubendt-system
+resources:
+  - namespace.yaml
+  - rbac.yaml
+  - backend.yaml
+  - frontend.yaml
+images:
+  - name: ghcr.io/emigcm98/kubendt-backend
+    newTag: latest
+  - name: ghcr.io/emigcm98/kubendt-frontend
+    newTag: latest

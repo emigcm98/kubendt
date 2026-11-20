@@ -62,6 +62,37 @@ Configuration lives **inline** in each compose file's `environment:` block. The 
 
 The compose files keep the `kubendt-files` and `backend-db` volumes an older backend wrote its files and database to; a backend of 1.12 reads them once to move that into the cluster, after which they can go.
 
+## Deployment in the cluster
+
+KubeNDT can run inside the cluster it manages, on a ServiceAccount, with no kubeconfig: `deploy/k8s` holds the manifests, a kustomization that installs the `kubendt-system` namespace, the ServiceAccount with its ClusterRole, the backend and the UI.
+
+```bash
+# The admin password; without this Secret one is generated and printed once in the backend's log.
+kubectl create namespace kubendt-system
+kubectl -n kubendt-system create secret generic kubendt-backend-env --from-literal=KUBENDT_ADMIN_PASSWORD='change-me'
+
+kubectl apply -k deploy/k8s                      # the images tagged latest
+kubectl apply -k "https://github.com/emigcm98/kubendt/deploy/k8s?ref=v1.12.0"   # a release, its kustomization pins its tag
+
+kubectl -n kubendt-system port-forward svc/kubendt-frontend 8080:80   # then http://localhost:8080
+```
+
+The UI's nginx proxies `/api` to the backend's Service, so one host serves both; `deploy/k8s/optional/ingress.yaml` is an Ingress to adapt. The backend keeps the platform's objects in the namespace it runs in and needs nothing else: no volume, no database. One replica: the state is in the cluster, but a capture, a shell or a trace lives in the backend that opened it, so a second replica would need the Service to keep each client on one pod; when a lab is heavy, give the one replica more memory in `backend.yaml` (its limit is 1 GiB, its CPU unlimited) rather than a second one. The heavy traffic of a lab, the exec streams of shells, captures and actions, goes through the API server and the kubelets whichever way the backend runs; in the cluster it only loses a hop. `deploy/k8s/rbac.yaml` is the exact list of what the ServiceAccount may do, verb by verb, the same the state browser shows in use.
+
+The backend's variables (the reference below) come from two objects the manifests name and the install provides, `deploy/k8s/optional/config.example.yaml` being both filled in as an example: the Secret `kubendt-backend-env` for the password and anything secret, and a ConfigMap `kubendt-backend-config` for plain settings, every key of both an environment variable. The manifests set `KUBENDT_SYSTEM_NAMESPACE` to the backend's own namespace and leave `KUBENDT_DB_PATH` empty, nothing else. A change is read at start, so it takes `kubectl -n kubendt-system rollout restart deploy/kubendt-backend`:
+
+```bash
+kubectl -n kubendt-system create configmap kubendt-backend-config \
+  --from-literal=KUBENDT_PLACEMENT=spread --from-literal=KUBENDT_CAPTURE_MAX_MB=200
+kubectl -n kubendt-system rollout restart deploy/kubendt-backend
+```
+
+The UI's only variable is `BACKEND_HOST`, set in `frontend.yaml` to the backend's Service.
+
+Meshnet and, for VM nodes, `/dev/kvm` on the workers are the cluster's side, as for any install; metrics-server is optional.
+
+A compose install of 1.11 or older moving to this version keeps its `backend-db` and `kubendt-files` volumes for the first start, which reads them once and moves what they hold into the cluster, after which they can go.
+
 ## What the backend asks of the cluster
 
 Kubernetes 1.25 or newer, 1.30 recommended. What sets the floor, by API, with the version it has been stable since:
@@ -78,7 +109,7 @@ Kubernetes 1.25 or newer, 1.30 recommended. What sets the floor, by API, with th
 | Pods, ConfigMaps, Secrets, Namespaces, Nodes, Events, Services `v1` | always | everything else |
 | metrics-server (`metrics.k8s.io`) | optional | the cluster page's CPU and memory; the page says when it is missing |
 
-The backend's credentials (the kubeconfig, or the ServiceAccount in the cluster) need those resources in the lab namespaces, Namespaces and ConfigMaps in `kubendt-system`, and Nodes cluster-wide. The backend is built with client-go 0.35, which Kubernetes supports against servers within one minor on either side and which works against the 1.32 and 1.37 clusters it is tried on. A worker with `/dev/kvm` is needed only for VM nodes (VyOS, EXOS).
+The backend's credentials (the kubeconfig, or the ServiceAccount of `deploy/k8s/rbac.yaml`, which lists every verb) need those resources in the lab namespaces and in `kubendt-system`, Namespaces and Nodes cluster-wide. The backend is built with client-go 0.35, which Kubernetes supports against servers within one minor on either side and which works against the 1.32 and 1.37 clusters it is tried on. A worker with `/dev/kvm` is needed only for VM nodes (VyOS, EXOS).
 
 ## Environment Variables Reference
 
@@ -115,5 +146,6 @@ Programmatic access uses **API tokens** (created in the dashboard or via `POST /
 
 ### Frontend
 
-- `REACT_APP_API_BASE_URL`: API base URL.
+- `REACT_APP_API_BASE_URL`: API base URL, read at build time (`/api` in the published image, which proxies it).
 - `PORT`: frontend dev server port (default `3000`).
+- `BACKEND_HOST`: in the published image, the host its nginx proxies `/api` to (default `backend`, the compose service; `kubendt-backend` in the cluster manifests).

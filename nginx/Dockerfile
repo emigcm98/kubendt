@@ -17,7 +17,11 @@ RUN npm run build
 FROM nginxinc/nginx-unprivileged:1.31-alpine
 
 COPY --from=build /app/build /usr/share/nginx/html
-COPY nginx/kubendt.conf /etc/nginx/conf.d/default.conf
+# The image's entrypoint renders the template with the environment at start,
+# so the backend's host is the compose service by default and whatever the
+# cluster names it when set.
+COPY nginx/kubendt.conf.template /etc/nginx/templates/default.conf.template
+ENV BACKEND_HOST=backend
 
 EXPOSE 8080
 

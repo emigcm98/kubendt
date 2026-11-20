@@ -1,0 +1,24 @@
+# An Ingress for the UI, to adapt: the class, the host and TLS are the
+# cluster's. The API goes through the same host under /api, the UI's nginx
+# proxies it, so one rule is enough. kubectl apply -n kubendt-system -f this.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kubendt
+  annotations:
+    # WebSockets (shells, captures) and long operations need time.
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: kubendt.example.org
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: kubendt-frontend
+                port:
+                  number: 80

@@ -1,0 +1,72 @@
+# What the backend does to the cluster, verb by verb. Labs are namespaces it
+# creates on demand, so the grants are cluster-wide.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kubendt-backend
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubendt-backend
+rules:
+  # Labs: created, labelled, deleted; kube-system read for the cluster's id.
+  - apiGroups: [""]
+    resources: [namespaces]
+    verbs: [get, list, watch, create, patch, delete]
+  # The cluster page and the placement of a topology.
+  - apiGroups: [""]
+    resources: [nodes, events]
+    verbs: [get, list, watch]
+  # Nodes are StatefulSets; their pods are restarted, nudged, watched for
+  # readiness and given the toolbox as an ephemeral container.
+  - apiGroups: [apps]
+    resources: [statefulsets]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [get, list, watch, update, patch, delete]
+  - apiGroups: [""]
+    resources: [pods/exec]
+    verbs: [create, get]
+  - apiGroups: [""]
+    resources: [pods/ephemeralcontainers]
+    verbs: [get, update, patch]
+  - apiGroups: [""]
+    resources: [pods/log]
+    verbs: [get]
+  # The platform's state: files, histories, layouts, the node environment,
+  # the admin, the tokens, the session key.
+  - apiGroups: [""]
+    resources: [configmaps, secrets]
+    verbs: [get, list, watch, create, update, patch, delete]
+  # The operation lock of a namespace.
+  - apiGroups: [coordination.k8s.io]
+    resources: [leases]
+    verbs: [get, list, watch, create, update, patch, delete]
+  # Meshnet's links.
+  - apiGroups: [networkop.co.uk]
+    resources: [topologies]
+    verbs: [get, list, watch, create, update, patch, delete]
+  # Meshnet is looked for among the DaemonSets.
+  - apiGroups: [apps]
+    resources: [daemonsets, deployments]
+    verbs: [get, list]
+  # CPU and memory on the cluster page and the pod panel, when metrics-server
+  # is there.
+  - apiGroups: [metrics.k8s.io]
+    resources: [nodes, pods]
+    verbs: [get, list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubendt-backend
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kubendt-backend
+subjects:
+  - kind: ServiceAccount
+    name: kubendt-backend
+    namespace: kubendt-system
