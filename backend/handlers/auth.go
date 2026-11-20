@@ -52,12 +52,27 @@ func bearerToken(c *gin.Context) (string, bool) {
 	return "", false
 }
 
+// sessionFromRequest validates the session cookie and, when the session
+// earned a fresh cookie, sets it on the response.
+func sessionFromRequest(c *gin.Context) (*auth.Principal, bool) {
+	raw, err := c.Cookie(auth.CookieName)
+	if err != nil {
+		return nil, false
+	}
+	p, refreshed, ok := auth.ValidateSession(raw)
+	if !ok {
+		return nil, false
+	}
+	if refreshed != "" {
+		setSessionCookie(c, refreshed)
+	}
+	return p, true
+}
+
 // principalFromRequest resolves a session cookie or bearer token to a principal.
 func principalFromRequest(c *gin.Context) (*auth.Principal, bool) {
-	if raw, err := c.Cookie(auth.CookieName); err == nil {
-		if p, ok := auth.ValidateSession(raw); ok {
-			return p, true
-		}
+	if p, ok := sessionFromRequest(c); ok {
+		return p, true
 	}
 	if tok, ok := bearerToken(c); ok {
 		if p, ok := auth.ValidateAPIToken(tok); ok {
@@ -109,12 +124,10 @@ func RequireSessionOrPassword() gin.HandlerFunc {
 			c.Next()
 			return
 		}
-		if raw, err := c.Cookie(auth.CookieName); err == nil {
-			if p, ok := auth.ValidateSession(raw); ok {
-				c.Set("principal", p)
-				c.Next()
-				return
-			}
+		if p, ok := sessionFromRequest(c); ok {
+			c.Set("principal", p)
+			c.Next()
+			return
 		}
 		if _, password, ok := c.Request.BasicAuth(); ok && auth.CheckPassword(password) {
 			c.Set("principal", &auth.Principal{Identity: "admin", Roles: []string{"admin"}, Method: "password"})
@@ -169,11 +182,9 @@ func Login(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"authenticated": true, "identity": "admin", "roles": []string{"admin"}})
 }
 
-// Logout revokes the current session and clears the cookie.
+// Logout clears the cookie; a session is the cookie itself, nothing is kept
+// of it on the server.
 func Logout(c *gin.Context) {
-	if raw, err := c.Cookie(auth.CookieName); err == nil {
-		_ = auth.DeleteSession(raw)
-	}
 	clearSessionCookie(c)
 	c.JSON(http.StatusOK, gin.H{"authenticated": false})
 }
@@ -216,6 +227,10 @@ func CreateAPIToken(c *gin.Context) {
 			c.JSON(http.StatusConflict, gin.H{"error": "A token with that name already exists"})
 			return
 		}
+		if errors.Is(err, auth.ErrNoStore) {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Load a kubeconfig first, API tokens are kept in the cluster"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create token"})
 		return
 	}
@@ -241,6 +256,10 @@ func DeleteAPIToken(c *gin.Context) {
 	}
 	removed, err := auth.DeleteAPIToken(id)
 	if err != nil {
+		if errors.Is(err, auth.ErrNoStore) {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Load a kubeconfig first, API tokens are kept in the cluster"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

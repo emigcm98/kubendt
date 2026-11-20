@@ -3,8 +3,6 @@ package helpers
 import (
 	"context"
 	"fmt"
-	"os"
-	"strings"
 
 	"kubendt/kubeclient"
 
@@ -15,8 +13,8 @@ import (
 )
 
 const (
-	SystemNamespaceEnv     = "KUBENDT_SYSTEM_NAMESPACE"
-	DefaultSystemNamespace = "kubendt-system"
+	SystemNamespaceEnv     = kubeclient.SystemNamespaceEnv
+	DefaultSystemNamespace = kubeclient.DefaultSystemNamespace
 )
 
 // systemNamespaces is the client the system namespace goes through, a
@@ -26,13 +24,8 @@ var systemNamespaces = func() corev1.NamespaceInterface {
 }
 
 // SystemNamespace is where the platform keeps what belongs to no lab: the
-// layouts of deleted namespaces today, users and tokens later.
-func SystemNamespace() string {
-	if ns := strings.TrimSpace(os.Getenv(SystemNamespaceEnv)); ns != "" {
-		return ns
-	}
-	return DefaultSystemNamespace
-}
+// admin and the tokens, the layouts of deleted namespaces.
+func SystemNamespace() string { return kubeclient.SystemNamespace() }
 
 // EnsureSystemNamespace creates the system namespace when the cluster lacks
 // it. It carries no kubendt/enabled label, so it never lists as a lab.

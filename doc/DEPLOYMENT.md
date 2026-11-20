@@ -27,10 +27,11 @@ The backend reads configuration from environment variables at startup, there is 
 
 ```bash
 export CORS_ALLOWED_ORIGINS=http://localhost:3000 # default when unset
-export FILES_BASE_PATH=./files # default when unset
-export KUBENDT_DB_PATH=./kubendt.db # default when unset: kubendt.db in cwd
+export KUBENDT_ADMIN_PASSWORD=admin123            # or a generated one is printed once
 go run .
 ```
+
+The state lives in the cluster. `KUBENDT_DB_PATH` and `FILES_BASE_PATH` only matter to move what a backend older than 1.12 kept in a database and on disk.
 
 Or create a local file and source it (not committed to git):
 
@@ -59,7 +60,7 @@ Two compose files are provided, both running the backend plus a combined nginx+f
 
 Configuration lives **inline** in each compose file's `environment:` block. The defaults expect your kubeconfig at `~/.kube/config` (mounted read-only) and set a placeholder admin password (`admin123`) that you should change. See the reference below for every variable.
 
-File storage and the SQLite database are persisted in named Docker volumes (`kubendt-files` and `backend-db`). They survive container restarts and rebuilds.
+The compose files keep the `kubendt-files` and `backend-db` volumes an older backend wrote its files and database to; a backend of 1.12 reads them once to move that into the cluster, after which they can go.
 
 ## What the backend asks of the cluster
 
@@ -88,8 +89,8 @@ The backend's credentials (the kubeconfig, or the ServiceAccount in the cluster)
 - `PORT`: API port (default `8080`).
 - `CORS_ALLOWED_ORIGINS`: comma-separated list of allowed frontend origins (default: `http://localhost:3000`).
 - `FILES_BASE_PATH`: the folder an older backend kept the namespace files in (default: `files` relative to cwd). The files live in the cluster now, as ConfigMaps and Secrets of the namespace; what is on disk moves there the first time a namespace is touched and stays behind a marker, so the variable and its volume are only needed to migrate.
-- `KUBENDT_DB_PATH`: SQLite database path (default: `kubendt.db` in cwd).
-- `KUBENDT_SYSTEM_NAMESPACE`: the namespace the platform keeps its own objects in, created at start (default `kubendt-system`); today the layouts of deleted namespaces wait there for a namespace of the same name. The backend's credentials need Leases in every lab namespace, the operation lock, and Namespaces and ConfigMaps in this one.
+- `KUBENDT_DB_PATH`: SQLite database path. Optional: the backend runs without one, the state lives in the cluster, and a file is only read to move what an older backend kept in it (its layouts, history, link attributes, file flags, admin password and API tokens). Unset, a `kubendt.db` in the working directory is still opened when there is one.
+- `KUBENDT_SYSTEM_NAMESPACE`: the namespace the platform keeps its own objects in, created at start (default `kubendt-system`): the admin password hash, the API tokens, the key the sessions are signed with, and the layouts of deleted namespaces waiting for a namespace of the same name. The first cluster the backend connects to is its home cluster and holds them; a context switch later does not move them.
 - `KUBECTL_EXEC_TIMEOUT_SECONDS`: max wall-clock seconds for any single in-pod exec (kubectl exec, `ssh_qemu` into a QEMU guest, batched VyOS commits, the one script that runs a pod's consecutive Linux actions in a configure or a replay). Default `30`. Bump it if you run against a slow cluster or busy guests and start seeing "exec timeout" errors from network-configure or modify operations. The SSH layer detects dead sessions independently within ~11s, so this deadline only bounds genuinely-long commands.
 - `KUBENDT_K8S_QPS` / `KUBENDT_K8S_BURST`: client-side rate limit for requests to the Kubernetes API (default `100` requests per second, burst `200`). client-go's own default is 5/10, which queues per-pod operations for tens of seconds on large topologies. Lower them only on a shared API server under pressure; it applies its own priority and fairness on top.
 - `SWAGGER_BASE_PATH`: base path prefix for Swagger UI (e.g. `/api/` when served behind a proxy).
@@ -104,11 +105,11 @@ The backend's credentials (the kubeconfig, or the ServiceAccount in the cluster)
 
 #### Authentication
 
-- `KUBENDT_ADMIN_PASSWORD`: admin password for login. If unset, a random one is generated on first run and printed to the logs once (its bcrypt hash is then stored, so it stays stable across restarts).
+- `KUBENDT_ADMIN_PASSWORD`: admin password for login, the source of truth when set (a change ends every session). If unset, the hash stored in the cluster is used, or a random password is generated, printed to the logs once and its hash stored, so it stays stable across restarts and backends.
 - `KUBENDT_AUTH_DISABLED`: set to `true` to run the API **unauthenticated** (dev / trusted network only). A loud warning is logged at startup.
 - `KUBENDT_COOKIE_SECURE`: set to `true` when serving over HTTPS so the session cookie is only sent over TLS (default `false`, since the stock compose serves plain HTTP behind nginx).
 - `KUBENDT_SESSION_IDLE_HOURS`: idle timeout for browser sessions (default `12`).
-- `KUBENDT_SESSION_MAX_HOURS`: absolute session lifetime (default `168` = 7 days).
+- `KUBENDT_SESSION_MAX_HOURS`: absolute session lifetime (default `168` = 7 days). A session is a signed cookie, accepted by every backend of the cluster and surviving their restarts; without a cluster the key is the process's own and sessions end with it.
 
 Programmatic access uses **API tokens** (created in the dashboard or via `POST /auth/tokens` with the admin password, optionally with an expiry via `expires_in_days`), sent as `Authorization: Bearer <token>`.
 

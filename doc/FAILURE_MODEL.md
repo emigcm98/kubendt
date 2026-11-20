@@ -15,9 +15,10 @@ What KubeNDT survives, what it loses, and what you have to fix by hand. The shor
 | `sensitive` flag of files | the kind of the file's object, a Secret | yes | yes |
 | Link uids | read from the Topology objects of every namespace when a deploy needs one | nothing kept | nothing to lose |
 | Operation locks | a `kubendt-internal-lock` Lease in the namespace, renewed while the operation runs | yes | taken over by the next operation once it expires, a minute at most |
-| Admin password, sessions, API tokens | SQLite `auth_config`, `sessions`, `api_tokens` | yes | no, the password comes back from `KUBENDT_ADMIN_PASSWORD` or is generated and printed once, tokens must be recreated |
+| Admin password, API tokens | Secrets in the system namespace of the home cluster (`kubendt-user-admin`, `kubendt-token-<id>`), what an older backend kept in SQLite moved there on the first bind | yes | yes, they are in the cluster |
+| Browser sessions | a signed cookie, the key a Secret in the system namespace (`kubendt-internal-session-key`) | yes, every backend of the cluster accepts them | yes, the key is in the cluster |
 
-SQLite lives at `KUBENDT_DB_PATH` (`./kubendt.db` by default, `/data/kubendt.db` on the `backend-db` volume in compose). It is a single local file, not replicated. Rows are scoped by cluster id, so one backend can serve several clusters without mixing their state.
+SQLite is optional. When `KUBENDT_DB_PATH` names a file (`/data/kubendt.db` on the `backend-db` volume in compose) or a `kubendt.db` sits in the working directory, it is opened and what an older backend kept in it moves to the cluster as it is touched; a new install needs none.
 
 ## Backend failures
 
@@ -25,7 +26,7 @@ SQLite lives at `KUBENDT_DB_PATH` (`./kubendt.db` by default, `/data/kubendt.db`
 
 **Interrupted operation.** A deploy that dies half way leaves the resources it created in the cluster. The next deploy into that namespace is refused with `409 already has a deployed topology`, because the guard looks at the CRDs, not at the database. Recovery is one call: `DELETE /network/clear-topology/{namespace}` removes StatefulSets, Topology CRDs, ConfigMaps, Secrets, the UID registry and the history for that namespace, and the deploy can be repeated. A deploy whose pods never become Ready rolls itself back the same way. A modify or a restart that dies mid way leaves the affected pods in whatever state Kubernetes left them, and the heal pass of the next modify, or a Restart of the pod, brings them back.
 
-**Lost database or volume.** The topology, the history the replay uses, the layout and the files are objects of the namespace, so a replacement backend with the kubeconfig carries on with them untouched. What goes with the database is the platform's own: the admin password comes back from `KUBENDT_ADMIN_PASSWORD` or is generated and printed once, and API tokens have to be recreated.
+**Lost database or volume.** Nothing, once its rows have moved: the topology, the history the replay uses, the layout, the files, the admin password and the API tokens are objects of the cluster, and a replacement backend with the kubeconfig carries on with them, browser sessions included.
 
 **Wrong cluster or credentials.** With no kubeconfig or no permissions the API answers errors and the dashboard shows the cluster as unreachable. Nothing is modified.
 

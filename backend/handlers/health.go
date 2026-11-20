@@ -67,8 +67,7 @@ func Readyz(c *gin.Context) {
 	ready := true
 
 	if database.DB == nil {
-		checks["database"] = "not_initialized"
-		ready = false
+		checks["database"] = "none"
 	} else {
 		ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
 		defer cancel()

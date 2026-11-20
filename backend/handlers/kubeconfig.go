@@ -7,6 +7,7 @@ import (
 	"os"
 	"sort"
 
+	"kubendt/auth"
 	"kubendt/helpers"
 	"kubendt/kubeclient"
 
@@ -87,11 +88,21 @@ func SetKubeContext(c *gin.Context) {
 	if err := helpers.RecordActiveCluster(); err != nil {
 		log.Printf("⚠️ Could not record active cluster after context switch: %v", err)
 	}
-	if err := helpers.EnsureSystemNamespace(); err != nil {
-		log.Printf("⚠️ Could not ensure the system namespace after context switch: %v", err)
-	}
+	bindPlatform("context switch")
 
 	c.JSON(http.StatusOK, gin.H{"current_context": req.Context})
+}
+
+// bindPlatform gives the cluster its system namespace and lets auth take the
+// store there, the first cluster being the home one.
+func bindPlatform(after string) {
+	if err := helpers.EnsureSystemNamespace(); err != nil {
+		log.Printf("⚠️ Could not ensure the system namespace after %s: %v", after, err)
+		return
+	}
+	if err := auth.Bind(); err != nil {
+		log.Printf("⚠️ Could not bind authentication to the cluster after %s: %v", after, err)
+	}
 }
 
 func LoadKubeConfig(c *gin.Context) {
@@ -134,6 +145,7 @@ func LoadKubeConfig(c *gin.Context) {
 	if err := helpers.RecordActiveCluster(); err != nil {
 		log.Printf("⚠️ Could not record active cluster after kubeconfig load: %v", err)
 	}
+	bindPlatform("kubeconfig load")
 
 	// Get updated info
 	info, err := kubeclient.GetKubeConfigInfo()
