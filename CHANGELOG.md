@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - A system namespace, `kubendt-system` (`KUBENDT_SYSTEM_NAMESPACE`), where a namespace deleted keeping its layout leaves it until a namespace of the same name takes it back.
 - A state browser, `GET /state`, `/state/{namespace}` and `/state/{namespace}/{kind}/{name}`, and its page from Home and from a namespace: every Kubernetes object KubeNDT creates or uses, told for what it is to the platform, each opening as YAML with a Secret's values replaced by their sizes.
 - Manifests to run KubeNDT inside the cluster it manages, `deploy/k8s` with `kubectl apply -k`: the system namespace, the ServiceAccount with the ClusterRole the backend needs, the backend and the UI. The UI image takes the backend's host from `BACKEND_HOST`.
+- The backend moves everything an older one kept in its database and on disk into the cluster as it starts, every lab at once, so an install can be carried into its cluster in one restart. An optional NodePort Service for a reverse proxy outside the cluster.
 
 ### Changed
 

@@ -91,7 +91,9 @@ The UI's only variable is `BACKEND_HOST`, set in `frontend.yaml` to the backend'
 
 Meshnet and, for VM nodes, `/dev/kvm` on the workers are the cluster's side, as for any install; metrics-server is optional.
 
-A compose install of 1.11 or older moving to this version keeps its `backend-db` and `kubendt-files` volumes for the first start, which reads them once and moves what they hold into the cluster, after which they can go.
+A compose install of 1.11 or older moving to this version keeps its `backend-db` and `kubendt-files` volumes for one more start: the backend moves what they hold (the admin password, the API tokens, and every lab's layout, history, link attributes and files) into the cluster as it starts and says so in its log, after which the volumes can go. To carry such an install into its cluster, start it once on this version where it is, then install the manifests and point the proxy at them; users keep their URL, their password and their tokens.
+
+For a reverse proxy outside the cluster, `deploy/k8s/optional/nodeport.yaml` puts the UI on port 30080 of every node, so the proxy's upstream can be the workers; behind HTTPS set `KUBENDT_COOKIE_SECURE=true` in the ConfigMap. The proxy must pass WebSockets (`proxy_http_version 1.1`, the `Upgrade` and `Connection` headers) with long read and send timeouts, as the shells and captures are open connections.
 
 ## What the backend asks of the cluster
 
