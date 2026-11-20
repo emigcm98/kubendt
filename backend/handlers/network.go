@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -941,7 +942,7 @@ func DeployNetwork(c *gin.Context) {
 		for _, mount := range node.Mounts {
 			_, _, err := helpers.CreateMountResourceForFile(namespace, mount.File)
 			if err != nil {
-				if strings.Contains(err.Error(), "error reading file") {
+				if errors.Is(err, helpers.ErrFileMissing) {
 					log.Printf("⚠️ File %s does not exist. Skipping ConfigMap creation: %v", mount.File, err)
 					warnings = append(warnings, types.Warning{
 						Node:   node.Name,

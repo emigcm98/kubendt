@@ -87,7 +87,7 @@ The backend's credentials (the kubeconfig, or the ServiceAccount in the cluster)
 - `KUBE_CONTEXT`: optional kube context override.
 - `PORT`: API port (default `8080`).
 - `CORS_ALLOWED_ORIGINS`: comma-separated list of allowed frontend origins (default: `http://localhost:3000`).
-- `FILES_BASE_PATH`: namespace files base folder (default: `files` relative to cwd).
+- `FILES_BASE_PATH`: the folder an older backend kept the namespace files in (default: `files` relative to cwd). The files live in the cluster now, as ConfigMaps and Secrets of the namespace; what is on disk moves there the first time a namespace is touched and stays behind a marker, so the variable and its volume are only needed to migrate.
 - `KUBENDT_DB_PATH`: SQLite database path (default: `kubendt.db` in cwd).
 - `KUBENDT_SYSTEM_NAMESPACE`: the namespace the platform keeps its own objects in, created at start (default `kubendt-system`); today the layouts of deleted namespaces wait there for a namespace of the same name. The backend's credentials need Leases in every lab namespace, the operation lock, and Namespaces and ConfigMaps in this one.
 - `KUBECTL_EXEC_TIMEOUT_SECONDS`: max wall-clock seconds for any single in-pod exec (kubectl exec, `ssh_qemu` into a QEMU guest, batched VyOS commits, the one script that runs a pod's consecutive Linux actions in a configure or a replay). Default `30`. Bump it if you run against a slow cluster or busy guests and start seeing "exec timeout" errors from network-configure or modify operations. The SSH layer detects dead sessions independently within ~11s, so this deadline only bounds genuinely-long commands.

@@ -476,6 +476,17 @@ function NamespaceFilesPage() {
       );
       setShowImportModal(false);
 
+      // Entries that cannot be a mounted file (binary, too big, odd names)
+      // are skipped, the rest is imported. Say so, the success alone would hide it.
+      const skipped = Array.isArray(payload?.skipped) ? payload.skipped : [];
+      if (skipped.length > 0) {
+        showToast(
+          `${skipped.length} entr${skipped.length === 1 ? 'y' : 'ies'} skipped: ${skipped[0]}${skipped.length > 1 ? ', ...' : ''}`,
+          'warning',
+          6000
+        );
+      }
+
       setTimeout(() => {
         fetchFiles();
         setImportStatus(null);

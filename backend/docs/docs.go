@@ -918,7 +918,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/types.MessageResponse"
+                            "$ref": "#/definitions/types.ImportArchiveResponse"
                         }
                     },
                     "400": {
@@ -4202,6 +4202,28 @@ const docTemplate = `{
                 "version": {
                     "type": "string",
                     "example": "0.1.0-pre"
+                }
+            }
+        },
+        "types.ImportArchiveResponse": {
+            "type": "object",
+            "properties": {
+                "imported": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "message": {
+                    "type": "string",
+                    "example": "File imported successfully"
+                },
+                "skipped": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "bin/tool: binary content is not supported"
+                    ]
                 }
             }
         },

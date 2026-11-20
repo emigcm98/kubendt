@@ -96,11 +96,17 @@ func ClearNamespaceTopologyResources(namespace string, deletePositions, deleteFi
 	}
 
 	for configMapName := range configMapsToDelete {
+		if cm, err := kubeclient.Clientset.CoreV1().ConfigMaps(namespace).Get(ctx, configMapName, metav1.GetOptions{}); err == nil && IsFileObject(cm.Labels) {
+			continue
+		}
 		if err := kubeclient.Clientset.CoreV1().ConfigMaps(namespace).Delete(ctx, configMapName, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
 			return fmt.Errorf("error deleting ConfigMap %s: %w", configMapName, err)
 		}
 	}
 	for secretName := range secretsToDelete {
+		if s, err := kubeclient.Clientset.CoreV1().Secrets(namespace).Get(ctx, secretName, metav1.GetOptions{}); err == nil && IsFileObject(s.Labels) {
+			continue
+		}
 		if err := kubeclient.Clientset.CoreV1().Secrets(namespace).Delete(ctx, secretName, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
 			return fmt.Errorf("error deleting Secret %s: %w", secretName, err)
 		}

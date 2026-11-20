@@ -497,7 +497,7 @@ func swaggerCreateFolder() {}
 //	@Param        namespace  path      string  true  "Namespace name"
 //	@Param        file       formData  file    true  "Archive file (.zip or .tar.gz)"
 //	@Param        path       formData  string  false "Target extraction sub-path"
-//	@Success      200        {object}  types.MessageResponse
+//	@Success      200        {object}  types.ImportArchiveResponse
 //	@Failure      400        {object}  types.ErrorResponse
 //	@Failure      500        {object}  types.ErrorResponse
 //	@Router       /file-ops/{namespace}/import [post]

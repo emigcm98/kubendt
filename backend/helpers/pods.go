@@ -10,14 +10,12 @@ import (
 	"kubendt/kubeclient"
 	"kubendt/types"
 	"log"
-	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -556,8 +554,8 @@ func SanitizeMountSecretName(name string) string {
 	return fmt.Sprintf("kubendt-secret-file-%s", sanitizeMountFileSuffix(name))
 }
 
-// MountResourceNameForFile resolves the K8s resource name backing a file
-// mount based on its sensitive flag. Returns (name, isSecret).
+// MountResourceNameForFile is the object a mount of the file references, the
+// file's own ConfigMap or Secret.
 func MountResourceNameForFile(namespace, fileName string) (string, bool) {
 	meta, _ := GetFileMeta(namespace, fileName)
 	if meta.Sensitive {
@@ -591,74 +589,6 @@ func SanitizeConfigMapDataKey(name string) string {
 // missing mount.
 const MountFilePathAnnotation = "kubendt/mount-file-path"
 
-// SyncMountResourceFromFile refreshes the ConfigMap or Secret backing a file
-// mount if one already exists. Returns kind="ConfigMap"|"Secret" on success,
-// synced=false with no error if nothing existed to sync.
-//
-// Pods already mounting the file need a restart to see the new content
-// (SubPath bind mounts don't propagate updates).
-func SyncMountResourceFromFile(namespace, fileName string) (synced bool, kind string, err error) {
-	ctx := context.TODO()
-
-	nsDir, err := namespaceFilesDir(namespace)
-	if err != nil {
-		return false, "", err
-	}
-	basePath := filepath.Join(nsDir, fileName)
-	data, readErr := os.ReadFile(basePath)
-	if readErr != nil {
-		return false, "", fmt.Errorf("error reading file %s: %w", basePath, readErr)
-	}
-	if len(data) > MaxMountFileBytes {
-		return false, "", fmt.Errorf("file %q is %d bytes; cannot sync (ConfigMaps/Secrets cap at ~1 MiB)", fileName, len(data))
-	}
-	if !utf8.Valid(data) {
-		return false, "", fmt.Errorf("file %q contains non-UTF-8 bytes; cannot sync", fileName)
-	}
-	dataKey := SanitizeConfigMapDataKey(fileName)
-
-	// Secret and ConfigMap are mutually exclusive per file after a deploy.
-	secretName := SanitizeMountSecretName(fileName)
-	if secret, err := kubeclient.Clientset.CoreV1().Secrets(namespace).Get(ctx, secretName, metav1.GetOptions{}); err == nil {
-		if secret.Data != nil && string(secret.Data[dataKey]) == string(data) && len(secret.Data) == 1 &&
-			secret.Annotations[MountFilePathAnnotation] == fileName {
-			return true, "Secret", nil
-		}
-		secret.Data = map[string][]byte{dataKey: data}
-		if secret.Annotations == nil {
-			secret.Annotations = map[string]string{}
-		}
-		secret.Annotations[MountFilePathAnnotation] = fileName
-		if _, err := kubeclient.Clientset.CoreV1().Secrets(namespace).Update(ctx, secret, metav1.UpdateOptions{}); err != nil {
-			return false, "", fmt.Errorf("error updating Secret %s: %w", secretName, err)
-		}
-		return true, "Secret", nil
-	} else if !apierrors.IsNotFound(err) {
-		return false, "", fmt.Errorf("error reading Secret %s: %w", secretName, err)
-	}
-
-	configMapName := SanitizeMountConfigMapName(fileName)
-	if cm, err := kubeclient.Clientset.CoreV1().ConfigMaps(namespace).Get(ctx, configMapName, metav1.GetOptions{}); err == nil {
-		if cm.Data != nil && cm.Data[dataKey] == string(data) && len(cm.Data) == 1 &&
-			cm.Annotations[MountFilePathAnnotation] == fileName {
-			return true, "ConfigMap", nil
-		}
-		cm.Data = map[string]string{dataKey: string(data)}
-		if cm.Annotations == nil {
-			cm.Annotations = map[string]string{}
-		}
-		cm.Annotations[MountFilePathAnnotation] = fileName
-		if _, err := kubeclient.Clientset.CoreV1().ConfigMaps(namespace).Update(ctx, cm, metav1.UpdateOptions{}); err != nil {
-			return false, "", fmt.Errorf("error updating ConfigMap %s: %w", configMapName, err)
-		}
-		return true, "ConfigMap", nil
-	} else if !apierrors.IsNotFound(err) {
-		return false, "", fmt.Errorf("error reading ConfigMap %s: %w", configMapName, err)
-	}
-
-	return false, "", nil
-}
-
 // CountMountedPodsForFile counts pods in the namespace that mount the file
 // (via either its ConfigMap or its Secret).
 func CountMountedPodsForFile(namespace, fileName string) (int, error) {
@@ -684,134 +614,25 @@ func CountMountedPodsForFile(namespace, fileName string) (int, error) {
 	return count, nil
 }
 
-// MaxMountFileBytes is the hard cap for a file backing a mount (etcd limit
-// for ConfigMaps and Secrets).
-const MaxMountFileBytes = 1 << 20
-
-// CreateMountResourceForFile upserts the ConfigMap (default) or Secret
-// (when the file is flagged sensitive) that backs a namespace-file mount.
-// Every pod mounting that file in the same namespace shares the resource.
-// Enforces the 1 MiB cap and UTF-8 encoding (mounts only support text).
-// Returns the resource name and whether it is a Secret.
+// CreateMountResourceForFile is the object a mount of the file references:
+// the file itself, as the manager keeps it. ErrFileMissing when the
+// namespace does not hold the file.
 func CreateMountResourceForFile(namespace, fileName string) (name string, isSecret bool, err error) {
-	nsDir, err := namespaceFilesDir(namespace)
+	p, err := cleanFilePath(fileName)
 	if err != nil {
 		return "", false, err
 	}
-	basePath := filepath.Join(nsDir, fileName)
-	data, readErr := os.ReadFile(basePath)
-	if readErr != nil {
-		return "", false, fmt.Errorf("error reading file %s: %w", basePath, readErr)
+	if err := migrateNamespaceFiles(namespace); err != nil {
+		return "", false, err
 	}
-	if len(data) > MaxMountFileBytes {
-		return "", false, fmt.Errorf("file %q is %d bytes; mounts are limited to %d bytes (ConfigMaps/Secrets cap at ~1 MiB in etcd). Split the file or use a different mechanism", fileName, len(data), MaxMountFileBytes)
+	f, err := getNamespaceFile(namespace, p, false)
+	if err != nil {
+		return "", false, err
 	}
-	if !utf8.Valid(data) {
-		return "", false, fmt.Errorf("file %q contains non-UTF-8 bytes; mounts only support text files. Use a different mechanism for binaries", fileName)
+	if f == nil {
+		return "", false, fmt.Errorf("%s: %w", fileName, ErrFileMissing)
 	}
-
-	meta, _ := GetFileMeta(namespace, fileName)
-	dataKey := SanitizeConfigMapDataKey(fileName)
-	ctx := context.TODO()
-
-	if meta.Sensitive {
-		secretName := SanitizeMountSecretName(fileName)
-		desiredData := map[string][]byte{dataKey: data}
-
-		existing, getErr := kubeclient.Clientset.CoreV1().Secrets(namespace).Get(ctx, secretName, metav1.GetOptions{})
-		if getErr == nil {
-			if existing.Data != nil && string(existing.Data[dataKey]) == string(data) && len(existing.Data) == 1 &&
-				existing.Annotations[MountFilePathAnnotation] == fileName {
-				return secretName, true, nil
-			}
-			existing.Data = desiredData
-			if existing.Annotations == nil {
-				existing.Annotations = map[string]string{}
-			}
-			existing.Annotations[MountFilePathAnnotation] = fileName
-			if _, updateErr := kubeclient.Clientset.CoreV1().Secrets(namespace).Update(ctx, existing, metav1.UpdateOptions{}); updateErr != nil {
-				return "", true, fmt.Errorf("error updating Secret %s: %w", secretName, updateErr)
-			}
-			return secretName, true, nil
-		}
-		if !apierrors.IsNotFound(getErr) {
-			return "", true, fmt.Errorf("error reading Secret %s: %w", secretName, getErr)
-		}
-
-		// Drop any stale ConfigMap left from a previous non-sensitive period.
-		if err := kubeclient.Clientset.CoreV1().ConfigMaps(namespace).Delete(ctx, SanitizeMountConfigMapName(fileName), metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
-			log.Printf("⚠️ could not delete stale ConfigMap for sensitive file %s: %v", fileName, err)
-		}
-
-		secret := &v1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      secretName,
-				Namespace: namespace,
-				Labels: map[string]string{
-					"app.kubernetes.io/managed-by": "kubendt-backend",
-					"kubendt/mount-file":           "true",
-					"kubendt/sensitive":            "true",
-				},
-				Annotations: map[string]string{
-					MountFilePathAnnotation: fileName,
-				},
-			},
-			Type: v1.SecretTypeOpaque,
-			Data: desiredData,
-		}
-		if _, err := kubeclient.Clientset.CoreV1().Secrets(namespace).Create(ctx, secret, metav1.CreateOptions{}); err != nil {
-			return "", true, fmt.Errorf("error creating Secret %s: %w", secretName, err)
-		}
-		return secretName, true, nil
-	}
-
-	// Non-sensitive: ConfigMap.
-	configMapName := SanitizeMountConfigMapName(fileName)
-	desiredData := map[string]string{dataKey: string(data)}
-
-	existing, getErr := kubeclient.Clientset.CoreV1().ConfigMaps(namespace).Get(ctx, configMapName, metav1.GetOptions{})
-	if getErr == nil {
-		if existing.Data != nil && existing.Data[dataKey] == string(data) && len(existing.Data) == 1 &&
-			existing.Annotations[MountFilePathAnnotation] == fileName {
-			return configMapName, false, nil
-		}
-		existing.Data = desiredData
-		if existing.Annotations == nil {
-			existing.Annotations = map[string]string{}
-		}
-		existing.Annotations[MountFilePathAnnotation] = fileName
-		if _, updateErr := kubeclient.Clientset.CoreV1().ConfigMaps(namespace).Update(ctx, existing, metav1.UpdateOptions{}); updateErr != nil {
-			return "", false, fmt.Errorf("error updating ConfigMap %s: %w", configMapName, updateErr)
-		}
-		return configMapName, false, nil
-	}
-	if !apierrors.IsNotFound(getErr) {
-		return "", false, fmt.Errorf("error reading ConfigMap %s: %w", configMapName, getErr)
-	}
-
-	// Drop any stale Secret left from a previous "sensitive" period.
-	if err := kubeclient.Clientset.CoreV1().Secrets(namespace).Delete(ctx, SanitizeMountSecretName(fileName), metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
-		log.Printf("⚠️ could not delete stale Secret for non-sensitive file %s: %v", fileName, err)
-	}
-
-	configMap := &v1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      configMapName,
-			Namespace: namespace,
-			Labels: map[string]string{
-				"app.kubernetes.io/managed-by": "kubendt-backend",
-				"kubendt/mount-file":           "true",
-			},
-			Annotations: map[string]string{
-				MountFilePathAnnotation: fileName,
-			},
-		},
-		Data: desiredData,
-	}
-	if _, err := kubeclient.Clientset.CoreV1().ConfigMaps(namespace).Create(ctx, configMap, metav1.CreateOptions{}); err != nil {
-		return "", false, fmt.Errorf("error creating ConfigMap %s: %w", configMapName, err)
-	}
-	return configMapName, false, nil
+	return f.Name, f.Sensitive, nil
 }
 
 func RestartPod(namespace, podName string) error {
