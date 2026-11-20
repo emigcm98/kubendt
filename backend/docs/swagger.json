@@ -10,7 +10,7 @@
     "paths": {
         "/auth/login": {
             "post": {
-                "description": "Exchanges the admin password for an HttpOnly session cookie.",
+                "description": "Exchanges an account's password for an HttpOnly session cookie. No username is the owner account, admin.",
                 "consumes": [
                     "application/json"
                 ],
@@ -23,7 +23,7 @@
                 "summary": "Log in",
                 "parameters": [
                     {
-                        "description": "Admin password",
+                        "description": "Username and password",
                         "name": "body",
                         "in": "body",
                         "required": true,
@@ -88,6 +88,46 @@
                 }
             }
         },
+        "/auth/password": {
+            "put": {
+                "description": "The current password must match; the account's other sessions end and a forced change is cleared. A session or the password itself, never an API token.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Change one's password",
+                "parameters": [
+                    {
+                        "description": "Current and new password",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.ChangePasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.MessageResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/tokens": {
             "get": {
                 "description": "Lists API token metadata (never the secrets). Requires a session or the admin password.",
@@ -98,6 +138,14 @@
                     "auth"
                 ],
                 "summary": "List API tokens",
+                "parameters": [
+                    {
+                        "type": "boolean",
+                        "description": "An admin asking for everyone's tokens",
+                        "name": "all",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -3107,6 +3155,220 @@
                 }
             }
         },
+        "/users": {
+            "get": {
+                "description": "Every account with its role, standing, flags and quotas, never a hash. Admins and the owner, over a session or the password.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "List accounts",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.UserListResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "A new account with a role, user by default; only the owner creates admins. Without a password one is generated and returned once. The account changes its password at its first login.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Create an account",
+                "parameters": [
+                    {
+                        "description": "The account",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.CreateUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/types.UserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/{name}": {
+            "put": {
+                "description": "Role, standing, flags or quotas. An admin changes plain users only and never a role; the owner changes anyone but its own standing. Disabling ends the account's sessions.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Update an account",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Username",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "What changes",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.UserPatchRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.UserResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Removes the account and its API tokens. The owner stays.",
+                "tags": [
+                    "users"
+                ],
+                "summary": "Delete an account",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Username",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/{name}/password": {
+            "post": {
+                "description": "The given password or a generated one, returned once; the account changes it at its next login and its sessions end.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Reset an account's password",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Username",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The password, or none for a generated one",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/types.ResetPasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.ResetPasswordResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/version": {
             "get": {
                 "description": "Returns service name and build metadata.",
@@ -3142,7 +3404,7 @@
                 },
                 "id": {
                     "type": "integer",
-                    "example": 1
+                    "example": 1795166265369580
                 },
                 "last_used_at": {
                     "type": "integer",
@@ -3151,6 +3413,10 @@
                 "name": {
                     "type": "string",
                     "example": "ci-pipeline"
+                },
+                "user": {
+                    "type": "string",
+                    "example": "admin"
                 }
             }
         },
@@ -3517,6 +3783,10 @@
                     "type": "boolean",
                     "example": true
                 },
+                "can_create_namespaces": {
+                    "type": "boolean",
+                    "example": true
+                },
                 "enabled": {
                     "type": "boolean",
                     "example": true
@@ -3525,14 +3795,26 @@
                     "type": "string",
                     "example": "admin"
                 },
+                "must_change_password": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "role": {
+                    "type": "string",
+                    "example": "owner"
+                },
                 "roles": {
                     "type": "array",
                     "items": {
                         "type": "string"
                     },
                     "example": [
-                        "admin"
+                        "owner"
                     ]
+                },
+                "username": {
+                    "type": "string",
+                    "example": "admin"
                 }
             }
         },
@@ -3605,6 +3887,19 @@
                     "items": {
                         "$ref": "#/definitions/types.DriverMethodEntry"
                     }
+                }
+            }
+        },
+        "types.ChangePasswordRequest": {
+            "type": "object",
+            "properties": {
+                "current_password": {
+                    "type": "string",
+                    "example": "admin123"
+                },
+                "new_password": {
+                    "type": "string",
+                    "example": "a-longer-one"
                 }
             }
         },
@@ -3916,6 +4211,35 @@
                 "token": {
                     "type": "string",
                     "example": "kdt_9f3a...."
+                }
+            }
+        },
+        "types.CreateUserRequest": {
+            "type": "object",
+            "properties": {
+                "can_create_namespaces": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "password": {
+                    "type": "string",
+                    "example": "first-one"
+                },
+                "quota_namespaces": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "quota_pods": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "role": {
+                    "type": "string",
+                    "example": "user"
+                },
+                "username": {
+                    "type": "string",
+                    "example": "alice"
                 }
             }
         },
@@ -4863,6 +5187,10 @@
                 "password": {
                     "type": "string",
                     "example": "admin123"
+                },
+                "username": {
+                    "type": "string",
+                    "example": "alice"
                 }
             }
         },
@@ -4873,9 +5201,21 @@
                     "type": "boolean",
                     "example": true
                 },
+                "can_create_namespaces": {
+                    "type": "boolean",
+                    "example": true
+                },
                 "identity": {
                     "type": "string",
                     "example": "admin"
+                },
+                "must_change_password": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "role": {
+                    "type": "string",
+                    "example": "owner"
                 },
                 "roles": {
                     "type": "array",
@@ -4883,8 +5223,12 @@
                         "type": "string"
                     },
                     "example": [
-                        "admin"
+                        "owner"
                     ]
+                },
+                "username": {
+                    "type": "string",
+                    "example": "admin"
                 }
             }
         },
@@ -6515,6 +6859,28 @@
                 }
             }
         },
+        "types.ResetPasswordRequest": {
+            "type": "object",
+            "properties": {
+                "password": {
+                    "type": "string",
+                    "example": "a-new-one"
+                }
+            }
+        },
+        "types.ResetPasswordResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "password reset"
+                },
+                "password": {
+                    "type": "string",
+                    "example": "3f9c2a1b7d4e0f6a"
+                }
+            }
+        },
         "types.RestartPodResponseDoc": {
             "type": "object",
             "properties": {
@@ -6991,6 +7357,95 @@
                 "content": {
                     "type": "string",
                     "example": "hostname router1"
+                }
+            }
+        },
+        "types.UserDoc": {
+            "type": "object",
+            "properties": {
+                "can_create_namespaces": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "created_at": {
+                    "type": "integer",
+                    "example": 1782905018
+                },
+                "disabled": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "must_change_password": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "quota_namespaces": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "quota_pods": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "role": {
+                    "type": "string",
+                    "example": "user"
+                },
+                "source": {
+                    "type": "string",
+                    "example": "local"
+                },
+                "username": {
+                    "type": "string",
+                    "example": "alice"
+                }
+            }
+        },
+        "types.UserListResponse": {
+            "type": "object",
+            "properties": {
+                "users": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.UserDoc"
+                    }
+                }
+            }
+        },
+        "types.UserPatchRequest": {
+            "type": "object",
+            "properties": {
+                "can_create_namespaces": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "disabled": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "quota_namespaces": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "quota_pods": {
+                    "type": "integer",
+                    "example": 40
+                },
+                "role": {
+                    "type": "string",
+                    "example": "admin"
+                }
+            }
+        },
+        "types.UserResponse": {
+            "type": "object",
+            "properties": {
+                "password": {
+                    "type": "string",
+                    "example": "3f9c2a1b7d4e0f6a"
+                },
+                "user": {
+                    "$ref": "#/definitions/types.UserDoc"
                 }
             }
         },

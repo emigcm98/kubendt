@@ -104,6 +104,13 @@ func RequireAuth() gin.HandlerFunc {
 			}
 		}
 		if p, ok := principalFromRequest(c); ok {
+			if p.MustChangePassword && !passwordChangeAllowlisted(path) {
+				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+					"error": "Change your password first (PUT /auth/password).",
+					"code":  "PASSWORD_CHANGE_REQUIRED",
+				})
+				return
+			}
 			c.Set("principal", p)
 			c.Next()
 			return
@@ -112,6 +119,39 @@ func RequireAuth() gin.HandlerFunc {
 			"error": "Authentication required.",
 			"code":  "UNAUTHENTICATED",
 		})
+	}
+}
+
+// passwordChangeAllowlisted is what an account with a password to change may
+// still call: who it is, the change itself, and leaving.
+func passwordChangeAllowlisted(path string) bool {
+	return path == "/auth/me" || path == "/auth/password" || path == "/auth/logout"
+}
+
+// PrincipalOf is the identity the middleware attached to the request, nil
+// when auth is disabled.
+func PrincipalOf(c *gin.Context) *auth.Principal {
+	if v, ok := c.Get("principal"); ok {
+		if p, ok := v.(*auth.Principal); ok {
+			return p
+		}
+	}
+	return nil
+}
+
+// RequireAdmin lets admins and the owner through, after RequireAuth or
+// RequireSessionOrPassword put the principal on the request.
+func RequireAdmin() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if !auth.Enabled() {
+			c.Next()
+			return
+		}
+		if p := PrincipalOf(c); p != nil && p.IsAdmin() {
+			c.Next()
+			return
+		}
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "An admin is required.", "code": "FORBIDDEN"})
 	}
 }
 
@@ -124,13 +164,23 @@ func RequireSessionOrPassword() gin.HandlerFunc {
 			c.Next()
 			return
 		}
-		if p, ok := sessionFromRequest(c); ok {
-			c.Set("principal", p)
-			c.Next()
-			return
+		p, ok := sessionFromRequest(c)
+		if !ok {
+			if username, password, has := c.Request.BasicAuth(); has {
+				p, ok = auth.Authenticate(username, password)
+			}
 		}
-		if _, password, ok := c.Request.BasicAuth(); ok && auth.CheckPassword(password) {
-			c.Set("principal", &auth.Principal{Identity: "admin", Roles: []string{"admin"}, Method: "password"})
+		if ok {
+			// A password to change blocks tokens too, or the change could be
+			// walked around by minting one.
+			if p.MustChangePassword && c.Request.URL.Path != "/auth/password" {
+				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+					"error": "Change your password first (PUT /auth/password).",
+					"code":  "PASSWORD_CHANGE_REQUIRED",
+				})
+				return
+			}
+			c.Set("principal", p)
 			c.Next()
 			return
 		}
@@ -161,25 +211,78 @@ func Login(c *gin.Context) {
 	}
 
 	var req struct {
+		Username string `json:"username"`
 		Password string `json:"password"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payload"})
 		return
 	}
-	if !auth.CheckPassword(req.Password) {
+	// No username is the owner account, so the login of every script and of
+	// the UI before users keeps working.
+	p, ok := auth.Authenticate(strings.TrimSpace(req.Username), req.Password)
+	if !ok {
 		auth.RegisterLoginFailure(ip)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials", "code": "INVALID_CREDENTIALS"})
 		return
 	}
 	auth.RegisterLoginSuccess(ip)
-	raw, err := auth.CreateSession("admin", []string{"admin"})
+	raw, err := auth.CreateSession(p.Identity)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create session"})
 		return
 	}
 	setSessionCookie(c, raw)
-	c.JSON(http.StatusOK, gin.H{"authenticated": true, "identity": "admin", "roles": []string{"admin"}})
+	c.JSON(http.StatusOK, meOf(p))
+}
+
+// meOf is what the UI learns about the account it is signed in as.
+func meOf(p *auth.Principal) gin.H {
+	out := gin.H{
+		"enabled":              true,
+		"authenticated":        true,
+		"identity":             p.Identity,
+		"username":             p.Identity,
+		"role":                 p.Role,
+		"roles":                p.Roles,
+		"must_change_password": p.MustChangePassword,
+	}
+	if u, ok := auth.GetUser(p.Identity); ok {
+		out["can_create_namespaces"] = u.CanCreateNamespaces || p.IsAdmin()
+	}
+	return out
+}
+
+// ChangePassword is an account changing its own password: the current one
+// must match, its other sessions end, and this one gets a fresh cookie.
+func ChangePassword(c *gin.Context) {
+	p := PrincipalOf(c)
+	if p == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required.", "code": "UNAUTHENTICATED"})
+		return
+	}
+	var req struct {
+		Current string `json:"current_password"`
+		New     string `json:"new_password"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil || strings.TrimSpace(req.New) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "current_password and new_password are required"})
+		return
+	}
+	if err := auth.ChangePassword(p.Identity, req.Current, req.New); err != nil {
+		if errors.Is(err, auth.ErrBadPassword) {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "The current password does not match", "code": "INVALID_CREDENTIALS"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if p.Method == "session" {
+		if raw, err := auth.CreateSession(p.Identity); err == nil {
+			setSessionCookie(c, raw)
+		}
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "password changed"})
 }
 
 // Logout clears the cookie; a session is the cookie itself, nothing is kept
@@ -196,7 +299,7 @@ func AuthMe(c *gin.Context) {
 		return
 	}
 	if p, ok := principalFromRequest(c); ok {
-		c.JSON(http.StatusOK, gin.H{"enabled": true, "authenticated": true, "identity": p.Identity, "roles": p.Roles})
+		c.JSON(http.StatusOK, meOf(p))
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"enabled": true, "authenticated": false})
@@ -221,7 +324,12 @@ func CreateAPIToken(c *gin.Context) {
 	if req.ExpiresInDays > 0 {
 		expiresAt = time.Now().Add(time.Duration(req.ExpiresInDays) * 24 * time.Hour).Unix()
 	}
-	raw, err := auth.CreateAPIToken(strings.TrimSpace(req.Name), expiresAt)
+	p := PrincipalOf(c)
+	if p == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required.", "code": "UNAUTHENTICATED"})
+		return
+	}
+	raw, err := auth.CreateAPIToken(p.Identity, strings.TrimSpace(req.Name), expiresAt)
 	if err != nil {
 		if errors.Is(err, auth.ErrTokenNameExists) {
 			c.JSON(http.StatusConflict, gin.H{"error": "A token with that name already exists"})
@@ -237,9 +345,17 @@ func CreateAPIToken(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"name": strings.TrimSpace(req.Name), "token": raw})
 }
 
-// ListAPITokens returns token metadata (never the secrets).
+// ListAPITokens returns the account's token metadata (never the secrets);
+// an admin asking with ?all=true sees everyone's.
 func ListAPITokens(c *gin.Context) {
-	tokens, err := auth.ListAPITokens()
+	user := ""
+	if p := PrincipalOf(c); p != nil {
+		user = p.Identity
+		if c.Query("all") == "true" && p.IsAdmin() {
+			user = ""
+		}
+	}
+	tokens, err := auth.ListAPITokens(user)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -247,11 +363,15 @@ func ListAPITokens(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"tokens": tokens})
 }
 
-// DeleteAPIToken revokes a token by id.
+// DeleteAPIToken revokes a token by id: one's own, or anyone's for an admin.
 func DeleteAPIToken(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid token id"})
+		return
+	}
+	if p := PrincipalOf(c); p != nil && !p.IsAdmin() && auth.TokenOwner(id) != p.Identity {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Token not found"})
 		return
 	}
 	removed, err := auth.DeleteAPIToken(id)

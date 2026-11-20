@@ -1,9 +1,9 @@
 // Package auth handles password login, browser sessions (a signed cookie, no
-// server-side record) and API tokens for scripts. The admin hash, the tokens
-// and the key the sessions are signed with are Secrets in the system
-// namespace of the home cluster, so any backend on it serves the same
-// logins. Credential checks go through the Authenticator interface so another
-// backend (e.g. LDAP) can be added later.
+// server-side record) and API tokens for scripts. The users, the tokens and
+// the key the sessions are signed with are Secrets in the system namespace
+// of the home cluster, so any backend on it serves the same logins. The
+// credentials of a user go through the Authenticator interface so another
+// source of identity (OIDC, LDAP) can be added later.
 package auth
 
 import (
@@ -43,15 +43,17 @@ const (
 	tokenTouchEvery = 5 * time.Minute
 )
 
-// Principal is the authenticated identity attached to a request.
+// Principal is the authenticated identity attached to a request: the
+// account, its platform role, and how it came in.
 type Principal struct {
-	Identity string
-	Roles    []string
-	Method   string // "session" | "token" | "password"
+	Identity           string
+	Role               string
+	Roles              []string
+	Method             string // "session" | "token" | "password"
+	MustChangePassword bool
 }
 
-// HasRole reports whether the principal carries the given role. Authorization
-// (RBAC) can build on this later; v1 grants every authenticated user "admin".
+// HasRole reports whether the principal carries the given role.
 func (p *Principal) HasRole(role string) bool {
 	for _, r := range p.Roles {
 		if r == role {
@@ -61,42 +63,48 @@ func (p *Principal) HasRole(role string) bool {
 	return false
 }
 
+func principalOf(u *userRecord, method string) *Principal {
+	return &Principal{Identity: u.Name, Role: u.Role, Roles: []string{u.Role}, Method: method, MustChangePassword: u.MustChangePassword}
+}
+
 var (
 	enabled     bool
 	idleTimeout time.Duration
 	maxLifetime time.Duration
 
-	mu                 sync.RWMutex
-	adminHash          []byte
-	sessionsValidAfter int64
-	sessionKey         []byte
-	bound              bool
-	tokens             map[string]*tokenEntry // by hash
-	storeLoadedAt      time.Time
+	mu            sync.RWMutex
+	users         map[string]*userRecord // by name
+	sessionKey    []byte
+	bound         bool
+	tokens        map[string]*tokenEntry // by hash
+	storeLoadedAt time.Time
 )
 
 var randRead = rand.Read
 
-// Authenticator verifies a username/password pair. LocalAuthenticator is the
-// only implementation today; an LDAP one would satisfy the same interface.
+// Authenticator verifies a username and password. LocalAuthenticator is the
+// only implementation today; an OIDC or LDAP one would satisfy the same
+// interface and map what it learns onto the same accounts.
 type Authenticator interface {
 	Authenticate(username, password string) (*Principal, error)
 }
 
-// LocalAuthenticator checks against the single admin password.
+// LocalAuthenticator checks against the accounts of the store.
 type LocalAuthenticator struct{}
 
 func (LocalAuthenticator) Authenticate(username, password string) (*Principal, error) {
-	if !CheckPassword(password) {
+	p, ok := Authenticate(username, password)
+	if !ok {
 		return nil, errors.New("invalid credentials")
 	}
-	return &Principal{Identity: "admin", Roles: []string{"admin"}, Method: "password"}, nil
+	return p, nil
 }
 
 // Init loads the auth configuration and, when a cluster is configured, binds
-// to it. Without one the admin password comes from KUBENDT_ADMIN_PASSWORD or
-// is generated, the sessions are signed with a key of this process, and the
-// tokens wait for a cluster; Bind picks the store up once one is loaded.
+// to it. Without one the owner's password comes from KUBENDT_ADMIN_PASSWORD
+// or is generated, the sessions are signed with a key of this process, and
+// the users and tokens wait for a cluster; Bind picks the store up once one
+// is loaded.
 func Init() error {
 	if strings.EqualFold(os.Getenv("KUBENDT_AUTH_DISABLED"), "true") {
 		enabled = false
@@ -108,7 +116,7 @@ func Init() error {
 	maxLifetime = hoursFromEnv("KUBENDT_SESSION_MAX_HOURS", 7*24*time.Hour)
 
 	mu.Lock()
-	bound, tokens, adminHash, sessionsValidAfter = false, map[string]*tokenEntry{}, nil, 0
+	bound, tokens, users = false, map[string]*tokenEntry{}, map[string]*userRecord{}
 	key := make([]byte, 32)
 	if _, err := randRead(key); err != nil {
 		mu.Unlock()
@@ -121,16 +129,16 @@ func Init() error {
 		return err
 	}
 	if !IsBound() {
-		if err := resolveAdminPassword(nil); err != nil {
+		if err := resolveOwnerPassword(nil); err != nil {
 			return err
 		}
-		log.Printf("ℹ️ No cluster yet: the admin password is this process's, sessions end with it, API tokens wait for a kubeconfig")
+		log.Printf("ℹ️ No cluster yet: the admin password is this process's, sessions end with it, users and API tokens wait for a kubeconfig")
 	}
 	return nil
 }
 
 // Bind takes the store of the configured cluster, once: the first cluster is
-// the home cluster, and a context switch later does not move the admin or
+// the home cluster, and a context switch later does not move the users or
 // the tokens. It is what the kubeconfig endpoints call after a load.
 func Bind() error {
 	if !enabled || IsBound() {
@@ -144,11 +152,11 @@ func Bind() error {
 	if err := migrateFromDatabase(); err != nil {
 		return err
 	}
-	stored, err := readAdmin()
+	stored, err := readUser(OwnerAccount)
 	if err != nil {
 		return err
 	}
-	if err := resolveAdminPassword(stored); err != nil {
+	if err := resolveOwnerPassword(stored); err != nil {
 		return err
 	}
 	key, err := loadOrCreateSessionKey()
@@ -169,95 +177,116 @@ func IsBound() bool {
 	return bound
 }
 
-// resolveAdminPassword sets the admin hash from KUBENDT_ADMIN_PASSWORD (the
-// source of truth when set, written to the store when it changed, which also
-// ends every session), from the stored hash, or from a password generated
-// and printed once. stored is nil when no cluster holds one.
-func resolveAdminPassword(stored *adminRecord) error {
-	validAfter := int64(0)
-	storedHash := ""
+// resolveOwnerPassword sets the owner account from KUBENDT_ADMIN_PASSWORD
+// (the source of truth when set, written to the store when it changed, which
+// also ends the owner's sessions), from the stored record, or from a
+// password generated and printed once. stored is nil when no cluster holds
+// one. An owner stored by a backend older than the roles gets its role.
+func resolveOwnerPassword(stored *userRecord) error {
+	owner := &userRecord{Name: OwnerAccount, Role: RoleOwner, Source: SourceLocal, CreatedAt: nowUnix()}
 	if stored != nil {
-		validAfter, storedHash = stored.SessionsValidAfter, stored.Hash
+		*owner = *stored
+		owner.Role, owner.Name = RoleOwner, OwnerAccount
+		if owner.Source == "" {
+			owner.Source = SourceLocal
+		}
 	}
-	setAdmin := func(hash []byte) {
+	needsRole := stored != nil && (stored.Role != RoleOwner || stored.Source == "")
+	persist := func() error {
+		if homeSecrets == nil {
+			return nil
+		}
+		return writeUser(owner)
+	}
+	keep := func() {
 		mu.Lock()
-		adminHash, sessionsValidAfter = hash, validAfter
+		users[OwnerAccount] = owner
 		mu.Unlock()
 	}
 
 	if pw := os.Getenv("KUBENDT_ADMIN_PASSWORD"); pw != "" {
-		if storedHash != "" && bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(pw)) == nil {
-			setAdmin([]byte(storedHash))
+		if owner.Hash != "" && bcrypt.CompareHashAndPassword([]byte(owner.Hash), []byte(pw)) == nil {
+			if needsRole {
+				if err := persist(); err != nil {
+					return err
+				}
+			}
+			keep()
 			return nil
 		}
-		h, err := bcrypt.GenerateFromPassword([]byte(pw), bcrypt.DefaultCost)
+		h, err := hashPassword(pw)
 		if err != nil {
 			return err
 		}
-		if stored != nil || homeSecrets != nil {
-			if storedHash != "" {
-				validAfter = nowUnix()
-				log.Printf("🔒 Admin password changed, every session must sign in again")
-			}
-			if err := writeAdmin(adminRecord{Hash: string(h), SessionsValidAfter: validAfter}); err != nil {
-				return err
-			}
+		if owner.Hash != "" {
+			owner.SessionsValidAfter = nowUnix()
+			log.Printf("🔒 Admin password changed, every session of the owner must sign in again")
 		}
-		setAdmin(h)
+		owner.Hash = h
+		if err := persist(); err != nil {
+			return err
+		}
+		keep()
 		return nil
 	}
 
-	if storedHash != "" {
-		setAdmin([]byte(storedHash))
+	if owner.Hash != "" {
+		if needsRole {
+			if err := persist(); err != nil {
+				return err
+			}
+		}
+		keep()
 		return nil
 	}
 
 	// A password of this process when nothing holds one: in memory until a
 	// cluster is bound, written to it when there is one.
 	mu.RLock()
-	current := adminHash
+	current := users[OwnerAccount]
 	mu.RUnlock()
-	if len(current) > 0 {
-		if homeSecrets != nil {
-			if err := writeAdmin(adminRecord{Hash: string(current)}); err != nil {
-				return err
-			}
+	if current != nil && current.Hash != "" {
+		owner.Hash = current.Hash
+		if err := persist(); err != nil {
+			return err
 		}
-		setAdmin(current)
+		keep()
 		return nil
 	}
 	pw, err := randomToken(18)
 	if err != nil {
 		return err
 	}
-	h, err := bcrypt.GenerateFromPassword([]byte(pw), bcrypt.DefaultCost)
-	if err != nil {
+	if owner.Hash, err = hashPassword(pw); err != nil {
 		return err
 	}
-	if homeSecrets != nil {
-		if err := writeAdmin(adminRecord{Hash: string(h)}); err != nil {
-			return err
-		}
+	if err := persist(); err != nil {
+		return err
 	}
-	setAdmin(h)
+	keep()
 	log.Printf("🔑 Generated admin password (shown once; set KUBENDT_ADMIN_PASSWORD to override):")
 	log.Printf("      user: admin   password: %s", pw)
 	return nil
 }
 
-// InvalidateAllSessions ends every browser session: a session issued before
-// now no longer counts. API tokens are unaffected; revoke those individually.
-func InvalidateAllSessions() error {
-	now := nowUnix()
+// EndSessions ends every browser session of an account: a session issued
+// before now no longer counts. Its API tokens are unaffected.
+func EndSessions(name string) error {
 	mu.Lock()
-	sessionsValidAfter = now
-	hash := string(adminHash)
+	u, ok := users[name]
+	if !ok {
+		mu.Unlock()
+		return ErrUserNotFound
+	}
+	changed := *u
+	changed.SessionsValidAfter = nowUnix()
+	users[name] = &changed
 	isBound := bound
 	mu.Unlock()
 	if !isBound {
 		return nil
 	}
-	return writeAdmin(adminRecord{Hash: hash, SessionsValidAfter: now})
+	return writeUser(&changed)
 }
 
 // Enabled reports whether authentication is active.
@@ -266,25 +295,41 @@ func Enabled() bool { return enabled }
 // SessionMaxAge is the absolute session lifetime, used as the cookie Max-Age.
 func SessionMaxAge() time.Duration { return maxLifetime }
 
-// CheckPassword verifies a candidate password against the admin hash.
-func CheckPassword(password string) bool {
+// Authenticate checks a username and password against the accounts; an
+// empty username is the owner account, so a login that names no user keeps
+// working. A disabled account never authenticates.
+func Authenticate(username, password string) (*Principal, bool) {
+	if username == "" {
+		username = OwnerAccount
+	}
 	refreshStoreIfStale()
 	mu.RLock()
-	h := adminHash
+	u, ok := users[username]
 	mu.RUnlock()
-	if len(h) == 0 {
-		return false
+	if !ok || u.Disabled || u.Hash == "" {
+		return nil, false
 	}
-	return bcrypt.CompareHashAndPassword(h, []byte(password)) == nil
+	if bcrypt.CompareHashAndPassword([]byte(u.Hash), []byte(password)) != nil {
+		return nil, false
+	}
+	return principalOf(u, "password"), true
+}
+
+// CheckPassword verifies a candidate password against the owner account.
+func CheckPassword(password string) bool {
+	_, ok := Authenticate(OwnerAccount, password)
+	return ok
 }
 
 // ── Sessions ────────────────────────────────────────────────────────────────
 
 // sessionClaims is what the cookie carries, signed: who, since when, and
-// when it was last seen, which the idle timeout counts from.
+// when it was last seen, which the idle timeout counts from. The role is
+// read from the account at each request, not from the cookie, so a change
+// of role or standing applies within the store's reload.
 type sessionClaims struct {
 	Identity string   `json:"i"`
-	Roles    []string `json:"r"`
+	Roles    []string `json:"r,omitempty"`
 	IssuedAt int64    `json:"iat"`
 	SeenAt   int64    `json:"seen"`
 }
@@ -334,16 +379,17 @@ func parseSession(raw string) (*sessionClaims, bool) {
 	return &c, true
 }
 
-// CreateSession issues a browser session and returns the cookie value.
-func CreateSession(identity string, roles []string) (string, error) {
+// CreateSession issues a browser session for an account and returns the
+// cookie value.
+func CreateSession(identity string) (string, error) {
 	now := nowUnix()
-	return signSession(sessionClaims{Identity: identity, Roles: roles, IssuedAt: now, SeenAt: now})
+	return signSession(sessionClaims{Identity: identity, IssuedAt: now, SeenAt: now})
 }
 
 // ValidateSession checks a cookie, enforcing the idle and absolute timeouts
-// and the moment before which no session counts. A session in use gets a
-// fresh cookie every few minutes, returned as refreshed, which slides its
-// idle window; "" when the one it has is fine.
+// and the moment before which no session of the account counts. A session
+// in use gets a fresh cookie every few minutes, returned as refreshed, which
+// slides its idle window; "" when the one it has is fine.
 func ValidateSession(raw string) (p *Principal, refreshed string, ok bool) {
 	refreshStoreIfStale()
 	c, ok := parseSession(raw)
@@ -352,9 +398,12 @@ func ValidateSession(raw string) (p *Principal, refreshed string, ok bool) {
 	}
 	now := time.Now()
 	mu.RLock()
-	validAfter := sessionsValidAfter
+	u, known := users[c.Identity]
 	mu.RUnlock()
-	if c.IssuedAt < validAfter || now.Sub(time.Unix(c.SeenAt, 0)) > idleTimeout || now.Sub(time.Unix(c.IssuedAt, 0)) > maxLifetime {
+	if !known || u.Disabled {
+		return nil, "", false
+	}
+	if c.IssuedAt < u.SessionsValidAfter || now.Sub(time.Unix(c.SeenAt, 0)) > idleTimeout || now.Sub(time.Unix(c.IssuedAt, 0)) > maxLifetime {
 		return nil, "", false
 	}
 	if now.Sub(time.Unix(c.SeenAt, 0)) >= sessionRefreshEvery {
@@ -363,7 +412,7 @@ func ValidateSession(raw string) (p *Principal, refreshed string, ok bool) {
 			refreshed = fresh
 		}
 	}
-	return &Principal{Identity: c.Identity, Roles: c.Roles, Method: "session"}, refreshed, true
+	return principalOf(u, "session"), refreshed, true
 }
 
 // ── API tokens ──────────────────────────────────────────────────────────────
@@ -372,6 +421,7 @@ func ValidateSession(raw string) (p *Principal, refreshed string, ok bool) {
 type TokenMeta struct {
 	ID         int64  `json:"id"`
 	Name       string `json:"name"`
+	User       string `json:"user"`
 	CreatedAt  int64  `json:"created_at"`
 	LastUsedAt *int64 `json:"last_used_at,omitempty"`
 	ExpiresAt  *int64 `json:"expires_at,omitempty"`
@@ -380,15 +430,15 @@ type TokenMeta struct {
 // ErrTokenNameExists is returned when creating a token whose name is taken.
 var ErrTokenNameExists = errors.New("a token with that name already exists")
 
-// reloadStore reads the tokens and the admin back from the store, which is
-// the truth at runtime: the password another backend set or the sessions it
-// ended apply here too.
+// reloadStore reads the users and the tokens back from the store, which is
+// the truth at runtime: the password another backend set, the sessions it
+// ended, the user it disabled, apply here too.
 func reloadStore() error {
 	list, err := listTokens()
 	if err != nil {
 		return err
 	}
-	admin, err := readAdmin()
+	accounts, err := listUserRecords()
 	if err != nil {
 		return err
 	}
@@ -396,11 +446,19 @@ func reloadStore() error {
 	for _, t := range list {
 		byHash[t.Hash] = t
 	}
-	mu.Lock()
-	tokens, storeLoadedAt = byHash, time.Now()
-	if admin != nil && admin.Hash != "" {
-		adminHash, sessionsValidAfter = []byte(admin.Hash), admin.SessionsValidAfter
+	byName := make(map[string]*userRecord, len(accounts))
+	for _, u := range accounts {
+		byName[u.Name] = u
 	}
+	mu.Lock()
+	if owner, ok := byName[OwnerAccount]; !ok || owner.Hash == "" {
+		// The store has no owner yet (a cluster just bound), keep the one
+		// this process resolved.
+		if current := users[OwnerAccount]; current != nil {
+			byName[OwnerAccount] = current
+		}
+	}
+	tokens, users, storeLoadedAt = byHash, byName, time.Now()
 	mu.Unlock()
 	return nil
 }
@@ -418,10 +476,10 @@ func refreshStoreIfStale() {
 	}
 }
 
-// CreateAPIToken mints a token and returns the raw value (shown once).
-// expiresAt is a unix timestamp, or 0 for a non-expiring token. Token names
-// must be unique.
-func CreateAPIToken(name string, expiresAt int64) (string, error) {
+// CreateAPIToken mints a token for an account and returns the raw value
+// (shown once). expiresAt is a unix timestamp, or 0 for a non-expiring
+// token. Token names are unique per account.
+func CreateAPIToken(user, name string, expiresAt int64) (string, error) {
 	if !IsBound() {
 		return "", ErrNoStore
 	}
@@ -429,20 +487,24 @@ func CreateAPIToken(name string, expiresAt int64) (string, error) {
 		return "", err
 	}
 	mu.RLock()
+	_, known := users[user]
 	for _, t := range tokens {
-		if t.Name == name {
+		if t.User == user && t.Name == name {
 			mu.RUnlock()
 			return "", ErrTokenNameExists
 		}
 	}
 	mu.RUnlock()
+	if !known {
+		return "", ErrUserNotFound
+	}
 
 	tok, err := randomToken(32)
 	if err != nil {
 		return "", err
 	}
 	raw := apiTokenPrefix + tok
-	entry := &tokenEntry{ID: time.Now().UnixMicro(), Hash: hashToken(raw), Name: name, CreatedAt: nowUnix(), ExpiresAt: expiresAt}
+	entry := &tokenEntry{ID: time.Now().UnixMicro(), Hash: hashToken(raw), Name: name, User: user, CreatedAt: nowUnix(), ExpiresAt: expiresAt}
 	if err := createToken(entry); err != nil {
 		return "", err
 	}
@@ -453,8 +515,9 @@ func CreateAPIToken(name string, expiresAt int64) (string, error) {
 }
 
 // ValidateAPIToken checks a bearer token and records its last use. The
-// cache is re-listed from the store every few seconds, so a token another
-// backend minted or revoked is seen without a restart.
+// token acts as its account and never above it: a disabled account's tokens
+// stop with it. The cache is re-listed from the store every few seconds, so
+// a token another backend minted or revoked is seen without a restart.
 func ValidateAPIToken(raw string) (*Principal, bool) {
 	if !strings.HasPrefix(raw, apiTokenPrefix) || !IsBound() {
 		return nil, false
@@ -463,8 +526,12 @@ func ValidateAPIToken(raw string) (*Principal, bool) {
 	h := hashToken(raw)
 	mu.RLock()
 	t, known := tokens[h]
+	var u *userRecord
+	if known {
+		u = users[t.User]
+	}
 	mu.RUnlock()
-	if !known {
+	if !known || u == nil || u.Disabled {
 		return nil, false
 	}
 	now := nowUnix()
@@ -481,12 +548,14 @@ func ValidateAPIToken(raw string) (*Principal, bool) {
 	if touch {
 		touchToken(id, now)
 	}
-	return &Principal{Identity: "admin", Roles: []string{"admin"}, Method: "token"}, true
+	p := principalOf(u, "token")
+	p.MustChangePassword = false
+	return p, true
 }
 
-// ListAPITokens returns metadata for all tokens (never the secrets), newest
-// first, as the store has them.
-func ListAPITokens() ([]TokenMeta, error) {
+// ListAPITokens returns the metadata of an account's tokens (never the
+// secrets), newest first; "" lists everyone's.
+func ListAPITokens(user string) ([]TokenMeta, error) {
 	if !IsBound() {
 		return []TokenMeta{}, nil
 	}
@@ -496,7 +565,10 @@ func ListAPITokens() ([]TokenMeta, error) {
 	mu.RLock()
 	out := make([]TokenMeta, 0, len(tokens))
 	for _, t := range tokens {
-		m := TokenMeta{ID: t.ID, Name: t.Name, CreatedAt: t.CreatedAt}
+		if user != "" && t.User != user {
+			continue
+		}
+		m := TokenMeta{ID: t.ID, Name: t.Name, User: t.User, CreatedAt: t.CreatedAt}
 		if t.LastUsedAt > 0 {
 			v := t.LastUsedAt
 			m.LastUsedAt = &v
@@ -515,6 +587,19 @@ func ListAPITokens() ([]TokenMeta, error) {
 		return out[i].ID > out[j].ID
 	})
 	return out, nil
+}
+
+// TokenOwner is the account a token acts as, "" when there is no such token.
+func TokenOwner(id int64) string {
+	refreshStoreIfStale()
+	mu.RLock()
+	defer mu.RUnlock()
+	for _, t := range tokens {
+		if t.ID == id {
+			return t.User
+		}
+	}
+	return ""
 }
 
 // DeleteAPIToken revokes a token by id; reports whether one was removed.

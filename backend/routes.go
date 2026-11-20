@@ -24,9 +24,11 @@ func SetupRoutes(router *gin.Engine) {
 		authGroup.POST("/login", handlers.Login)
 		authGroup.POST("/logout", handlers.Logout)
 		authGroup.GET("/me", handlers.AuthMe)
+		// One's own password: a session or the password itself, never a token.
+		authGroup.PUT("/password", handlers.RequireSessionOrPassword(), handlers.ChangePassword)
 
-		// Token management: session or admin password only (never a bearer
-		// token), so a leaked API token cannot mint or revoke tokens.
+		// Token management: session or password only (never a bearer token),
+		// so a leaked API token cannot mint or revoke tokens.
 		tokens := authGroup.Group("/tokens")
 		tokens.Use(handlers.RequireSessionOrPassword())
 		{
@@ -34,6 +36,17 @@ func SetupRoutes(router *gin.Engine) {
 			tokens.POST("", handlers.CreateAPIToken)
 			tokens.DELETE("/:id", handlers.DeleteAPIToken)
 		}
+	}
+
+	// The accounts: admins and the owner, over a session or the password.
+	usersGroup := router.Group("/users")
+	usersGroup.Use(handlers.RequireSessionOrPassword(), handlers.RequireAdmin())
+	{
+		usersGroup.GET("", handlers.ListUsers)
+		usersGroup.POST("", handlers.CreateUser)
+		usersGroup.PUT("/:name", handlers.UpdateUser)
+		usersGroup.DELETE("/:name", handlers.DeleteUser)
+		usersGroup.POST("/:name/password", handlers.ResetUserPassword)
 	}
 
 	shellGroup := router.Group("/shell")

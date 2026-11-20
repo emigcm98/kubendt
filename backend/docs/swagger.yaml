@@ -9,13 +9,16 @@ definitions:
         example: 0
         type: integer
       id:
-        example: 1
+        example: 1795166265369580
         type: integer
       last_used_at:
         example: 1782905090
         type: integer
       name:
         example: ci-pipeline
+        type: string
+      user:
+        example: admin
         type: string
     type: object
   types.APITokenList:
@@ -316,18 +319,30 @@ definitions:
       authenticated:
         example: true
         type: boolean
+      can_create_namespaces:
+        example: true
+        type: boolean
       enabled:
         example: true
         type: boolean
       identity:
         example: admin
         type: string
+      must_change_password:
+        example: false
+        type: boolean
+      role:
+        example: owner
+        type: string
       roles:
         example:
-        - admin
+        - owner
         items:
           type: string
         type: array
+      username:
+        example: admin
+        type: string
     type: object
   types.BackendPhasesMs:
     properties:
@@ -391,6 +406,15 @@ definitions:
         items:
           $ref: '#/definitions/types.DriverMethodEntry'
         type: array
+    type: object
+  types.ChangePasswordRequest:
+    properties:
+      current_password:
+        example: admin123
+        type: string
+      new_password:
+        example: a-longer-one
+        type: string
     type: object
   types.ClearTimingResponse:
     properties:
@@ -612,6 +636,27 @@ definitions:
         type: string
       token:
         example: kdt_9f3a....
+        type: string
+    type: object
+  types.CreateUserRequest:
+    properties:
+      can_create_namespaces:
+        example: false
+        type: boolean
+      password:
+        example: first-one
+        type: string
+      quota_namespaces:
+        example: 0
+        type: integer
+      quota_pods:
+        example: 0
+        type: integer
+      role:
+        example: user
+        type: string
+      username:
+        example: alice
         type: string
     type: object
   types.DeleteDriverHistoryByIDResponseDoc:
@@ -1315,21 +1360,36 @@ definitions:
       password:
         example: admin123
         type: string
+      username:
+        example: alice
+        type: string
     type: object
   types.LoginResponse:
     properties:
       authenticated:
         example: true
         type: boolean
+      can_create_namespaces:
+        example: true
+        type: boolean
       identity:
         example: admin
         type: string
+      must_change_password:
+        example: false
+        type: boolean
+      role:
+        example: owner
+        type: string
       roles:
         example:
-        - admin
+        - owner
         items:
           type: string
         type: array
+      username:
+        example: admin
+        type: string
     type: object
   types.MeshnetGateResponse:
     properties:
@@ -2525,6 +2585,21 @@ definitions:
         example: configs/old.conf
         type: string
     type: object
+  types.ResetPasswordRequest:
+    properties:
+      password:
+        example: a-new-one
+        type: string
+    type: object
+  types.ResetPasswordResponse:
+    properties:
+      message:
+        example: password reset
+        type: string
+      password:
+        example: 3f9c2a1b7d4e0f6a
+        type: string
+    type: object
   types.RestartPodResponseDoc:
     properties:
       link_mtu:
@@ -2891,6 +2966,69 @@ definitions:
         example: hostname router1
         type: string
     type: object
+  types.UserDoc:
+    properties:
+      can_create_namespaces:
+        example: false
+        type: boolean
+      created_at:
+        example: 1782905018
+        type: integer
+      disabled:
+        example: false
+        type: boolean
+      must_change_password:
+        example: true
+        type: boolean
+      quota_namespaces:
+        example: 0
+        type: integer
+      quota_pods:
+        example: 0
+        type: integer
+      role:
+        example: user
+        type: string
+      source:
+        example: local
+        type: string
+      username:
+        example: alice
+        type: string
+    type: object
+  types.UserListResponse:
+    properties:
+      users:
+        items:
+          $ref: '#/definitions/types.UserDoc'
+        type: array
+    type: object
+  types.UserPatchRequest:
+    properties:
+      can_create_namespaces:
+        example: true
+        type: boolean
+      disabled:
+        example: true
+        type: boolean
+      quota_namespaces:
+        example: 3
+        type: integer
+      quota_pods:
+        example: 40
+        type: integer
+      role:
+        example: admin
+        type: string
+    type: object
+  types.UserResponse:
+    properties:
+      password:
+        example: 3f9c2a1b7d4e0f6a
+        type: string
+      user:
+        $ref: '#/definitions/types.UserDoc'
+    type: object
   types.VersionResponse:
     properties:
       build_date:
@@ -2932,9 +3070,10 @@ paths:
     post:
       consumes:
       - application/json
-      description: Exchanges the admin password for an HttpOnly session cookie.
+      description: Exchanges an account's password for an HttpOnly session cookie.
+        No username is the owner account, admin.
       parameters:
-      - description: Admin password
+      - description: Username and password
         in: body
         name: body
         required: true
@@ -2980,10 +3119,43 @@ paths:
       summary: Current auth state
       tags:
       - auth
+  /auth/password:
+    put:
+      consumes:
+      - application/json
+      description: The current password must match; the account's other sessions end
+        and a forced change is cleared. A session or the password itself, never an
+        API token.
+      parameters:
+      - description: Current and new password
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/types.ChangePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.MessageResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Change one's password
+      tags:
+      - auth
   /auth/tokens:
     get:
       description: Lists API token metadata (never the secrets). Requires a session
         or the admin password.
+      parameters:
+      - description: An admin asking for everyone's tokens
+        in: query
+        name: all
+        type: boolean
       produces:
       - application/json
       responses:
@@ -5108,6 +5280,153 @@ paths:
       summary: Traceroute / metrics report
       tags:
       - trace
+  /users:
+    get:
+      description: Every account with its role, standing, flags and quotas, never
+        a hash. Admins and the owner, over a session or the password.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.UserListResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: List accounts
+      tags:
+      - users
+    post:
+      consumes:
+      - application/json
+      description: A new account with a role, user by default; only the owner creates
+        admins. Without a password one is generated and returned once. The account
+        changes its password at its first login.
+      parameters:
+      - description: The account
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/types.CreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/types.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Create an account
+      tags:
+      - users
+  /users/{name}:
+    delete:
+      description: Removes the account and its API tokens. The owner stays.
+      parameters:
+      - description: Username
+        in: path
+        name: name
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Delete an account
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      description: Role, standing, flags or quotas. An admin changes plain users only
+        and never a role; the owner changes anyone but its own standing. Disabling
+        ends the account's sessions.
+      parameters:
+      - description: Username
+        in: path
+        name: name
+        required: true
+        type: string
+      - description: What changes
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/types.UserPatchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.UserResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Update an account
+      tags:
+      - users
+  /users/{name}/password:
+    post:
+      consumes:
+      - application/json
+      description: The given password or a generated one, returned once; the account
+        changes it at its next login and its sessions end.
+      parameters:
+      - description: Username
+        in: path
+        name: name
+        required: true
+        type: string
+      - description: The password, or none for a generated one
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/types.ResetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.ResetPasswordResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Reset an account's password
+      tags:
+      - users
   /version:
     get:
       description: Returns service name and build metadata.

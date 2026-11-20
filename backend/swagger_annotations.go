@@ -816,11 +816,11 @@ func swaggerGetCapturePacketDetail() {}
 // swaggerLogin godoc
 //
 //	@Summary      Log in
-//	@Description  Exchanges the admin password for an HttpOnly session cookie.
+//	@Description  Exchanges an account's password for an HttpOnly session cookie. No username is the owner account, admin.
 //	@Tags         auth
 //	@Accept       json
 //	@Produce      json
-//	@Param        body  body  types.LoginRequest  true  "Admin password"
+//	@Param        body  body  types.LoginRequest  true  "Username and password"
 //	@Success      200  {object}  types.LoginResponse
 //	@Failure      401  {object}  types.ErrorResponse
 //	@Router       /auth/login [post]
@@ -846,12 +846,94 @@ func swaggerLogout() {}
 //	@Router       /auth/me [get]
 func swaggerAuthMe() {}
 
+// swaggerChangePassword godoc
+//
+//	@Summary      Change one's password
+//	@Description  The current password must match; the account's other sessions end and a forced change is cleared. A session or the password itself, never an API token.
+//	@Tags         auth
+//	@Accept       json
+//	@Produce      json
+//	@Param        body  body  types.ChangePasswordRequest  true  "Current and new password"
+//	@Success      200  {object}  types.MessageResponse
+//	@Failure      401  {object}  types.ErrorResponse
+//	@Router       /auth/password [put]
+func swaggerChangePassword() {}
+
+// swaggerListUsers godoc
+//
+//	@Summary      List accounts
+//	@Description  Every account with its role, standing, flags and quotas, never a hash. Admins and the owner, over a session or the password.
+//	@Tags         users
+//	@Produce      json
+//	@Success      200  {object}  types.UserListResponse
+//	@Failure      403  {object}  types.ErrorResponse
+//	@Router       /users [get]
+func swaggerListUsers() {}
+
+// swaggerCreateUser godoc
+//
+//	@Summary      Create an account
+//	@Description  A new account with a role, user by default; only the owner creates admins. Without a password one is generated and returned once. The account changes its password at its first login.
+//	@Tags         users
+//	@Accept       json
+//	@Produce      json
+//	@Param        body  body  types.CreateUserRequest  true  "The account"
+//	@Success      201  {object}  types.UserResponse
+//	@Failure      400  {object}  types.ErrorResponse
+//	@Failure      403  {object}  types.ErrorResponse
+//	@Failure      409  {object}  types.ErrorResponse
+//	@Router       /users [post]
+func swaggerCreateUser() {}
+
+// swaggerUpdateUser godoc
+//
+//	@Summary      Update an account
+//	@Description  Role, standing, flags or quotas. An admin changes plain users only and never a role; the owner changes anyone but its own standing. Disabling ends the account's sessions.
+//	@Tags         users
+//	@Accept       json
+//	@Produce      json
+//	@Param        name  path  string  true  "Username"
+//	@Param        body  body  types.UserPatchRequest  true  "What changes"
+//	@Success      200  {object}  types.UserResponse
+//	@Failure      403  {object}  types.ErrorResponse
+//	@Failure      404  {object}  types.ErrorResponse
+//	@Router       /users/{name} [put]
+func swaggerUpdateUser() {}
+
+// swaggerDeleteUser godoc
+//
+//	@Summary      Delete an account
+//	@Description  Removes the account and its API tokens. The owner stays.
+//	@Tags         users
+//	@Param        name  path  string  true  "Username"
+//	@Success      204  "No Content"
+//	@Failure      403  {object}  types.ErrorResponse
+//	@Failure      404  {object}  types.ErrorResponse
+//	@Router       /users/{name} [delete]
+func swaggerDeleteUser() {}
+
+// swaggerResetUserPassword godoc
+//
+//	@Summary      Reset an account's password
+//	@Description  The given password or a generated one, returned once; the account changes it at its next login and its sessions end.
+//	@Tags         users
+//	@Accept       json
+//	@Produce      json
+//	@Param        name  path  string  true  "Username"
+//	@Param        body  body  types.ResetPasswordRequest  false  "The password, or none for a generated one"
+//	@Success      200  {object}  types.ResetPasswordResponse
+//	@Failure      403  {object}  types.ErrorResponse
+//	@Failure      404  {object}  types.ErrorResponse
+//	@Router       /users/{name}/password [post]
+func swaggerResetUserPassword() {}
+
 // swaggerListAPITokens godoc
 //
 //	@Summary      List API tokens
 //	@Description  Lists API token metadata (never the secrets). Requires a session or the admin password.
 //	@Tags         auth
 //	@Produce      json
+//	@Param        all  query  boolean  false  "An admin asking for everyone's tokens"
 //	@Success      200  {object}  types.APITokenList
 //	@Router       /auth/tokens [get]
 func swaggerListAPITokens() {}

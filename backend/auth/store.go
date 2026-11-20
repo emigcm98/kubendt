@@ -19,24 +19,34 @@ import (
 )
 
 // The platform's own state lives as Secrets in the system namespace of the
-// home cluster, the first one the backend binds to: kubendt-user-admin (the
-// bcrypt hash and the moment before which no session counts), one
-// kubendt-token-<id> per API token, and kubendt-internal-session-key, the
-// HMAC key every backend on the cluster signs sessions with.
+// home cluster, the first one the backend binds to: one kubendt-user-<name>
+// per user (the bcrypt hash, the role, the flags, the moment before which
+// no session of theirs counts), one kubendt-token-<id> per API token with
+// the user it acts as, and kubendt-internal-session-key, the HMAC key every
+// backend on the cluster signs sessions with.
 const (
-	adminSecretName      = "kubendt-user-admin"
+	userSecretPrefix     = "kubendt-user-"
 	sessionKeySecretName = "kubendt-internal-session-key"
 	tokenSecretPrefix    = "kubendt-token-"
 	tokenSelector        = "kubendt/kind=token"
+	userSelector         = "kubendt/kind=user"
 
-	keyPasswordHash      = "password_hash"
-	keySessionsValidFrom = "sessions_valid_after"
-	keyHash              = "hash"
-	keyName              = "name"
-	keyCreatedAt         = "created_at"
-	keyExpiresAt         = "expires_at"
-	keyLastUsedAt        = "last_used_at"
-	keySessionKey        = "key"
+	keyPasswordHash        = "password_hash"
+	keyRole                = "role"
+	keyDisabled            = "disabled"
+	keyMustChangePassword  = "must_change_password"
+	keyCanCreateNamespaces = "can_create_namespaces"
+	keyQuotaNamespaces     = "quota_namespaces"
+	keyQuotaPods           = "quota_pods"
+	keySource              = "source"
+	keySessionsValidFrom   = "sessions_valid_after"
+	keyHash                = "hash"
+	keyName                = "name"
+	keyUser                = "user"
+	keyCreatedAt           = "created_at"
+	keyExpiresAt           = "expires_at"
+	keyLastUsedAt          = "last_used_at"
+	keySessionKey          = "key"
 )
 
 // ErrNoStore says the backend has no cluster to keep what was asked.
@@ -62,31 +72,105 @@ func internalLabels(kind string) map[string]string {
 	}
 }
 
-type adminRecord struct {
-	Hash               string
-	SessionsValidAfter int64
+// userRecord is a user as the store holds it.
+type userRecord struct {
+	Name                string
+	Hash                string
+	Role                string
+	Disabled            bool
+	MustChangePassword  bool
+	CanCreateNamespaces bool
+	QuotaNamespaces     int
+	QuotaPods           int
+	Source              string
+	CreatedAt           int64
+	SessionsValidAfter  int64
 }
 
-func readAdmin() (*adminRecord, error) {
-	s, err := homeSecrets.Get(context.TODO(), adminSecretName, metav1.GetOptions{})
+func userSecretName(name string) string { return userSecretPrefix + name }
+
+func boolOf(b []byte) bool { return string(b) == "true" }
+
+func intOf(b []byte) int {
+	n, _ := strconv.Atoi(string(b))
+	return n
+}
+
+func int64Of(b []byte) int64 {
+	n, _ := strconv.ParseInt(string(b), 10, 64)
+	return n
+}
+
+func userFromSecret(s *corev1.Secret) *userRecord {
+	name := s.Labels["kubendt/user"]
+	if name == "" {
+		name = s.Name[len(userSecretPrefix):]
+	}
+	return &userRecord{
+		Name:                name,
+		Hash:                string(s.Data[keyPasswordHash]),
+		Role:                string(s.Data[keyRole]),
+		Disabled:            boolOf(s.Data[keyDisabled]),
+		MustChangePassword:  boolOf(s.Data[keyMustChangePassword]),
+		CanCreateNamespaces: boolOf(s.Data[keyCanCreateNamespaces]),
+		QuotaNamespaces:     intOf(s.Data[keyQuotaNamespaces]),
+		QuotaPods:           intOf(s.Data[keyQuotaPods]),
+		Source:              string(s.Data[keySource]),
+		CreatedAt:           int64Of(s.Data[keyCreatedAt]),
+		SessionsValidAfter:  int64Of(s.Data[keySessionsValidFrom]),
+	}
+}
+
+func userData(u *userRecord) map[string][]byte {
+	return map[string][]byte{
+		keyPasswordHash:        []byte(u.Hash),
+		keyRole:                []byte(u.Role),
+		keyDisabled:            []byte(strconv.FormatBool(u.Disabled)),
+		keyMustChangePassword:  []byte(strconv.FormatBool(u.MustChangePassword)),
+		keyCanCreateNamespaces: []byte(strconv.FormatBool(u.CanCreateNamespaces)),
+		keyQuotaNamespaces:     []byte(strconv.Itoa(u.QuotaNamespaces)),
+		keyQuotaPods:           []byte(strconv.Itoa(u.QuotaPods)),
+		keySource:              []byte(u.Source),
+		keyCreatedAt:           []byte(strconv.FormatInt(u.CreatedAt, 10)),
+		keySessionsValidFrom:   []byte(strconv.FormatInt(u.SessionsValidAfter, 10)),
+	}
+}
+
+func readUser(name string) (*userRecord, error) {
+	s, err := homeSecrets.Get(context.TODO(), userSecretName(name), metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
 		return nil, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("could not read the admin secret: %w", err)
+		return nil, fmt.Errorf("could not read the user %s: %w", name, err)
 	}
-	validAfter, _ := strconv.ParseInt(string(s.Data[keySessionsValidFrom]), 10, 64)
-	return &adminRecord{Hash: string(s.Data[keyPasswordHash]), SessionsValidAfter: validAfter}, nil
+	return userFromSecret(s), nil
 }
 
-func writeAdmin(r adminRecord) error {
-	data := map[string][]byte{
-		keyPasswordHash:      []byte(r.Hash),
-		keySessionsValidFrom: []byte(strconv.FormatInt(r.SessionsValidAfter, 10)),
+func listUserRecords() ([]*userRecord, error) {
+	list, err := homeSecrets.List(context.TODO(), metav1.ListOptions{LabelSelector: userSelector})
+	if err != nil {
+		return nil, fmt.Errorf("could not list the users: %w", err)
 	}
+	out := make([]*userRecord, 0, len(list.Items))
+	for i := range list.Items {
+		out = append(out, userFromSecret(&list.Items[i]))
+	}
+	return out, nil
+}
+
+func writeUser(u *userRecord) error {
 	labels := internalLabels("user")
-	labels["kubendt/user"] = "admin"
-	return upsertSecret(adminSecretName, labels, data)
+	labels["kubendt/user"] = u.Name
+	return upsertSecret(userSecretName(u.Name), labels, userData(u))
+}
+
+func deleteUserSecret(name string) error {
+	err := homeSecrets.Delete(context.TODO(), userSecretName(name), metav1.DeleteOptions{})
+	if err != nil && !apierrors.IsNotFound(err) {
+		return fmt.Errorf("could not delete the user %s: %w", name, err)
+	}
+	return nil
 }
 
 func upsertSecret(name string, labels map[string]string, data map[string][]byte) error {
@@ -144,10 +228,13 @@ func loadOrCreateSessionKey() ([]byte, error) {
 	return key, nil
 }
 
+// tokenEntry is an API token as the store holds it; User is who it acts as,
+// the owner account for the tokens minted before users existed.
 type tokenEntry struct {
 	ID         int64
 	Hash       string
 	Name       string
+	User       string
 	CreatedAt  int64
 	ExpiresAt  int64
 	LastUsedAt int64
@@ -160,10 +247,13 @@ func tokenFromSecret(s *corev1.Secret) (*tokenEntry, bool) {
 	if err != nil || id <= 0 {
 		return nil, false
 	}
-	t := &tokenEntry{ID: id, Hash: string(s.Data[keyHash]), Name: string(s.Data[keyName])}
-	t.CreatedAt, _ = strconv.ParseInt(string(s.Data[keyCreatedAt]), 10, 64)
-	t.ExpiresAt, _ = strconv.ParseInt(string(s.Data[keyExpiresAt]), 10, 64)
-	t.LastUsedAt, _ = strconv.ParseInt(string(s.Data[keyLastUsedAt]), 10, 64)
+	t := &tokenEntry{ID: id, Hash: string(s.Data[keyHash]), Name: string(s.Data[keyName]), User: string(s.Data[keyUser])}
+	if t.User == "" {
+		t.User = OwnerAccount
+	}
+	t.CreatedAt = int64Of(s.Data[keyCreatedAt])
+	t.ExpiresAt = int64Of(s.Data[keyExpiresAt])
+	t.LastUsedAt = int64Of(s.Data[keyLastUsedAt])
 	return t, t.Hash != ""
 }
 
@@ -172,6 +262,7 @@ func tokenData(t *tokenEntry) map[string][]byte {
 		"id":          []byte(strconv.FormatInt(t.ID, 10)),
 		keyHash:       []byte(t.Hash),
 		keyName:       []byte(t.Name),
+		keyUser:       []byte(t.User),
 		keyCreatedAt:  []byte(strconv.FormatInt(t.CreatedAt, 10)),
 		keyExpiresAt:  []byte(strconv.FormatInt(t.ExpiresAt, 10)),
 		keyLastUsedAt: []byte(strconv.FormatInt(t.LastUsedAt, 10)),
@@ -193,7 +284,9 @@ func listTokens() ([]*tokenEntry, error) {
 }
 
 func createToken(t *tokenEntry) error {
-	s := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: tokenSecretName(t.ID), Labels: internalLabels("token")}, Data: tokenData(t)}
+	labels := internalLabels("token")
+	labels["kubendt/user"] = t.User
+	s := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: tokenSecretName(t.ID), Labels: labels}, Data: tokenData(t)}
 	if _, err := homeSecrets.Create(context.TODO(), s, metav1.CreateOptions{}); err != nil {
 		return fmt.Errorf("could not write the token: %w", err)
 	}
@@ -230,7 +323,7 @@ func touchToken(id int64, at int64) {
 }
 
 // migrateFromDatabase moves the admin hash and the API tokens an older
-// backend kept in SQLite into the store, once, when the store has no admin
+// backend kept in SQLite into the store, once, when the store has no owner
 // yet, and drops the rows. The sessions table goes with them: a session is a
 // signed cookie now.
 func migrateFromDatabase() error {
@@ -238,7 +331,7 @@ func migrateFromDatabase() error {
 	if db == nil {
 		return nil
 	}
-	current, err := readAdmin()
+	current, err := readUser(OwnerAccount)
 	if err != nil {
 		return err
 	}
@@ -250,7 +343,7 @@ func migrateFromDatabase() error {
 			return err
 		}
 		if hash != "" {
-			if err := writeAdmin(adminRecord{Hash: hash}); err != nil {
+			if err := writeUser(&userRecord{Name: OwnerAccount, Hash: hash, Role: RoleOwner, Source: SourceLocal, CreatedAt: nowUnix()}); err != nil {
 				return err
 			}
 			moved++
@@ -261,7 +354,7 @@ func migrateFromDatabase() error {
 		}
 		defer rows.Close()
 		for rows.Next() {
-			var t tokenEntry
+			t := tokenEntry{User: OwnerAccount}
 			var lastUsed, expires sql.NullInt64
 			if err := rows.Scan(&t.ID, &t.Hash, &t.Name, &t.CreatedAt, &lastUsed, &expires); err != nil {
 				return err
