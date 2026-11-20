@@ -38,6 +38,7 @@ const (
 	keyCanCreateNamespaces = "can_create_namespaces"
 	keyQuotaNamespaces     = "quota_namespaces"
 	keyQuotaPods           = "quota_pods"
+	keyQuotaPodsPerNS      = "quota_pods_per_namespace"
 	keySource              = "source"
 	keySessionsValidFrom   = "sessions_valid_after"
 	keyHash                = "hash"
@@ -74,17 +75,18 @@ func internalLabels(kind string) map[string]string {
 
 // userRecord is a user as the store holds it.
 type userRecord struct {
-	Name                string
-	Hash                string
-	Role                string
-	Disabled            bool
-	MustChangePassword  bool
-	CanCreateNamespaces bool
-	QuotaNamespaces     int
-	QuotaPods           int
-	Source              string
-	CreatedAt           int64
-	SessionsValidAfter  int64
+	Name                  string
+	Hash                  string
+	Role                  string
+	Disabled              bool
+	MustChangePassword    bool
+	CanCreateNamespaces   bool
+	QuotaNamespaces       int
+	QuotaPods             int
+	QuotaPodsPerNamespace int
+	Source                string
+	CreatedAt             int64
+	SessionsValidAfter    int64
 }
 
 func userSecretName(name string) string { return userSecretPrefix + name }
@@ -107,17 +109,18 @@ func userFromSecret(s *corev1.Secret) *userRecord {
 		name = s.Name[len(userSecretPrefix):]
 	}
 	return &userRecord{
-		Name:                name,
-		Hash:                string(s.Data[keyPasswordHash]),
-		Role:                string(s.Data[keyRole]),
-		Disabled:            boolOf(s.Data[keyDisabled]),
-		MustChangePassword:  boolOf(s.Data[keyMustChangePassword]),
-		CanCreateNamespaces: boolOf(s.Data[keyCanCreateNamespaces]),
-		QuotaNamespaces:     intOf(s.Data[keyQuotaNamespaces]),
-		QuotaPods:           intOf(s.Data[keyQuotaPods]),
-		Source:              string(s.Data[keySource]),
-		CreatedAt:           int64Of(s.Data[keyCreatedAt]),
-		SessionsValidAfter:  int64Of(s.Data[keySessionsValidFrom]),
+		Name:                  name,
+		Hash:                  string(s.Data[keyPasswordHash]),
+		Role:                  string(s.Data[keyRole]),
+		Disabled:              boolOf(s.Data[keyDisabled]),
+		MustChangePassword:    boolOf(s.Data[keyMustChangePassword]),
+		CanCreateNamespaces:   boolOf(s.Data[keyCanCreateNamespaces]),
+		QuotaNamespaces:       intOf(s.Data[keyQuotaNamespaces]),
+		QuotaPods:             intOf(s.Data[keyQuotaPods]),
+		QuotaPodsPerNamespace: intOf(s.Data[keyQuotaPodsPerNS]),
+		Source:                string(s.Data[keySource]),
+		CreatedAt:             int64Of(s.Data[keyCreatedAt]),
+		SessionsValidAfter:    int64Of(s.Data[keySessionsValidFrom]),
 	}
 }
 
@@ -130,6 +133,7 @@ func userData(u *userRecord) map[string][]byte {
 		keyCanCreateNamespaces: []byte(strconv.FormatBool(u.CanCreateNamespaces)),
 		keyQuotaNamespaces:     []byte(strconv.Itoa(u.QuotaNamespaces)),
 		keyQuotaPods:           []byte(strconv.Itoa(u.QuotaPods)),
+		keyQuotaPodsPerNS:      []byte(strconv.Itoa(u.QuotaPodsPerNamespace)),
 		keySource:              []byte(u.Source),
 		keyCreatedAt:           []byte(strconv.FormatInt(u.CreatedAt, 10)),
 		keySessionsValidFrom:   []byte(strconv.FormatInt(u.SessionsValidAfter, 10)),

@@ -194,7 +194,7 @@ func TestWithoutAClusterAuthWaitsForOne(t *testing.T) {
 	if _, err := CreateAPIToken(OwnerAccount, "ci", 0); !errors.Is(err, ErrNoStore) {
 		t.Errorf("tokens need a cluster, got %v", err)
 	}
-	if _, err := CreateUser(owner(), "alice", "x", RoleUser, false, 0, 0); !errors.Is(err, ErrNoStore) {
+	if _, err := CreateUser(owner(), "alice", "x", RoleUser, false, [3]int{0, 0, 0}); !errors.Is(err, ErrNoStore) {
 		t.Errorf("users need a cluster, got %v", err)
 	}
 	secretsOfCurrentCluster = func() corev1client.SecretInterface { return cs.CoreV1().Secrets("kubendt-system") }
@@ -216,20 +216,20 @@ func TestAccountsAndWhoMayManageWhom(t *testing.T) {
 	if err := Init(); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := CreateUser(owner(), "Alice", "x", RoleUser, false, 0, 0); !errors.Is(err, ErrBadUsername) {
+	if _, err := CreateUser(owner(), "Alice", "x", RoleUser, false, [3]int{0, 0, 0}); !errors.Is(err, ErrBadUsername) {
 		t.Errorf("a username is lowercase: %v", err)
 	}
-	if _, err := CreateUser(owner(), "alice", "x", RoleOwner, false, 0, 0); !errors.Is(err, ErrBadRole) {
+	if _, err := CreateUser(owner(), "alice", "x", RoleOwner, false, [3]int{0, 0, 0}); !errors.Is(err, ErrBadRole) {
 		t.Errorf("there is one owner: %v", err)
 	}
-	generated, err := CreateUser(owner(), "alice", "", RoleUser, true, 2, 10)
+	generated, err := CreateUser(owner(), "alice", "", RoleUser, true, [3]int{2, 10, 0})
 	if err != nil || generated == "" {
 		t.Fatalf("create alice: %v %q", err, generated)
 	}
-	if _, err := CreateUser(owner(), "alice", "x", RoleUser, false, 0, 0); !errors.Is(err, ErrUserExists) {
+	if _, err := CreateUser(owner(), "alice", "x", RoleUser, false, [3]int{0, 0, 0}); !errors.Is(err, ErrUserExists) {
 		t.Errorf("twice: %v", err)
 	}
-	if _, err := CreateUser(owner(), "bob", "bob-pw", RoleAdmin, false, 0, 0); err != nil {
+	if _, err := CreateUser(owner(), "bob", "bob-pw", RoleAdmin, false, [3]int{0, 0, 0}); err != nil {
 		t.Fatal(err)
 	}
 	s, err := cs.CoreV1().Secrets("kubendt-system").Get(context.TODO(), "kubendt-user-alice", metav1.GetOptions{})
@@ -254,13 +254,13 @@ func TestAccountsAndWhoMayManageWhom(t *testing.T) {
 
 	bob := &Principal{Identity: "bob", Role: RoleAdmin, Roles: []string{RoleAdmin}}
 	alice := &Principal{Identity: "alice", Role: RoleUser, Roles: []string{RoleUser}}
-	if _, err := CreateUser(bob, "carol", "x", RoleAdmin, false, 0, 0); !errors.Is(err, ErrNotAllowed) {
+	if _, err := CreateUser(bob, "carol", "x", RoleAdmin, false, [3]int{0, 0, 0}); !errors.Is(err, ErrNotAllowed) {
 		t.Errorf("an admin does not create admins: %v", err)
 	}
-	if _, err := CreateUser(bob, "carol", "x", RoleUser, false, 0, 0); err != nil {
+	if _, err := CreateUser(bob, "carol", "x", RoleUser, false, [3]int{0, 0, 0}); err != nil {
 		t.Errorf("an admin creates users: %v", err)
 	}
-	if _, err := CreateUser(alice, "dave", "x", RoleUser, false, 0, 0); !errors.Is(err, ErrNotAllowed) {
+	if _, err := CreateUser(alice, "dave", "x", RoleUser, false, [3]int{0, 0, 0}); !errors.Is(err, ErrNotAllowed) {
 		t.Errorf("a user creates nobody: %v", err)
 	}
 	role := RoleAdmin
@@ -338,7 +338,7 @@ func TestAPITokensBelongToAccounts(t *testing.T) {
 	if err := Init(); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := CreateUser(owner(), "alice", "x", RoleUser, false, 0, 0); err != nil {
+	if _, err := CreateUser(owner(), "alice", "x", RoleUser, false, [3]int{0, 0, 0}); err != nil {
 		t.Fatal(err)
 	}
 	raw, err := CreateAPIToken(OwnerAccount, "ci", 0)

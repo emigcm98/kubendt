@@ -23,7 +23,8 @@ import (
 func fakeStateCluster(t *testing.T, objs ...runtime.Object) {
 	t.Helper()
 	cs := fake.NewClientset(objs...)
-	prevNS, prevSTS, prevPods, prevCM, prevSec, prevLease, prevTopo := stateNamespaces, stateStatefulSets, statePods, stateConfigMaps, stateSecrets, stateLeases, stateTopologies
+	prevNS, prevSTS, prevPods, prevCM, prevSec, prevLease, prevTopo, prevLR := stateNamespaces, stateStatefulSets, statePods, stateConfigMaps, stateSecrets, stateLeases, stateTopologies, stateLimitRanges
+	stateLimitRanges = func(ns string) corev1client.LimitRangeInterface { return cs.CoreV1().LimitRanges(ns) }
 	stateNamespaces = func() corev1client.NamespaceInterface { return cs.CoreV1().Namespaces() }
 	stateStatefulSets = func(ns string) appsv1client.StatefulSetInterface { return cs.AppsV1().StatefulSets(ns) }
 	statePods = func(ns string) corev1client.PodInterface { return cs.CoreV1().Pods(ns) }
@@ -36,7 +37,7 @@ func fakeStateCluster(t *testing.T, objs ...runtime.Object) {
 	stateTopologies = func(ns string) dynamic.ResourceInterface { return dyn.Resource(TopologyGVR).Namespace(ns) }
 	t.Setenv(SystemNamespaceEnv, "")
 	t.Cleanup(func() {
-		stateNamespaces, stateStatefulSets, statePods, stateConfigMaps, stateSecrets, stateLeases, stateTopologies = prevNS, prevSTS, prevPods, prevCM, prevSec, prevLease, prevTopo
+		stateNamespaces, stateStatefulSets, statePods, stateConfigMaps, stateSecrets, stateLeases, stateTopologies, stateLimitRanges = prevNS, prevSTS, prevPods, prevCM, prevSec, prevLease, prevTopo, prevLR
 	})
 }
 

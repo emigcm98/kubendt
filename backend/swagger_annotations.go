@@ -859,6 +859,16 @@ func swaggerAuthMe() {}
 //	@Router       /auth/password [put]
 func swaggerChangePassword() {}
 
+// swaggerAuthQuota godoc
+//
+//	@Summary      The account's quota
+//	@Description  The limits the account is under (namespaces owned, pods across them, pods in any one), zero for none, and what it owns today.
+//	@Tags         auth
+//	@Produce      json
+//	@Success      200  {object}  types.QuotaResponse
+//	@Router       /auth/quota [get]
+func swaggerAuthQuota() {}
+
 // swaggerListUsers godoc
 //
 //	@Summary      List accounts

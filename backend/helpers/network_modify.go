@@ -16,6 +16,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	appsv1client "k8s.io/client-go/kubernetes/typed/apps/v1"
 )
 
 // ApplyAddToExistingTopology applies CRD changes for the add phase (new
@@ -306,8 +307,14 @@ func ApplyDeleteOnExistingTopology(namespace string, deleteNodes []string, delet
 	return touchedPeers, deletedNodeNames, nil
 }
 
+// nodeStatefulSets is the client the nodes are read through, a variable so
+// the tests can hand it a fake clientset.
+var nodeStatefulSets = func(namespace string) appsv1client.StatefulSetInterface {
+	return kubeclient.Clientset.AppsV1().StatefulSets(namespace)
+}
+
 func GetExistingNodes(namespace string) ([]types.NodeSpec, error) {
-	stsList, err := kubeclient.Clientset.AppsV1().StatefulSets(namespace).List(context.TODO(), metav1.ListOptions{})
+	stsList, err := nodeStatefulSets(namespace).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}

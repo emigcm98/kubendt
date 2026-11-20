@@ -44,6 +44,10 @@ rules:
   - apiGroups: [coordination.k8s.io]
     resources: [leases]
     verbs: [get, list, watch, create, update, patch, delete]
+  # The limits every container of a lab gets, when configured.
+  - apiGroups: [""]
+    resources: [limitranges]
+    verbs: [get, list, create, delete]
   # Meshnet's links.
   - apiGroups: [networkop.co.uk]
     resources: [topologies]

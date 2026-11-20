@@ -839,6 +839,7 @@ type UserDoc struct {
 	CanCreateNamespaces bool   `json:"can_create_namespaces" example:"false"`
 	QuotaNamespaces     int    `json:"quota_namespaces" example:"0"`
 	QuotaPods           int    `json:"quota_pods" example:"0"`
+	QuotaPodsPerNS      int    `json:"quota_pods_per_namespace" example:"0"`
 	Source              string `json:"source" example:"local"`
 	CreatedAt           int64  `json:"created_at" example:"1782905018"`
 }
@@ -857,6 +858,7 @@ type CreateUserRequest struct {
 	CanCreateNamespaces bool   `json:"can_create_namespaces,omitempty" example:"false"`
 	QuotaNamespaces     int    `json:"quota_namespaces,omitempty" example:"0"`
 	QuotaPods           int    `json:"quota_pods,omitempty" example:"0"`
+	QuotaPodsPerNS      int    `json:"quota_pods_per_namespace,omitempty" example:"0"`
 }
 
 // UserResponse is returned by POST /users and PUT /users/{name}; the
@@ -874,6 +876,27 @@ type UserPatchRequest struct {
 	CanCreateNamespaces *bool   `json:"can_create_namespaces,omitempty" example:"true"`
 	QuotaNamespaces     *int    `json:"quota_namespaces,omitempty" example:"3"`
 	QuotaPods           *int    `json:"quota_pods,omitempty" example:"40"`
+	QuotaPodsPerNS      *int    `json:"quota_pods_per_namespace,omitempty" example:"20"`
+}
+
+// QuotaDoc is the limits an account is under, zero for none.
+type QuotaDoc struct {
+	Namespaces       int `json:"namespaces" example:"3"`
+	Pods             int `json:"pods" example:"40"`
+	PodsPerNamespace int `json:"pods_per_namespace" example:"20"`
+}
+
+// QuotaUsageDoc is what an account owns today.
+type QuotaUsageDoc struct {
+	Namespaces int `json:"namespaces" example:"1"`
+	Pods       int `json:"pods" example:"9"`
+}
+
+// QuotaResponse is returned by GET /auth/quota.
+type QuotaResponse struct {
+	Username string        `json:"username" example:"alice"`
+	Quota    QuotaDoc      `json:"quota"`
+	Usage    QuotaUsageDoc `json:"usage"`
 }
 
 // DeleteUserResponse is returned by DELETE /users/{name}.

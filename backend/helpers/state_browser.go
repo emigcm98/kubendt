@@ -81,7 +81,7 @@ var (
 var roleRank = map[string]int{
 	"namespace": 0, "node": 1, "pod": 2, "topology": 3, "env": 4,
 	"file": 5, "folder": 6, "mount": 7, "history": 8, "layout": 9, "layout-attic": 10,
-	"lock": 11, "iface-counts": 12, "user": 13, "token": 14, "session-key": 15,
+	"lock": 11, "iface-counts": 12, "limits": 13, "user": 14, "token": 15, "session-key": 16,
 }
 
 func rankOf(role string) int {
@@ -258,6 +258,20 @@ func ListStateObjects(namespace string) ([]StateObject, error) {
 		rows = append(rows, leaseRow(&leases.Items[i]))
 	}
 
+	limits, err := stateLimitRanges(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil && !apierrors.IsForbidden(err) {
+		return nil, fmt.Errorf("could not list the LimitRanges of %s: %w", namespace, err)
+	}
+	if limits != nil {
+		for i := range limits.Items {
+			lr := &limits.Items[i]
+			rows = append(rows, StateObject{
+				Kind: "LimitRange", Name: lr.Name, Namespace: namespace, Role: "limits", Detail: limitRangeDetail(lr),
+				Size: jsonSize(lr), CreatedAt: stamp(lr.CreationTimestamp), ResourceVersion: lr.ResourceVersion, Labels: lr.Labels,
+			})
+		}
+	}
+
 	sort.SliceStable(rows, func(i, j int) bool {
 		if ri, rj := rankOf(rows[i].Role), rankOf(rows[j].Role); ri != rj {
 			return ri < rj
@@ -265,6 +279,28 @@ func ListStateObjects(namespace string) ([]StateObject, error) {
 		return rows[i].Name < rows[j].Name
 	})
 	return rows, nil
+}
+
+func limitRangeDetail(lr *corev1.LimitRange) string {
+	var parts []string
+	for _, item := range lr.Spec.Limits {
+		for _, res := range []corev1.ResourceName{corev1.ResourceCPU, corev1.ResourceMemory} {
+			req, hasReq := item.DefaultRequest[res]
+			lim, hasLim := item.Default[res]
+			switch {
+			case hasReq && hasLim:
+				parts = append(parts, fmt.Sprintf("%s %s to %s", res, req.String(), lim.String()))
+			case hasReq:
+				parts = append(parts, fmt.Sprintf("%s %s", res, req.String()))
+			case hasLim:
+				parts = append(parts, fmt.Sprintf("%s up to %s", res, lim.String()))
+			}
+		}
+	}
+	if len(parts) == 0 {
+		return "defaults for every container"
+	}
+	return "every container " + strings.Join(parts, ", ")
 }
 
 func namespaceRow(ns *corev1.Namespace) StateObject {
@@ -440,6 +476,9 @@ func GetStateObject(namespace, kind, name string) (map[string]any, string, error
 	case "lease":
 		obj, err = stateLeases(namespace).Get(ctx, name, metav1.GetOptions{})
 		apiVersion, typed = "coordination.k8s.io/v1", "Lease"
+	case "limitrange":
+		obj, err = stateLimitRanges(namespace).Get(ctx, name, metav1.GetOptions{})
+		typed = "LimitRange"
 	case "topology":
 		var u *unstructured.Unstructured
 		u, err = stateTopologies(namespace).Get(ctx, name, metav1.GetOptions{})
