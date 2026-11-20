@@ -1,0 +1,27 @@
+# The backend's variables, as the manifests expect them: a Secret for what is
+# secret, a ConfigMap for the rest, every key an environment variable of the
+# backend pod. Copy, fill in, apply to the namespace, then
+# kubectl -n kubendt-system rollout restart deploy/kubendt-backend.
+# The reference of every variable is doc/DEPLOYMENT.md.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kubendt-backend-env
+type: Opaque
+stringData:
+  KUBENDT_ADMIN_PASSWORD: change-me
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kubendt-backend-config
+data:
+  # Where a topology's pods go: pack on as few workers as possible, or spread.
+  KUBENDT_PLACEMENT: pack
+  # A capture stops by itself at this size.
+  KUBENDT_CAPTURE_MAX_MB: "100"
+  # Browser sessions: idle timeout and absolute lifetime, in hours.
+  KUBENDT_SESSION_IDLE_HOURS: "12"
+  KUBENDT_SESSION_MAX_HOURS: "168"
+  # Set to "true" behind HTTPS so the session cookie only travels over TLS.
+  KUBENDT_COOKIE_SECURE: "false"
