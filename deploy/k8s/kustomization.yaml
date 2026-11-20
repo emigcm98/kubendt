@@ -10,6 +10,6 @@ resources:
   - frontend.yaml
 images:
   - name: ghcr.io/emigcm98/kubendt-backend
-    newTag: latest
+    newTag: 1.12.0
   - name: ghcr.io/emigcm98/kubendt-frontend
-    newTag: latest
+    newTag: 1.12.0

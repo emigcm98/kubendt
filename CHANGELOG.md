@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.12.0] - 2026-11-20
+
 ### Added
 
 - A system namespace, `kubendt-system` (`KUBENDT_SYSTEM_NAMESPACE`), where a namespace deleted keeping its layout leaves it until a namespace of the same name takes it back.
@@ -375,7 +377,8 @@ Initial public release. KubeNDT deploys and operates virtual network topologies 
 - Health, readiness and version endpoints, and Swagger docs at `/swagger`.
 - Container images published to GHCR and a Docker Compose deployment.
 
-[Unreleased]: https://github.com/emigcm98/kubendt/compare/v1.11.0...HEAD
+[Unreleased]: https://github.com/emigcm98/kubendt/compare/v1.12.0...HEAD
+[1.12.0]: https://github.com/emigcm98/kubendt/compare/v1.11.0...v1.12.0
 [1.11.0]: https://github.com/emigcm98/kubendt/compare/v1.10.0...v1.11.0
 [1.10.0]: https://github.com/emigcm98/kubendt/compare/v1.9.0...v1.10.0
 [1.9.0]: https://github.com/emigcm98/kubendt/compare/v1.8.0...v1.9.0
