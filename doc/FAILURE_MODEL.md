@@ -9,7 +9,7 @@ What KubeNDT survives, what it loses, and what you have to fix by hand. The shor
 | Topology (nodes, links, IPs from the CRDs) | Kubernetes: StatefulSets, Meshnet Topology CRDs, ConfigMaps, Secrets | yes | yes |
 | Configuration applied to nodes (routes, bridges, OSPF, NAT, qdiscs) | inside the pods, plus one history row per applied action in SQLite | yes | the pods keep it, the history is gone |
 | Operation history (what replay uses) | SQLite `driver_operation_history` | yes | no |
-| Link attributes (the shaping, `mtu` and extra addresses a link declares) | SQLite `link_attributes` | yes | no, a pod recreated afterwards comes back with the namespace MTU and the first address of each end |
+| Link attributes (the shaping, `mtu` and extra addresses a link declares) | the `kubendt/link-attrs` annotation on the Topology object of the pod the topology named, read once from SQLite `link_attributes` where an older backend left rows | yes | yes, it is in the cluster |
 | Node positions and annotations of the graph | the `kubendt-internal-layout` ConfigMap of the namespace, mirrored into SQLite `node_positions` while a database is open, and `kubendt-internal-layout-<namespace>` in the `kubendt-system` namespace once the namespace is deleted keeping it | yes | yes, it is in the cluster |
 | Files of the namespace file manager | disk under `FILES_BASE_PATH` (`kubendt-files` volume in compose) | yes | no, mounted ConfigMaps and Secrets stay in the cluster and the file manager flags them as missing their source |
 | `sensitive` flag of files | SQLite `namespace_file_meta` | yes | no |

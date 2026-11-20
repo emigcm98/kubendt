@@ -1,11 +1,16 @@
 package helpers
 
 import (
+	"context"
+	"database/sql"
 	"reflect"
 	"strings"
 	"testing"
 
+	"kubendt/kubeclient"
 	"kubendt/types"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestValidateLinkAttributes(t *testing.T) {
@@ -87,8 +92,8 @@ func TestLinkAttrsAddresses(t *testing.T) {
 	if attrsOf(types.LinkSpec{LocalIP: types.Addrs{"10.0.0.1/30"}}).empty() != true {
 		t.Fatal("one address per end is nothing to keep")
 	}
-	if encodeAddrs(nil) != "" || !reflect.DeepEqual(decodeAddrs(encodeAddrs(a.PeerAddrs)), a.PeerAddrs) || decodeAddrs("nonsense") != nil {
-		t.Fatal("address columns do not round trip")
+	if decodeAddrs("") != nil || !reflect.DeepEqual(decodeAddrs(`["fd00::2/64","10.0.0.9/30"]`), a.PeerAddrs) || decodeAddrs("nonsense") != nil {
+		t.Fatal("the address column of an older database does not read back")
 	}
 
 	// A link read back from the cluster has one address per end; the fill
@@ -139,5 +144,139 @@ func TestValidateLinkMTU(t *testing.T) {
 	t.Setenv(LinkMTUEnv, "")
 	if err := ValidateLinkAttributes([]types.LinkSpec{{Node: "a", LocalIntf: "eth1", PeerNode: "b", PeerIntf: "eth1", MTU: 9001}}); err == nil || !strings.Contains(err.Error(), "link[0]") {
 		t.Fatalf("the link index is named: %v", err)
+	}
+}
+
+// Two pods wired to each other, and one of them to the outside.
+func fakeLinkAttrsTopologies(t *testing.T) {
+	t.Helper()
+	fakeTopologies(t,
+		topologyCR("lab", "a-0",
+			map[string]interface{}{"uid": int64(1000001), "local_intf": "eth1", "peer_pod": "b-0", "peer_intf": "eth1"},
+			map[string]interface{}{"uid": int64(1000002), "local_intf": "eth2", "peer_pod": "localhost", "peer_intf": "eth0"}),
+		topologyCR("lab", "b-0",
+			map[string]interface{}{"uid": int64(1000001), "local_intf": "eth1", "peer_pod": "a-0", "peer_intf": "eth1"}),
+	)
+	prev := DB
+	DB = nil
+	t.Cleanup(func() { DB = prev })
+}
+
+var attrsNodes = []types.NodeSpec{{Name: "a", Replicas: 1}, {Name: "b", Replicas: 1}}
+
+func TestLinkAttributesLiveOnTheTopologyObjects(t *testing.T) {
+	fakeLinkAttrsTopologies(t)
+	links := []types.LinkSpec{
+		{Node: "a", LocalIntf: "eth1", PeerNode: "b", PeerIntf: "eth1", Delay: "10ms", MTU: 1400,
+			LocalIP: types.Addrs{"10.0.0.1/24", "fd00::1/64"}, PeerIP: types.Addrs{"10.0.0.2/24", "fd00::2/64"}},
+		{Node: "a", LocalIntf: "eth2", PeerNode: "external", PeerIntf: "eth0", Bandwidth: "10mbit"},
+	}
+	if err := SaveLinkAttributes("lab", links, attrsNodes); err != nil {
+		t.Fatal(err)
+	}
+	obj, err := topologyObjects("lab").Get(context.TODO(), "a-0", metav1.GetOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	entries := linkAttrEntries(obj)
+	if entries["eth1"].Peer != "b-0" || entries["eth1"].MTU != 1400 || entries["eth1"].Delay != "10ms" || entries["eth2"].Bandwidth != "10mbit" || entries["eth2"].Peer != "external" {
+		t.Fatalf("the annotation should carry both links from a's side: %+v", entries)
+	}
+	if !reflect.DeepEqual(entries["eth1"].LocalAddrs, []string{"fd00::1/64"}) || !reflect.DeepEqual(entries["eth1"].PeerAddrs, []string{"fd00::2/64"}) {
+		t.Errorf("only the addresses beyond the first are kept: %+v", entries["eth1"])
+	}
+	attrs, err := LoadLinkAttributes("lab")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if attrs["a-0/eth1"].MTU != 1400 || attrs["b-0/eth1"].MTU != 1400 || !reflect.DeepEqual(attrs["b-0/eth1"].LocalAddrs, []string{"fd00::2/64"}) {
+		t.Fatalf("a load answers both ends, each from its side: %+v", attrs)
+	}
+	if _, ok := attrs["external/eth0"]; ok {
+		t.Error("the outside has no end to look up")
+	}
+
+	// The MTU set on the peer's side lands on the entry a's side keeps.
+	if err := SetLinkMTU("lab", "b-0", "eth1", "a-0", "eth1", 1300); err != nil {
+		t.Fatal(err)
+	}
+	attrs, _ = LoadLinkAttributes("lab")
+	if attrs["a-0/eth1"].MTU != 1300 || attrs["b-0/eth1"].MTU != 1300 {
+		t.Fatalf("the MTU should follow whichever end set it: %+v", attrs)
+	}
+	// A link nobody declared attributes on gets an entry when an MTU is set,
+	// and loses it when the MTU is cleared.
+	if err := SetLinkMTU("lab", "b-0", "eth9", "a-0", "eth9", 1200); err != nil {
+		t.Fatal(err)
+	}
+	if attrs, _ = LoadLinkAttributes("lab"); attrs["b-0/eth9"].MTU != 1200 {
+		t.Fatalf("a fresh entry on the end that asked: %+v", attrs)
+	}
+	if err := SetLinkMTU("lab", "b-0", "eth9", "a-0", "eth9", 0); err != nil {
+		t.Fatal(err)
+	}
+	if attrs, _ = LoadLinkAttributes("lab"); attrs["b-0/eth9"].MTU != 0 {
+		t.Fatalf("cleared: %+v", attrs)
+	}
+
+	// A deleted link takes its entry, whichever end named it.
+	if err := DeleteLinkAttributesForLinks("lab", []types.LinkSpec{{Node: "b", LocalIntf: "eth1", PeerNode: "a", PeerIntf: "eth1"}}, attrsNodes); err != nil {
+		t.Fatal(err)
+	}
+	attrs, _ = LoadLinkAttributes("lab")
+	if _, ok := attrs["a-0/eth1"]; ok {
+		t.Errorf("the entry of a deleted link should go: %+v", attrs)
+	}
+	if attrs["a-0/eth2"].Bandwidth != "10mbit" {
+		t.Errorf("the other link stays: %+v", attrs)
+	}
+}
+
+func TestLinkAttributesOfDeletedPodsLeaveTheirPeers(t *testing.T) {
+	fakeLinkAttrsTopologies(t)
+	links := []types.LinkSpec{{Node: "a", LocalIntf: "eth1", PeerNode: "b", PeerIntf: "eth1", Loss: "1%"}}
+	if err := SaveLinkAttributes("lab", links, attrsNodes); err != nil {
+		t.Fatal(err)
+	}
+	if err := DeleteLinkAttributesForPods("lab", map[string]struct{}{"b-0": {}}); err != nil {
+		t.Fatal(err)
+	}
+	obj, _ := topologyObjects("lab").Get(context.TODO(), "a-0", metav1.GetOptions{})
+	if _, still := obj.GetAnnotations()[LinkAttrsAnnotation]; still {
+		t.Errorf("a's entry toward the deleted pod should go, and with it the annotation: %v", obj.GetAnnotations())
+	}
+}
+
+func TestLinkAttributesMigrateFromTheDatabase(t *testing.T) {
+	fakeLinkAttrsTopologies(t)
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Skip("no sqlite:", err)
+	}
+	defer func() { _ = db.Close() }()
+	if _, err := db.Exec(`CREATE TABLE link_attributes (cluster_id TEXT, namespace TEXT, node TEXT, intf TEXT, peer_node TEXT, peer_intf TEXT, delay TEXT DEFAULT '', jitter TEXT DEFAULT '', loss TEXT DEFAULT '', bandwidth TEXT DEFAULT '', mtu INTEGER DEFAULT 0, local_addresses TEXT DEFAULT '', peer_addresses TEXT DEFAULT '')`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO link_attributes (cluster_id, namespace, node, intf, peer_node, peer_intf, delay, mtu, local_addresses) VALUES ('c1', 'lab', 'b-0', 'eth1', 'a-0', 'eth1', '5ms', 1450, '["fd00::2/64"]')`); err != nil {
+		t.Fatal(err)
+	}
+	DB = db
+	kubeclient.SetClusterIDForTest("c1")
+	t.Cleanup(func() { kubeclient.SetClusterIDForTest("") })
+
+	attrs, err := LoadLinkAttributes("lab")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if attrs["b-0/eth1"].Delay != "5ms" || attrs["a-0/eth1"].MTU != 1450 || !reflect.DeepEqual(attrs["a-0/eth1"].PeerAddrs, []string{"fd00::2/64"}) {
+		t.Fatalf("the rows should answer through the objects: %+v", attrs)
+	}
+	obj, _ := topologyObjects("lab").Get(context.TODO(), "b-0", metav1.GetOptions{})
+	if linkAttrEntries(obj)["eth1"].Delay != "5ms" {
+		t.Errorf("the row should now be an entry on b's Topology: %v", obj.GetAnnotations())
+	}
+	var left int
+	if err := db.QueryRow(`SELECT count(*) FROM link_attributes`).Scan(&left); err != nil || left != 0 {
+		t.Errorf("the rows should be gone once moved, %d left (%v)", left, err)
 	}
 }
