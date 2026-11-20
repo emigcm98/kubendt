@@ -14,6 +14,7 @@ func SetupRoutes(router *gin.Engine) {
 	// kubeconfig gate rejects cluster ops until a kubeconfig is loaded.
 	router.Use(handlers.RequireAuth())
 	router.Use(handlers.RequireKubeconfig())
+	router.Use(handlers.RequireAccess())
 
 	router.GET("/healthz", handlers.Healthz)
 	router.GET("/readyz", handlers.Readyz)

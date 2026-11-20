@@ -4,6 +4,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"kubendt/handlers"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -49,6 +51,26 @@ func TestRoutesSurviveReservedNames(t *testing.T) {
 		shadow.ServeHTTP(w, httptest.NewRequest(c.method, c.path, nil))
 		if w.Code != 200 || w.Body.String() != c.want {
 			t.Errorf("%s %s: matched %q (%d), want %s", c.method, c.path, w.Body.String(), w.Code, c.want)
+		}
+	}
+}
+
+// Every route has a permission in the handlers' table, and the table names
+// no route that is not there: what is registered is what is guarded.
+func TestEveryRouteHasAPermission(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	SetupRoutes(r)
+	registered := map[string]bool{}
+	for _, route := range r.Routes() {
+		registered[route.Method+" "+route.Path] = true
+		if _, ok := handlers.RoutePermission(route.Method, route.Path); !ok {
+			t.Errorf("%s %s has no permission declared", route.Method, route.Path)
+		}
+	}
+	for _, rule := range handlers.RouteRules() {
+		if !registered[rule.Method+" "+rule.Path] {
+			t.Errorf("the table names %s %s, which is not registered", rule.Method, rule.Path)
 		}
 	}
 }

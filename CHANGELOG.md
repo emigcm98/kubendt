@@ -8,11 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- Accounts: one Secret per user in the system namespace with a role (`owner`, `admin` or `user`), managed by admins through `/users`, and `PUT /auth/password` for one's own. The login takes a `username`, `admin` when absent, so scripts keep working; a created account changes its password at its first login.
+- Accounts with a role (`owner`, `admin` or `user`), one Secret per user in the system namespace, managed through `/users`. The login takes a `username`, `admin` when absent.
 
 ### Changed
 
-- The `admin` account is the owner, API tokens act as the account that minted them and never above it, and the tokens of before are the owner's.
+- The `admin` account is the owner, and an API token acts as the account that minted it.
+- Every route carries a permission, checked against the account's level in the namespace (`viewer`, `operator`, `editor` or its owner, from annotations on the Namespace) or against its role. The namespace list says the owner and the level.
 
 ## [1.12.0] - 2026-11-20
 

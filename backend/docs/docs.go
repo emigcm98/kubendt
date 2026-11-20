@@ -5448,9 +5448,19 @@ const docTemplate = `{
                     "type": "boolean",
                     "example": true
                 },
+                "level": {
+                    "description": "Level is what the asking account may do in it: viewer, operator,\neditor or owner. Admins hold owner everywhere.",
+                    "type": "string",
+                    "example": "editor"
+                },
                 "name": {
                     "type": "string",
                     "example": "prueba"
+                },
+                "owner": {
+                    "description": "Owner is the account the namespace belongs to, \"\" for one from before\nthe accounts, which admins alone see.",
+                    "type": "string",
+                    "example": "alice"
                 },
                 "status": {
                     "type": "string",

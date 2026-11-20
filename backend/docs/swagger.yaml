@@ -1544,8 +1544,20 @@ definitions:
           deploy / modify / clear flows and cheap to read (DB lookup).
         example: true
         type: boolean
+      level:
+        description: |-
+          Level is what the asking account may do in it: viewer, operator,
+          editor or owner. Admins hold owner everywhere.
+        example: editor
+        type: string
       name:
         example: prueba
+        type: string
+      owner:
+        description: |-
+          Owner is the account the namespace belongs to, "" for one from before
+          the accounts, which admins alone see.
+        example: alice
         type: string
       status:
         example: Active
