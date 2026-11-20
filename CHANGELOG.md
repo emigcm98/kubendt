@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Changed
 
 - The operation lock is a Lease in the namespace, renewed while the operation runs and taken over once it expires, so two backends can share a cluster. Whether a namespace has a topology and which link uids are in use are read from the cluster, not kept in SQLite.
+- The attributes a topology declares on a link live on the Topology object of its pod, as an annotation, and die with it. Rows an older backend kept move there on first use.
 
 ## [1.11.0] - 2026-11-19
 

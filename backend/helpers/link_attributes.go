@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -8,15 +9,21 @@ import (
 
 	"kubendt/kubeclient"
 	"kubendt/types"
+
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 // Link attributes are the properties a topology declares on a link and the
 // platform imposes after wiring it: a netem with the delay, jitter, loss and
 // bandwidth, the MTU, and the addresses beyond the first on each end. They
-// are kept in their own table so GET /network/get-network can echo them. The
-// shaping is applied as ordinary operations of each end, so a restart
-// replays it; the MTU and the extra addresses are applied by the MTU pass,
-// which runs after every wiring anyway (Meshnet wires one address per end).
+// live on the Topology object of the pod the topology named, so they die
+// with it and any backend sees them, and GET /network/get-network echoes
+// them. The shaping is applied as ordinary operations of each end, so a
+// restart replays it; the MTU and the extra addresses are applied by the MTU
+// pass, which runs after every wiring anyway (Meshnet wires one address per
+// end).
 
 // LinkAttrs are the declared properties of one link. LocalAddrs are the
 // extra addresses of the end the lookup key names, PeerAddrs the other
@@ -46,15 +53,8 @@ func (a LinkAttrs) swapped() LinkAttrs {
 	return a
 }
 
-// Extra addresses travel as a JSON array in a text column, "" for none.
-func encodeAddrs(addrs []string) string {
-	if len(addrs) == 0 {
-		return ""
-	}
-	raw, _ := json.Marshal(addrs)
-	return string(raw)
-}
-
+// decodeAddrs reads the JSON array an older backend kept in a text column,
+// "" for none.
 func decodeAddrs(raw string) []string {
 	if raw == "" {
 		return nil
@@ -196,32 +196,115 @@ func ApplyPodActions(namespace, podName string, actions []types.ActionEntry) []t
 	return warnings
 }
 
-// Storage. One row per declared link, keyed by the end the topology named.
+// Storage. Each pod's Topology object carries, in one annotation, the
+// attributes of the links the topology named from its side, keyed by
+// interface. The rows an older backend left in SQLite are read once into the
+// annotations and dropped.
+
+const LinkAttrsAnnotation = "kubendt/link-attrs"
+
+type linkAttrEntry struct {
+	Peer       string   `json:"peer"`
+	PeerIntf   string   `json:"peer_intf"`
+	Delay      string   `json:"delay,omitempty"`
+	Jitter     string   `json:"jitter,omitempty"`
+	Loss       string   `json:"loss,omitempty"`
+	Bandwidth  string   `json:"bandwidth,omitempty"`
+	MTU        int      `json:"mtu,omitempty"`
+	LocalAddrs []string `json:"addrs,omitempty"`
+	PeerAddrs  []string `json:"peer_addrs,omitempty"`
+}
+
+func (e linkAttrEntry) attrs() LinkAttrs {
+	return LinkAttrs{Delay: e.Delay, Jitter: e.Jitter, Loss: e.Loss, Bandwidth: e.Bandwidth, MTU: e.MTU, LocalAddrs: e.LocalAddrs, PeerAddrs: e.PeerAddrs}
+}
+
+func entryOf(a LinkAttrs, peer, peerIntf string) linkAttrEntry {
+	return linkAttrEntry{Peer: peer, PeerIntf: peerIntf, Delay: a.Delay, Jitter: a.Jitter, Loss: a.Loss, Bandwidth: a.Bandwidth, MTU: a.MTU, LocalAddrs: a.LocalAddrs, PeerAddrs: a.PeerAddrs}
+}
+
+func linkAttrEntries(obj *unstructured.Unstructured) map[string]linkAttrEntry {
+	entries := map[string]linkAttrEntry{}
+	raw := obj.GetAnnotations()[LinkAttrsAnnotation]
+	if raw == "" {
+		return entries
+	}
+	if err := json.Unmarshal([]byte(raw), &entries); err != nil {
+		log.Printf("⚠️ Link attributes: unreadable annotation on %s/%s, taken as none: %v", obj.GetNamespace(), obj.GetName(), err)
+		return map[string]linkAttrEntry{}
+	}
+	return entries
+}
+
+func setLinkAttrEntries(obj *unstructured.Unstructured, entries map[string]linkAttrEntry) {
+	annotations := obj.GetAnnotations()
+	if annotations == nil {
+		annotations = map[string]string{}
+	}
+	if len(entries) == 0 {
+		delete(annotations, LinkAttrsAnnotation)
+	} else {
+		raw, _ := json.Marshal(entries)
+		annotations[LinkAttrsAnnotation] = string(raw)
+	}
+	obj.SetAnnotations(annotations)
+}
+
+// updateLinkAttrs rewrites a pod's entries under its Topology's
+// resourceVersion, retrying when something else wrote in between. A pod
+// without a Topology has no links to carry attributes.
+func updateLinkAttrs(namespace, pod string, mutate func(map[string]linkAttrEntry) bool) error {
+	for attempt := 0; attempt < 3; attempt++ {
+		obj, err := topologyObjects(namespace).Get(context.TODO(), pod, metav1.GetOptions{})
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		if err != nil {
+			return fmt.Errorf("could not read the Topology of %s/%s: %w", namespace, pod, err)
+		}
+		entries := linkAttrEntries(obj)
+		if !mutate(entries) {
+			return nil
+		}
+		setLinkAttrEntries(obj, entries)
+		if _, err := topologyObjects(namespace).Update(context.TODO(), obj, metav1.UpdateOptions{}); err == nil {
+			return nil
+		} else if !apierrors.IsConflict(err) {
+			return fmt.Errorf("could not write the link attributes of %s/%s: %w", namespace, pod, err)
+		}
+	}
+	return fmt.Errorf("the Topology of %s/%s kept changing while its link attributes were written", namespace, pod)
+}
+
+func peerPodOf(l types.LinkSpec, nodes []types.NodeSpec) string {
+	if l.PeerNode == externalNodeName {
+		return externalNodeName
+	}
+	return ResolvePodNameFromLink(l.PeerNode, nodes)
+}
 
 func SaveLinkAttributes(namespace string, links []types.LinkSpec, nodes []types.NodeSpec) error {
-	if DB == nil {
-		return fmt.Errorf("database not initialized")
-	}
-	clusterID, err := kubeclient.CurrentClusterID()
-	if err != nil {
+	if err := migrateLinkAttributes(namespace); err != nil {
 		return err
 	}
+	byPod := map[string][]types.LinkSpec{}
 	for _, l := range links {
-		a := attrsOf(l)
-		node, peer := ResolvePodNameFromLink(l.Node, nodes), l.PeerNode
-		if peer != externalNodeName {
-			peer = ResolvePodNameFromLink(l.PeerNode, nodes)
-		}
-		if a.empty() {
-			if _, err := DB.Exec(`DELETE FROM link_attributes WHERE cluster_id = ? AND namespace = ? AND node = ? AND intf = ?`, clusterID, namespace, node, l.LocalIntf); err != nil {
-				return err
+		node := ResolvePodNameFromLink(l.Node, nodes)
+		byPod[node] = append(byPod[node], l)
+	}
+	for pod, podLinks := range byPod {
+		err := updateLinkAttrs(namespace, pod, func(entries map[string]linkAttrEntry) bool {
+			for _, l := range podLinks {
+				if a := attrsOf(l); a.empty() {
+					delete(entries, l.LocalIntf)
+				} else {
+					entries[l.LocalIntf] = entryOf(a, peerPodOf(l, nodes), l.PeerIntf)
+				}
 			}
-			continue
-		}
-		if _, err := DB.Exec(`INSERT OR REPLACE INTO link_attributes (cluster_id, namespace, node, intf, peer_node, peer_intf, delay, jitter, loss, bandwidth, mtu, local_addresses, peer_addresses)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			clusterID, namespace, node, l.LocalIntf, peer, l.PeerIntf, a.Delay, a.Jitter, a.Loss, a.Bandwidth, a.MTU, encodeAddrs(a.LocalAddrs), encodeAddrs(a.PeerAddrs)); err != nil {
-			return fmt.Errorf("error saving link attributes for %s:%s: %w", node, l.LocalIntf, err)
+			return true
+		})
+		if err != nil {
+			return err
 		}
 	}
 	return nil
@@ -231,74 +314,100 @@ func SaveLinkAttributes(namespace string, links []types.LinkSpec, nodes []types.
 // both ends of every link, each seen from that end, so a lookup works
 // whichever end a reader has.
 func LoadLinkAttributes(namespace string) (map[string]LinkAttrs, error) {
+	if err := migrateLinkAttributes(namespace); err != nil {
+		return nil, err
+	}
+	list, err := topologyObjects(namespace).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("could not list the Topology objects of %s: %w", namespace, err)
+	}
 	out := map[string]LinkAttrs{}
-	if DB == nil {
-		return out, nil
-	}
-	clusterID, err := kubeclient.CurrentClusterID()
-	if err != nil {
-		return nil, err
-	}
-	rows, err := DB.Query(`SELECT node, intf, peer_node, peer_intf, delay, jitter, loss, bandwidth, mtu, local_addresses, peer_addresses FROM link_attributes WHERE cluster_id = ? AND namespace = ?`, clusterID, namespace)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var node, intf, peer, peerIntf, localAddrs, peerAddrs string
-		var a LinkAttrs
-		if err := rows.Scan(&node, &intf, &peer, &peerIntf, &a.Delay, &a.Jitter, &a.Loss, &a.Bandwidth, &a.MTU, &localAddrs, &peerAddrs); err != nil {
-			return nil, err
-		}
-		a.LocalAddrs, a.PeerAddrs = decodeAddrs(localAddrs), decodeAddrs(peerAddrs)
-		out[node+"/"+intf] = a
-		if peer != externalNodeName {
-			out[peer+"/"+peerIntf] = a.swapped()
+	for i := range list.Items {
+		pod := list.Items[i].GetName()
+		for intf, e := range linkAttrEntries(&list.Items[i]) {
+			a := e.attrs()
+			out[pod+"/"+intf] = a
+			if e.Peer != externalNodeName && e.Peer != "" {
+				out[e.Peer+"/"+e.PeerIntf] = a.swapped()
+			}
 		}
 	}
-	return out, rows.Err()
+	return out, nil
 }
 
-// DeleteLinkAttributesForLinks drops the rows of links removed by a modify,
-// whichever end named them.
+// DeleteLinkAttributesForLinks drops the entries of links removed by a
+// modify, whichever end named them.
 func DeleteLinkAttributesForLinks(namespace string, links []types.LinkSpec, nodes []types.NodeSpec) error {
-	if DB == nil {
-		return nil
-	}
-	clusterID, err := kubeclient.CurrentClusterID()
-	if err != nil {
+	if err := migrateLinkAttributes(namespace); err != nil {
 		return err
 	}
+	drop := map[string]map[string]bool{}
 	for _, l := range links {
-		node, peer := ResolvePodNameFromLink(l.Node, nodes), l.PeerNode
-		if peer != externalNodeName {
-			peer = ResolvePodNameFromLink(l.PeerNode, nodes)
+		node, peer := ResolvePodNameFromLink(l.Node, nodes), peerPodOf(l, nodes)
+		if drop[node] == nil {
+			drop[node] = map[string]bool{}
 		}
-		if _, err := DB.Exec(`DELETE FROM link_attributes WHERE cluster_id = ? AND namespace = ? AND ((node = ? AND intf = ?) OR (node = ? AND intf = ?))`,
-			clusterID, namespace, node, l.LocalIntf, peer, l.PeerIntf); err != nil {
+		drop[node][l.LocalIntf] = true
+		if peer != externalNodeName {
+			if drop[peer] == nil {
+				drop[peer] = map[string]bool{}
+			}
+			drop[peer][l.PeerIntf] = true
+		}
+	}
+	for pod, intfs := range drop {
+		err := updateLinkAttrs(namespace, pod, func(entries map[string]linkAttrEntry) bool {
+			changed := false
+			for intf := range intfs {
+				if _, ok := entries[intf]; ok {
+					delete(entries, intf)
+					changed = true
+				}
+			}
+			return changed
+		})
+		if err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// DeleteLinkAttributesForPods drops the rows of every link a deleted pod was on.
+// DeleteLinkAttributesForPods drops, on the pods that stay, the entries of
+// links that went to a deleted pod; the deleted pods' own entries go with
+// their Topology objects.
 func DeleteLinkAttributesForPods(namespace string, pods map[string]struct{}) error {
-	if DB == nil {
-		return nil
-	}
-	clusterID, err := kubeclient.CurrentClusterID()
-	if err != nil {
+	if err := migrateLinkAttributes(namespace); err != nil {
 		return err
 	}
-	for pod := range pods {
-		if _, err := DB.Exec(`DELETE FROM link_attributes WHERE cluster_id = ? AND namespace = ? AND (node = ? OR peer_node = ?)`, clusterID, namespace, pod, pod); err != nil {
+	list, err := topologyObjects(namespace).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("could not list the Topology objects of %s: %w", namespace, err)
+	}
+	for i := range list.Items {
+		pod := list.Items[i].GetName()
+		if _, gone := pods[pod]; gone {
+			continue
+		}
+		err := updateLinkAttrs(namespace, pod, func(entries map[string]linkAttrEntry) bool {
+			changed := false
+			for intf, e := range entries {
+				if _, gone := pods[e.Peer]; gone {
+					delete(entries, intf)
+					changed = true
+				}
+			}
+			return changed
+		})
+		if err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
+// DeleteNamespaceLinkAttributes clears what an older backend left in SQLite
+// for the namespace; the entries themselves die with the Topology objects.
 func DeleteNamespaceLinkAttributes(namespace string) error {
 	if DB == nil {
 		return nil
@@ -330,25 +439,97 @@ func FillLinkAttributes(link *types.LinkSpec, podName, peerPod string, attrs map
 }
 
 // SetLinkMTU records the MTU asked for a running link through the links
-// section of a configure request, on the row of whichever end the topology
+// section of a configure request, on the entry of whichever end the topology
 // named, so the next MTU pass and every restart apply it. 0 clears it.
 func SetLinkMTU(namespace, pod, iface, peerPod, peerIntf string, mtu int) error {
+	if err := migrateLinkAttributes(namespace); err != nil {
+		return err
+	}
+	set := func(entries map[string]linkAttrEntry, intf string) bool {
+		e, ok := entries[intf]
+		if !ok {
+			return false
+		}
+		e.MTU = mtu
+		if e.attrs().empty() {
+			delete(entries, intf)
+		} else {
+			entries[intf] = e
+		}
+		return true
+	}
+	found := false
+	err := updateLinkAttrs(namespace, pod, func(entries map[string]linkAttrEntry) bool {
+		found = set(entries, iface)
+		return found
+	})
+	if err != nil || found {
+		return err
+	}
+	err = updateLinkAttrs(namespace, peerPod, func(entries map[string]linkAttrEntry) bool {
+		found = set(entries, peerIntf)
+		return found
+	})
+	if err != nil || found || mtu == 0 {
+		return err
+	}
+	return updateLinkAttrs(namespace, pod, func(entries map[string]linkAttrEntry) bool {
+		entries[iface] = linkAttrEntry{Peer: peerPod, PeerIntf: peerIntf, MTU: mtu}
+		return true
+	})
+}
+
+// migrateLinkAttributes moves the rows an older backend kept for the
+// namespace onto its Topology objects and drops them, the first time any of
+// them is touched. A namespace with no rows costs one query.
+func migrateLinkAttributes(namespace string) error {
 	if DB == nil {
-		return fmt.Errorf("database not initialized")
+		return nil
 	}
 	clusterID, err := kubeclient.CurrentClusterID()
 	if err != nil {
 		return err
 	}
-	res, err := DB.Exec(`UPDATE link_attributes SET mtu = ? WHERE cluster_id = ? AND namespace = ? AND ((node = ? AND intf = ?) OR (node = ? AND intf = ?))`,
-		mtu, clusterID, namespace, pod, iface, peerPod, peerIntf)
+	rows, err := DB.Query(`SELECT node, intf, peer_node, peer_intf, delay, jitter, loss, bandwidth, mtu, local_addresses, peer_addresses FROM link_attributes WHERE cluster_id = ? AND namespace = ?`, clusterID, namespace)
 	if err != nil {
 		return err
 	}
-	if n, _ := res.RowsAffected(); n > 0 || mtu == 0 {
+	defer rows.Close()
+	byPod := map[string]map[string]linkAttrEntry{}
+	for rows.Next() {
+		var node, intf, localAddrs, peerAddrs string
+		var e linkAttrEntry
+		if err := rows.Scan(&node, &intf, &e.Peer, &e.PeerIntf, &e.Delay, &e.Jitter, &e.Loss, &e.Bandwidth, &e.MTU, &localAddrs, &peerAddrs); err != nil {
+			return err
+		}
+		e.LocalAddrs, e.PeerAddrs = decodeAddrs(localAddrs), decodeAddrs(peerAddrs)
+		if byPod[node] == nil {
+			byPod[node] = map[string]linkAttrEntry{}
+		}
+		byPod[node][intf] = e
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	if len(byPod) == 0 {
 		return nil
 	}
-	_, err = DB.Exec(`INSERT INTO link_attributes (cluster_id, namespace, node, intf, peer_node, peer_intf, mtu) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		clusterID, namespace, pod, iface, peerPod, peerIntf, mtu)
-	return err
+	for pod, entries := range byPod {
+		err := updateLinkAttrs(namespace, pod, func(current map[string]linkAttrEntry) bool {
+			for intf, e := range entries {
+				if _, ok := current[intf]; !ok {
+					current[intf] = e
+				}
+			}
+			return true
+		})
+		if err != nil {
+			return fmt.Errorf("could not move the link attributes of %s to its Topology: %w", pod, err)
+		}
+	}
+	if _, err := DB.Exec(`DELETE FROM link_attributes WHERE cluster_id = ? AND namespace = ?`, clusterID, namespace); err != nil {
+		return err
+	}
+	log.Printf("ℹ️ Link attributes of namespace '%s' moved from the database to its Topology objects", namespace)
+	return nil
 }
