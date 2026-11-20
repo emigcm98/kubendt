@@ -10,6 +10,15 @@ type MessageResponse struct {
 	Message string `json:"message" example:"ok"`
 }
 
+// ImportArchiveResponse is the outcome of an archive import. An entry that
+// cannot become a file (too big, binary, a name that is not a valid key) is
+// skipped with its reason and the rest is imported.
+type ImportArchiveResponse struct {
+	Message  string   `json:"message" example:"File imported successfully"`
+	Imported int      `json:"imported" example:"3"`
+	Skipped  []string `json:"skipped,omitempty" example:"bin/tool: binary content is not supported"`
+}
+
 // Warning is a non-fatal incident surfaced in the response of a deploy or
 // modify operation. The kind is a stable machine-readable identifier; the
 // detail is human-readable and safe to display verbatim.

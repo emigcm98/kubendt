@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"math/rand"
@@ -115,7 +116,7 @@ func ApplyAddToExistingTopology(namespace string, request types.DeployRequest, e
 		for _, mount := range node.Mounts {
 			_, _, err := CreateMountResourceForFile(namespace, mount.File)
 			if err != nil {
-				if strings.Contains(err.Error(), "error reading file") {
+				if errors.Is(err, ErrFileMissing) {
 					log.Printf("⚠️ File %s does not exist. Skipping ConfigMap creation: %v", mount.File, err)
 					warnings = append(warnings, types.Warning{
 						Node:   node.Name,
@@ -824,11 +825,16 @@ func DeleteNodeStatefulSetAndTopologies(namespace string, node types.NodeSpec) e
 		// Iface-counts ConfigMap is also managed by us but lives on a
 		// different lifecycle (rebuilt on every topology mutation). Never
 		// GC it here.
+		// A file of the manager stays whatever mounts it; what goes is the
+		// mount a deleted or renamed file left behind for the pods.
 		for _, name := range mountCMs {
 			if name == IfaceCountsConfigMapName {
 				continue
 			}
 			if _, stillUsed := cmInUse[name]; stillUsed {
+				continue
+			}
+			if cm, err := kubeclient.Clientset.CoreV1().ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{}); err != nil || IsFileObject(cm.Labels) {
 				continue
 			}
 			if err := kubeclient.Clientset.CoreV1().ConfigMaps(namespace).Delete(ctx, name, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
@@ -837,6 +843,9 @@ func DeleteNodeStatefulSetAndTopologies(namespace string, node types.NodeSpec) e
 		}
 		for _, name := range mountSecrets {
 			if _, stillUsed := secretInUse[name]; stillUsed {
+				continue
+			}
+			if s, err := kubeclient.Clientset.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{}); err != nil || IsFileObject(s.Labels) {
 				continue
 			}
 			if err := kubeclient.Clientset.CoreV1().Secrets(namespace).Delete(ctx, name, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {

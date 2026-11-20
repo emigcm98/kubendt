@@ -903,6 +903,21 @@ definitions:
         example: 0.1.0-pre
         type: string
     type: object
+  types.ImportArchiveResponse:
+    properties:
+      imported:
+        example: 3
+        type: integer
+      message:
+        example: File imported successfully
+        type: string
+      skipped:
+        example:
+        - 'bin/tool: binary content is not supported'
+        items:
+          type: string
+        type: array
+    type: object
   types.InspectionColumn:
     properties:
       description:
@@ -3455,7 +3470,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/types.MessageResponse'
+            $ref: '#/definitions/types.ImportArchiveResponse'
         "400":
           description: Bad Request
           schema:

@@ -8,7 +8,6 @@ import (
 	drivers_meta "kubendt/drivers/meta"
 	"kubendt/kubeclient"
 	"log"
-	"os"
 	"regexp"
 	"strings"
 	"sync"
@@ -26,72 +25,6 @@ var (
 	ErrNamespaceExistsEmpty  = stderrors.New("namespace already exists but is empty")
 	ErrNamespaceHasResources = stderrors.New("namespace already exists and contains resources")
 )
-
-func CreateNamespaceFileDir(namespace string) error {
-	path, err := namespaceFilesDir(namespace)
-	if err != nil {
-		return err
-	}
-	return os.MkdirAll(path, 0755)
-}
-
-func DeleteNamespaceFileDir(namespace string) error {
-	path, err := namespaceFilesDir(namespace)
-	if err != nil {
-		return err
-	}
-
-	// If directory does not exist, nothing to do.
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return nil
-	} else if err != nil {
-		return fmt.Errorf("could not stat namespace files dir %s: %w", path, err)
-	}
-
-	entries, err := os.ReadDir(path)
-	if err != nil {
-		return fmt.Errorf("could not read namespace files dir %s: %w", path, err)
-	}
-
-	// Only remove folder when empty. Never delete when it contains files/subfolders.
-	if len(entries) > 0 {
-		return nil
-	}
-
-	if err := os.Remove(path); err != nil {
-		return fmt.Errorf("could not remove empty namespace files dir %s: %w", path, err)
-	}
-
-	return nil
-}
-
-// DeleteNamespaceFilesAll removes the entire namespace files directory and all its contents.
-func DeleteNamespaceFilesAll(namespace string) error {
-	path, err := namespaceFilesDir(namespace)
-	if err != nil {
-		return err
-	}
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return nil
-	}
-	if err := os.RemoveAll(path); err != nil {
-		return fmt.Errorf("could not remove namespace files dir %s: %w", path, err)
-	}
-	return nil
-}
-
-// NamespaceHasFiles returns true if the namespace files directory exists and contains any entries.
-func NamespaceHasFiles(namespace string) bool {
-	path, err := namespaceFilesDir(namespace)
-	if err != nil {
-		return false
-	}
-	entries, err := os.ReadDir(path)
-	if err != nil {
-		return false
-	}
-	return len(entries) > 0
-}
 
 func isNamespaceNonEmpty(namespace string) (bool, error) {
 	ctx := context.TODO()
@@ -165,11 +98,6 @@ func CreateNamespace(namespace string) error {
 		log.Printf("ℹ️ Namespace %s took its layout back from the attic", namespace)
 	}
 
-	// Create files directory associated with namespace
-	if err := CreateNamespaceFileDir(namespace); err != nil {
-		return fmt.Errorf("could not create files directory for namespace %s: %w", namespace, err)
-	}
-
 	return nil
 }
 
@@ -214,7 +142,7 @@ func DeleteNamespace(namespace string, deletePositions, deleteFiles bool) error 
 			log.Printf("⚠️ Could not delete namespace files for %s: %v", namespace, err)
 		}
 	} else {
-		// Always try to remove the directory if it is empty (cleanup).
+		// What an older backend left on disk goes once it is only the marker.
 		if err := DeleteNamespaceFileDir(namespace); err != nil {
 			log.Printf("⚠️ Could not cleanup namespace files folder %s: %v", namespace, err)
 		}

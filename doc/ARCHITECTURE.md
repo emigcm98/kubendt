@@ -72,13 +72,13 @@ The duration of the pass is reported as `timeline.backend_ms.heal`, and under th
 
 ## Persistence
 
-KubeNDT stores control-plane state in SQLite (var `KUBENDT_DB_PATH`) and per-namespace files on disk (var `FILES_BASE_PATH`).
+KubeNDT stores control-plane state in SQLite (var `KUBENDT_DB_PATH`); the files of a namespace are ConfigMaps and Secrets in it (see `doc/FILE_MANAGER.md`), and `FILES_BASE_PATH` only names the disk an older backend kept them on, read once to move them.
 
 SQLite tables:
 
 - `node_positions` — a mirror of the layout, which lives in the namespace as the `kubendt-internal-layout` ConfigMap (`GET` and `PUT /network/layout/:namespace`, the positions endpoints on the same document)
 - `driver_operation_history`
-- `namespace_file_meta` — per-file flags (e.g. `sensitive`, which materialises a file as a Secret instead of a ConfigMap)
+- `namespace_file_meta` — the `sensitive` flags an older backend kept, read once when its files move into the cluster
 - `clusters` — registry of known clusters (see below)
 - `auth_config`, `sessions`, `api_tokens`
 

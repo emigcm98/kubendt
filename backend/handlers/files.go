@@ -4,6 +4,7 @@ package handlers
 import (
 	"io"
 	"kubendt/helpers"
+	"kubendt/types"
 	"log"
 	"net/http"
 	"strings"
@@ -86,22 +87,9 @@ func UploadFile(c *gin.Context) {
 
 	log.Printf("✅ File '%s' uploaded to namespace '%s'", filename, namespace)
 
-	// Refresh the K8s resource (ConfigMap or Secret) that backs this file,
-	// if one exists (i.e. some pod already mounts it). Pods need a restart
-	// to see the new content because SubPath bind mounts don't propagate
-	// updates; surface the count so the UI can prompt the user.
-	resp := gin.H{"message": "File uploaded successfully"}
-	if synced, kind, err := helpers.SyncMountResourceFromFile(namespace, filename); err != nil {
-		log.Printf("⚠️ resource sync after upload of '%s' failed: %v", filename, err)
-		resp["sync_warning"] = err.Error()
-	} else if synced {
-		resp["resource_synced"] = true
-		resp["resource_kind"] = kind
-		if mounted, err := helpers.CountMountedPodsForFile(namespace, filename); err == nil {
-			resp["pods_mounting"] = mounted
-		}
-	}
-	c.JSON(http.StatusOK, resp)
+	// The object written is the one pods mount, and a SubPath mount does not
+	// follow it, so pods mounting the file need a restart to see it.
+	c.JSON(http.StatusOK, withMountHints(namespace, filename, gin.H{"message": "File uploaded successfully"}))
 }
 
 func UpdateFileContent(c *gin.Context) {
@@ -126,22 +114,7 @@ func UpdateFileContent(c *gin.Context) {
 	}
 
 	log.Printf("✅ Updated content of '%s' in namespace '%s'", filename, namespace)
-
-	// Same resource sync as in upload. Restart of mounting pods is still
-	// required to surface the new content because SubPath bind mounts are
-	// static against ConfigMap/Secret updates.
-	resp := gin.H{"message": "Content updated successfully"}
-	if synced, kind, err := helpers.SyncMountResourceFromFile(namespace, filename); err != nil {
-		log.Printf("⚠️ resource sync after edit of '%s' failed: %v", filename, err)
-		resp["sync_warning"] = err.Error()
-	} else if synced {
-		resp["resource_synced"] = true
-		resp["resource_kind"] = kind
-		if mounted, err := helpers.CountMountedPodsForFile(namespace, filename); err == nil {
-			resp["pods_mounting"] = mounted
-		}
-	}
-	c.JSON(http.StatusOK, resp)
+	c.JSON(http.StatusOK, withMountHints(namespace, filename, gin.H{"message": "Content updated successfully"}))
 }
 
 func DeleteFile(c *gin.Context) {
@@ -151,9 +124,6 @@ func DeleteFile(c *gin.Context) {
 	// Try deleting as file first
 	fileErr := helpers.DeleteFile(namespace, filename)
 	if fileErr == nil {
-		if err := helpers.DeleteFileMeta(namespace, filename); err != nil {
-			log.Printf("⚠️ could not delete file meta for '%s' in '%s': %v", filename, namespace, err)
-		}
 		log.Printf("✅ File '%s' deleted from namespace '%s'", filename, namespace)
 		c.JSON(http.StatusOK, gin.H{"message": "File deleted successfully"})
 		return
@@ -162,9 +132,6 @@ func DeleteFile(c *gin.Context) {
 	// If it fails, try deleting as folder
 	folderErr := helpers.DeleteFolder(namespace, filename)
 	if folderErr == nil {
-		if err := helpers.DeleteFileMetaByPrefix(namespace, filename); err != nil {
-			log.Printf("⚠️ could not delete file meta under '%s' in '%s': %v", filename, namespace, err)
-		}
 		log.Printf("✅ Folder '%s' deleted from namespace '%s'", filename, namespace)
 		c.JSON(http.StatusOK, gin.H{"message": "Folder deleted successfully"})
 		return
@@ -224,15 +191,6 @@ func DeleteAllNamespaceFiles(c *gin.Context) {
 		return
 	}
 
-	// Recreate the empty directory so future uploads work immediately.
-	if err := helpers.CreateNamespaceFileDir(namespace); err != nil {
-		log.Printf("⚠️ Could not recreate files dir for namespace '%s': %v", namespace, err)
-	}
-
-	if err := helpers.DeleteAllFileMetaForNamespace(namespace); err != nil {
-		log.Printf("⚠️ could not clear file meta for namespace '%s': %v", namespace, err)
-	}
-
 	log.Printf("✅ All files deleted for namespace '%s'", namespace)
 	c.JSON(http.StatusOK, gin.H{"message": "All files deleted successfully"})
 }
@@ -275,12 +233,12 @@ func ImportArchive(c *gin.Context) {
 	// Detect file type by extension
 	filename := fileHeader.Filename
 	var importErr error
-	var imported int
+	var report helpers.ImportReport
 
 	if strings.HasSuffix(filename, ".zip") {
-		imported, importErr = helpers.ExtractZip(namespace, file)
+		report, importErr = helpers.ExtractZip(namespace, file)
 	} else if strings.HasSuffix(filename, ".tar.gz") || strings.HasSuffix(filename, ".tgz") {
-		imported, importErr = helpers.ExtractTarGz(namespace, file)
+		report, importErr = helpers.ExtractTarGz(namespace, file)
 	} else {
 		log.Printf("❌ Unsupported file type: %s", filename)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Only .zip, .tar.gz and .tgz are supported"})
@@ -293,8 +251,8 @@ func ImportArchive(c *gin.Context) {
 		return
 	}
 
-	log.Printf("✅ File '%s' imported (%d files) into namespace '%s'", filename, imported, namespace)
-	c.JSON(http.StatusOK, gin.H{"message": "File imported successfully", "imported": imported})
+	log.Printf("✅ File '%s' imported (%d files, %d skipped) into namespace '%s'", filename, report.Imported, len(report.Skipped), namespace)
+	c.JSON(http.StatusOK, types.ImportArchiveResponse{Message: "File imported successfully", Imported: report.Imported, Skipped: report.Skipped})
 }
 
 // POST /files/:namespace/rename
@@ -316,10 +274,6 @@ func RenameFile(c *gin.Context) {
 		log.Printf("❌ Error renaming %s to %s: %v", body.OldPath, body.NewPath, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
-	}
-
-	if err := helpers.RenameFileMeta(namespace, body.OldPath, body.NewPath); err != nil {
-		log.Printf("⚠️ could not move file meta from '%s' to '%s' in '%s': %v", body.OldPath, body.NewPath, namespace, err)
 	}
 
 	log.Printf("✅ Renamed '%s' to '%s' in namespace '%s'", body.OldPath, body.NewPath, namespace)
@@ -351,14 +305,8 @@ func UpdateFileMeta(c *gin.Context) {
 		return
 	}
 
-	// The flag flip does NOT change file content, so nothing to sync into
-	// K8s right now: any existing ConfigMap or Secret keeps the same data.
-	// What the flag affects is the resource TYPE chosen the next time
-	// CreateMountResourceForFile runs (i.e. on the next deploy/modify
-	// that materialises this mount). Pods that already mount the file
-	// keep using whatever resource was originally created for them; they
-	// will switch to the new type only on redeploy. Report this clearly
-	// so the UI can prompt the user.
+	// The file is the other kind of object now; pods that mount it keep the
+	// one they mounted until they are redeployed, so say so.
 	resp := gin.H{
 		"message":   "Sensitive flag updated",
 		"sensitive": *body.Sensitive,
@@ -400,4 +348,21 @@ func ExportArchive(c *gin.Context) {
 		log.Printf("❌ Error exporting namespace '%s': %v", namespace, err)
 		return
 	}
+}
+
+// withMountHints adds, when pods mount the file, what the UI needs to say
+// about the restart they need: the object's kind and how many pods.
+func withMountHints(namespace, filename string, resp gin.H) gin.H {
+	mounted, err := helpers.CountMountedPodsForFile(namespace, filename)
+	if err != nil || mounted == 0 {
+		return resp
+	}
+	kind := "ConfigMap"
+	if meta, err := helpers.GetFileMeta(namespace, filename); err == nil && meta.Sensitive {
+		kind = "Secret"
+	}
+	resp["resource_synced"] = true
+	resp["resource_kind"] = kind
+	resp["pods_mounting"] = mounted
+	return resp
 }

@@ -14,6 +14,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - The operation lock is a Lease in the namespace, renewed while the operation runs and taken over once it expires, so two backends can share a cluster. Whether a namespace has a topology and which link uids are in use are read from the cluster, not kept in SQLite.
 - The attributes a topology declares on a link live on the Topology object of its pod, as an annotation, and die with it. Rows an older backend kept move there on first use.
+- The files of a namespace are ConfigMaps and Secrets in it from the moment they are uploaded, the same objects the pods mount, so the file manager works from any backend and `FILES_BASE_PATH` is only read to move what an older backend kept on disk. A file deleted or renamed while pods mount it stays for them until they are redeployed.
+- An archive import answers how many files it wrote and which entries it skipped, and the files page says so.
 
 ## [1.11.0] - 2026-11-19
 
