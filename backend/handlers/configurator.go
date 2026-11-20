@@ -119,6 +119,10 @@ func ConfigureNetwork(c *gin.Context) {
 			log.Printf("⚠️ Could not read creation time of pod '%s': %v (duplicate check by payload only)", podName, podErr)
 		}
 
+		// The pod's history is read once and written once at the end, so a
+		// request of many actions costs one object write per pod.
+		history, historyErr := helpers.OpenPodHistory(namespace, podName)
+
 		plans := helpers.PlanActions(namespace, podName, driver, driverErr, podConfig.Actions)
 		// Earlier actions of this request that will run: one of them may take
 		// down the state a later one writes (an undo, a program load), and
@@ -126,16 +130,18 @@ func ConfigureNetwork(c *gin.Context) {
 		var earlier []types.ActionEntry
 		for i := range plans {
 			p := &plans[i]
+			if p.Err != nil || !p.Flags.Persist {
+				continue
+			}
+			if historyErr != nil {
+				p.Err = historyErr
+				continue
+			}
 			// A repeatable action (custom) runs every time it is asked for.
-			if p.Err != nil || !p.Flags.Persist || (p.Desc != nil && p.Desc.Repeatable) {
+			if p.Desc != nil && p.Desc.Repeatable {
 				continue
 			}
-			alreadyPersisted, existsErr := helpers.DriverOperationAppliedSince(namespace, podName, driverType, p.Action, podCreated)
-			if existsErr != nil {
-				p.Err = existsErr
-				continue
-			}
-			if alreadyPersisted && !slices.ContainsFunc(earlier, func(e types.ActionEntry) bool { return helpers.ClearsStateOf(e, p.Action) }) {
+			if history.AppliedSince(driverType, p.Action, podCreated) && !slices.ContainsFunc(earlier, func(e types.ActionEntry) bool { return helpers.ClearsStateOf(e, p.Action) }) {
 				p.Skip = "duplicate operation: already applied to this pod with the same payload"
 				continue
 			}
@@ -144,6 +150,7 @@ func ConfigureNetwork(c *gin.Context) {
 
 		outcomes, _ := helpers.RunPlannedActions(namespace, podName, plans, helpers.RunOptions{})
 
+		var persisted []int
 		fail := func(p helpers.PlannedAction, err error, commands []string) {
 			result.errorList = append(result.errorList, ErrorEntry{Pod: podConfig.Pod, Driver: driverType, Error: err.Error()})
 			result.actionResults = append(result.actionResults, ActionResult{
@@ -177,12 +184,8 @@ func ConfigureNetwork(c *gin.Context) {
 				fail(p, o.Err, p.CommandStrings())
 			default:
 				if p.Flags.Persist {
-					if persistErr := helpers.SaveDriverOperation(namespace, podName, driverType, p.Action); persistErr != nil {
-						err := fmt.Errorf("operation executed but could not persist history: %v", persistErr)
-						log.Printf("❌ %v", err)
-						fail(p, err, p.CommandStrings())
-						continue
-					}
+					history.Save(driverType, p.Action)
+					persisted = append(persisted, len(result.actionResults))
 				}
 				result.actionResults = append(result.actionResults, ActionResult{
 					Pod:         podConfig.Pod,
@@ -194,6 +197,21 @@ func ConfigureNetwork(c *gin.Context) {
 					Output:      o.Output,
 				})
 				result.successes++
+			}
+		}
+		// An action that ran but is not in the history would not survive a
+		// restart, so it is reported as failed, as it always was.
+		if len(persisted) > 0 {
+			if persistErr := history.Commit(); persistErr != nil {
+				err := fmt.Errorf("operation executed but could not persist history: %v", persistErr)
+				log.Printf("❌ %v", err)
+				for _, idx := range persisted {
+					r := &result.actionResults[idx]
+					r.Status, r.Error = "failed", err.Error()
+					result.errorList = append(result.errorList, ErrorEntry{Pod: podConfig.Pod, Driver: driverType, Error: err.Error()})
+					result.successes--
+					result.failures++
+				}
 			}
 		}
 

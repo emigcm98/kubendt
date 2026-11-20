@@ -178,7 +178,17 @@ func ApplyPodActions(namespace, podName string, actions []types.ActionEntry) []t
 	}
 	driverType := fmt.Sprintf("%T", driver)
 
+	history, err := OpenPodHistory(namespace, podName)
+	if err != nil {
+		var out []types.Warning
+		for _, a := range actions {
+			out = append(out, warn(a, err))
+		}
+		return out
+	}
+
 	var warnings []types.Warning
+	var saved []types.ActionEntry
 	plans := PlanActions(namespace, podName, driver, nil, actions)
 	outcomes, _ := RunPlannedActions(namespace, podName, plans, RunOptions{})
 	for i, o := range outcomes {
@@ -186,8 +196,12 @@ func ApplyPodActions(namespace, podName string, actions []types.ActionEntry) []t
 			warnings = append(warnings, warn(plans[i].Action, o.Err))
 			continue
 		}
-		if err := SaveDriverOperation(namespace, podName, driverType, plans[i].Action); err != nil {
-			warnings = append(warnings, warn(plans[i].Action, fmt.Errorf("applied but not persisted: %w", err)))
+		history.Save(driverType, plans[i].Action)
+		saved = append(saved, plans[i].Action)
+	}
+	if err := history.Commit(); err != nil {
+		for _, a := range saved {
+			warnings = append(warnings, warn(a, fmt.Errorf("applied but not persisted: %w", err)))
 		}
 	}
 	for _, w := range warnings {

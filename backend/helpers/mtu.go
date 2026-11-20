@@ -458,9 +458,6 @@ func parseSetFailures(out string) map[string]bool {
 // a declared address the user took off with remove_ip stays off whichever
 // runs first, the pass or the replay. A later set_ip of it puts it back.
 func removedAddresses(namespace, pod string) map[string]bool {
-	if DB == nil {
-		return map[string]bool{}
-	}
 	ops, err := ListDriverOperationsForPod(namespace, pod)
 	if err != nil {
 		log.Printf("⚠️ MTU pass: could not read the history of %s/%s: %v", namespace, pod, err)

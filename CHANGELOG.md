@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - The attributes a topology declares on a link live on the Topology object of its pod, as an annotation, and die with it. Rows an older backend kept move there on first use.
 - The files of a namespace are ConfigMaps and Secrets in it from the moment they are uploaded, the same objects the pods mount, so the file manager works from any backend and `FILES_BASE_PATH` is only read to move what an older backend kept on disk. A file deleted or renamed while pods mount it stays for them until they are redeployed.
 - An archive import answers how many files it wrote and which entries it skipped, and the files page says so.
+- The operations applied to a pod are a ConfigMap of its namespace, `kubendt-internal-history-<pod>`, written once per request and read by any backend for the replay. The rows an older backend kept move there the first time the namespace is used.
 
 ## [1.11.0] - 2026-11-19
 

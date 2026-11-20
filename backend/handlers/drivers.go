@@ -2,7 +2,7 @@
 package handlers
 
 import (
-	"database/sql"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -283,7 +283,7 @@ func DeleteDriverOperationHistory(c *gin.Context) {
 
 	err = helpers.DeleteDriverOperationHistoryByID(id)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, helpers.ErrOperationNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "operation not found"})
 			return
 		}
