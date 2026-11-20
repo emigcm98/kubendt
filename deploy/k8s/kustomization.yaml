@@ -1,5 +1,5 @@
 # KubeNDT in the cluster it manages: kubectl apply -k deploy/k8s
-# Pin a release by setting newTag to its version (1.12.0), latest otherwise.
+# newTag is the release this tree was cut at; the release commit sets it.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: kubendt-system
