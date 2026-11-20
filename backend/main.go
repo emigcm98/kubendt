@@ -49,6 +49,11 @@ func main() {
 		if err := helpers.EnsureSystemNamespace(); err != nil {
 			log.Printf("⚠️ Could not ensure the system namespace: %v", err)
 		}
+		// What an older backend kept in its database or on disk moves into
+		// the cluster now, so the volume behind them can go.
+		if err := helpers.MigrateAllNamespaces(); err != nil {
+			log.Printf("⚠️ Could not move the state kept outside the cluster: %v", err)
+		}
 	}
 
 	// Authentication binds to the cluster's system namespace (the admin, the
