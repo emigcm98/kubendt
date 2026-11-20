@@ -1,6 +1,6 @@
 # Failure model
 
-What KubeNDT survives, what it loses, and what you have to fix by hand. The short version: the cluster is the source of truth for the topology, the backend keeps only what the cluster cannot hold (operation history, node positions, file flags, sessions), and nothing runs between operations, so the platform recovers from most of its own failures on the next request and does not notice the ones that happen behind its back.
+What KubeNDT survives, what it loses, and what you have to fix by hand. The short version: the cluster is the source of truth for the topology and for everything KubeNDT knows about it (the histories, the layouts, the files, the users and tokens), the backend keeps nothing of its own, and nothing runs between operations, so the platform recovers from most of its own failures on the next request and does not notice the ones that happen behind its back.
 
 ## Where state lives
 
@@ -22,9 +22,9 @@ SQLite is optional. When `KUBENDT_DB_PATH` names a file (`/data/kubendt.db` on t
 
 ## Backend failures
 
-**Process restart** (crash, OOM, upgrade). Nothing is lost. A lock a dead backend left behind is a Lease that expires within a minute and the next operation takes it over, and the backend lists namespaces by the `kubendt/enabled` label and topologies from the CRDs, so it sees and operates whatever is deployed. A replacement backend on another machine does the same as long as it has the kubeconfig. It only lacks what its own database never had, see the table.
+**Process restart** (crash, OOM, upgrade). Nothing is lost. A lock a dead backend left behind is a Lease that expires within a minute and the next operation takes it over, and the backend lists namespaces by the `kubendt/enabled` label and topologies from the CRDs, so it sees and operates whatever is deployed. A replacement backend on another machine, or the pod Kubernetes starts in its place, does the same as long as it reaches the cluster.
 
-**Interrupted operation.** A deploy that dies half way leaves the resources it created in the cluster. The next deploy into that namespace is refused with `409 already has a deployed topology`, because the guard looks at the CRDs, not at the database. Recovery is one call: `DELETE /network/clear-topology/{namespace}` removes StatefulSets, Topology CRDs, ConfigMaps, Secrets, the UID registry and the history for that namespace, and the deploy can be repeated. A deploy whose pods never become Ready rolls itself back the same way. A modify or a restart that dies mid way leaves the affected pods in whatever state Kubernetes left them, and the heal pass of the next modify, or a Restart of the pod, brings them back.
+**Interrupted operation.** A deploy that dies half way leaves the resources it created in the cluster. The next deploy into that namespace is refused with `409 already has a deployed topology`, because the guard looks at the cluster. Recovery is one call: `DELETE /network/clear-topology/{namespace}` removes the StatefulSets, the Topology objects, the node ConfigMaps, the mounts of deleted files, the lock and the history of that namespace, keeps its files and its layout, and the deploy can be repeated. A deploy whose pods never become Ready rolls itself back the same way. A modify or a restart that dies mid way leaves the affected pods in whatever state Kubernetes left them, and the heal pass of the next modify, or a Restart of the pod, brings them back.
 
 **Lost database or volume.** Nothing, once its rows have moved: the topology, the history the replay uses, the layout, the files, the admin password and the API tokens are objects of the cluster, and a replacement backend with the kubeconfig carries on with them, browser sessions included.
 
@@ -46,8 +46,8 @@ SQLite is optional. When `KUBENDT_DB_PATH` names a file (`/data/kubendt.db` on t
 - A cross-worker peer interface left behind by an external recreation: `ip link del` in the peer pod.
 - Anything applied inside a pod by hand (shell) is not in the history and is not replayed.
 - Internal state of the workloads themselves (routing tables learnt by protocols, 5G sessions, database contents) is theirs to rebuild. Replay restores what KubeNDT applied, not what the processes derived from it.
-- Backups of the two volumes. KubeNDT does not replicate its database.
+- Backups. KubeNDT's state is in the cluster's etcd with everything else, so the cluster's backup is the one that covers it; there is no volume of KubeNDT's own to save.
 
 ## Control-plane resources
 
-The backend, the frontend and the database run outside the twin's namespace, on the KubeNDT host or as containers of the compose stack, so the per-namespace resource figures Kubernetes reports for a twin do not include them. Measure them separately (`docker stats` on the compose stack, or the process on the host) and report both numbers.
+The backend and the UI run outside the twin's namespace: on the KubeNDT host, as containers of the compose stack, or as the two pods of `kubendt-system` when installed in the cluster. The per-namespace resource figures Kubernetes reports for a twin do not include them, so measure them apart (`docker stats` on the compose stack, the process on the host, or `kubectl top pods -n kubendt-system`) and report both numbers.
