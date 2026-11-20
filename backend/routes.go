@@ -27,6 +27,7 @@ func SetupRoutes(router *gin.Engine) {
 		authGroup.GET("/me", handlers.AuthMe)
 		// One's own password: a session or the password itself, never a token.
 		authGroup.PUT("/password", handlers.RequireSessionOrPassword(), handlers.ChangePassword)
+		authGroup.GET("/quota", handlers.AuthQuota)
 
 		// Token management: session or password only (never a bearer token),
 		// so a leaked API token cannot mint or revoke tokens.

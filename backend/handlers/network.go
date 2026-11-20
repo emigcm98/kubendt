@@ -237,6 +237,9 @@ func ModifyNetwork(c *gin.Context) {
 		deleteNodeNames[n] = struct{}{}
 	}
 	scalePlans, err := helpers.BuildScalePlans(request.Scale, existingNodes, addNodeNames, deleteNodeNames)
+	if err == nil && quotaExceeded(c, namespace, helpers.PodsAfterModify(existingNodes, deleteNodeNames, scalePlans, request.Add.Nodes)) {
+		return
+	}
 	if err != nil {
 		status := http.StatusInternalServerError
 		if strings.HasPrefix(err.Error(), "VALIDATION:") {
@@ -886,6 +889,9 @@ func DeployNetwork(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	if quotaExceeded(c, namespace, helpers.PodsAfterModify(nil, nil, nil, request.Nodes)) {
+		return
+	}
 	placement, err := helpers.ResolvePlacement(request.Placement)
 	if err != nil {
 		log.Printf("❌ %v", err)
@@ -1503,4 +1509,21 @@ func ExportNetworkConf(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, conf)
+}
+
+// quotaExceeded answers the request when the namespace's owner has no room
+// for the pods planned, and says so.
+func quotaExceeded(c *gin.Context, namespace string, planned int) bool {
+	err := helpers.CheckPodQuota(namespace, planned)
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, helpers.ErrQuotaExceeded) {
+		log.Printf("⛔ %s: %v", namespace, err)
+		c.JSON(http.StatusForbidden, gin.H{"error": err.Error(), "code": "QUOTA_EXCEEDED"})
+		return true
+	}
+	log.Printf("⚠️ Could not check the quota of %s: %v", namespace, err)
+	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	return true
 }

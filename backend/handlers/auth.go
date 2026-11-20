@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"kubendt/auth"
+	"kubendt/helpers"
 
 	"github.com/gin-gonic/gin"
 )
@@ -388,4 +389,24 @@ func DeleteAPIToken(c *gin.Context) {
 		return
 	}
 	c.Status(http.StatusNoContent)
+}
+
+// GET /auth/quota  -> the account's limits and what it has against them.
+// Under /auth the gate does not run, so the account is read here.
+func AuthQuota(c *gin.Context) {
+	if !auth.Enabled() {
+		c.JSON(http.StatusOK, gin.H{"quota": helpers.Quota{}, "usage": helpers.QuotaUsage{}})
+		return
+	}
+	p, ok := principalFromRequest(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required.", "code": "UNAUTHENTICATED"})
+		return
+	}
+	usage, err := helpers.UsageOf(p.Identity)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"username": p.Identity, "quota": helpers.QuotaFor(p.Identity), "usage": usage})
 }

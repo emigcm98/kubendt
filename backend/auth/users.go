@@ -42,6 +42,7 @@ type User struct {
 	CanCreateNamespaces bool   `json:"can_create_namespaces"`
 	QuotaNamespaces     int    `json:"quota_namespaces"`
 	QuotaPods           int    `json:"quota_pods"`
+	QuotaPodsPerNS      int    `json:"quota_pods_per_namespace"`
 	Source              string `json:"source"`
 	CreatedAt           int64  `json:"created_at"`
 }
@@ -53,12 +54,13 @@ type UserPatch struct {
 	CanCreateNamespaces *bool   `json:"can_create_namespaces"`
 	QuotaNamespaces     *int    `json:"quota_namespaces"`
 	QuotaPods           *int    `json:"quota_pods"`
+	QuotaPodsPerNS      *int    `json:"quota_pods_per_namespace"`
 }
 
 func (u *userRecord) view() User {
 	return User{Name: u.Name, Role: u.Role, Disabled: u.Disabled, MustChangePassword: u.MustChangePassword,
 		CanCreateNamespaces: u.CanCreateNamespaces, QuotaNamespaces: u.QuotaNamespaces, QuotaPods: u.QuotaPods,
-		Source: u.Source, CreatedAt: u.CreatedAt}
+		QuotaPodsPerNS: u.QuotaPodsPerNamespace, Source: u.Source, CreatedAt: u.CreatedAt}
 }
 
 func validRole(role string) bool {
@@ -127,10 +129,11 @@ func GetUser(name string) (*User, bool) {
 	return &v, true
 }
 
-// CreateUser adds an account. An empty password is generated and returned,
-// to be shown once; a created user changes it at the first login either way.
-// Only the owner creates admins.
-func CreateUser(actor *Principal, name, password, role string, canCreate bool, quotaNamespaces, quotaPods int) (generated string, err error) {
+// CreateUser adds an account, its quota the namespaces, pods and pods per
+// namespace it may own. An empty password is generated and returned, to be
+// shown once; a created user changes it at the first login either way. Only
+// the owner creates admins.
+func CreateUser(actor *Principal, name, password, role string, canCreate bool, quota [3]int) (generated string, err error) {
 	if !IsBound() {
 		return "", ErrNoStore
 	}
@@ -167,7 +170,7 @@ func CreateUser(actor *Principal, name, password, role string, canCreate bool, q
 		return "", err
 	}
 	u := &userRecord{Name: name, Hash: hash, Role: role, MustChangePassword: true, CanCreateNamespaces: canCreate,
-		QuotaNamespaces: quotaNamespaces, QuotaPods: quotaPods, Source: SourceLocal, CreatedAt: nowUnix()}
+		QuotaNamespaces: quota[0], QuotaPods: quota[1], QuotaPodsPerNamespace: quota[2], Source: SourceLocal, CreatedAt: nowUnix()}
 	if err := writeUser(u); err != nil {
 		return "", err
 	}
@@ -219,6 +222,9 @@ func UpdateUser(actor *Principal, name string, patch UserPatch) error {
 	}
 	if patch.QuotaPods != nil {
 		u.QuotaPods = *patch.QuotaPods
+	}
+	if patch.QuotaPodsPerNS != nil {
+		u.QuotaPodsPerNamespace = *patch.QuotaPodsPerNS
 	}
 	if err := writeUser(&u); err != nil {
 		return err

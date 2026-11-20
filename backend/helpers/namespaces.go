@@ -94,6 +94,10 @@ func CreateNamespace(namespace, owner string) error {
 	if err := DeleteNamespaceLinkAttributes(namespace); err != nil {
 		log.Printf("⚠️ Could not clear leftover link attributes for new namespace %s: %v", namespace, err)
 	}
+	// The environment's limits for every container of the lab, when set.
+	if err := EnsureLimitRange(namespace); err != nil {
+		log.Printf("⚠️ %v", err)
+	}
 	// A namesake deleted keeping its layout left it in the attic.
 	if restored, err := RestoreLayoutFromAttic(namespace); err != nil {
 		log.Printf("⚠️ Could not restore the layout of namespace %s from the attic: %v", namespace, err)

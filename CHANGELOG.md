@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - The `admin` account is the owner, and an API token acts as the account that minted it.
 - Every route carries a permission, checked against the account's level in the namespace (`viewer`, `operator`, `editor` or its owner, from annotations on the Namespace) or against its role. The namespace list says the owner and the level.
 - A namespace is shared through `/namespaces/access/{namespace}`, its owner naming the guests and their level. A deleted account's namespaces pass to whom the delete names, or to the admins.
+- Quotas per account (namespaces owned, pods across them and in any one), with the environment's defaults, checked before a namespace is created and before a deploy or a modify. A LimitRange from the environment gives every container of a lab default requests and limits.
 
 ## [1.12.0] - 2026-11-20
 

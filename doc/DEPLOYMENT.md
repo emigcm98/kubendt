@@ -141,6 +141,8 @@ The backend's credentials (the kubeconfig, or the ServiceAccount of `deploy/k8s/
 - `KUBENDT_ADMIN_PASSWORD`: admin password for login, the source of truth when set (a change ends every session). If unset, the hash stored in the cluster is used, or a random password is generated, printed to the logs once and its hash stored, so it stays stable across restarts and backends.
 - `KUBENDT_AUTH_DISABLED`: set to `true` to run the API **unauthenticated** (dev / trusted network only). A loud warning is logged at startup.
 - `KUBENDT_COOKIE_SECURE`: set to `true` when serving over HTTPS so the session cookie is only sent over TLS (default `false`, since the stock compose serves plain HTTP behind nginx).
+- `KUBENDT_QUOTA_NAMESPACES`, `KUBENDT_QUOTA_PODS`, `KUBENDT_QUOTA_PODS_PER_NAMESPACE`: the quota of an account that has none of its own, namespaces owned, pods across them and pods in any one of them; `0` or unset is no limit. Admins are never counted; a lab counts against its owner whoever deploys into it.
+- `KUBENDT_POD_CPU_REQUEST`, `KUBENDT_POD_MEMORY_REQUEST`, `KUBENDT_POD_CPU_LIMIT`, `KUBENDT_POD_MEMORY_LIMIT`: quantities (`100m`, `256Mi`) a LimitRange written into every new lab namespace gives each container without its own, so the scheduler counts the pods and a lab cannot starve a worker. Unset, no LimitRange is written. A VM node needs memory enough for its guest, so set the limit with those in mind.
 - `KUBENDT_SESSION_IDLE_HOURS`: idle timeout for browser sessions (default `12`).
 - `KUBENDT_SESSION_MAX_HOURS`: absolute session lifetime (default `168` = 7 days). A session is a signed cookie, accepted by every backend of the cluster and surviving their restarts; without a cluster the key is the process's own and sessions end with it.
 

@@ -30,6 +30,7 @@ var routePermissions = []routeRule{
 	{"POST", "/auth/logout", auth.PermAny},
 	{"GET", "/auth/me", auth.PermAny},
 	{"PUT", "/auth/password", auth.PermAny},
+	{"GET", "/auth/quota", auth.PermAny},
 	{"GET", "/auth/tokens", auth.PermAny},
 	{"POST", "/auth/tokens", auth.PermAny},
 	{"DELETE", "/auth/tokens/:id", auth.PermAny},

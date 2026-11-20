@@ -135,6 +135,26 @@ const docTemplate = `{
                 }
             }
         },
+        "/auth/quota": {
+            "get": {
+                "description": "The limits the account is under (namespaces owned, pods across them, pods in any one), zero for none, and what it owns today.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "The account's quota",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.QuotaResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/tokens": {
             "get": {
                 "description": "Lists API token metadata (never the secrets). Requires a session or the admin password.",
@@ -4350,6 +4370,10 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 0
                 },
+                "quota_pods_per_namespace": {
+                    "type": "integer",
+                    "example": 0
+                },
                 "role": {
                     "type": "string",
                     "example": "user"
@@ -6996,6 +7020,51 @@ const docTemplate = `{
                 }
             }
         },
+        "types.QuotaDoc": {
+            "type": "object",
+            "properties": {
+                "namespaces": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "pods": {
+                    "type": "integer",
+                    "example": 40
+                },
+                "pods_per_namespace": {
+                    "type": "integer",
+                    "example": 20
+                }
+            }
+        },
+        "types.QuotaResponse": {
+            "type": "object",
+            "properties": {
+                "quota": {
+                    "$ref": "#/definitions/types.QuotaDoc"
+                },
+                "usage": {
+                    "$ref": "#/definitions/types.QuotaUsageDoc"
+                },
+                "username": {
+                    "type": "string",
+                    "example": "alice"
+                }
+            }
+        },
+        "types.QuotaUsageDoc": {
+            "type": "object",
+            "properties": {
+                "namespaces": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "pods": {
+                    "type": "integer",
+                    "example": 9
+                }
+            }
+        },
         "types.RIPTimers": {
             "type": "object",
             "properties": {
@@ -7577,6 +7646,10 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 0
                 },
+                "quota_pods_per_namespace": {
+                    "type": "integer",
+                    "example": 0
+                },
                 "role": {
                     "type": "string",
                     "example": "user"
@@ -7620,6 +7693,10 @@ const docTemplate = `{
                 "quota_pods": {
                     "type": "integer",
                     "example": 40
+                },
+                "quota_pods_per_namespace": {
+                    "type": "integer",
+                    "example": 20
                 },
                 "role": {
                     "type": "string",

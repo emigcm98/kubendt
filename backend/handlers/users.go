@@ -52,12 +52,13 @@ func CreateUser(c *gin.Context) {
 		CanCreateNamespaces bool   `json:"can_create_namespaces"`
 		QuotaNamespaces     int    `json:"quota_namespaces"`
 		QuotaPods           int    `json:"quota_pods"`
+		QuotaPodsPerNS      int    `json:"quota_pods_per_namespace"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil || strings.TrimSpace(req.Username) == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "A username is required"})
 		return
 	}
-	generated, err := auth.CreateUser(PrincipalOf(c), req.Username, req.Password, req.Role, req.CanCreateNamespaces, req.QuotaNamespaces, req.QuotaPods)
+	generated, err := auth.CreateUser(PrincipalOf(c), req.Username, req.Password, req.Role, req.CanCreateNamespaces, [3]int{req.QuotaNamespaces, req.QuotaPods, req.QuotaPodsPerNS})
 	if err != nil {
 		userError(c, err)
 		return

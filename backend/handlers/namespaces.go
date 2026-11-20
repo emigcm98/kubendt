@@ -93,6 +93,14 @@ func CreateNamespace(c *gin.Context) {
 	owner := ""
 	if p := PrincipalOf(c); p != nil {
 		owner = p.Identity
+		if err := helpers.CheckNamespaceQuota(owner); err != nil {
+			if errors.Is(err, helpers.ErrQuotaExceeded) {
+				c.JSON(http.StatusForbidden, gin.H{"error": err.Error(), "code": "QUOTA_EXCEEDED"})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
 	}
 	err := helpers.CreateNamespace(namespace, owner)
 	if err != nil {

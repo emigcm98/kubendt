@@ -652,6 +652,9 @@ definitions:
       quota_pods:
         example: 0
         type: integer
+      quota_pods_per_namespace:
+        example: 0
+        type: integer
       role:
         example: user
         type: string
@@ -2604,6 +2607,37 @@ definitions:
         example: true
         type: boolean
     type: object
+  types.QuotaDoc:
+    properties:
+      namespaces:
+        example: 3
+        type: integer
+      pods:
+        example: 40
+        type: integer
+      pods_per_namespace:
+        example: 20
+        type: integer
+    type: object
+  types.QuotaResponse:
+    properties:
+      quota:
+        $ref: '#/definitions/types.QuotaDoc'
+      usage:
+        $ref: '#/definitions/types.QuotaUsageDoc'
+      username:
+        example: alice
+        type: string
+    type: object
+  types.QuotaUsageDoc:
+    properties:
+      namespaces:
+        example: 1
+        type: integer
+      pods:
+        example: 9
+        type: integer
+    type: object
   types.RIPTimers:
     properties:
       garbage:
@@ -3042,6 +3076,9 @@ definitions:
       quota_pods:
         example: 0
         type: integer
+      quota_pods_per_namespace:
+        example: 0
+        type: integer
       role:
         example: user
         type: string
@@ -3072,6 +3109,9 @@ definitions:
         type: integer
       quota_pods:
         example: 40
+        type: integer
+      quota_pods_per_namespace:
+        example: 20
         type: integer
       role:
         example: admin
@@ -3201,6 +3241,20 @@ paths:
           schema:
             $ref: '#/definitions/types.ErrorResponse'
       summary: Change one's password
+      tags:
+      - auth
+  /auth/quota:
+    get:
+      description: The limits the account is under (namespaces owned, pods across
+        them, pods in any one), zero for none, and what it owns today.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.QuotaResponse'
+      summary: The account's quota
       tags:
       - auth
   /auth/tokens:
