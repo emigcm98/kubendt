@@ -29,6 +29,17 @@ export function installApiClient() {
         window.dispatchEvent(new CustomEvent('kubendt:unauthorized'));
       }
     }
+    // An account with a password to change gets nothing else until it does:
+    // the gate shows that screen.
+    if (isApiRequest(input) && res.status === 403) {
+      const data = await res
+        .clone()
+        .json()
+        .catch(() => null);
+      if (data?.code === 'PASSWORD_CHANGE_REQUIRED') {
+        window.dispatchEvent(new CustomEvent('kubendt:password-change-required'));
+      }
+    }
     return res;
   };
 }

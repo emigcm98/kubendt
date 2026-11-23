@@ -28,6 +28,18 @@ definitions:
           $ref: '#/definitions/types.APIToken'
         type: array
     type: object
+  types.AccountNamespaceDoc:
+    properties:
+      level:
+        example: editor
+        type: string
+      namespace:
+        example: lab
+        type: string
+      owner:
+        example: alice
+        type: string
+    type: object
   types.ActionEntry:
     properties:
       action:
@@ -3096,6 +3108,16 @@ definitions:
           $ref: '#/definitions/types.UserDoc'
         type: array
     type: object
+  types.UserNamespacesResponse:
+    properties:
+      namespaces:
+        items:
+          $ref: '#/definitions/types.AccountNamespaceDoc'
+        type: array
+      username:
+        example: bob
+        type: string
+    type: object
   types.UserPatchRequest:
     properties:
       can_create_namespaces:
@@ -3262,7 +3284,8 @@ paths:
       description: Lists API token metadata (never the secrets). Requires a session
         or the admin password.
       parameters:
-      - description: An admin asking for everyone's tokens
+      - description: 'Also the tokens of the accounts one manages: the plain users''
+          for an admin, everyone''s for the owner'
         in: query
         name: all
         type: boolean
@@ -5577,6 +5600,34 @@ paths:
           schema:
             $ref: '#/definitions/types.ErrorResponse'
       summary: Update an account
+      tags:
+      - users
+  /users/{name}/namespaces:
+    get:
+      description: The namespaces the account owns or is a guest of, with its level
+        in each.
+      parameters:
+      - description: Username
+        in: path
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.UserNamespacesResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: An account's namespaces
       tags:
       - users
   /users/{name}/password:

@@ -968,13 +968,26 @@ func swaggerPutNamespaceAccess() {}
 //	@Router       /users/{name}/password [post]
 func swaggerResetUserPassword() {}
 
+// swaggerUserNamespaces godoc
+//
+//	@Summary      An account's namespaces
+//	@Description  The namespaces the account owns or is a guest of, with its level in each.
+//	@Tags         users
+//	@Produce      json
+//	@Param        name  path  string  true  "Username"
+//	@Success      200  {object}  types.UserNamespacesResponse
+//	@Failure      403  {object}  types.ErrorResponse
+//	@Failure      404  {object}  types.ErrorResponse
+//	@Router       /users/{name}/namespaces [get]
+func swaggerUserNamespaces() {}
+
 // swaggerListAPITokens godoc
 //
 //	@Summary      List API tokens
 //	@Description  Lists API token metadata (never the secrets). Requires a session or the admin password.
 //	@Tags         auth
 //	@Produce      json
-//	@Param        all  query  boolean  false  "An admin asking for everyone's tokens"
+//	@Param        all  query  boolean  false  "Also the tokens of the accounts one manages: the plain users' for an admin, everyone's for the owner"
 //	@Success      200  {object}  types.APITokenList
 //	@Router       /auth/tokens [get]
 func swaggerListAPITokens() {}

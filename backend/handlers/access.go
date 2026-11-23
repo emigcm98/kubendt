@@ -47,6 +47,7 @@ var routePermissions = []routeRule{
 	{"PUT", "/users/:name", auth.PermAdmin},
 	{"DELETE", "/users/:name", auth.PermAdmin},
 	{"POST", "/users/:name/password", auth.PermAdmin},
+	{"GET", "/users/:name/namespaces", auth.PermAdmin},
 	{"GET", "/cluster/status", auth.PermAdmin},
 	{"GET", "/cluster/nodes/:name", auth.PermAdmin},
 	{"GET", "/kube/config", auth.PermAdmin},

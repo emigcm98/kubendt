@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Modal from 'react-modal';
 import NetworkGraph from '../components/NetworkGraph';
@@ -98,6 +98,25 @@ function NamespacePage() {
     }
   };
 
+  // The account's level here, from the list: what the bars offer follows it.
+  const [level, setLevel] = useState('');
+  useEffect(() => {
+    let stopped = false;
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/namespaces/`);
+        const data = await res.json();
+        const mine = (data?.namespaces || []).find((n) => n.name === namespace);
+        if (!stopped && mine?.level) setLevel(mine.level);
+      } catch {
+        // the API decides anyway; without a level nothing is hidden
+      }
+    })();
+    return () => {
+      stopped = true;
+    };
+  }, [namespace]);
+
   if (fetchError) {
     return <ErrorPage statusCode={fetchError.status || 500} rawMessage={fetchError.message} />;
   }
@@ -106,6 +125,7 @@ function NamespacePage() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
       <NamespaceNavbar
         namespace={namespace}
+        level={level}
         onDelete={handleDeleteNamespace}
         onDeleteHistory={handleDeleteNamespaceHistory}
         onRefresh={() => {
@@ -117,6 +137,7 @@ function NamespacePage() {
       />
       <NetworkGraph
         namespace={namespace}
+        level={level}
         onError={setFetchError}
         onImportingChange={setIsImporting}
         refreshTrigger={refreshTrigger}

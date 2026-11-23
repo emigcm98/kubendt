@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Added
 
 - Accounts with a role (`owner`, `admin` or `user`), one Secret per user in the system namespace, managed through `/users`. The login takes a `username`, `admin` when absent.
+- The accounts page for admins, with each account's namespaces, and the sign-in with an account name, a new look and the forced change of a first password. A namespace card and the namespace menu show its owner, the guests and one's level, with sharing and hand-over for the owner.
 
 ### Changed
 

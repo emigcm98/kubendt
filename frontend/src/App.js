@@ -6,6 +6,7 @@ import DriversPage from './pages/DriversPage';
 import NamespacePage from './pages/NamespacePage';
 import NamespaceFilesPage from './pages/NamespaceFilesPage';
 import StatePage from './pages/StatePage';
+import UsersPage from './pages/UsersPage';
 import ErrorPage from './pages/ErrorPage';
 
 function App() {
@@ -14,6 +15,7 @@ function App() {
       <Route path="/" element={<Home />} />
       <Route path="/drivers/:driver?" element={<DriversPage />} />
       <Route path="/state" element={<StatePage />} />
+      <Route path="/users" element={<UsersPage />} />
       <Route path="/:namespace/files" element={<NamespaceFilesPage />} />
       <Route path="/:namespace/state" element={<StatePage />} />
       <Route path="/:namespace" element={<NamespacePage />} />

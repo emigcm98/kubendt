@@ -168,7 +168,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "boolean",
-                        "description": "An admin asking for everyone's tokens",
+                        "description": "Also the tokens of the accounts one manages: the plain users' for an admin, everyone's for the owner",
                         "name": "all",
                         "in": "query"
                     }
@@ -3454,6 +3454,47 @@ const docTemplate = `{
                 }
             }
         },
+        "/users/{name}/namespaces": {
+            "get": {
+                "description": "The namespaces the account owns or is a guest of, with its level in each.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "An account's namespaces",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Username",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.UserNamespacesResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/users/{name}/password": {
             "post": {
                 "description": "The given password or a generated one, returned once; the account changes it at its next login and its sessions end.",
@@ -3565,6 +3606,23 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/types.APIToken"
                     }
+                }
+            }
+        },
+        "types.AccountNamespaceDoc": {
+            "type": "object",
+            "properties": {
+                "level": {
+                    "type": "string",
+                    "example": "editor"
+                },
+                "namespace": {
+                    "type": "string",
+                    "example": "lab"
+                },
+                "owner": {
+                    "type": "string",
+                    "example": "alice"
                 }
             }
         },
@@ -7672,6 +7730,21 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/types.UserDoc"
                     }
+                }
+            }
+        },
+        "types.UserNamespacesResponse": {
+            "type": "object",
+            "properties": {
+                "namespaces": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.AccountNamespaceDoc"
+                    }
+                },
+                "username": {
+                    "type": "string",
+                    "example": "bob"
                 }
             }
         },

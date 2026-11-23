@@ -2,12 +2,15 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ReactComponent as KeyIcon } from '../assets/images/icons/key.svg';
 import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
 import { API_BASE_URL } from '../config';
+import { useAuth } from '../auth/AuthContext';
 import './ApiTokensModal.css';
 
 const fmt = (secs) => (secs ? new Date(secs * 1000).toLocaleString() : '—');
 
 // Manage long-lived API tokens: create (value shown once), list and revoke.
 export default function ApiTokensModal({ onClose }) {
+  const auth = useAuth();
+  const [all, setAll] = useState(false);
   const [tokens, setTokens] = useState([]);
   const [name, setName] = useState('');
   const [expiresInDays, setExpiresInDays] = useState(0);
@@ -39,14 +42,14 @@ export default function ApiTokensModal({ onClose }) {
   const load = useCallback(async () => {
     setError('');
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/tokens`);
+      const res = await fetch(`${API_BASE_URL}/auth/tokens${all ? '?all=true' : ''}`);
       if (!res.ok) throw new Error('Failed to load tokens');
       const data = await res.json();
       setTokens(Array.isArray(data.tokens) ? data.tokens : []);
     } catch (e) {
       setError(e.message || 'Failed to load tokens');
     }
-  }, []);
+  }, [all]);
 
   useEffect(() => {
     load();
@@ -142,7 +145,15 @@ export default function ApiTokensModal({ onClose }) {
 
         {error && <div className="tokens-error">{error}</div>}
 
-        <div className="tokens-list-title">Your tokens</div>
+        <div className="tokens-list-title">
+          {all ? "Every account's tokens" : 'Your tokens'}
+          {auth.isAdmin && (
+            <label className="tokens-all">
+              <input type="checkbox" checked={all} onChange={(e) => setAll(e.target.checked)} />
+              accounts I manage
+            </label>
+          )}
+        </div>
         <div className="tokens-list">
           {tokens.length === 0 && <div className="tokens-empty">No API tokens yet.</div>}
           {tokens.map((t) => (
@@ -151,7 +162,10 @@ export default function ApiTokensModal({ onClose }) {
                 <KeyIcon className="tokens-row-icon-svg" />
               </span>
               <div className="tokens-row-main">
-                <span className="tokens-row-name">{t.name}</span>
+                <span className="tokens-row-name">
+                  {t.name}
+                  {all && t.user && <span className="tokens-row-user">{t.user}</span>}
+                </span>
                 <span className="tokens-row-meta">
                   Created {fmt(t.created_at)}
                   <span className="tokens-row-dot">·</span>

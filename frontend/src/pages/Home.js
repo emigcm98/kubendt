@@ -7,6 +7,8 @@ import ErrorModal from '../components/ErrorModal';
 import K8sNodeInfoPanel from '../components/K8sNodeInfoPanel';
 import ApiTokensModal from '../components/ApiTokensModal';
 import ProfileMenu from '../components/ProfileMenu';
+import ChangePasswordModal from '../components/ChangePasswordModal';
+import ShareNamespaceModal from '../components/ShareNamespaceModal';
 import { useAuth } from '../auth/AuthContext';
 import { API_BASE_URL, SWAGGER_UI_URL } from '../config';
 import kubendtLogo from '../assets/images/kubendt-logo.svg';
@@ -23,6 +25,7 @@ import { ReactComponent as RefreshIcon } from '../assets/images/icons/refresh.sv
 import { ReactComponent as BookIcon } from '../assets/images/icons/book.svg';
 import { ReactComponent as BoxIcon } from '../assets/images/icons/box.svg';
 import { ReactComponent as ClusterIcon } from '../assets/images/icons/cluster.svg';
+import { ReactComponent as ShareIcon } from '../assets/images/icons/users.svg';
 import './Home.css';
 
 Modal.setAppElement('#root');
@@ -82,6 +85,8 @@ const Home = () => {
   const navigate = useNavigate();
   const auth = useAuth();
   const [tokensOpen, setTokensOpen] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
+  const [shareTarget, setShareTarget] = useState('');
 
   const handleSort = (field) => {
     let nextField = sortField;
@@ -170,6 +175,10 @@ const Home = () => {
   };
 
   const fetchClusterStatus = async () => {
+    if (auth.enabled && !auth.isAdmin) {
+      setInitialClusterLoading(false);
+      return;
+    }
     try {
       setClusterLoading(true);
       const res = await fetch(`${API_BASE_URL}/cluster/status`);
@@ -564,7 +573,12 @@ const Home = () => {
             <BookIcon className="app-icon" aria-hidden="true" />
             Open API
           </button>
-          {auth.enabled && <ProfileMenu onOpenTokens={() => setTokensOpen(true)} />}
+          {auth.enabled && (
+            <ProfileMenu
+              onOpenTokens={() => setTokensOpen(true)}
+              onChangePassword={() => setPasswordOpen(true)}
+            />
+          )}
         </div>
       </div>
 
@@ -579,305 +593,306 @@ const Home = () => {
         </div>
       )}
 
-      {/* Main Controls - 2 Column Layout */}
-      <div className="main-layout">
-        {/* Left Column: Cluster Status */}
-        <div className="layout-column left-column">
-          {/* Cluster Status Panel */}
-          <div className="cluster-status-card">
-            <div className="cluster-card-header">
-              <h2 className="cluster-card-title">
-                Cluster status{' '}
-                {clusterStatus && (
-                  <span className="cluster-status-badge">
-                    Ready {clusterStatus.ready}/{clusterStatus.total}
-                  </span>
-                )}
-                {meshnetBadge && (
-                  <span
-                    className={`meshnet-badge meshnet-${meshnetBadge.cls}`}
-                    title={meshnetBadge.title}
-                  >
-                    <span className="meshnet-dot" aria-hidden="true" />
-                    {meshnetBadge.label}
-                  </span>
-                )}
-              </h2>
-              <div className="cluster-refresh-controls">
-                <button
-                  className="refresh-btn"
-                  onClick={fetchClusterStatus}
-                  disabled={clusterLoading || kubeConfigured === false}
-                  title="Refresh cluster status"
-                >
-                  <RefreshIcon style={{ width: 15, height: 15 }} />
-                </button>
-              </div>
-            </div>
-            {initialClusterLoading ? (
-              <div className="cluster-loading">
-                <LoadingIcon className="app-icon" aria-hidden="true" /> Loading cluster
-                information...
-              </div>
-            ) : clusterStatus && clusterStatus.nodes && clusterStatus.nodes.length > 0 ? (
-              <>
-                {clusterAggregates && (
-                  <div className="cluster-summary-strip">
-                    <div className="cluster-summary-item">
-                      <span className="cluster-summary-label">Ready</span>
-                      <span className="cluster-summary-value">
-                        {clusterAggregates.ready}/{clusterAggregates.total}
-                      </span>
-                    </div>
-                    {clusterAggregates.metricsAvailable ? (
-                      <>
-                        <div className="cluster-summary-divider" />
-                        <div className="cluster-summary-item">
-                          <span className="cluster-summary-label">Avg CPU</span>
-                          <span className="cluster-summary-value">
-                            {clusterAggregates.cpuAvg !== null
-                              ? `${clusterAggregates.cpuAvg.toFixed(1)}%`
-                              : '—'}
-                          </span>
-                        </div>
-                        <div className="cluster-summary-divider" />
-                        <div className="cluster-summary-item">
-                          <span className="cluster-summary-label">Avg RAM</span>
-                          <span className="cluster-summary-value">
-                            {clusterAggregates.memAvg !== null
-                              ? `${clusterAggregates.memAvg.toFixed(1)}%`
-                              : '—'}
-                          </span>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="cluster-summary-divider" />
-                        <div
-                          className="cluster-summary-warning"
-                          title="metrics-server is not reachable or no node is reporting metrics. Install metrics-server in the cluster to see live CPU and RAM."
-                        >
-                          <WarningIcon className="app-icon" aria-hidden="true" /> metrics-server
-                          unavailable. CPU / RAM not reported
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
-                <div className="nodes-grid">
-                  {clusterStatus.nodes.map((node) => (
-                    <div
-                      key={node.name}
-                      className={`node-card ${node.status.toLowerCase()}`}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => setSelectedNodeName(node.name)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          setSelectedNodeName(node.name);
-                        }
-                      }}
-                      title={`Open details for ${node.name}`}
+      {/* Main Controls - 2 Column Layout; the cluster column is the admins' */}
+      <div className={`main-layout${auth.isAdmin ? '' : ' main-layout-single'}`}>
+        {auth.isAdmin && (
+          <div className="layout-column left-column">
+            {/* Cluster Status Panel */}
+            <div className="cluster-status-card">
+              <div className="cluster-card-header">
+                <h2 className="cluster-card-title">
+                  Cluster status{' '}
+                  {clusterStatus && (
+                    <span className="cluster-status-badge">
+                      Ready {clusterStatus.ready}/{clusterStatus.total}
+                    </span>
+                  )}
+                  {meshnetBadge && (
+                    <span
+                      className={`meshnet-badge meshnet-${meshnetBadge.cls}`}
+                      title={meshnetBadge.title}
                     >
-                      <div className="node-header">
-                        <div className="node-name" title={node.name}>
-                          {node.name}
-                        </div>
-                      </div>
-                      {/* Meta strip: role, status and meshnet on one row, so
-                          the name gets the full width above it. */}
-                      <div className="node-meta">
-                        {node.roles.map((role) => (
-                          <span key={role} className="role-badge">
-                            {role}
-                          </span>
-                        ))}
-                        <div className={`node-status-indicator ${node.status.toLowerCase()}`}>
-                          {node.status}
-                        </div>
-                        {(() => {
-                          const chip = nodeMeshnetChip(node.meshnet);
-                          return chip ? (
-                            <span
-                              className={`node-meshnet node-meshnet-${chip.cls}`}
-                              title={chip.title}
-                            >
-                              <span className="node-meshnet-dot" aria-hidden="true" />
-                              meshnet
-                            </span>
-                          ) : null;
-                        })()}
-                      </div>
-                      <div className="node-metrics">
-                        <div className="metric-row">
-                          <span className="metric-label">CPU:</span>
-                          <div className="metric-bar-container">
-                            <div
-                              className="metric-bar cpu"
-                              style={{ width: `${Math.min(node.cpu_percentage, 100)}%` }}
-                            ></div>
-                            <span className="metric-value">
-                              {node.cpu_usage !== 'N/A'
-                                ? `${node.cpu_percentage.toFixed(1)}%`
-                                : 'N/A'}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="metric-row">
-                          <span className="metric-label">RAM:</span>
-                          <div className="metric-bar-container">
-                            <div
-                              className="metric-bar memory"
-                              style={{ width: `${Math.min(node.memory_percentage, 100)}%` }}
-                            ></div>
-                            <span className="metric-value">
-                              {node.memory_usage !== 'N/A'
-                                ? `${node.memory_percentage.toFixed(1)}%`
-                                : 'N/A'}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="node-capacity">
-                          Resources: {node.cpu_capacity} CPU, {node.memory_capacity} RAM
-                        </div>
-                      </div>
-                      <div className="node-version">
-                        {formatKubeletVersion(node.kubelet_version)}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            ) : kubeConfigured === false ? (
-              <div className="cluster-error">Load a kubeconfig to see cluster status</div>
-            ) : (
-              <div className="cluster-error">
-                <ErrorIcon className="app-icon" aria-hidden="true" /> Failed to fetch cluster
-                information
-              </div>
-            )}
-          </div>
-
-          {/* Kubeconfig Panel, lives in the left column under the cluster status */}
-          <div className="kubeconfig-card">
-            <div className="kubeconfig-header">
-              <h2 className="kubeconfig-title">Kubectl context</h2>
-              <button
-                className="kubeconfig-refresh"
-                onClick={fetchKubeConfigInfo}
-                disabled={kubeInfoLoading}
-                title="Refresh kubeconfig info"
-              >
-                <RefreshIcon style={{ width: 14, height: 14 }} />
-              </button>
-            </div>
-            {kubeInfoLoading ? (
-              <div className="kubeconfig-loading">Loading kubeconfig info...</div>
-            ) : (
-              <>
-                <div className="kubeconfig-row">
-                  <span className="kubeconfig-label">Config path</span>
-                  <span className="kubeconfig-value" title={kubeconfigPath}>
-                    {kubeconfigPath || 'Not available'}
-                  </span>
-                </div>
-                <div className="kubeconfig-row">
-                  <span className="kubeconfig-label">Current context</span>
-                  <span className="kubeconfig-value">{currentContext || 'Not set'}</span>
-                </div>
-                <div className="kubeconfig-row">
-                  <span className="kubeconfig-label">Cluster ID</span>
-                  <span
-                    className="kubeconfig-value"
-                    title={
-                      contextClusterIds[currentContext] || 'Cluster unreachable or not resolved'
-                    }
-                  >
-                    {contextClusterIds[currentContext] || 'n/a'}
-                  </span>
-                </div>
-                <div className="kubeconfig-controls">
-                  <select
-                    className="kubeconfig-select"
-                    value={selectedContext}
-                    onChange={(e) => setSelectedContext(e.target.value)}
-                  >
-                    {kubeContexts.length === 0 && <option value="">No contexts found</option>}
-                    {kubeContexts.map((ctx) => {
-                      const cid = contextClusterIds[ctx];
-                      const shortId = cid ? cid.slice(0, 8) : 'unreachable';
-                      return (
-                        <option key={ctx} value={ctx}>
-                          {`${ctx} — ${shortId}`}
-                        </option>
-                      );
-                    })}
-                  </select>
+                      <span className="meshnet-dot" aria-hidden="true" />
+                      {meshnetBadge.label}
+                    </span>
+                  )}
+                </h2>
+                <div className="cluster-refresh-controls">
                   <button
-                    className="kubeconfig-apply"
-                    onClick={handleSwitchContext}
-                    disabled={
-                      switchingContext || !selectedContext || selectedContext === currentContext
-                    }
+                    className="refresh-btn"
+                    onClick={fetchClusterStatus}
+                    disabled={clusterLoading || kubeConfigured === false}
+                    title="Refresh cluster status"
                   >
-                    {switchingContext ? 'Switching...' : 'Apply'}
+                    <RefreshIcon style={{ width: 15, height: 15 }} />
                   </button>
                 </div>
-
-                <input
-                  ref={kubeconfigFileInputRef}
-                  type="file"
-                  onChange={handleLoadKubeConfigFile}
-                  disabled={loadingKubeConfig}
-                  style={{ display: 'none' }}
-                  accept=".config,.yaml,*"
-                />
-                <div
-                  role="button"
-                  tabIndex={0}
-                  className={`kubeconfig-drop-zone${kubeconfigDragging ? ' is-dragging' : ''}${loadingKubeConfig ? ' is-busy' : ''}`}
-                  onClick={() => !loadingKubeConfig && kubeconfigFileInputRef.current?.click()}
-                  onKeyDown={(e) => {
-                    if ((e.key === 'Enter' || e.key === ' ') && !loadingKubeConfig) {
-                      e.preventDefault();
-                      kubeconfigFileInputRef.current?.click();
-                    }
-                  }}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (!loadingKubeConfig) setKubeconfigDragging(true);
-                  }}
-                  onDragLeave={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setKubeconfigDragging(false);
-                  }}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setKubeconfigDragging(false);
-                    if (loadingKubeConfig) return;
-                    const file = e.dataTransfer.files?.[0];
-                    if (!file) return;
-                    handleLoadKubeConfigFile({ target: { files: [file], value: '' } });
-                  }}
-                  aria-busy={loadingKubeConfig || undefined}
-                >
-                  <FolderIcon className="kubeconfig-drop-icon" aria-hidden="true" />
-                  <span className="kubeconfig-drop-text">
-                    {loadingKubeConfig
-                      ? 'Loading kubeconfig…'
-                      : 'Drop kubeconfig here or click to select'}
-                  </span>
+              </div>
+              {initialClusterLoading ? (
+                <div className="cluster-loading">
+                  <LoadingIcon className="app-icon" aria-hidden="true" /> Loading cluster
+                  information...
                 </div>
+              ) : clusterStatus && clusterStatus.nodes && clusterStatus.nodes.length > 0 ? (
+                <>
+                  {clusterAggregates && (
+                    <div className="cluster-summary-strip">
+                      <div className="cluster-summary-item">
+                        <span className="cluster-summary-label">Ready</span>
+                        <span className="cluster-summary-value">
+                          {clusterAggregates.ready}/{clusterAggregates.total}
+                        </span>
+                      </div>
+                      {clusterAggregates.metricsAvailable ? (
+                        <>
+                          <div className="cluster-summary-divider" />
+                          <div className="cluster-summary-item">
+                            <span className="cluster-summary-label">Avg CPU</span>
+                            <span className="cluster-summary-value">
+                              {clusterAggregates.cpuAvg !== null
+                                ? `${clusterAggregates.cpuAvg.toFixed(1)}%`
+                                : '—'}
+                            </span>
+                          </div>
+                          <div className="cluster-summary-divider" />
+                          <div className="cluster-summary-item">
+                            <span className="cluster-summary-label">Avg RAM</span>
+                            <span className="cluster-summary-value">
+                              {clusterAggregates.memAvg !== null
+                                ? `${clusterAggregates.memAvg.toFixed(1)}%`
+                                : '—'}
+                            </span>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="cluster-summary-divider" />
+                          <div
+                            className="cluster-summary-warning"
+                            title="metrics-server is not reachable or no node is reporting metrics. Install metrics-server in the cluster to see live CPU and RAM."
+                          >
+                            <WarningIcon className="app-icon" aria-hidden="true" /> metrics-server
+                            unavailable. CPU / RAM not reported
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                  <div className="nodes-grid">
+                    {clusterStatus.nodes.map((node) => (
+                      <div
+                        key={node.name}
+                        className={`node-card ${node.status.toLowerCase()}`}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setSelectedNodeName(node.name)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setSelectedNodeName(node.name);
+                          }
+                        }}
+                        title={`Open details for ${node.name}`}
+                      >
+                        <div className="node-header">
+                          <div className="node-name" title={node.name}>
+                            {node.name}
+                          </div>
+                        </div>
+                        {/* Meta strip: role, status and meshnet on one row, so
+                          the name gets the full width above it. */}
+                        <div className="node-meta">
+                          {node.roles.map((role) => (
+                            <span key={role} className="role-badge">
+                              {role}
+                            </span>
+                          ))}
+                          <div className={`node-status-indicator ${node.status.toLowerCase()}`}>
+                            {node.status}
+                          </div>
+                          {(() => {
+                            const chip = nodeMeshnetChip(node.meshnet);
+                            return chip ? (
+                              <span
+                                className={`node-meshnet node-meshnet-${chip.cls}`}
+                                title={chip.title}
+                              >
+                                <span className="node-meshnet-dot" aria-hidden="true" />
+                                meshnet
+                              </span>
+                            ) : null;
+                          })()}
+                        </div>
+                        <div className="node-metrics">
+                          <div className="metric-row">
+                            <span className="metric-label">CPU:</span>
+                            <div className="metric-bar-container">
+                              <div
+                                className="metric-bar cpu"
+                                style={{ width: `${Math.min(node.cpu_percentage, 100)}%` }}
+                              ></div>
+                              <span className="metric-value">
+                                {node.cpu_usage !== 'N/A'
+                                  ? `${node.cpu_percentage.toFixed(1)}%`
+                                  : 'N/A'}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="metric-row">
+                            <span className="metric-label">RAM:</span>
+                            <div className="metric-bar-container">
+                              <div
+                                className="metric-bar memory"
+                                style={{ width: `${Math.min(node.memory_percentage, 100)}%` }}
+                              ></div>
+                              <span className="metric-value">
+                                {node.memory_usage !== 'N/A'
+                                  ? `${node.memory_percentage.toFixed(1)}%`
+                                  : 'N/A'}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="node-capacity">
+                            Resources: {node.cpu_capacity} CPU, {node.memory_capacity} RAM
+                          </div>
+                        </div>
+                        <div className="node-version">
+                          {formatKubeletVersion(node.kubelet_version)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : kubeConfigured === false ? (
+                <div className="cluster-error">Load a kubeconfig to see cluster status</div>
+              ) : (
+                <div className="cluster-error">
+                  <ErrorIcon className="app-icon" aria-hidden="true" /> Failed to fetch cluster
+                  information
+                </div>
+              )}
+            </div>
 
-                {kubeInfoError && <div className="kubeconfig-error">{kubeInfoError}</div>}
-              </>
-            )}
+            {/* Kubeconfig Panel, lives in the left column under the cluster status */}
+            <div className="kubeconfig-card">
+              <div className="kubeconfig-header">
+                <h2 className="kubeconfig-title">Kubectl context</h2>
+                <button
+                  className="kubeconfig-refresh"
+                  onClick={fetchKubeConfigInfo}
+                  disabled={kubeInfoLoading}
+                  title="Refresh kubeconfig info"
+                >
+                  <RefreshIcon style={{ width: 14, height: 14 }} />
+                </button>
+              </div>
+              {kubeInfoLoading ? (
+                <div className="kubeconfig-loading">Loading kubeconfig info...</div>
+              ) : (
+                <>
+                  <div className="kubeconfig-row">
+                    <span className="kubeconfig-label">Config path</span>
+                    <span className="kubeconfig-value" title={kubeconfigPath}>
+                      {kubeconfigPath || 'Not available'}
+                    </span>
+                  </div>
+                  <div className="kubeconfig-row">
+                    <span className="kubeconfig-label">Current context</span>
+                    <span className="kubeconfig-value">{currentContext || 'Not set'}</span>
+                  </div>
+                  <div className="kubeconfig-row">
+                    <span className="kubeconfig-label">Cluster ID</span>
+                    <span
+                      className="kubeconfig-value"
+                      title={
+                        contextClusterIds[currentContext] || 'Cluster unreachable or not resolved'
+                      }
+                    >
+                      {contextClusterIds[currentContext] || 'n/a'}
+                    </span>
+                  </div>
+                  <div className="kubeconfig-controls">
+                    <select
+                      className="kubeconfig-select"
+                      value={selectedContext}
+                      onChange={(e) => setSelectedContext(e.target.value)}
+                    >
+                      {kubeContexts.length === 0 && <option value="">No contexts found</option>}
+                      {kubeContexts.map((ctx) => {
+                        const cid = contextClusterIds[ctx];
+                        const shortId = cid ? cid.slice(0, 8) : 'unreachable';
+                        return (
+                          <option key={ctx} value={ctx}>
+                            {`${ctx} — ${shortId}`}
+                          </option>
+                        );
+                      })}
+                    </select>
+                    <button
+                      className="kubeconfig-apply"
+                      onClick={handleSwitchContext}
+                      disabled={
+                        switchingContext || !selectedContext || selectedContext === currentContext
+                      }
+                    >
+                      {switchingContext ? 'Switching...' : 'Apply'}
+                    </button>
+                  </div>
+
+                  <input
+                    ref={kubeconfigFileInputRef}
+                    type="file"
+                    onChange={handleLoadKubeConfigFile}
+                    disabled={loadingKubeConfig}
+                    style={{ display: 'none' }}
+                    accept=".config,.yaml,*"
+                  />
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    className={`kubeconfig-drop-zone${kubeconfigDragging ? ' is-dragging' : ''}${loadingKubeConfig ? ' is-busy' : ''}`}
+                    onClick={() => !loadingKubeConfig && kubeconfigFileInputRef.current?.click()}
+                    onKeyDown={(e) => {
+                      if ((e.key === 'Enter' || e.key === ' ') && !loadingKubeConfig) {
+                        e.preventDefault();
+                        kubeconfigFileInputRef.current?.click();
+                      }
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (!loadingKubeConfig) setKubeconfigDragging(true);
+                    }}
+                    onDragLeave={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setKubeconfigDragging(false);
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setKubeconfigDragging(false);
+                      if (loadingKubeConfig) return;
+                      const file = e.dataTransfer.files?.[0];
+                      if (!file) return;
+                      handleLoadKubeConfigFile({ target: { files: [file], value: '' } });
+                    }}
+                    aria-busy={loadingKubeConfig || undefined}
+                  >
+                    <FolderIcon className="kubeconfig-drop-icon" aria-hidden="true" />
+                    <span className="kubeconfig-drop-text">
+                      {loadingKubeConfig
+                        ? 'Loading kubeconfig…'
+                        : 'Drop kubeconfig here or click to select'}
+                    </span>
+                  </div>
+
+                  {kubeInfoError && <div className="kubeconfig-error">{kubeInfoError}</div>}
+                </>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Right Column: Namespaces */}
         <div className="layout-column right-column">
@@ -1004,9 +1019,23 @@ const Home = () => {
                       title={terminating ? 'Namespace is terminating' : `Open namespace ${ns.name}`}
                     >
                       <span className="namespace-item-info">
-                        <span className="namespace-item-name">{ns.name}</span>
-                        {ns.createdAt && (
-                          <span className="namespace-item-created">created: {ns.createdAt}</span>
+                        <span className="namespace-item-name">
+                          {ns.name}
+                          {auth.enabled && ns.level && ns.level !== 'owner' && (
+                            <span
+                              className={`namespace-item-level namespace-item-level-${ns.level}`}
+                              title={`What you may do here: ${ns.level}`}
+                            >
+                              {ns.level}
+                            </span>
+                          )}
+                        </span>
+                        {(ns.createdAt || (ns.owner && ns.owner !== auth.identity)) && (
+                          <span className="namespace-item-created">
+                            {ns.createdAt && <>created: {ns.createdAt}</>}
+                            {ns.createdAt && ns.owner && ns.owner !== auth.identity && ' · '}
+                            {ns.owner && ns.owner !== auth.identity && <>owned by {ns.owner}</>}
+                          </span>
                         )}
                       </span>
                       <span className="namespace-item-badges">
@@ -1029,49 +1058,76 @@ const Home = () => {
                         </span>
                       </span>
                     </button>
-                    <button
-                      type="button"
-                      className="namespace-item-delete"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRequestDeleteNamespace(ns);
-                      }}
-                      disabled={terminating}
-                      title={terminating ? 'Already terminating' : `Delete namespace ${ns.name}`}
-                      aria-label={`Delete namespace ${ns.name}`}
-                    >
-                      <TrashIcon className="app-icon" aria-hidden="true" />
-                    </button>
+                    {auth.enabled && ns.level === 'owner' && (
+                      <button
+                        type="button"
+                        className="namespace-item-share"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShareTarget(ns.name);
+                        }}
+                        disabled={terminating}
+                        title={`Share namespace ${ns.name}`}
+                        aria-label={`Share namespace ${ns.name}`}
+                      >
+                        <ShareIcon className="app-icon" aria-hidden="true" />
+                      </button>
+                    )}
+                    {(!auth.enabled || ns.level === 'owner') && (
+                      <button
+                        type="button"
+                        className="namespace-item-delete"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRequestDeleteNamespace(ns);
+                        }}
+                        disabled={terminating}
+                        title={terminating ? 'Already terminating' : `Delete namespace ${ns.name}`}
+                        aria-label={`Delete namespace ${ns.name}`}
+                      >
+                        <TrashIcon className="app-icon" aria-hidden="true" />
+                      </button>
+                    )}
                   </div>
                 );
               })}
             </div>
 
-            <button
-              type="button"
-              className="namespace-create-btn"
-              disabled={kubeConfigured === false}
-              onClick={() => {
-                setNsNameValidation(null);
-                setNewNamespaceName('');
-                setIsModalOpen(true);
-              }}
-              title={
-                kubeConfigured === false
-                  ? 'Load a kubeconfig first'
-                  : 'Create a new KubeNDT namespace'
-              }
-            >
-              <span className="namespace-create-icon" aria-hidden="true">
-                +
-              </span>
-              <span>Create KubeNDT namespace</span>
-            </button>
+            {auth.canCreateNamespaces && (
+              <button
+                type="button"
+                className="namespace-create-btn"
+                disabled={kubeConfigured === false}
+                onClick={() => {
+                  setNsNameValidation(null);
+                  setNewNamespaceName('');
+                  setIsModalOpen(true);
+                }}
+                title={
+                  kubeConfigured === false
+                    ? 'Load a kubeconfig first'
+                    : 'Create a new KubeNDT namespace'
+                }
+              >
+                <span className="namespace-create-icon" aria-hidden="true">
+                  +
+                </span>
+                <span>Create KubeNDT namespace</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
 
       {tokensOpen && <ApiTokensModal onClose={() => setTokensOpen(false)} />}
+      {passwordOpen && <ChangePasswordModal onClose={() => setPasswordOpen(false)} />}
+      {shareTarget && (
+        <ShareNamespaceModal
+          namespace={shareTarget}
+          onClose={() => setShareTarget('')}
+          onChanged={() => fetchNamespaces()}
+        />
+      )}
 
       {/* Modal to create namespace */}
       <Modal

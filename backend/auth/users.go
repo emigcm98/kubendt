@@ -349,3 +349,24 @@ func ChangePassword(name, current, next string) error {
 	mu.Unlock()
 	return nil
 }
+
+// MayManageTokensOf says whose tokens an account sees and revokes: its own,
+// everyone's for the owner, the plain users' for an admin.
+func MayManageTokensOf(actor *Principal, user string) bool {
+	if actor == nil {
+		return false
+	}
+	if user == actor.Identity {
+		return true
+	}
+	switch actor.Role {
+	case RoleOwner:
+		return true
+	case RoleAdmin:
+		mu.RLock()
+		defer mu.RUnlock()
+		u, ok := users[user]
+		return ok && u.Role == RoleUser
+	}
+	return false
+}
