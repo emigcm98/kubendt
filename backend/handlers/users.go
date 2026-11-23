@@ -128,3 +128,18 @@ func ResetUserPassword(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, out)
 }
+
+// GET /users/:name/namespaces  -> where the account is, and as what
+func UserNamespaces(c *gin.Context) {
+	name := c.Param("name")
+	if _, ok := auth.GetUser(name); !ok && auth.Enabled() {
+		c.JSON(http.StatusNotFound, gin.H{"error": "no such user"})
+		return
+	}
+	list, err := helpers.NamespacesOfAccount(name)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"username": name, "namespaces": list})
+}

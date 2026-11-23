@@ -347,16 +347,26 @@ func CreateAPIToken(c *gin.Context) {
 }
 
 // ListAPITokens returns the account's token metadata (never the secrets);
-// an admin asking with ?all=true sees everyone's.
+// with ?all=true an admin also sees the plain users' and the owner everyone's.
 func ListAPITokens(c *gin.Context) {
 	user := ""
-	if p := PrincipalOf(c); p != nil {
+	p := PrincipalOf(c)
+	if p != nil {
 		user = p.Identity
 		if c.Query("all") == "true" && p.IsAdmin() {
 			user = ""
 		}
 	}
 	tokens, err := auth.ListAPITokens(user)
+	if err == nil && user == "" {
+		kept := tokens[:0]
+		for _, t := range tokens {
+			if auth.MayManageTokensOf(p, t.User) {
+				kept = append(kept, t)
+			}
+		}
+		tokens = kept
+	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -364,14 +374,15 @@ func ListAPITokens(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"tokens": tokens})
 }
 
-// DeleteAPIToken revokes a token by id: one's own, or anyone's for an admin.
+// DeleteAPIToken revokes a token by id: one's own, a plain user's for an
+// admin, anyone's for the owner.
 func DeleteAPIToken(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid token id"})
 		return
 	}
-	if p := PrincipalOf(c); p != nil && !p.IsAdmin() && auth.TokenOwner(id) != p.Identity {
+	if p := PrincipalOf(c); p != nil && !auth.MayManageTokensOf(p, auth.TokenOwner(id)) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Token not found"})
 		return
 	}

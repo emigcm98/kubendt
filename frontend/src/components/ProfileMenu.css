@@ -125,3 +125,32 @@
   width: 18px;
   text-align: center;
 }
+
+.profile-role {
+  display: inline-block;
+  margin-top: 3px;
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--info-bg);
+  color: var(--primary);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: lowercase;
+}
+
+.profile-role-owner,
+.profile-role-admin {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.profile-item-tag {
+  margin-left: auto;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: 0.64rem;
+  font-weight: 700;
+  text-transform: lowercase;
+}

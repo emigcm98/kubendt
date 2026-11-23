@@ -212,3 +212,32 @@ func RemoveAccountFromNamespaces(name, newOwner string) (owned, guested int, err
 	}
 	return owned, guested, nil
 }
+
+// AccountNamespace is a namespace an account is in, as owner or guest.
+type AccountNamespace struct {
+	Namespace string `json:"namespace"`
+	Owner     string `json:"owner"`
+	Level     string `json:"level"`
+}
+
+// NamespacesOfAccount lists the namespaces an account owns or is a guest of,
+// with its level in each.
+func NamespacesOfAccount(name string) ([]AccountNamespace, error) {
+	list, err := stateNamespaces().List(context.TODO(), metav1.ListOptions{LabelSelector: "kubendt/enabled=true"})
+	if err != nil {
+		return nil, fmt.Errorf("could not list the namespaces: %w", err)
+	}
+	out := []AccountNamespace{}
+	for i := range list.Items {
+		ns := &list.Items[i]
+		access := ParseNamespaceAccess(ns)
+		switch {
+		case access.Owner == name:
+			out = append(out, AccountNamespace{Namespace: ns.Name, Owner: access.Owner, Level: auth.LevelOwner})
+		case access.Guests[name] != "":
+			out = append(out, AccountNamespace{Namespace: ns.Name, Owner: access.Owner, Level: access.Guests[name]})
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Namespace < out[j].Namespace })
+	return out, nil
+}

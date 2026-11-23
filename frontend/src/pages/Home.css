@@ -1873,3 +1873,50 @@
   cursor: not-allowed;
   filter: grayscale(35%);
 }
+
+/* Without the cluster column, the namespaces take the page. */
+.main-layout.main-layout-single {
+  grid-template-columns: minmax(480px, 720px);
+  justify-content: center;
+}
+
+.namespace-item-level {
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--info-bg);
+  color: var(--primary);
+  font-size: 0.66rem;
+  font-weight: 700;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.namespace-item-level-viewer {
+  background: var(--panel-header-from);
+  color: var(--text-muted);
+}
+
+.namespace-item-share {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-right: 2px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-subtle);
+  cursor: pointer;
+  opacity: 0;
+}
+
+.namespace-item:hover .namespace-item-share {
+  opacity: 1;
+}
+
+.namespace-item-share:hover:not(:disabled) {
+  background: var(--info-bg);
+  color: var(--primary);
+}

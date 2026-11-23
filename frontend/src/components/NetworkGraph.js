@@ -770,7 +770,11 @@ const NetworkGraph = ({
   onImportingChange,
   refreshTrigger = 0,
   onTopologyStats,
+  level,
 }) => {
+  // What the account may do in this namespace: below editor the lab is
+  // read and worked on, never changed from here.
+  const canEdit = !level || level === 'editor' || level === 'owner';
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const {
@@ -3943,6 +3947,7 @@ const NetworkGraph = ({
               type="button"
               className={`topbar-btn${!hasGraph && !initialLoading ? ' topbar-btn-primary' : ''}`}
               disabled={
+                !canEdit ||
                 initialLoading ||
                 nodes.length > 0 ||
                 openShells.length > 0 ||
@@ -3990,6 +3995,7 @@ const NetworkGraph = ({
               type="button"
               className="topbar-btn"
               disabled={
+                !canEdit ||
                 !hasGraph ||
                 openShells.length > 0 ||
                 traceOpen ||
@@ -4010,6 +4016,7 @@ const NetworkGraph = ({
               type="button"
               className="topbar-btn topbar-btn-danger"
               disabled={
+                !canEdit ||
                 !hasGraph ||
                 openShells.length > 0 ||
                 traceOpen ||
@@ -4032,6 +4039,7 @@ const NetworkGraph = ({
               type="button"
               className="topbar-btn"
               disabled={
+                !canEdit ||
                 !hasGraph ||
                 clearingTopology ||
                 loadingConfig ||

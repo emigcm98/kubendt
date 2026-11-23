@@ -920,6 +920,19 @@ type NamespaceAccessRequest struct {
 	Guests map[string]string `json:"guests" example:"bob:editor,carol:viewer"`
 }
 
+// AccountNamespaceDoc is a namespace an account is in, as owner or guest.
+type AccountNamespaceDoc struct {
+	Namespace string `json:"namespace" example:"lab"`
+	Owner     string `json:"owner" example:"alice"`
+	Level     string `json:"level" example:"editor"`
+}
+
+// UserNamespacesResponse is returned by GET /users/{name}/namespaces.
+type UserNamespacesResponse struct {
+	Username   string                `json:"username" example:"bob"`
+	Namespaces []AccountNamespaceDoc `json:"namespaces"`
+}
+
 // ResetPasswordRequest is the body for POST /users/{name}/password; empty
 // means a generated one.
 type ResetPasswordRequest struct {

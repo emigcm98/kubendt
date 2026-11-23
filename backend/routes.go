@@ -49,6 +49,7 @@ func SetupRoutes(router *gin.Engine) {
 		usersGroup.PUT("/:name", handlers.UpdateUser)
 		usersGroup.DELETE("/:name", handlers.DeleteUser)
 		usersGroup.POST("/:name/password", handlers.ResetUserPassword)
+		usersGroup.GET("/:name/namespaces", handlers.UserNamespaces)
 	}
 
 	shellGroup := router.Group("/shell")

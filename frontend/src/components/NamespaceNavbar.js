@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { API_BASE_URL } from '../config';
 import { useNavigate } from 'react-router-dom';
 import './NamespaceNavbar.css';
 import AlertModal from './AlertModal';
 import DeleteExtrasCheckboxes from './DeleteExtrasCheckboxes';
+import ShareNamespaceModal from './ShareNamespaceModal';
 import { ReactComponent as RefreshIcon } from '../assets/images/icons/refresh.svg';
 import { ReactComponent as FolderIcon } from '../assets/images/icons/folder.svg';
 import { ReactComponent as ClusterIcon } from '../assets/images/icons/cluster.svg';
@@ -12,6 +13,8 @@ import { ReactComponent as TopologyIcon } from '../assets/images/icons/topology.
 import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
 import { ReactComponent as ClockIcon } from '../assets/images/icons/clock.svg';
 import { ReactComponent as ChevronDownIcon } from '../assets/images/icons/chevron-down.svg';
+import { ReactComponent as UsersIcon } from '../assets/images/icons/users.svg';
+import { ReactComponent as EyeIcon } from '../assets/images/icons/eye.svg';
 import kubendtLogo from '../assets/images/kubendt-logo.svg';
 
 const plural = (type) => (type === 'switch' ? 'switches' : `${type}s`);
@@ -20,6 +23,7 @@ function NamespaceNavbar({
   namespace,
   onDelete,
   onDeleteHistory,
+  level,
   onRefresh,
   disabled = false,
   stats = null,
@@ -80,10 +84,29 @@ function NamespaceNavbar({
   const [deletePositionsChecked, setDeletePositionsChecked] = useState(false);
   const [deleteFilesChecked, setDeleteFilesChecked] = useState(false);
 
-  // The destructive actions live under the dots menu, which closes on a
-  // click elsewhere or Esc.
+  // The namespace menu: whose it is, who is in, sharing and the deletions,
+  // each by the account's level. No level means auth is off, so everything.
+  // It closes on a click elsewhere or Esc.
+  const isOwner = !level || level === 'owner';
+  const canEdit = isOwner || level === 'editor';
   const [menuOpen, setMenuOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [access, setAccess] = useState(null);
   const menuRef = useRef(null);
+
+  // Who owns and who is in, read when the menu opens and after a change.
+  const loadAccess = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/namespaces/access/${encodeURIComponent(namespace)}`);
+      const data = await res.json().catch(() => null);
+      setAccess(res.ok && data ? data : false);
+    } catch {
+      setAccess(false);
+    }
+  }, [namespace]);
+  useEffect(() => {
+    if (menuOpen) loadAccess();
+  }, [menuOpen, loadAccess]);
   useEffect(() => {
     if (!menuOpen) return undefined;
     const onDown = (e) => {
@@ -208,7 +231,7 @@ function NamespaceNavbar({
               onClick={() => setMenuOpen((v) => !v)}
               aria-haspopup="menu"
               aria-expanded={menuOpen}
-              title="Delete the history or the namespace"
+              title="Owner, guests and actions"
             >
               <TopologyIcon className="app-icon" aria-hidden="true" />
               Namespace
@@ -216,35 +239,93 @@ function NamespaceNavbar({
             </button>
             {menuOpen && (
               <div className="navbar-menu" role="menu">
+                <div className="navbar-menu-info">
+                  <div>
+                    <span className="navbar-menu-key">Owner</span>
+                    <strong>
+                      {access === null
+                        ? '…'
+                        : access === false
+                          ? '?'
+                          : access.owner || 'the admins'}
+                    </strong>
+                  </div>
+                  <div>
+                    <span className="navbar-menu-key">Guests</span>
+                    <strong>
+                      {access
+                        ? Object.keys(access.guests || {}).length
+                        : access === null
+                          ? '…'
+                          : '?'}
+                    </strong>
+                  </div>
+                  {level && (
+                    <div>
+                      <span className="navbar-menu-key">You</span>
+                      <strong>{level}</strong>
+                    </div>
+                  )}
+                </div>
+                <div className="navbar-menu-sep" />
                 <button
                   type="button"
                   className="navbar-menu-item"
                   role="menuitem"
-                  disabled={disabled || !onDeleteHistory}
                   onClick={() => {
                     setMenuOpen(false);
-                    setShowDeleteHistoryConfirmModal(true);
+                    setShareOpen(true);
                   }}
                 >
-                  <ClockIcon className="app-icon" aria-hidden="true" />
-                  Delete history
-                  <span className="navbar-menu-sub">the topology stays</span>
+                  {isOwner ? (
+                    <UsersIcon className="app-icon" aria-hidden="true" />
+                  ) : (
+                    <EyeIcon className="app-icon" aria-hidden="true" />
+                  )}
+                  {isOwner ? 'Share or hand over' : 'Who is in'}
                 </button>
-                <button
-                  type="button"
-                  className="navbar-menu-item navbar-menu-item-danger"
-                  role="menuitem"
-                  disabled={disabled}
-                  onClick={handleDelete}
-                >
-                  <TrashIcon className="app-icon" aria-hidden="true" />
-                  Delete namespace
-                </button>
+                {canEdit && (
+                  <button
+                    type="button"
+                    className="navbar-menu-item"
+                    role="menuitem"
+                    disabled={disabled || !onDeleteHistory}
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setShowDeleteHistoryConfirmModal(true);
+                    }}
+                  >
+                    <ClockIcon className="app-icon" aria-hidden="true" />
+                    Delete history
+                    <span className="navbar-menu-sub">the topology stays</span>
+                  </button>
+                )}
+                {isOwner && (
+                  <button
+                    type="button"
+                    className="navbar-menu-item navbar-menu-item-danger"
+                    role="menuitem"
+                    disabled={disabled}
+                    onClick={handleDelete}
+                  >
+                    <TrashIcon className="app-icon" aria-hidden="true" />
+                    Delete namespace
+                  </button>
+                )}
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {shareOpen && (
+        <ShareNamespaceModal
+          namespace={namespace}
+          readOnly={!isOwner}
+          onClose={() => setShareOpen(false)}
+          onChanged={loadAccess}
+        />
+      )}
 
       <AlertModal
         isOpen={showDeleteConfirmModal}

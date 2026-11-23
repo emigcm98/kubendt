@@ -1,0 +1,88 @@
+.share-modal {
+  max-width: 520px;
+}
+
+.share-modal h2 code {
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--panel-from);
+  font-size: 0.9em;
+}
+
+.share-label {
+  margin: 10px 0 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+
+.share-owner {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 0.9rem;
+}
+
+.share-owner .share-label {
+  margin: 0;
+}
+
+.share-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.share-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  background: var(--panel-from);
+}
+
+.share-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  color: var(--text-heading);
+}
+
+.share-level {
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--info-bg);
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.share-help {
+  margin-top: 8px;
+}
+
+.share-handover {
+  margin-top: 12px;
+}
+
+.tokens-create-btn-quiet {
+  background: var(--surface);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+.tokens-create-btn-quiet:hover:not(:disabled) {
+  background: var(--panel-header-from);
+  color: var(--text-heading);
+}
+
+.share-saved {
+  margin-top: 8px;
+  font-size: 0.82rem;
+  color: var(--success);
+}

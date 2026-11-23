@@ -1,12 +1,18 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import './ProfileMenu.css';
 import { ReactComponent as KeyIcon } from '../assets/images/icons/key.svg';
+import { ReactComponent as LockIcon } from '../assets/images/icons/lock.svg';
+import { ReactComponent as PowerIcon } from '../assets/images/icons/power.svg';
+import { ReactComponent as UsersIcon } from '../assets/images/icons/users.svg';
 
-// Header account menu: click the user chip to reveal identity/roles plus the
-// API tokens and logout actions.
-export default function ProfileMenu({ onOpenTokens }) {
+// Header account menu: click the account chip to see who is signed in and
+// their role, change the password, manage API tokens, the accounts for
+// admins, and sign out.
+export default function ProfileMenu({ onOpenTokens, onChangePassword }) {
   const auth = useAuth();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -28,7 +34,24 @@ export default function ProfileMenu({ onOpenTokens }) {
 
   const identity = auth.identity || 'user';
   const initial = identity.charAt(0).toUpperCase();
-  const roles = auth.roles && auth.roles.length ? auth.roles.join(', ') : '—';
+  const role = auth.role || (auth.roles && auth.roles[0]) || '';
+
+  const item = (label, Icon, onClick, extra = '', tag = '') => (
+    <button
+      className={`profile-item${extra}`}
+      role="menuitem"
+      onClick={() => {
+        setOpen(false);
+        onClick?.();
+      }}
+    >
+      <span className="profile-item-icon" aria-hidden="true">
+        <Icon className="app-icon" />
+      </span>
+      {label}
+      {tag && <span className="profile-item-tag">{tag}</span>}
+    </button>
+  );
 
   return (
     <div className="profile-menu" ref={ref}>
@@ -50,36 +73,15 @@ export default function ProfileMenu({ onOpenTokens }) {
             <span className="profile-avatar profile-avatar-lg">{initial}</span>
             <div className="profile-info-text">
               <span className="profile-info-name">{identity}</span>
-              <span className="profile-info-roles">Roles: {roles}</span>
+              {role && <span className={`profile-role profile-role-${role}`}>{role}</span>}
             </div>
           </div>
           <div className="profile-sep" />
-          <button
-            className="profile-item"
-            role="menuitem"
-            onClick={() => {
-              setOpen(false);
-              onOpenTokens?.();
-            }}
-          >
-            <span className="profile-item-icon" aria-hidden="true">
-              <KeyIcon className="app-icon" />
-            </span>
-            API tokens
-          </button>
-          <button
-            className="profile-item profile-item-danger"
-            role="menuitem"
-            onClick={() => {
-              setOpen(false);
-              auth.logout();
-            }}
-          >
-            <span className="profile-item-icon" aria-hidden="true">
-              ⏻
-            </span>
-            Logout
-          </button>
+          {item('Change password', LockIcon, onChangePassword)}
+          {item('API tokens', KeyIcon, onOpenTokens)}
+          {auth.isAdmin && item('Accounts', UsersIcon, () => navigate('/users'), '', 'admin')}
+          <div className="profile-sep" />
+          {item('Sign out', PowerIcon, () => auth.logout(), ' profile-item-danger')}
         </div>
       )}
     </div>
