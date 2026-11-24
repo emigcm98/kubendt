@@ -25,3 +25,16 @@ data:
   KUBENDT_SESSION_MAX_HOURS: "168"
   # Set to "true" behind HTTPS so the session cookie only travels over TLS.
   KUBENDT_COOKIE_SECURE: "false"
+  # The least a chosen password may be long.
+  KUBENDT_PASSWORD_MIN_LENGTH: "8"
+  # The quota of an account without figures of its own, "0" for none:
+  # namespaces owned, pods across them, pods in any one.
+  KUBENDT_QUOTA_NAMESPACES: "0"
+  KUBENDT_QUOTA_PODS: "0"
+  KUBENDT_QUOTA_PODS_PER_NAMESPACE: "0"
+  # Defaults a LimitRange gives each container of a new lab namespace.
+  # Uncomment to have one written; a VM node needs memory for its guest.
+  # KUBENDT_POD_CPU_REQUEST: 50m
+  # KUBENDT_POD_MEMORY_REQUEST: 64Mi
+  # KUBENDT_POD_CPU_LIMIT: "2"
+  # KUBENDT_POD_MEMORY_LIMIT: 2Gi

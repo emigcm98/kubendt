@@ -218,6 +218,9 @@ func resolveOwnerPassword(stored *userRecord) error {
 		if err != nil {
 			return err
 		}
+		if checkPassword(OwnerAccount, pw) != nil {
+			log.Printf("⚠️ KUBENDT_ADMIN_PASSWORD does not meet the password policy")
+		}
 		if owner.Hash != "" {
 			owner.SessionsValidAfter = nowUnix()
 			log.Printf("🔒 Admin password changed, every session of the owner must sign in again")

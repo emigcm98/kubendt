@@ -8,7 +8,7 @@
    <a href="https://doi.org/10.5281/zenodo.21276320"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.21276320.svg" alt="DOI" /></a>
 </p>
 
-> Last reviewed: 20 Nov 2026
+> Last reviewed: 24 Nov 2026
 
 **KubeNDT** is a platform for deploying and operating virtual network topologies on Kubernetes.
 
@@ -72,6 +72,7 @@ KubeNDT bundles a small set of third-party SVG icons in its frontend. See [ATTRI
 
 - **Multi-namespace support** - isolate topologies per namespace
 - **Authentication** - password login, browser sessions and revocable API tokens
+- **Users and workspaces** - accounts with a role, namespaces owned and shared by level (viewer, operator, editor), quotas per account
 - **State browser** - every Kubernetes object KubeNDT keeps in the cluster, told for what it is, per namespace or cluster-wide
 - **Horizontal scaling** - support for large clusters with many pods
 - **Prometheus-compatible** - database-backed state for monitoring integration
@@ -121,7 +122,7 @@ docker compose up --build
 
 Either way, open http://localhost in your browser.
 
-**Authentication:** the dashboard and API require login. The provided compose files ship a default password **`admin123`**, change it via `KUBENDT_ADMIN_PASSWORD` before any real use. If you unset it entirely, a random password is generated and printed once in the backend logs. For programmatic access, create an API token in the dashboard and send it as `Authorization: Bearer <token>`. See [doc/DEPLOYMENT.md](doc/DEPLOYMENT.md#authentication) for all auth variables.
+**Authentication:** the dashboard and API require login. The provided compose files ship a default password **`admin123`**, change it via `KUBENDT_ADMIN_PASSWORD` before any real use. If you unset it entirely, a random password is generated and printed once in the backend logs. For programmatic access, create an API token in the dashboard and send it as `Authorization: Bearer <token>`. That password is the `admin` account's, which creates the others: see [doc/USERS.md](doc/USERS.md) for accounts, sharing and quotas, and [doc/DEPLOYMENT.md](doc/DEPLOYMENT.md#authentication) for all auth variables.
 
 **Common settings** (in the compose file's `environment:`, or via your shell):
 
@@ -178,6 +179,7 @@ The full technical details were moved out of this top-level README to keep first
 - Architecture flows and diagrams: [doc/ARCHITECTURE_FLOWS.md](doc/ARCHITECTURE_FLOWS.md)
 - Operation timelines (per-pod lifecycle stamps in API responses): [doc/TIMING.md](doc/TIMING.md)
 - Failure model (what survives, what is lost, what stays manual): [doc/FAILURE_MODEL.md](doc/FAILURE_MODEL.md)
+- Users and workspaces (roles, levels, quotas, the trust model): [doc/USERS.md](doc/USERS.md)
 
 ## Use Cases & Examples
 

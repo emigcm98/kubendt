@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"fmt"
 	"path/filepath"
 	"testing"
 	"time"
@@ -229,7 +230,7 @@ func TestAccountsAndWhoMayManageWhom(t *testing.T) {
 	if _, err := CreateUser(owner(), "alice", "x", RoleUser, false, [3]int{0, 0, 0}); !errors.Is(err, ErrUserExists) {
 		t.Errorf("twice: %v", err)
 	}
-	if _, err := CreateUser(owner(), "bob", "bob-pw", RoleAdmin, false, [3]int{0, 0, 0}); err != nil {
+	if _, err := CreateUser(owner(), "bob", "bob-password", RoleAdmin, false, [3]int{0, 0, 0}); err != nil {
 		t.Fatal(err)
 	}
 	s, err := cs.CoreV1().Secrets("kubendt-system").Get(context.TODO(), "kubendt-user-alice", metav1.GetOptions{})
@@ -242,13 +243,23 @@ func TestAccountsAndWhoMayManageWhom(t *testing.T) {
 	if !ok || !p.MustChangePassword || p.Role != RoleUser {
 		t.Fatalf("alice: %v %+v", ok, p)
 	}
-	if err := ChangePassword("alice", "wrong", "new-pw"); !errors.Is(err, ErrBadPassword) {
+	if err := ChangePassword("alice", "wrong", "new-password"); !errors.Is(err, ErrBadPassword) {
 		t.Errorf("the current password must match: %v", err)
 	}
-	if err := ChangePassword("alice", generated, "new-pw"); err != nil {
+	var weak *WeakPasswordError
+	if err := ChangePassword("alice", generated, "short"); !errors.As(err, &weak) {
+		t.Errorf("a short password was taken: %v", err)
+	}
+	if err := ChangePassword("alice", generated, generated); !errors.As(err, &weak) {
+		t.Errorf("the current password was taken as the new one: %v", err)
+	}
+	if _, err := CreateUser(owner(), "erin", "short", RoleUser, false, [3]int{0, 0, 0}); !errors.As(err, &weak) {
+		t.Errorf("an account was created with a short password: %v", err)
+	}
+	if err := ChangePassword("alice", generated, "new-password"); err != nil {
 		t.Fatal(err)
 	}
-	if p, ok := Authenticate("alice", "new-pw"); !ok || p.MustChangePassword {
+	if p, ok := Authenticate("alice", "new-password"); !ok || p.MustChangePassword {
 		t.Errorf("after the change: %v %+v", ok, p)
 	}
 
@@ -257,7 +268,7 @@ func TestAccountsAndWhoMayManageWhom(t *testing.T) {
 	if _, err := CreateUser(bob, "carol", "x", RoleAdmin, false, [3]int{0, 0, 0}); !errors.Is(err, ErrNotAllowed) {
 		t.Errorf("an admin does not create admins: %v", err)
 	}
-	if _, err := CreateUser(bob, "carol", "x", RoleUser, false, [3]int{0, 0, 0}); err != nil {
+	if _, err := CreateUser(bob, "carol", "carol-password", RoleUser, false, [3]int{0, 0, 0}); err != nil {
 		t.Errorf("an admin creates users: %v", err)
 	}
 	if _, err := CreateUser(alice, "dave", "x", RoleUser, false, [3]int{0, 0, 0}); !errors.Is(err, ErrNotAllowed) {
@@ -338,7 +349,7 @@ func TestAPITokensBelongToAccounts(t *testing.T) {
 	if err := Init(); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := CreateUser(owner(), "alice", "x", RoleUser, false, [3]int{0, 0, 0}); err != nil {
+	if _, err := CreateUser(owner(), "alice", "alice-password", RoleUser, false, [3]int{0, 0, 0}); err != nil {
 		t.Fatal(err)
 	}
 	raw, err := CreateAPIToken(OwnerAccount, "ci", 0)
@@ -437,23 +448,84 @@ func TestLoginLimiter(t *testing.T) {
 
 	const ip = "10.0.0.1"
 	for i := 0; i < loginMaxAttempts; i++ {
-		if ok, _ := LoginAllowed(ip); !ok {
+		if ok, _ := LoginAllowed(ip, "alice"); !ok {
 			t.Fatalf("blocked too early at attempt %d", i)
 		}
-		RegisterLoginFailure(ip)
+		RegisterLoginFailure(ip, "alice")
 	}
-	if ok, _ := LoginAllowed(ip); ok {
+	if ok, _ := LoginAllowed(ip, "alice"); ok {
 		t.Error("should be blocked after max failed attempts")
 	}
 
-	// A different IP is unaffected.
-	if ok, _ := LoginAllowed("10.0.0.2"); !ok {
-		t.Error("unrelated IP should not be blocked")
+	// A different IP is unaffected, and one address alone does not lock the account.
+	if ok, _ := LoginAllowed("10.0.0.2", "alice"); !ok {
+		t.Error("another address should still reach the account")
 	}
 
 	// Success clears the counter.
-	RegisterLoginSuccess(ip)
-	if ok, _ := LoginAllowed(ip); !ok {
+	RegisterLoginSuccess(ip, "alice")
+	if ok, _ := LoginAllowed(ip, "alice"); !ok {
 		t.Error("counter not cleared after success")
+	}
+}
+
+func TestLoginLimiterPerAccount(t *testing.T) {
+	loginMu.Lock()
+	loginAttempts = map[string]*loginAttempt{}
+	loginMu.Unlock()
+
+	// Failures spread over addresses, none of them over its own limit.
+	for i := 0; i < accountMaxAttempts; i++ {
+		ip := fmt.Sprintf("10.0.1.%d", i)
+		if ok, _ := LoginAllowed(ip, "bob"); !ok {
+			t.Fatalf("blocked too early at attempt %d", i)
+		}
+		RegisterLoginFailure(ip, "bob")
+	}
+	if ok, wait := LoginAllowed("10.0.2.1", "bob"); ok || wait <= 0 {
+		t.Error("the account should be locked from any address")
+	}
+	if ok, _ := LoginAllowed("10.0.2.1", "carol"); !ok {
+		t.Error("another account should not be locked")
+	}
+	// No username is the owner account.
+	for i := 0; i < accountMaxAttempts; i++ {
+		RegisterLoginFailure(fmt.Sprintf("10.0.3.%d", i), "")
+	}
+	if ok, _ := LoginAllowed("10.0.4.1", OwnerAccount); ok {
+		t.Error("logins without a username count against the owner")
+	}
+	// A name no account can have keeps no counter.
+	RegisterLoginFailure("10.0.5.1", "Not A Name")
+	loginMu.Lock()
+	_, kept := loginAttempts["account:Not A Name"]
+	loginMu.Unlock()
+	if kept {
+		t.Error("an impossible name got a counter")
+	}
+	RegisterLoginSuccess("10.0.2.1", "bob")
+	if ok, _ := LoginAllowed("10.0.2.1", "bob"); !ok {
+		t.Error("a success should unlock the account")
+	}
+}
+
+func TestPasswordPolicy(t *testing.T) {
+	var weak *WeakPasswordError
+	if err := checkPassword("alice", "short"); !errors.As(err, &weak) {
+		t.Errorf("a short password passed: %v", err)
+	}
+	if err := checkPassword("alice-wonder", "Alice-Wonder"); !errors.As(err, &weak) {
+		t.Errorf("the account's name passed as its password: %v", err)
+	}
+	if err := checkPassword("alice", "long enough"); err != nil {
+		t.Errorf("a fine password was refused: %v", err)
+	}
+	t.Setenv("KUBENDT_PASSWORD_MIN_LENGTH", "14")
+	if err := checkPassword("alice", "long enough"); !errors.As(err, &weak) {
+		t.Errorf("the minimum from the environment was not applied: %v", err)
+	}
+	t.Setenv("KUBENDT_PASSWORD_MIN_LENGTH", "nonsense")
+	if PasswordMinLength() != defaultPasswordMinLength {
+		t.Error("a bad minimum should fall back to the default")
 	}
 }

@@ -55,7 +55,7 @@ export default function Login({ onSuccess }) {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        if (res.status === 429) throw new Error('Too many attempts. Try again in a minute.');
+        if (res.status === 429) throw new Error('Too many attempts. Try again later.');
         throw new Error(data.error || 'Login failed');
       }
       onSuccess?.();

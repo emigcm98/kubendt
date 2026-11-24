@@ -816,13 +816,14 @@ func swaggerGetCapturePacketDetail() {}
 // swaggerLogin godoc
 //
 //	@Summary      Log in
-//	@Description  Exchanges an account's password for an HttpOnly session cookie. No username is the owner account, admin.
+//	@Description  Exchanges an account's password for an HttpOnly session cookie. No username is the owner account, admin. Failed attempts are counted per client address and per account; past the limit the answer is 429 with Retry-After.
 //	@Tags         auth
 //	@Accept       json
 //	@Produce      json
 //	@Param        body  body  types.LoginRequest  true  "Username and password"
 //	@Success      200  {object}  types.LoginResponse
 //	@Failure      401  {object}  types.ErrorResponse
+//	@Failure      429  {object}  types.ErrorResponse  "code RATE_LIMITED"
 //	@Router       /auth/login [post]
 func swaggerLogin() {}
 
@@ -849,12 +850,13 @@ func swaggerAuthMe() {}
 // swaggerChangePassword godoc
 //
 //	@Summary      Change one's password
-//	@Description  The current password must match; the account's other sessions end and a forced change is cleared. A session or the password itself, never an API token.
+//	@Description  The current password must match; the account's other sessions end and a forced change is cleared. A session or the password itself, never an API token. The new one meets the policy: a minimum length (KUBENDT_PASSWORD_MIN_LENGTH, eight by default), not the current one, not the account's name.
 //	@Tags         auth
 //	@Accept       json
 //	@Produce      json
 //	@Param        body  body  types.ChangePasswordRequest  true  "Current and new password"
 //	@Success      200  {object}  types.MessageResponse
+//	@Failure      400  {object}  types.ErrorResponse  "code WEAK_PASSWORD"
 //	@Failure      401  {object}  types.ErrorResponse
 //	@Router       /auth/password [put]
 func swaggerChangePassword() {}
@@ -963,6 +965,7 @@ func swaggerPutNamespaceAccess() {}
 //	@Param        name  path  string  true  "Username"
 //	@Param        body  body  types.ResetPasswordRequest  false  "The password, or none for a generated one"
 //	@Success      200  {object}  types.ResetPasswordResponse
+//	@Failure      400  {object}  types.ErrorResponse  "code WEAK_PASSWORD"
 //	@Failure      403  {object}  types.ErrorResponse
 //	@Failure      404  {object}  types.ErrorResponse
 //	@Router       /users/{name}/password [post]
