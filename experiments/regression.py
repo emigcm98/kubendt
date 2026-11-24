@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
-"""End-to-end regression over the nine shipped examples, following their READMEs.
+"""End-to-end regression over the shipped examples, following their READMEs.
 
 Each example is deployed into the namespace its README uses, configured, checked
 (pings, OSPF adjacencies, DNS, HTTP, 5G registration, mounts), restarted through the
 API to exercise replay, and torn down. Results go to results/regression/<stamp>/
-with one row per check. It is the gate before tagging a release and it needs a
-cluster, so it is not part of CI.
+with one row per check. The last block, `users`, signs in as two accounts it creates
+(the password policy, a quota, sharing by level) and needs the admin's password, not
+a token. It is the gate before tagging a release and it needs a cluster, so it is not
+part of CI.
 
-  python3 regression.py            # all nine
+  python3 regression.py            # all of them, then the accounts
   python3 regression.py 2 3        # a subset
+  python3 regression.py users      # accounts, levels and quotas on a lab of two hosts
   KEEP=5 ...                       # leave example 5 deployed
   SKIP_RAW=1 ...                   # skip the raw kubectl delete check in example 3
 
@@ -97,13 +100,22 @@ def contains(ns, pod, cmd, needle):
 # ---------- result bookkeeping ----------
 class Example:
     def __init__(self, name, ns):
-        self.name, self.ns, self.checks, self.timings, self.notes = name, ns, [], {}, []
+        self.name, self.ns, self.checks, self.timings, self.notes, self.evidence = name, ns, [], {}, [], {}
         self.t0 = time.time()
     def check(self, label, ok, detail="", waited=None):
         self.checks.append({"check": label, "ok": bool(ok), "detail": str(detail)[:400], "waited_s": waited})
         log(f"  [{'OK ' if ok else 'FAIL'}] {label}" + (f" ({waited}s)" if waited else "") + ("" if ok else f" :: {str(detail)[:200]}"))
     def note(self, msg): self.notes.append(msg); log(f"  note: {msg}")
     def timing(self, key, value): self.timings[key] = value; log(f"  {key}: {value}")
+
+def evidence(ex, pods, tail=80):
+    """What a failed check leaves for later: where the pods ran and the end of their logs."""
+    rc, out, _ = C.kubectl(["-n", ex.ns, "get", "pods", "-o", "wide", "--no-headers"], 30)
+    ex.evidence["pods"] = out.splitlines()
+    for p in pods:
+        rc, out, _ = C.kubectl(["-n", ex.ns, "logs", p, f"--tail={tail}"], 30)
+        ex.evidence[p] = out.splitlines()
+    ex.note(f"logs of {', '.join(pods)} kept in the example's result file")
 
 def iperf_check(ex, label, path, server_pod=None):
     """One throughput test through the API. The call and its report are the check; a
@@ -338,6 +350,8 @@ def ex5():
         ok, det, w = retry(contains(ex.ns, "ue-0", "ip addr show uesimtun0 2>&1", "inet "), 300); ex.check("ue-0 uesimtun0 has an IP (5G registration + PDU session)", ok, det, w)
         if ok:
             ok, det, w = retry(contains(ex.ns, "ue-0", "ip route", "uesimtun0"), 30); ex.check("ue-0 default route via uesimtun0", ok, det, w)
+        else:
+            evidence(ex, ["ue-0", "gnb-0", "amf-0", "smf-0", "upf-0"])
         # Restart a node without 5G session state. Restarting amf-0 drops the NGAP
         # association and strands the UE with a tunnel the gNB no longer knows.
         if restart(ex, "webui-0"):
@@ -634,7 +648,99 @@ def ex11():
             mcast_from("h1-0", "h1's echoes to 224.1.1.1 reach h2 and h3 after the restart")
     teardown(ex); return ex
 
-ALL = {"1": ex1, "2": ex2, "3": ex3, "4": ex4, "5": ex5, "6": ex6, "7": ex7, "8": ex8, "9": ex9, "10": ex10, "11": ex11}
+# ---------- accounts ----------
+def users():
+    """Two accounts on one lab: the forced first change, the password policy, a
+    quota, sharing by level and a disabled account. Skipped with auth off or a
+    token, since accounts are managed with a session."""
+    ns = "users-lab"; ex = Example("users", ns)
+    st, me = api("GET", "/auth/me")
+    if not (st == 200 and me.get("enabled") and me.get("role") in ("owner", "admin")) or client.token:
+        ex.note("auth is off or the run uses a token, accounts not exercised"); return ex
+    alice, bob = "reg-alice", "reg-bob"
+    pw = {alice: "alice-regression", bob: "bob-regression"}
+    two_hosts = lambda n: {"nodes": [{"name": "pc", "image": "alpine:3.24.2", "type": "host", "replicas": n}],
+                           "links": [{"localIntf": "eth1", "node": "pc-0", "peerNode": "pc-1", "peerIntf": "eth1", "localIp": "10.9.0.1/24", "peerIp": "10.9.0.2/24"}]}
+    code = lambda r: r.get("code") if isinstance(r, dict) else None
+
+    # Leftovers of a broken run.
+    if ns in client.namespaces():
+        api("DELETE", f"/network/clear-topology/{ns}"); api("DELETE", f"/namespaces/{ns}?deletePositions=true&deleteFiles=true")
+        retry(lambda: (ns not in client.namespaces(), "still terminating"), 120)
+    for u in (alice, bob):
+        api("DELETE", f"/users/{u}")
+
+    first = {}
+    for u, extra in ((alice, {"can_create_namespaces": True, "quota_namespaces": 1, "quota_pods": 3}), (bob, {})):
+        st, r = api("POST", "/users", body={"username": u, "role": "user", **extra})
+        first[u] = r.get("password") if isinstance(r, dict) else None
+        ex.check(f"create {u} with a generated password", st == 201 and bool(first[u]), r)
+    st, r = api("POST", "/users", body={"username": "reg-carol", "password": "short"})
+    ex.check("an account with a short password is refused", st == 400 and code(r) == "WEAK_PASSWORD", r)
+
+    as_ = {}
+    for u in (alice, bob):
+        c = C.Client(client.base, first[u], username=u)
+        st, r = c.api("GET", "/namespaces/"); ex.check(f"{u} must change the password first", st == 403 and code(r) == "PASSWORD_CHANGE_REQUIRED", r)
+        st, r = c.api("PUT", "/auth/password", body={"current_password": first[u], "new_password": "short"}); ex.check(f"{u}: a short new password is refused", st == 400 and code(r) == "WEAK_PASSWORD", r)
+        st, r = c.api("PUT", "/auth/password", body={"current_password": first[u], "new_password": pw[u]}); ex.check(f"{u} changes the password", st == 200, r)
+        as_[u] = C.Client(client.base, pw[u], username=u)
+    a, b = as_[alice], as_[bob]
+
+    st, r = b.api("POST", "/namespaces/", body={"namespace": "users-lab-bob"}); ex.check("bob may not create namespaces", st == 403, r)
+    st, r = a.api("POST", "/namespaces/", body={"namespace": ns}); ex.check("alice creates her namespace", st == 200, r)
+    st, r = a.api("POST", "/namespaces/", body={"namespace": "users-lab-2"}); ex.check("a second namespace is over her quota", st == 403 and code(r) == "QUOTA_EXCEEDED", r)
+    st, r = a.api("GET", "/users"); ex.check("alice does not see the accounts", st == 403, r)
+
+    ex.check("bob does not see alice's namespace", ns not in b.namespaces())
+    st, r = b.api("GET", f"/network/get-network/{ns}"); ex.check("nor reads it", st == 403, r)
+
+    st, r = a.api("POST", f"/network/deploy-network/{ns}", body=two_hosts(4)); ex.check("a deploy over the pod quota is refused", st == 403 and code(r) == "QUOTA_EXCEEDED", r)
+    st, r = a.api("POST", f"/network/deploy-network/{ns}", body=two_hosts(2)); ex.check("alice deploys within it", st == 200, r if st != 200 else "")
+    if st == 200:
+        ok, det, w = retry(ping(ns, "pc-0", "10.9.0.2"), 60); ex.check("pc-0 ping pc-1", ok, det, w)
+        st, r = a.api("POST", f"/network/modify-network/{ns}", body={"scale": [{"name": "pc", "replicas": 4}]}); ex.check("a scale over the pod quota is refused", st == 403 and code(r) == "QUOTA_EXCEEDED", r)
+
+        share = lambda level: a.api("PUT", f"/namespaces/access/{ns}", body={"owner": alice, "guests": {bob: level}})
+        level_of = lambda: next((n.get("level") for n in (b.api("GET", "/namespaces/")[1].get("namespaces") or []) if n["name"] == ns), None)
+        conf = {"targets": [{"pod": "pc-0", "actions": [{"type": "custom", "command": "true"}]}]}
+        st, r = share("viewer"); ex.check("alice shares it with bob as a viewer", st == 200, r)
+        # The backend caches a namespace's access for a few seconds.
+        ok, det, w = retry(lambda: (level_of() == "viewer", level_of()), 30, every=2); ex.check("bob sees it as a viewer", ok, det, w)
+        st, r = b.api("GET", f"/network/get-network/{ns}"); ex.check("a viewer reads the topology", st == 200, r if st != 200 else "")
+        st, r = b.api("GET", f"/trace/run/{ns}/pc-0?dest=10.9.0.2"); ex.check("a viewer runs no tool", st == 403, r)
+        st, r = b.api("POST", f"/network/configure/{ns}", body=conf); ex.check("a viewer configures nothing", st == 403, r)
+        st, r = share("operator"); ex.check("bob raised to operator", st == 200, r)
+        ok, det, w = retry(lambda: (level_of() == "operator", level_of()), 30, every=2); ex.check("bob sees it as an operator", ok, det, w)
+        st, r = b.api("GET", f"/trace/run/{ns}/pc-0?dest=10.9.0.2", timeout=180); ex.check("an operator runs a trace", st == 200, r if st != 200 else "")
+        st, r = b.api("POST", f"/network/configure/{ns}", body=conf); ex.check("an operator configures nothing", st == 403, r)
+        st, r = share("editor"); ex.check("bob raised to editor", st == 200, r)
+        ok, det, w = retry(lambda: (level_of() == "editor", level_of()), 30, every=2); ex.check("bob sees it as an editor", ok, det, w)
+        st, r = b.api("POST", f"/network/configure/{ns}", body=conf); ex.check("an editor configures", st == 200 and r.get("failures") == 0, r if st != 200 else "")
+        st, r = b.api("PUT", f"/namespaces/access/{ns}", body={"owner": bob, "guests": {}}); ex.check("an editor does not share or take the namespace", st == 403, r)
+        st, r = b.api("DELETE", f"/namespaces/{ns}"); ex.check("nor deletes it", st == 403, r)
+
+    st, r = a.api("POST", "/auth/tokens", body={"name": "regression"}); tok = r.get("token") if isinstance(r, dict) else None
+    ex.check("alice mints a token", st in (200, 201) and bool(tok), r)
+    if tok:
+        t = C.Client(client.base, token=tok)
+        st, r = t.api("GET", "/auth/me"); ex.check("the token acts as alice", st == 200 and r.get("identity") == alice and r.get("role") == "user", r)
+        st, r = t.api("GET", "/users"); ex.check("and no higher", st in (401, 403), r)
+
+    st, r = api("PUT", f"/users/{bob}", body={"disabled": True}); ex.check("the admin disables bob", st == 200, r)
+    st, r = b.api("GET", "/namespaces/"); ex.check("bob's session ends", st == 401, r)
+
+    if ex.name in os.environ.get("KEEP", "").split(","):
+        ex.note(f"namespace {ns} and the accounts left on request"); ex.timing("total_s", round(time.time() - ex.t0, 1)); return ex
+    st, r = a.api("DELETE", f"/network/clear-topology/{ns}"); ex.check("alice clears her topology", st == 200, r if st != 200 else "")
+    st, r = a.api("DELETE", f"/namespaces/{ns}?deletePositions=true&deleteFiles=true"); ex.check("and deletes her namespace", st == 200, r if st != 200 else "")
+    for u in (alice, bob):
+        st, r = api("DELETE", f"/users/{u}"); ex.check(f"delete {u}", st == 200, r)
+    st, r = t.api("GET", "/auth/me") if tok else (401, ""); ex.check("the token went with its account", st == 401 or (isinstance(r, dict) and not r.get("authenticated")), r)
+    ex.timing("total_s", round(time.time() - ex.t0, 1)); return ex
+
+
+ALL = {"1": ex1, "2": ex2, "3": ex3, "4": ex4, "5": ex5, "6": ex6, "7": ex7, "8": ex8, "9": ex9, "10": ex10, "11": ex11, "users": users}
 
 
 def main():
@@ -654,7 +760,7 @@ def main():
     for r in results:
         for c in r.checks:
             rec.add(example=r.name, **c)
-        rec.save(f"{r.name}.json", {"checks": r.checks, "timings": r.timings, "notes": r.notes})
+        rec.save(f"{r.name}.json", {"checks": r.checks, "timings": r.timings, "notes": r.notes, **({"evidence": r.evidence} if r.evidence else {})})
     rec.finish({r.name: {"ok": sum(c["ok"] for c in r.checks), "checks": len(r.checks), "total_s": r.timings.get("total_s")} for r in results})
     print("\n===== SUMMARY =====")
     failed = 0

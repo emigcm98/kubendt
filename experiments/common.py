@@ -44,16 +44,18 @@ class Client:
     """Thin wrapper over the REST API. Auth is a login cookie (KUBENDT_PASSWORD) or a
     bearer token (KUBENDT_TOKEN); with KUBENDT_AUTH_DISABLED on the backend neither is needed."""
 
-    def __init__(self, base=None, password=None, token=None):
+    def __init__(self, base=None, password=None, token=None, username=None):
         self.base = (base or os.environ.get("KUBENDT_URL", "http://localhost:8080")).rstrip("/")
         self.cookie = None
-        self.token = token or os.environ.get("KUBENDT_TOKEN")
-        password = password or os.environ.get("KUBENDT_PASSWORD")
+        # A named account signs in with its own password, never with the environment's token.
+        self.token = token or (None if username else os.environ.get("KUBENDT_TOKEN"))
+        password = password or (None if username else os.environ.get("KUBENDT_PASSWORD"))
         if password and not self.token:
-            self.login(password)
+            self.login(password, username)
 
-    def login(self, password):
-        req = urllib.request.Request(self.base + "/auth/login", data=json.dumps({"password": password}).encode(), method="POST")
+    def login(self, password, username=None):
+        body = {"password": password, **({"username": username} if username else {})}
+        req = urllib.request.Request(self.base + "/auth/login", data=json.dumps(body).encode(), method="POST")
         req.add_header("Content-Type", "application/json")
         with urllib.request.urlopen(req, timeout=30) as r:
             cookies = r.headers.get_all("Set-Cookie") or []

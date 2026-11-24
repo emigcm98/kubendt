@@ -17,7 +17,7 @@ const docTemplate = `{
     "paths": {
         "/auth/login": {
             "post": {
-                "description": "Exchanges an account's password for an HttpOnly session cookie. No username is the owner account, admin.",
+                "description": "Exchanges an account's password for an HttpOnly session cookie. No username is the owner account, admin. Failed attempts are counted per client address and per account; past the limit the answer is 429 with Retry-After.",
                 "consumes": [
                     "application/json"
                 ],
@@ -48,6 +48,12 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "code RATE_LIMITED",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
@@ -97,7 +103,7 @@ const docTemplate = `{
         },
         "/auth/password": {
             "put": {
-                "description": "The current password must match; the account's other sessions end and a forced change is cleared. A session or the password itself, never an API token.",
+                "description": "The current password must match; the account's other sessions end and a forced change is cleared. A session or the password itself, never an API token. The new one meets the policy: a minimum length (KUBENDT_PASSWORD_MIN_LENGTH, eight by default), not the current one, not the account's name.",
                 "consumes": [
                     "application/json"
                 ],
@@ -124,6 +130,12 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/types.MessageResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "code WEAK_PASSWORD",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "401": {
@@ -3530,6 +3542,12 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/types.ResetPasswordResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "code WEAK_PASSWORD",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "403": {

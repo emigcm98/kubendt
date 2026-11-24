@@ -164,6 +164,8 @@ func CreateUser(actor *Principal, name, password, role string, canCreate bool, q
 			return "", err
 		}
 		password = generated
+	} else if err := checkPassword(name, password); err != nil {
+		return "", err
 	}
 	hash, err := hashPassword(password)
 	if err != nil {
@@ -302,6 +304,8 @@ func ResetPassword(actor *Principal, name, password string) (generated string, e
 			return "", err
 		}
 		password = generated
+	} else if err := checkPassword(name, password); err != nil {
+		return "", err
 	}
 	u := *current
 	if u.Hash, err = hashPassword(password); err != nil {
@@ -332,6 +336,12 @@ func ChangePassword(name, current, next string) error {
 	}
 	if bcrypt.CompareHashAndPassword([]byte(u.Hash), []byte(current)) != nil {
 		return ErrBadPassword
+	}
+	if next == current {
+		return &WeakPasswordError{"The new password is the current one."}
+	}
+	if err := checkPassword(name, next); err != nil {
+		return err
 	}
 	hash, err := hashPassword(next)
 	if err != nil {

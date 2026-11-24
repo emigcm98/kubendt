@@ -168,7 +168,12 @@ func RequireSessionOrPassword() gin.HandlerFunc {
 		p, ok := sessionFromRequest(c)
 		if !ok {
 			if username, password, has := c.Request.BasicAuth(); has {
-				p, ok = auth.Authenticate(username, password)
+				var retry time.Duration
+				if p, ok, retry = passwordLogin(c, username, password); retry > 0 {
+					tooManyLogins(c, retry)
+					c.Abort()
+					return
+				}
 			}
 		}
 		if ok {
@@ -194,20 +199,34 @@ func RequireSessionOrPassword() gin.HandlerFunc {
 
 // ── Handlers ──────────────────────────────────────────────────────────────
 
-// Login exchanges the admin password for a session cookie.
+// passwordLogin checks an account's password under the login limits, per
+// client address and per account. A wait above zero means it was not tried.
+func passwordLogin(c *gin.Context, username, password string) (*auth.Principal, bool, time.Duration) {
+	ip := c.ClientIP()
+	if ok, retry := auth.LoginAllowed(ip, username); !ok {
+		return nil, false, retry
+	}
+	p, ok := auth.Authenticate(username, password)
+	if !ok {
+		auth.RegisterLoginFailure(ip, username)
+		return nil, false, 0
+	}
+	auth.RegisterLoginSuccess(ip, username)
+	return p, true, 0
+}
+
+func tooManyLogins(c *gin.Context, retry time.Duration) {
+	c.Header("Retry-After", strconv.Itoa(int(retry.Seconds())+1))
+	c.JSON(http.StatusTooManyRequests, gin.H{
+		"error": "Too many login attempts. Try again later.",
+		"code":  "RATE_LIMITED",
+	})
+}
+
+// Login exchanges an account's password for a session cookie.
 func Login(c *gin.Context) {
 	if !auth.Enabled() {
 		c.JSON(http.StatusOK, gin.H{"authenticated": true, "auth_disabled": true})
-		return
-	}
-
-	ip := c.ClientIP()
-	if ok, retry := auth.LoginAllowed(ip); !ok {
-		c.Header("Retry-After", strconv.Itoa(int(retry.Seconds())+1))
-		c.JSON(http.StatusTooManyRequests, gin.H{
-			"error": "Too many login attempts. Try again later.",
-			"code":  "RATE_LIMITED",
-		})
 		return
 	}
 
@@ -221,13 +240,15 @@ func Login(c *gin.Context) {
 	}
 	// No username is the owner account, so the login of every script and of
 	// the UI before users keeps working.
-	p, ok := auth.Authenticate(strings.TrimSpace(req.Username), req.Password)
+	p, ok, retry := passwordLogin(c, strings.TrimSpace(req.Username), req.Password)
+	if retry > 0 {
+		tooManyLogins(c, retry)
+		return
+	}
 	if !ok {
-		auth.RegisterLoginFailure(ip)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials", "code": "INVALID_CREDENTIALS"})
 		return
 	}
-	auth.RegisterLoginSuccess(ip)
 	raw, err := auth.CreateSession(p.Identity)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create session"})
@@ -273,6 +294,11 @@ func ChangePassword(c *gin.Context) {
 	if err := auth.ChangePassword(p.Identity, req.Current, req.New); err != nil {
 		if errors.Is(err, auth.ErrBadPassword) {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "The current password does not match", "code": "INVALID_CREDENTIALS"})
+			return
+		}
+		var weak *auth.WeakPasswordError
+		if errors.As(err, &weak) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": weak.Reason, "code": "WEAK_PASSWORD"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

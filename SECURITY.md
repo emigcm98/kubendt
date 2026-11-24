@@ -30,10 +30,12 @@ Understanding what KubeNDT is helps set expectations:
 
 ### Authentication
 
-- The API and dashboard require authentication. Login uses a password (stored as a bcrypt hash) and issues an **HttpOnly, SameSite=Strict session cookie**.
-- Sessions expire after inactivity (`KUBENDT_SESSION_IDLE_HOURS`, default 12h) and an absolute lifetime (`KUBENDT_SESSION_MAX_HOURS`, default 7d), and are **cleared whenever the backend restarts**, so users must sign in again.
-- Programmatic access uses **API tokens** (`Authorization: Bearer <token>`), which are revocable and can be given an expiry. Tokens carry admin scope and cannot be used to mint or revoke other tokens (that requires a session or the password).
-- Login has basic in-memory rate limiting (lockout after repeated failures). Behind a reverse proxy the client IP is the proxy's, so the limit is effectively global unless trusted proxies are configured.
+- The API and dashboard require authentication. Login uses an account's password (stored as a bcrypt hash) and issues an **HttpOnly, SameSite=Strict session cookie**.
+- Accounts have a role (`owner`, `admin` or `user`) and a level in each namespace they reach. Every route carries a permission checked against them. See [doc/USERS.md](doc/USERS.md).
+- Sessions are signed cookies that expire after inactivity (`KUBENDT_SESSION_IDLE_HOURS`, default 12h) and an absolute lifetime (`KUBENDT_SESSION_MAX_HOURS`, default 7d). A changed or reset password, or a disabled account, ends them.
+- Programmatic access uses **API tokens** (`Authorization: Bearer <token>`), which are revocable and can be given an expiry. A token acts as the account that minted it and cannot be used to mint or revoke other tokens (that requires a session or the password).
+- Chosen passwords meet a minimum length (`KUBENDT_PASSWORD_MIN_LENGTH`, default 8).
+- Login has in-memory rate limiting per client address and per account (lockout after repeated failures). Behind a reverse proxy the client IP is the proxy's, so the address limit is effectively global unless trusted proxies are configured.
 
 ### Hardening already in place
 
@@ -49,6 +51,7 @@ Understanding what KubeNDT is helps set expectations:
 
 ## Known Limitations
 
-- **Single admin account.** There is one admin identity with full access. There is no multi-user support or fine-grained RBAC yet (the session model already carries identity/roles to make this an additive change later).
-- **API tokens are admin-scoped.** There are no per-token permission scopes.
+- **Users are trusted people, not tenants.** Access is enforced by KubeNDT's API over one kubeconfig. An account with a shell in a privileged lab node can reach the worker, and labs are not confined from each other on the cluster network. See the trust model in [doc/USERS.md](doc/USERS.md).
+- **No single sign-on.** Accounts are KubeNDT's own, there is no identity provider login yet.
+- **API tokens carry their account's whole scope.** There are no per-token permission scopes.
 - **Login rate limiting is coarse behind a proxy** (see above).

@@ -16,6 +16,11 @@ import (
 // package's rule; here it is only told.
 
 func userError(c *gin.Context, err error) {
+	var weak *auth.WeakPasswordError
+	if errors.As(err, &weak) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": weak.Reason, "code": "WEAK_PASSWORD"})
+		return
+	}
 	switch {
 	case errors.Is(err, auth.ErrUserNotFound):
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
