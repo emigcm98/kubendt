@@ -1,3 +1,10 @@
+:root {
+  --profile-sep: #edf2f7;
+  --profile-item-hover: #f7fafc;
+  --profile-danger-text: #c53030;
+  --profile-danger-hover: #fff5f5;
+}
+
 .profile-menu {
   position: relative;
 }
@@ -9,15 +16,15 @@
   padding: 5px 10px 5px 6px;
   font-size: 0.85rem;
   font-weight: 600;
-  color: #fff;
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: var(--text-on-brand);
+  background: color-mix(in srgb, var(--text-on-brand) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--text-on-brand) 30%, transparent);
   border-radius: var(--radius-pill);
   cursor: pointer;
 }
 
 .profile-chip:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: color-mix(in srgb, var(--text-on-brand) 25%, transparent);
 }
 
 .profile-avatar {
@@ -29,7 +36,7 @@
   font-size: 0.78rem;
   font-weight: 700;
   color: var(--primary);
-  background: #fff;
+  background: var(--text-on-brand);
   border-radius: 50%;
 }
 
@@ -48,10 +55,10 @@
   right: 0;
   z-index: 1200;
   min-width: 210px;
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 12px 32px color-mix(in srgb, var(--shadow-color) 18%, transparent);
   padding: 8px;
 }
 
@@ -90,7 +97,7 @@
 
 .profile-sep {
   height: 1px;
-  background: #edf2f7;
+  background: var(--profile-sep);
   margin: 4px 0;
 }
 
@@ -110,15 +117,15 @@
 }
 
 .profile-item:hover {
-  background: #f7fafc;
+  background: var(--profile-item-hover);
 }
 
 .profile-item-danger {
-  color: #c53030;
+  color: var(--profile-danger-text);
 }
 
 .profile-item-danger:hover {
-  background: #fff5f5;
+  background: var(--profile-danger-hover);
 }
 
 .profile-item-icon {

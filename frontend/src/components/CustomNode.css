@@ -1,3 +1,10 @@
+:root {
+  /* the soft halo around every node */
+  --node-glow: #5a6e8c;
+  --node-selected-bg: #bbdefb;
+  --node-restarting-text: #92400e;
+}
+
 .custom-node {
   position: relative;
   display: flex;
@@ -14,19 +21,20 @@
 /* Idle hover: subtle blue-gray halo. Only applies when no other state owns the visual. */
 .custom-node:not(.node-selected):not(.node-deleting):not(.node-creating):not(.node-restarting):hover
   .node-icon {
-  filter: drop-shadow(0 0 3px rgba(90, 110, 140, 0.45))
-    drop-shadow(0 0 8px rgba(90, 110, 140, 0.25));
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--node-glow) 45%, transparent))
+    drop-shadow(0 0 8px color-mix(in srgb, var(--node-glow) 25%, transparent));
   transition: filter 0.15s ease;
 }
 
 .custom-node.node-selected .node-icon {
-  filter: drop-shadow(0 0 6px var(--primary)) drop-shadow(0 0 12px rgba(25, 118, 210, 0.55));
+  filter: drop-shadow(0 0 6px var(--primary))
+    drop-shadow(0 0 12px color-mix(in srgb, var(--primary) 55%, transparent));
 }
 
 .custom-node.node-selected .label {
-  background: rgba(187, 222, 251, 0.95);
+  background: color-mix(in srgb, var(--node-selected-bg) 95%, transparent);
   border-color: var(--primary);
-  box-shadow: 0 0 6px rgba(25, 118, 210, 0.45);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--primary) 45%, transparent);
 }
 
 .node-icon {
@@ -41,9 +49,9 @@
   top: 50%;
   left: 50%;
   font-weight: bold;
-  background: rgba(184, 208, 223, 0.8);
+  background: var(--graph-label-bg);
   border-radius: var(--radius-sm);
-  border: 1px solid #4695c9;
+  border: 1px solid var(--graph-label-border);
   z-index: 20;
   white-space: nowrap;
 }
@@ -85,7 +93,7 @@
 }
 
 .status-pending {
-  background-color: #ffeb3b; /* yellow */
+  background-color: var(--status-pending); /* yellow */
 }
 
 .status-notready {
@@ -108,12 +116,12 @@
 .restart-spinner {
   position: absolute;
   border-radius: 50%;
-  border: 2.5px solid rgba(245, 158, 11, 0.3);
-  border-top-color: #f59e0b;
+  border: 2.5px solid color-mix(in srgb, var(--warning-accent) 30%, transparent);
+  border-top-color: var(--warning-accent);
   animation: spin 0.75s linear infinite;
   z-index: 50;
   pointer-events: none;
-  box-shadow: 0 0 6px rgba(245, 158, 11, 0.55);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--warning-accent) 55%, transparent);
 }
 
 /* Restart state: amber pulsing glow, NO transparency, the node is being reloaded,
@@ -125,19 +133,19 @@
 @keyframes node-restarting-glow {
   0%,
   100% {
-    filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.6))
-      drop-shadow(0 0 10px rgba(245, 158, 11, 0.4));
+    filter: drop-shadow(0 0 4px color-mix(in srgb, var(--warning-accent) 60%, transparent))
+      drop-shadow(0 0 10px color-mix(in srgb, var(--warning-accent) 40%, transparent));
   }
   50% {
-    filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.9))
-      drop-shadow(0 0 18px rgba(245, 158, 11, 0.7));
+    filter: drop-shadow(0 0 8px color-mix(in srgb, var(--warning-accent) 90%, transparent))
+      drop-shadow(0 0 18px color-mix(in srgb, var(--warning-accent) 70%, transparent));
   }
 }
 
 .custom-node.node-restarting .label {
-  background: rgba(245, 158, 11, 0.16);
-  border-color: #f59e0b;
-  color: #92400e;
+  background: color-mix(in srgb, var(--warning-accent) 16%, transparent);
+  border-color: var(--warning-accent);
+  color: var(--node-restarting-text);
 }
 
 /* Restart success: brief green flash when the pod returns to Running */
@@ -147,7 +155,8 @@
 
 @keyframes node-restart-success-flash {
   0% {
-    filter: drop-shadow(0 0 8px var(--success-accent)) drop-shadow(0 0 16px rgba(76, 175, 80, 0.85));
+    filter: drop-shadow(0 0 8px var(--success-accent))
+      drop-shadow(0 0 16px color-mix(in srgb, var(--success-accent) 85%, transparent));
   }
   100% {
     filter: none;
@@ -163,17 +172,17 @@
 @keyframes node-deleting-glow {
   0%,
   100% {
-    filter: drop-shadow(0 0 4px rgba(244, 67, 54, 0.55))
-      drop-shadow(0 0 10px rgba(244, 67, 54, 0.35));
+    filter: drop-shadow(0 0 4px color-mix(in srgb, var(--danger-accent) 55%, transparent))
+      drop-shadow(0 0 10px color-mix(in srgb, var(--danger-accent) 35%, transparent));
   }
   50% {
-    filter: drop-shadow(0 0 8px rgba(244, 67, 54, 0.85))
-      drop-shadow(0 0 18px rgba(244, 67, 54, 0.65));
+    filter: drop-shadow(0 0 8px color-mix(in srgb, var(--danger-accent) 85%, transparent))
+      drop-shadow(0 0 18px color-mix(in srgb, var(--danger-accent) 65%, transparent));
   }
 }
 
 .custom-node.node-deleting .label {
-  background: rgba(244, 67, 54, 0.16);
+  background: color-mix(in srgb, var(--danger-accent) 16%, transparent);
   border-color: var(--danger);
   color: var(--danger-strong);
 }
@@ -187,17 +196,17 @@
 @keyframes node-creating-glow {
   0%,
   100% {
-    filter: drop-shadow(0 0 4px rgba(76, 175, 80, 0.55))
-      drop-shadow(0 0 10px rgba(76, 175, 80, 0.35));
+    filter: drop-shadow(0 0 4px color-mix(in srgb, var(--success-accent) 55%, transparent))
+      drop-shadow(0 0 10px color-mix(in srgb, var(--success-accent) 35%, transparent));
   }
   50% {
-    filter: drop-shadow(0 0 8px rgba(76, 175, 80, 0.85))
-      drop-shadow(0 0 18px rgba(76, 175, 80, 0.65));
+    filter: drop-shadow(0 0 8px color-mix(in srgb, var(--success-accent) 85%, transparent))
+      drop-shadow(0 0 18px color-mix(in srgb, var(--success-accent) 65%, transparent));
   }
 }
 
 .custom-node.node-creating .label {
-  background: rgba(76, 175, 80, 0.16);
+  background: color-mix(in srgb, var(--success-accent) 16%, transparent);
   border-color: var(--success-accent);
   color: var(--success);
 }

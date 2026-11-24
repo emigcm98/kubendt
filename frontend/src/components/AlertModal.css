@@ -4,7 +4,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.35);
+  background: color-mix(in srgb, var(--scrim-color) 35%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -14,7 +14,7 @@
 .alert-modal-container {
   background: var(--surface);
   border-radius: var(--radius-lg);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 8px 32px color-mix(in srgb, var(--shadow-color) 25%, transparent);
   width: 90%;
   max-width: 420px;
   padding: 0;
@@ -198,12 +198,12 @@
 .alert-modal-btn:hover {
   transform: translateY(-1px);
   filter: brightness(0.96);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--shadow-color) 12%, transparent);
 }
 
 .alert-modal-btn:active {
   transform: translateY(0);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--shadow-color) 12%, transparent);
 }
 
 .alert-modal-btn-primary,
@@ -220,7 +220,7 @@
 
 .alert-modal-btn-danger {
   background: var(--danger);
-  color: #fff;
+  color: var(--text-on-brand);
   border-color: var(--danger);
 }
 

@@ -1,4 +1,35 @@
+:root {
+  --pod-scrollbar-thumb: #bbbbbb;
+  --pod-status-pending: #f57f17;
+  /* the node kinds in the panel header */
+  --pod-type-router: #3498db;
+  --pod-type-host: #7f8c8d;
+  --pod-type-switch: #9b59b6;
+  --pod-overlay-bg: #f0f0f0;
+  /* shaping on, and the history buttons */
+  --pod-on-text: #1e7e34;
+  --pod-on-border: #b7e1c2;
+  --pod-off-bg: #eef1f5;
+  --pod-off-border: #d4dce5;
+  --pod-error-text: #c0392b;
+  --pod-btn-border: #b8c7db;
+  --pod-btn-bg: #f7f9fc;
+  --pod-btn-bg-hover: #eef3f9;
+  --pod-btn-bg-active: #e3edf8;
+  --pod-delete-border: #e2b9b9;
+  --pod-delete-bg: #fff6f6;
+  --pod-delete-bg-hover: #fde8e8;
+  --pod-delete-text: #8a2d2d;
+  --pod-popup-border: #cfd8e3;
+  --pod-popup-empty: #777777;
+  --pod-field-border: #e7ecf2;
+  --pod-command-border: #dbe4ef;
+  --pod-command-bg: #f8fbff;
+  --pod-command-text: #1f3b57;
+}
+
 /* === PANEL PRINCIPAL === */
+
 .pod-info-panel {
   position: fixed;
   /* Where the panel used to start when it was centred, so the tabs stay put
@@ -74,7 +105,7 @@
 }
 
 .pod-body::-webkit-scrollbar-thumb {
-  background-color: #bbb;
+  background-color: var(--pod-scrollbar-thumb);
   border-radius: var(--radius-sm);
 }
 
@@ -196,7 +227,7 @@
   color: var(--success);
   font-weight: 600;
   font-size: 0.82rem;
-  background: rgba(255, 255, 255, 0.92);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
   border: 1px solid var(--success-bg);
   border-radius: var(--radius-sm);
   padding: 2px 8px;
@@ -232,7 +263,7 @@
 }
 
 .podinfo-status-pending {
-  color: #f57f17;
+  color: var(--pod-status-pending);
 }
 
 .podinfo-status-failed {
@@ -241,17 +272,17 @@
 
 /* === TIPOS DE POD === */
 .type-router {
-  color: #3498db;
+  color: var(--pod-type-router);
   font-weight: bold;
 }
 
 .type-host {
-  color: #7f8c8d;
+  color: var(--pod-type-host);
   font-weight: bold;
 }
 
 .type-switch {
-  color: #9b59b6;
+  color: var(--pod-type-switch);
   font-weight: bold;
 }
 
@@ -312,7 +343,7 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(240, 240, 240, 0.5);
+  background: color-mix(in srgb, var(--pod-overlay-bg) 50%, transparent);
   z-index: 999;
   cursor: not-allowed;
 }
@@ -423,13 +454,13 @@
   margin: 0 0.8rem 0.4rem 0.8rem;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 1px 3px rgba(25, 118, 210, 0.08);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--primary) 8%, transparent);
 }
 
 .interface-item:hover {
   background: var(--info-bg);
   border-color: var(--primary);
-  box-shadow: 0 2px 6px rgba(25, 118, 210, 0.15);
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--primary) 15%, transparent);
   transform: translateY(-1px);
 }
 
@@ -438,7 +469,7 @@
   color: var(--primary-hover);
   border-color: var(--primary);
   font-weight: 600;
-  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.2);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--primary) 20%, transparent);
 }
 
 .interface-name {
@@ -481,8 +512,8 @@
   margin-left: 0.4rem;
   border-radius: var(--radius-pill);
   background: var(--success-bg);
-  color: #1e7e34;
-  border: 1px solid #b7e1c2;
+  color: var(--pod-on-text);
+  border: 1px solid var(--pod-on-border);
 }
 
 /* Spinner shown in place of the state dot while an interface is toggling. */
@@ -570,18 +601,18 @@
 
 .tc-links-status.on {
   background: var(--success-bg);
-  color: #1e7e34;
-  border-color: #b7e1c2;
+  color: var(--pod-on-text);
+  border-color: var(--pod-on-border);
 }
 
 .tc-links-status.off {
-  background: #eef1f5;
+  background: var(--pod-off-bg);
   color: var(--text-muted);
-  border-color: #d4dce5;
+  border-color: var(--pod-off-border);
 }
 
 .error-text {
-  color: #c0392b;
+  color: var(--pod-error-text);
   font-size: 0.85rem;
 }
 
@@ -638,7 +669,7 @@
   align-items: center;
   gap: 0.4rem;
   padding: 0.45rem 0.7rem;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--surface-muted);
   font-size: 0.85rem;
 }
 
@@ -818,7 +849,7 @@
 .driver-history-item {
   border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
-  background: #fff;
+  background: var(--surface);
   padding: 0.5rem 0.65rem;
 }
 
@@ -836,8 +867,8 @@
 }
 
 .driver-history-info-btn {
-  border: 1px solid #b8c7db;
-  background: #f7f9fc;
+  border: 1px solid var(--pod-btn-border);
+  background: var(--pod-btn-bg);
   color: var(--text-heading);
   border-radius: var(--radius-sm);
   width: 24px;
@@ -848,13 +879,13 @@
 }
 
 .driver-history-info-btn:hover {
-  background: #eef3f9;
+  background: var(--pod-btn-bg-hover);
 }
 
 .driver-history-delete-btn {
-  border: 1px solid #e2b9b9;
-  background: #fff6f6;
-  color: #8a2d2d;
+  border: 1px solid var(--pod-delete-border);
+  background: var(--pod-delete-bg);
+  color: var(--pod-delete-text);
   border-radius: var(--radius-sm);
   width: 24px;
   height: 24px;
@@ -864,7 +895,7 @@
 }
 
 .driver-history-delete-btn:hover:not(:disabled) {
-  background: #fde8e8;
+  background: var(--pod-delete-bg-hover);
 }
 
 .driver-history-delete-btn:disabled {
@@ -887,7 +918,7 @@
 .history-popup-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.35);
+  background: color-mix(in srgb, var(--scrim-color) 35%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -897,11 +928,11 @@
 .history-popup {
   width: min(520px, 92vw);
   max-height: 80vh;
-  background: #fff;
+  background: var(--surface);
   border-radius: var(--radius-md);
-  border: 1px solid #cfd8e3;
+  border: 1px solid var(--pod-popup-border);
   overflow: hidden;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--shadow-color) 25%, transparent);
 }
 
 .history-popup-header {
@@ -947,7 +978,7 @@
 
 .history-popup-empty {
   margin: 0;
-  color: #777;
+  color: var(--pod-popup-empty);
   font-size: 0.82rem;
 }
 
@@ -962,7 +993,7 @@
   grid-template-columns: 120px 1fr;
   gap: 0.5rem;
   font-size: 0.82rem;
-  border: 1px solid #e7ecf2;
+  border: 1px solid var(--pod-field-border);
   border-radius: var(--radius-sm);
   padding: 0.35rem 0.45rem;
 }
@@ -986,10 +1017,10 @@
 
 .history-popup-command {
   display: block;
-  border: 1px solid #dbe4ef;
+  border: 1px solid var(--pod-command-border);
   border-radius: var(--radius-sm);
-  background: #f8fbff;
-  color: #1f3b57;
+  background: var(--pod-command-bg);
+  color: var(--pod-command-text);
   padding: 0.35rem 0.45rem;
   font-size: 0.78rem;
   white-space: pre-wrap;
@@ -1005,8 +1036,8 @@
 }
 
 .history-popup-copy-btn {
-  border: 1px solid #b8c7db;
-  background: #f7f9fc;
+  border: 1px solid var(--pod-btn-border);
+  background: var(--pod-btn-bg);
   border-radius: var(--radius-sm);
   padding: 0 6px;
   font-size: 0.8rem;
@@ -1016,7 +1047,7 @@
 }
 
 .history-popup-copy-btn:hover {
-  background: #e3edf8;
+  background: var(--pod-btn-bg-active);
 }
 
 /* The usage line of the summary, the values with their unit muted. */
@@ -1148,7 +1179,7 @@
   font-weight: 600;
   color: var(--text-muted);
   background: var(--border-light);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 0.05rem 0.45rem;
 }
 .state-refresh-btn {

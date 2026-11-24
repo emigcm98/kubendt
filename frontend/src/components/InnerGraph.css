@@ -1,3 +1,10 @@
+:root {
+  /* the traceroute overlay: the path walked, the hop in flight */
+  --trace-path: #00e676;
+  --trace-path-active: #69f0ae;
+  --edge-spinner: #aaaaaa;
+}
+
 .graph-container {
   position: relative;
   width: 100%;
@@ -33,7 +40,7 @@
 .graph-tools .graph-control-btn-active,
 .graph-tools .graph-control-btn-active:hover {
   background: var(--primary);
-  color: #fff;
+  color: var(--text-on-brand);
 }
 
 .graph-tools .graph-control-btn:disabled {
@@ -72,7 +79,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   overflow: hidden;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--shadow-color) 12%, transparent);
 }
 
 .graph-control-btn {
@@ -104,12 +111,12 @@
 /* Active toggle (repulsion on): brand-filled so its state is obvious. */
 .graph-control-btn-active {
   background: var(--primary);
-  color: #fff;
+  color: var(--text-on-brand);
 }
 
 .graph-control-btn-active:hover {
   background: var(--primary-hover);
-  color: #fff;
+  color: var(--text-on-brand);
 }
 
 /* Selection box while dragging on the pane. The frame React Flow draws
@@ -143,14 +150,14 @@
    reads at a glance next to the nodes left out. */
 .react-flow__node.selected .custom-node:not(.node-selected) .node-icon {
   filter: drop-shadow(0 0 2px var(--primary)) drop-shadow(0 0 8px var(--primary))
-    drop-shadow(0 0 16px rgba(25, 118, 210, 0.5));
+    drop-shadow(0 0 16px color-mix(in srgb, var(--primary) 50%, transparent));
 }
 
 .react-flow__node.selected .custom-node:not(.node-selected) .label {
   background: var(--primary);
-  color: #fff;
+  color: var(--text-on-brand);
   border-color: var(--primary-hover);
-  box-shadow: 0 0 8px rgba(25, 118, 210, 0.5);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--primary) 50%, transparent);
 }
 
 /* How many nodes are selected, with a way to drop the selection. The panel
@@ -168,7 +175,7 @@
   background: color-mix(in srgb, var(--surface) 92%, transparent);
   border: 1px solid var(--primary);
   border-radius: var(--radius-pill);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 4px color-mix(in srgb, var(--shadow-color) 10%, transparent);
 }
 
 .graph-selection-hint {
@@ -212,7 +219,7 @@
   background: color-mix(in srgb, var(--surface) 88%, transparent);
   border: 1px solid var(--border);
   border-radius: var(--radius-pill);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 4px color-mix(in srgb, var(--shadow-color) 10%, transparent);
   pointer-events: none;
 }
 
@@ -246,7 +253,7 @@
   padding: 4px 8px;
   z-index: 999;
   pointer-events: none;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--shadow-color) 8%, transparent);
   line-height: 1.35;
   white-space: nowrap;
 }
@@ -283,7 +290,7 @@
   align-items: center;
   gap: 4px;
   white-space: nowrap;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--shadow-color) 8%, transparent);
   transition:
     border-color 0.18s ease,
     box-shadow 0.18s ease,
@@ -291,7 +298,7 @@
 }
 
 .edge-label:hover {
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.16);
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--shadow-color) 16%, transparent);
   z-index: 22;
 }
 
@@ -310,7 +317,7 @@
   display: inline-block;
   width: 0.75em;
   height: 0.75em;
-  border: 1.5px solid #aaa;
+  border: 1.5px solid var(--edge-spinner);
   border-top-color: var(--text-muted);
   border-radius: 50%;
   animation: edge-label-spin 0.7s linear infinite;
@@ -321,7 +328,7 @@
 .link-name-label {
   position: absolute;
   background: var(--primary-hover);
-  color: #fff;
+  color: var(--text-on-brand);
   font-weight: 700;
   padding: 1px 6px;
   border-radius: var(--radius-md);
@@ -329,7 +336,7 @@
   z-index: 25;
   white-space: nowrap;
   letter-spacing: 0.03em;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 1px 4px color-mix(in srgb, var(--shadow-color) 28%, transparent);
   user-select: none;
 }
 
@@ -350,7 +357,7 @@
   top: 0;
   left: 0;
   height: 3px;
-  background: #35507a;
+  background: var(--tool-border-strong);
   border-radius: 2px;
   pointer-events: none;
   z-index: 18;
@@ -358,24 +365,24 @@
 }
 
 .trace-seg-done {
-  background: #00e676;
+  background: var(--trace-path);
   opacity: 1;
-  box-shadow: 0 0 8px rgba(0, 230, 118, 0.65);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--trace-path) 65%, transparent);
 }
 
 .trace-seg-active {
-  background: #69f0ae;
+  background: var(--trace-path-active);
   height: 4px;
   opacity: 1;
-  box-shadow: 0 0 10px rgba(105, 240, 174, 0.9);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--trace-path-active) 90%, transparent);
 }
 
 /* Tunnel segments: dashed once traversed, still green & visible. */
 .trace-seg-tunnel.trace-seg-done {
   background: repeating-linear-gradient(
     90deg,
-    #00e676 0,
-    #00e676 7px,
+    var(--trace-path) 0,
+    var(--trace-path) 7px,
     transparent 7px,
     transparent 13px
   );
@@ -387,7 +394,7 @@
   position: absolute;
   top: 0;
   left: 0;
-  color: #00e676;
+  color: var(--trace-path);
   font-size: 15px;
   letter-spacing: 1px;
   white-space: nowrap;
@@ -407,7 +414,7 @@
   }
   50% {
     opacity: 1;
-    filter: drop-shadow(0 0 6px rgba(0, 230, 118, 0.9));
+    filter: drop-shadow(0 0 6px color-mix(in srgb, var(--trace-path) 90%, transparent));
   }
 }
 
@@ -433,10 +440,10 @@
 @keyframes trace-packet-pulse {
   0%,
   100% {
-    filter: drop-shadow(0 0 5px rgba(0, 230, 118, 0.7));
+    filter: drop-shadow(0 0 5px color-mix(in srgb, var(--trace-path) 70%, transparent));
   }
   50% {
-    filter: drop-shadow(0 0 12px rgba(0, 230, 118, 1));
+    filter: drop-shadow(0 0 12px var(--trace-path));
     opacity: 0.75;
   }
 }
@@ -454,7 +461,7 @@
 /* The envelope SVG: soft green glow so it reads as "the packet in flight". */
 .trace-packet-env {
   display: block;
-  filter: drop-shadow(0 0 5px rgba(0, 230, 118, 0.85));
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--trace-path) 85%, transparent));
 }
 
 /* The drop ✕ SVG, layered dead-centre over the envelope with a dark halo so
@@ -465,6 +472,6 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  filter: drop-shadow(0 0 2px #000) drop-shadow(0 0 4px #000);
+  filter: drop-shadow(0 0 2px var(--shadow-color)) drop-shadow(0 0 4px var(--shadow-color));
   z-index: 1;
 }

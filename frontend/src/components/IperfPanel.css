@@ -10,7 +10,7 @@
   color: var(--tool-text-body);
   border: 1px solid var(--tool-border);
   border-radius: var(--radius-md);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--shadow-color) 45%, transparent);
   font-size: 12px;
   overflow: hidden;
   user-select: none;
@@ -155,7 +155,7 @@
   background: var(--tool-bg);
   border: 1px solid var(--tool-border-strong);
   border-radius: var(--radius-sm);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--shadow-color) 40%, transparent);
 }
 
 .iperf-picker-item {

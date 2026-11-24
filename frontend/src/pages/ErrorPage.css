@@ -20,7 +20,7 @@
   max-width: 500px;
   width: 100%;
   text-align: center;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--shadow-color) 5%, transparent);
 }
 
 .error-icon {

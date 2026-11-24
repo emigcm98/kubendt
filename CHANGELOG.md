@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- Most colors, shadows and radii of the frontend come from shared design tokens instead of values repeated in each stylesheet, the groundwork for dark mode.
+
 ## [1.13.0] - 2026-11-24
 
 ### Added

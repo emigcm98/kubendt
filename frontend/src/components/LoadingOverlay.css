@@ -1,10 +1,23 @@
+:root {
+  /* one tint per operation */
+  --overlay-import-bg: #fffbe6;
+  --overlay-config-bg: #e6f7ff;
+  --overlay-config-border: #91d5ff;
+  --overlay-modify-bg: #f6ffed;
+  --overlay-modify-border: #b7eb8f;
+  --overlay-clear-bg: #fff1f0;
+  --overlay-clear-border: #ffa39e;
+  --overlay-info-bg: #f0f5ff;
+  --overlay-info-border: #d0dae8;
+}
+
 .loading-overlay-backdrop {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.3);
+  background: color-mix(in srgb, var(--scrim-color) 30%, transparent);
   z-index: 19;
   pointer-events: none;
 }
@@ -31,26 +44,26 @@
 }
 
 .loading-overlay-import {
-  background: #fffbe6;
-  border-color: #f0c36d;
+  background: var(--overlay-import-bg);
+  border-color: var(--warning-border);
 }
 
 .loading-overlay-config {
-  background: #e6f7ff;
-  border-color: #91d5ff;
+  background: var(--overlay-config-bg);
+  border-color: var(--overlay-config-border);
 }
 
 .loading-overlay-modify {
-  background: #f6ffed;
-  border-color: #b7eb8f;
+  background: var(--overlay-modify-bg);
+  border-color: var(--overlay-modify-border);
 }
 
 .loading-overlay-clear {
-  background: #fff1f0;
-  border-color: #ffa39e;
+  background: var(--overlay-clear-bg);
+  border-color: var(--overlay-clear-border);
 }
 
 .loading-overlay-info {
-  background: #f0f5ff;
-  border-color: #d0dae8;
+  background: var(--overlay-info-bg);
+  border-color: var(--overlay-info-border);
 }

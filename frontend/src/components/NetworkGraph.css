@@ -1,9 +1,22 @@
+:root {
+  --empty-topology-text: #5a6b7a;
+  --import-confirm-header: #fff9e6;
+  --import-confirm-title: #000000;
+  /* the taskbar of minimized shells, in the terminal family */
+  --term-bg-chip: #2a2a2a;
+  --term-bg-chip-hover: #303030;
+  --term-border-subtle: #3a3a3a;
+  --term-danger-text: #ff6868;
+  --graph-loading-text: #666666;
+}
+
 /* ── The top bar: three quiet groups floating on the canvas ─────────────────
    The topology actions on the left, the search and the external switch in
    the middle, the layout and the export on the right. One language for
    every button and colour only where it means something: the main action of
    the state filled with the primary, red on Clear's hover, the rest neutral,
    the disabled ones quiet and in their place. */
+
 .topbar {
   position: absolute;
   top: 14px;
@@ -26,7 +39,7 @@
   background: var(--panel-from);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  box-shadow: 0 2px 10px rgba(25, 60, 100, 0.12);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--shadow-color-cool) 12%, transparent);
   pointer-events: auto;
 }
 
@@ -214,7 +227,7 @@
   position: relative;
   width: 28px;
   height: 16px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--text-subtle);
   flex-shrink: 0;
   transition: background 0.15s ease;
@@ -378,11 +391,11 @@
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 18;
-  background: #ffffff;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 1.6rem 2rem;
-  box-shadow: 0 4px 18px rgba(25, 60, 100, 0.08);
+  box-shadow: 0 4px 18px color-mix(in srgb, var(--shadow-color-cool) 8%, transparent);
   text-align: center;
   max-width: 380px;
   pointer-events: none;
@@ -399,7 +412,7 @@
 
 .empty-topology p {
   margin: 0;
-  color: #5a6b7a;
+  color: var(--empty-topology-text);
   font-size: 0.92rem;
   line-height: 1.5;
 }
@@ -433,7 +446,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.6);
+  background-color: color-mix(in srgb, var(--scrim-color) 60%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -441,9 +454,9 @@
 }
 
 .import-confirm-modal {
-  background-color: white;
+  background-color: var(--surface);
   border-radius: var(--radius-lg);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 32px color-mix(in srgb, var(--shadow-color) 30%, transparent);
   width: 90%;
   max-width: 500px;
   padding: 0;
@@ -456,12 +469,12 @@
   align-items: center;
   padding: 1.5rem;
   border-bottom: 1px solid var(--border-light);
-  background-color: #fff9e6;
+  background-color: var(--import-confirm-header);
 }
 
 .import-confirm-modal .modal-header h2 {
   margin: 0;
-  color: #000000;
+  color: var(--import-confirm-title);
   font-size: 1.4rem;
 }
 
@@ -501,7 +514,7 @@
 }
 
 .modal-close-btn:hover {
-  background-color: #f0f0f0;
+  background-color: var(--surface-muted);
   color: var(--text-body);
 }
 
@@ -552,10 +565,10 @@
   display: flex;
   gap: 8px;
   padding: 6px 10px;
-  background: rgba(30, 30, 30, 0.92);
-  border: 1px solid #3a3a3a;
+  background: color-mix(in srgb, var(--term-bg) 92%, transparent);
+  border: 1px solid var(--term-border-subtle);
   border-radius: var(--radius-pill);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--shadow-color) 35%, transparent);
   z-index: 9000;
   backdrop-filter: blur(4px);
 }
@@ -563,8 +576,8 @@
 .shell-taskbar-chip {
   display: inline-flex;
   align-items: stretch;
-  background: #2a2a2a;
-  border: 1px solid #444;
+  background: var(--term-bg-chip);
+  border: 1px solid var(--term-border);
   border-radius: var(--radius-pill);
   overflow: hidden;
   transition:
@@ -573,8 +586,8 @@
 }
 
 .shell-taskbar-chip:hover {
-  border-color: #00ff99;
-  background: #303030;
+  border-color: var(--term-accent);
+  background: var(--term-bg-chip-hover);
 }
 
 .shell-taskbar-chip-restore {
@@ -591,14 +604,14 @@
 }
 
 .shell-taskbar-chip-icon {
-  color: #00ff99;
+  color: var(--term-accent);
   font-size: 0.7rem;
 }
 
 .shell-taskbar-chip-name {
   font-weight: 600;
   font-family: 'Monaco', 'Menlo', monospace;
-  color: #00ff99;
+  color: var(--term-accent);
   max-width: 160px;
   white-space: nowrap;
   overflow: hidden;
@@ -613,7 +626,7 @@
 .shell-taskbar-chip-close {
   background: transparent;
   border: none;
-  border-left: 1px solid #444;
+  border-left: 1px solid var(--term-border);
   color: var(--text-subtle);
   padding: 0 9px;
   cursor: pointer;
@@ -624,8 +637,8 @@
 }
 
 .shell-taskbar-chip-close:hover {
-  background: rgba(255, 77, 77, 0.18);
-  color: #ff6868;
+  background: color-mix(in srgb, var(--term-danger) 18%, transparent);
+  color: var(--term-danger-text);
 }
 
 /* Search input below Save positions / Export topology, centred between them.

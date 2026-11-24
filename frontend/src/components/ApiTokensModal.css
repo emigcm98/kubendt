@@ -1,7 +1,7 @@
 .tokens-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: color-mix(in srgb, var(--scrim-color) 45%, transparent);
   z-index: 1000;
 }
 
@@ -15,9 +15,9 @@
   max-width: 680px;
   max-height: 85vh;
   overflow-y: auto;
-  background: #fff;
+  background: var(--surface);
   border-radius: var(--radius-lg);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 20px 60px color-mix(in srgb, var(--shadow-color) 30%, transparent);
   padding: 22px;
 }
 
@@ -85,7 +85,7 @@
   border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
   font-size: 0.85rem;
-  background: #fff;
+  background: var(--surface);
   color: var(--text-body);
   cursor: pointer;
 }
@@ -138,7 +138,7 @@
   align-items: center;
   word-break: break-all;
   font-size: 0.82rem;
-  background: #fff;
+  background: var(--surface);
   border: 1px solid #c6f6d5;
   border-radius: var(--radius-sm);
   padding: 8px;
@@ -214,7 +214,7 @@
 }
 
 .tokens-row:hover {
-  background: #fff;
+  background: var(--surface);
   border-color: var(--border-light);
 }
 
@@ -266,7 +266,7 @@
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--danger-strong);
-  background: #fff;
+  background: var(--surface);
   border: 1px solid #feb2b2;
   border-radius: var(--radius-sm);
   cursor: pointer;

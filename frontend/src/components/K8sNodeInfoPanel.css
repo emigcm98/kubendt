@@ -14,7 +14,7 @@
   bottom: 0;
   width: 520px;
   max-width: 100vw;
-  background: #ffffff;
+  background: var(--surface);
   box-shadow: -8px 0 24px rgba(15, 30, 60, 0.18);
   z-index: 1001;
   display: flex;
@@ -47,7 +47,7 @@
 .kni-header {
   flex-shrink: 0;
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
-  color: #ffffff;
+  color: var(--text-on-brand);
   padding: 18px 22px;
   display: flex;
   align-items: flex-start;
@@ -64,7 +64,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1px;
-  color: rgba(255, 255, 255, 0.75);
+  color: color-mix(in srgb, var(--text-on-brand) 75%, transparent);
   margin-bottom: 4px;
 }
 
@@ -73,7 +73,7 @@
   font-size: 1.35rem;
   font-weight: 800;
   letter-spacing: 0.2px;
-  color: #ffffff;
+  color: var(--text-on-brand);
   word-break: break-all;
 }
 
@@ -90,11 +90,11 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  background: rgba(255, 255, 255, 0.18);
-  color: #ffffff;
+  background: color-mix(in srgb, var(--text-on-brand) 18%, transparent);
+  color: var(--text-on-brand);
   padding: 3px 9px;
   border-radius: var(--radius-pill);
-  border: 1px solid rgba(255, 255, 255, 0.28);
+  border: 1px solid color-mix(in srgb, var(--text-on-brand) 28%, transparent);
 }
 
 .kni-status {
@@ -118,7 +118,7 @@
 
 .kni-status-ready {
   background: var(--success-accent);
-  color: #fff;
+  color: var(--text-on-brand);
 }
 
 .kni-status-notready {
@@ -160,9 +160,9 @@
 }
 
 .kni-close {
-  background: rgba(255, 255, 255, 0.12);
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: color-mix(in srgb, var(--text-on-brand) 12%, transparent);
+  color: var(--text-on-brand);
+  border: 1px solid color-mix(in srgb, var(--text-on-brand) 28%, transparent);
   width: 32px;
   height: 32px;
   border-radius: var(--radius-md);
@@ -176,7 +176,7 @@
 }
 
 .kni-close:hover {
-  background: rgba(255, 255, 255, 0.24);
+  background: color-mix(in srgb, var(--text-on-brand) 24%, transparent);
 }
 
 /* === Body === */
@@ -261,7 +261,7 @@
 .kni-section-count {
   font-size: 0.65rem;
   background: var(--primary);
-  color: #ffffff;
+  color: var(--text-on-brand);
   padding: 2px 7px;
   border-radius: var(--radius-pill);
   letter-spacing: 0.3px;
@@ -388,7 +388,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  background: rgba(255, 255, 255, 0.6);
+  background: color-mix(in srgb, var(--surface) 60%, transparent);
   border: 1px solid rgba(149, 169, 192, 0.25);
   border-radius: var(--radius-sm);
   padding: 6px 9px;
@@ -440,13 +440,13 @@
 .kni-condition-good {
   background: var(--success-bg);
   color: var(--success);
-  border-color: rgba(46, 125, 50, 0.25);
+  border-color: color-mix(in srgb, var(--success) 25%, transparent);
 }
 
 .kni-condition-bad {
   background: var(--danger-bg);
   color: var(--danger-strong);
-  border-color: rgba(198, 40, 40, 0.25);
+  border-color: color-mix(in srgb, var(--danger-strong) 25%, transparent);
 }
 
 /* === Taints === */
@@ -477,7 +477,7 @@
 
 .kni-tag {
   display: inline-flex;
-  background: #ffffff;
+  background: var(--surface);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-sm);
   padding: 2px 7px;

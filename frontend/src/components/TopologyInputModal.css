@@ -5,7 +5,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.35);
+  background-color: color-mix(in srgb, var(--scrim-color) 35%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -19,7 +19,7 @@
 .topology-input-modal {
   background-color: white;
   border-radius: var(--radius-lg);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 32px color-mix(in srgb, var(--shadow-color) 30%, transparent);
   width: 92%;
   max-width: 760px;
   padding: 0;
@@ -49,7 +49,7 @@
   align-items: center;
   padding: 0.9rem 1.5rem;
   border-bottom: 1px solid var(--border);
-  background: linear-gradient(to bottom, #e3eaf3, #d8e2ee);
+  background: linear-gradient(to bottom, var(--panel-header-from), var(--panel-header-to));
   border-top-left-radius: var(--radius-lg);
   border-top-right-radius: var(--radius-lg);
 }
@@ -121,7 +121,7 @@
 }
 
 .tinput-toolbar-btn:hover:not(:disabled) {
-  background-color: #e3eaf3;
+  background-color: var(--panel-header-from);
   border-color: #95a9c0;
 }
 
@@ -160,7 +160,7 @@
   border: 1px solid var(--border-light);
   border-radius: var(--radius-sm);
   overflow: hidden;
-  background: #ffffff;
+  background: var(--surface);
   /* Fill the middle and scroll internally via .cm-scroller. */
   flex: 1;
   min-height: 0;
@@ -173,7 +173,7 @@
 
 .tinput-editor-wrapper.is-dragging {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.15);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent);
 }
 
 .tinput-drop-hint {
@@ -182,7 +182,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(227, 242, 253, 0.92);
+  background: color-mix(in srgb, var(--info-bg) 92%, transparent);
   color: var(--primary-hover);
   font-weight: 700;
   pointer-events: none;

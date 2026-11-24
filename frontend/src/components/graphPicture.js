@@ -46,6 +46,10 @@ const TOKEN_NAMES = [
   'warning',
   'warning-strong',
   'danger',
+  'text-on-brand',
+  'status-pending',
+  'graph-label-bg',
+  'graph-label-border',
 ];
 
 // The tokens as the page resolves them, with the hex of index.css as the
@@ -64,6 +68,10 @@ export const readTokens = () => {
     warning: '#f0a020',
     'warning-strong': '#f57c00',
     danger: '#d32f2f',
+    'text-on-brand': '#ffffff',
+    'status-pending': '#ffeb3b',
+    'graph-label-bg': 'rgba(184, 208, 223, 0.8)',
+    'graph-label-border': '#4695c9',
   };
   if (typeof document === 'undefined') return fallback;
   const style = getComputedStyle(document.documentElement);
@@ -361,7 +369,7 @@ const nodeSvg = (n, tokens, icons, iconInsets) => {
       d.status === 'Running'
         ? tokens['success-accent']
         : d.status === 'Pending'
-          ? '#ffeb3b'
+          ? tokens['status-pending']
           : d.status === 'running-not-ready' || d.status === 'container-not-ready'
             ? tokens.warning
             : tokens.danger;
@@ -383,8 +391,8 @@ const nodeSvg = (n, tokens, icons, iconInsets) => {
     weight: 700,
     padX,
     padY,
-    fill: 'rgba(184, 208, 223, 0.8)',
-    stroke: '#4695c9',
+    fill: tokens['graph-label-bg'],
+    stroke: tokens['graph-label-border'],
     strokeWidth: 1,
     radius: 6,
     color: tokens['text-body'],
@@ -516,7 +524,7 @@ export const paintGraph = ({
         stroke: 'none',
         strokeWidth: 0,
         radius: 8,
-        color: '#ffffff',
+        color: tokens['text-on-brand'],
       });
       labelLayer += p.svg;
       boxes.push(p.box);

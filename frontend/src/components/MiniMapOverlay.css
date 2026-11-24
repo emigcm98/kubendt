@@ -1,3 +1,19 @@
+:root {
+  --minimap-toggle-hover: #ffc800;
+  /* the glow of each node kind */
+  --minimap-host: #4c7958;
+  --minimap-router: #3498db;
+  --minimap-switch: #9b59b6;
+  --minimap-external: #8b5cf6;
+  /* the map's own fills, read by MiniMapOverlay.js */
+  --minimap-fill-router: #3b82f6;
+  --minimap-fill-switch: #6b7280;
+  --minimap-fill-host: #10b981;
+  --minimap-fill-external: #8b5cf6;
+  --minimap-fill-other: #facc15;
+  --minimap-stroke: #111111;
+}
+
 .minimap-container {
   position: absolute;
   bottom: 1rem;
@@ -7,10 +23,10 @@
   width: 300px;
   height: 220px;
 
-  background: white;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--shadow-color) 15%, transparent);
   /* Clip the inner minimap to the rounded corners so its gray mask never
      bleeds over the border. */
   overflow: hidden;
@@ -43,7 +59,7 @@
 }
 
 .minimap-toggle:hover {
-  background: rgba(255, 200, 0, 0.12);
+  background: color-mix(in srgb, var(--minimap-toggle-hover) 12%, transparent);
   color: var(--warning-strong);
 }
 
@@ -59,7 +75,7 @@
   border-radius: var(--radius-md);
   background: var(--surface);
   color: var(--text-body);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--shadow-color) 15%, transparent);
 }
 
 .minimap-toggle-collapsed:hover {
@@ -74,7 +90,7 @@
 
 /* Minimap background */
 .react-flow__minimap {
-  background: white;
+  background: var(--surface);
   margin: 0;
 }
 
@@ -88,13 +104,13 @@
 .minimap-node.host {
   rx: 0 !important;
   ry: 0 !important;
-  filter: drop-shadow(0 0 10px #4c7958);
+  filter: drop-shadow(0 0 10px var(--minimap-host));
 }
 
 .minimap-node.router {
   rx: 50% !important;
   ry: 50% !important;
-  filter: drop-shadow(0 0 10px #3498db);
+  filter: drop-shadow(0 0 10px var(--minimap-router));
 }
 
 .minimap-node.switch {
@@ -103,7 +119,7 @@
   transform: rotate(45deg) scale(0.9); /* girar y escalar un poco para que no se desborde */
   transform-box: fill-box; /* importante para que el rotate funcione bien */
   transform-origin: center;
-  filter: drop-shadow(0 0 10px #9b59b6);
+  filter: drop-shadow(0 0 10px var(--minimap-switch));
 }
 
 /* External network: a diamond like a switch (shared L2 segment), in violet to
@@ -114,7 +130,7 @@
   transform: rotate(45deg) scale(0.9);
   transform-box: fill-box;
   transform-origin: center;
-  filter: drop-shadow(0 0 10px #8b5cf6);
+  filter: drop-shadow(0 0 10px var(--minimap-external));
 }
 
 /* Annotations: a faint outline, the pods are what the map is for. */

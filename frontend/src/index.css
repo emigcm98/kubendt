@@ -1,7 +1,9 @@
 /* === KubeNDT design tokens ===
    Single source of truth for colors, radii and elevation. Values are the
    canonical ones distilled from the existing UI; each token collapses several
-   near-duplicate hex values that were scattered across the stylesheets. */
+   near-duplicate hex values that were scattered across the stylesheets.
+   A color only one stylesheet uses is a token in a :root block at its top,
+   so portals and a dark theme reach it too. */
 :root {
   /* Brand (header banner) */
   --brand: #2b8fd4;
@@ -17,6 +19,7 @@
   --panel-border: #d3dfec;
   --panel-shadow: 0 4px 16px rgba(25, 118, 210, 0.12);
   --surface: #ffffff;
+  --surface-muted: #f0f0f0;
   /* Panel/section header band (the light blue-gray gradient). */
   --panel-header-from: #e3eaf3;
   --panel-header-to: #d8e2ee;
@@ -60,6 +63,9 @@
   /* Graph (topology canvas) */
   --graph-edge: #2b333f; /* near-black slate for links, crisp but a touch softer than pure black */
   --graph-edge-selected: var(--primary); /* selected link / selected node's links */
+  --graph-label-bg: rgba(184, 208, 223, 0.8); /* node names under the icons */
+  --graph-label-border: #4695c9;
+  --status-pending: #ffeb3b;
 
   /* Status */
   --success: #2e7d32;
@@ -68,9 +74,11 @@
   --success-bg: #e6f4ea;
   --danger: #d32f2f;
   --danger-strong: #c62828;
+  --danger-accent: #f44336;
   --danger-bg: #fdecea;
   --warning: #f0a020;
   --warning-strong: #f57c00;
+  --warning-accent: #f59e0b;
   --warning-border: #f0c36d;
   --warning-bg: #fff8e6;
   --warning-text: #8a5a00;
@@ -89,6 +97,12 @@
   --term-accent-hover: #00cc77;
   --term-danger: #ff4d4d;
   --term-link: #00aaff;
+
+  /* Shadows and backdrops. Each use mixes the base at its own alpha,
+     color-mix(in srgb, var(--shadow-color) 12%, transparent). */
+  --shadow-color: #000000;
+  --shadow-color-cool: #193c64; /* the blue-gray shadow of cards on light panels */
+  --scrim-color: #000000;
 
   /* Radii */
   --radius-sm: 6px;
