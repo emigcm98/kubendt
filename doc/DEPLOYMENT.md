@@ -71,7 +71,7 @@ KubeNDT can run inside the cluster it manages, on a ServiceAccount, with no kube
 kubectl create namespace kubendt-system
 kubectl -n kubendt-system create secret generic kubendt-backend-env --from-literal=KUBENDT_ADMIN_PASSWORD='change-me'
 
-kubectl apply -k "https://github.com/emigcm98/kubendt/deploy/k8s?ref=v1.12.0"   # a release: its kustomization pins its images
+kubectl apply -k "https://github.com/emigcm98/kubendt/deploy/k8s?ref=v1.13.0"   # a release: its kustomization pins its images
 kubectl apply -k deploy/k8s                      # a checkout: the images of the release it was cut at
 
 kubectl -n kubendt-system port-forward svc/kubendt-frontend 8080:80   # then http://localhost:8080
