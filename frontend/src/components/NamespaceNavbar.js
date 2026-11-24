@@ -214,17 +214,19 @@ function NamespaceNavbar({
             <FolderIcon className="app-icon" aria-hidden="true" />
             File Manager
           </button>
-          <button
-            className="navbar-button"
-            onClick={() => {
-              sessionStorage.setItem(`kubendt.restoreCache.${namespace}`, 'true');
-              navigate(`/${namespace}/state`);
-            }}
-            title="Every Kubernetes object of this namespace and what it is for KubeNDT"
-          >
-            <ClusterIcon className="app-icon" aria-hidden="true" />
-            State
-          </button>
+          {isOwner && (
+            <button
+              className="navbar-button"
+              onClick={() => {
+                sessionStorage.setItem(`kubendt.restoreCache.${namespace}`, 'true');
+                navigate(`/${namespace}/state`);
+              }}
+              title="Every Kubernetes object of this namespace and what it is for KubeNDT"
+            >
+              <ClusterIcon className="app-icon" aria-hidden="true" />
+              State
+            </button>
+          )}
           <div className="navbar-menu-anchor" ref={menuRef}>
             <button
               className={`navbar-button${menuOpen ? ' navbar-button-open' : ''}`}

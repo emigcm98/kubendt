@@ -40,7 +40,7 @@ export default function ChangePasswordModal({ onClose }) {
   return (
     <>
       <div className="tokens-backdrop" onClick={onClose} />
-      <div className="tokens-modal" role="dialog" aria-label="Change password">
+      <div className="tokens-modal tokens-modal-narrow" role="dialog" aria-label="Change password">
         <div className="tokens-header">
           <h2>Change password</h2>
           <button className="tokens-close" onClick={onClose} title="Close">

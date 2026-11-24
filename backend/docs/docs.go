@@ -3107,7 +3107,7 @@ const docTemplate = `{
         },
         "/state/{namespace}": {
             "get": {
-                "description": "The objects of one namespace, a lab or the system one, with the role each plays for KubeNDT.",
+                "description": "The objects of one namespace, a lab or the system one, with the role each plays for KubeNDT. For the namespace's owner and the admins; the system namespace for admins alone.",
                 "produces": [
                     "application/json"
                 ],

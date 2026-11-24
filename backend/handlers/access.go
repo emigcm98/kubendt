@@ -80,8 +80,6 @@ var routePermissions = []routeRule{
 	{"GET", "/file-ops/:namespace/export", auth.PermView},
 	{"GET", "/drivers/history/:namespace", auth.PermView},
 	{"GET", "/drivers/history/:namespace/:podName", auth.PermView},
-	{"GET", "/state/:namespace", auth.PermView},
-	{"GET", "/state/:namespace/:kind/:name", auth.PermView},
 
 	// Working on its pods without changing the lab.
 	{"GET", "/shell/ws/:namespace/:podName", auth.PermOperate},
@@ -113,7 +111,9 @@ var routePermissions = []routeRule{
 	{"DELETE", "/drivers/history/namespace/:namespace/pod/:podName", auth.PermEdit},
 	{"DELETE", "/drivers/history/namespace/:namespace", auth.PermEdit},
 
-	// Disposing of it.
+	// Disposing of it, and what KubeNDT keeps of it in the cluster.
+	{"GET", "/state/:namespace", auth.PermOwn},
+	{"GET", "/state/:namespace/:kind/:name", auth.PermOwn},
 	{"DELETE", "/namespaces/:namespace", auth.PermOwn},
 	{"PUT", "/namespaces/access/:namespace", auth.PermOwn},
 	{"DELETE", "/network/clear-topology/:namespace", auth.PermOwn},

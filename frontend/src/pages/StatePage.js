@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { API_BASE_URL } from '../config';
+import { useAuth } from '../auth/AuthContext';
 import '../components/NamespaceNavbar.css';
 import './StatePage.css';
 import kubendtLogo from '../assets/images/kubendt-logo.svg';
@@ -57,6 +58,7 @@ export const formatAge = (iso, now = Date.now()) => {
 const StatePage = () => {
   const navigate = useNavigate();
   const { namespace } = useParams();
+  const auth = useAuth();
   const [namespaces, setNamespaces] = useState(null);
   const [error, setError] = useState('');
   const [picked, setPicked] = useState('');
@@ -213,7 +215,7 @@ const StatePage = () => {
           </div>
         </div>
         <div className="navbar-right">
-          {namespace && (
+          {namespace && auth.isAdmin && (
             <button
               className="navbar-button"
               onClick={() => navigate('/state')}
