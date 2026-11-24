@@ -1,5 +1,10 @@
 /* Reuses .pod-info-panel + .panel-wrapper + .close-btn from PodInfoPanel.css */
 
+:root {
+  --link-badge-up-border: #b6dcc0;
+  --link-badge-down-border: #f0bcb4;
+}
+
 .link-info-title-icon {
   width: 20px;
   height: 20px;
@@ -46,7 +51,7 @@
   border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
   padding: 0.6rem 0.7rem;
-  box-shadow: 0 1px 3px rgba(25, 118, 210, 0.08);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--primary) 8%, transparent);
 }
 
 .link-endpoint-header {
@@ -60,7 +65,7 @@
   width: 28px;
   height: 28px;
   flex-shrink: 0;
-  filter: drop-shadow(0 0 6px rgba(0, 0, 0, 0.1));
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--shadow-color) 10%, transparent));
 }
 
 .link-endpoint-titles {
@@ -104,13 +109,13 @@
 .link-state-badge.badge-up {
   background: var(--success-bg);
   color: var(--success);
-  border: 1px solid #b6dcc0;
+  border: 1px solid var(--link-badge-up-border);
 }
 
 .link-state-badge.badge-down {
   background: var(--danger-bg);
   color: var(--danger-strong);
-  border: 1px solid #f0bcb4;
+  border: 1px solid var(--link-badge-down-border);
 }
 
 .link-endpoint-detail {

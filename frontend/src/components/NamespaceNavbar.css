@@ -10,7 +10,7 @@
   background: linear-gradient(to bottom, var(--brand), var(--brand-edge));
   border-bottom: 2px solid var(--brand-edge);
   padding: 0.4rem 1rem;
-  box-shadow: 0 2px 8px rgba(28, 116, 192, 0.25);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--brand-edge) 25%, transparent);
   min-height: 48px;
 }
 
@@ -41,7 +41,7 @@
   border: 0;
   background: var(--surface);
   border-radius: var(--radius-md);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--shadow-color) 18%, transparent);
   cursor: pointer;
   transition: box-shadow 0.15s ease;
 }
@@ -56,11 +56,11 @@
 }
 
 .navbar-brand:hover {
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 3px 8px color-mix(in srgb, var(--shadow-color) 25%, transparent);
 }
 
 .navbar-brand:focus-visible {
-  outline: 2px solid rgba(255, 255, 255, 0.7);
+  outline: 2px solid color-mix(in srgb, var(--text-on-brand) 70%, transparent);
   outline-offset: 2px;
 }
 
@@ -74,10 +74,10 @@
   display: inline-flex;
   align-items: center;
   gap: 11px;
-  background: rgba(255, 255, 255, 0.12);
+  background: color-mix(in srgb, var(--text-on-brand) 12%, transparent);
   padding: 5px 6px 5px 15px;
   border-radius: var(--radius-lg);
-  border: 1px solid rgba(255, 255, 255, 0.24);
+  border: 1px solid color-mix(in srgb, var(--text-on-brand) 24%, transparent);
   max-width: 460px;
 }
 
@@ -99,16 +99,16 @@
 .navbar-ns-icon {
   width: 20px;
   height: 20px;
-  color: rgba(255, 255, 255, 0.9);
+  color: color-mix(in srgb, var(--text-on-brand) 90%, transparent);
   flex-shrink: 0;
 }
 
 .navbar-namespace {
   font-size: 1.1rem;
   font-weight: 700;
-  color: white;
+  color: var(--text-on-brand);
   letter-spacing: 0.3px;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  text-shadow: 0 1px 2px color-mix(in srgb, var(--shadow-color) 20%, transparent);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -120,8 +120,8 @@
 }
 
 .navbar-refresh-btn {
-  background: rgba(255, 255, 255, 0.18);
-  color: #ffffff;
+  background: color-mix(in srgb, var(--text-on-brand) 18%, transparent);
+  color: var(--text-on-brand);
   border: none;
   border-radius: var(--radius-pill);
   width: 30px;
@@ -136,7 +136,7 @@
 }
 
 .navbar-refresh-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.32);
+  background: color-mix(in srgb, var(--text-on-brand) 32%, transparent);
   transform: translateY(-1px);
 }
 
@@ -155,9 +155,9 @@
   font-family: inherit;
   font-size: 0.85rem;
   font-weight: 600;
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: var(--text-on-brand);
+  background: color-mix(in srgb, var(--text-on-brand) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--text-on-brand) 28%, transparent);
   border-radius: var(--radius-md);
   cursor: pointer;
   white-space: nowrap;
@@ -172,11 +172,11 @@
 
 .navbar-button:hover:not(:disabled),
 .navbar-button-open {
-  background: rgba(255, 255, 255, 0.26);
+  background: color-mix(in srgb, var(--text-on-brand) 26%, transparent);
 }
 
 .navbar-button:active:not(:disabled) {
-  background: rgba(255, 255, 255, 0.2);
+  background: color-mix(in srgb, var(--text-on-brand) 20%, transparent);
 }
 
 .navbar-button:disabled {
@@ -205,7 +205,7 @@
   background: var(--surface);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 12px 32px color-mix(in srgb, var(--shadow-color) 18%, transparent);
 }
 
 .navbar-menu-item {
@@ -293,7 +293,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: color-mix(in srgb, var(--scrim-color) 50%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -301,9 +301,9 @@
 }
 
 .delete-confirm-modal {
-  background-color: white;
+  background-color: var(--surface);
   border-radius: var(--radius-lg);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 32px color-mix(in srgb, var(--shadow-color) 20%, transparent);
   width: 90%;
   max-width: 450px;
   padding: 0;
@@ -341,7 +341,7 @@
 }
 
 .delete-confirm-modal .modal-close-btn:hover {
-  background-color: #f0f0f0;
+  background-color: var(--surface-muted);
   color: var(--text-body);
 }
 
@@ -375,7 +375,7 @@
 }
 
 .delete-confirm-modal .modal-btn-cancel {
-  background-color: #f0f0f0;
+  background-color: var(--surface-muted);
   color: var(--text-body);
 }
 
@@ -440,14 +440,14 @@
   line-height: 1.15;
   font-size: 0.7rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.85);
+  color: color-mix(in srgb, var(--text-on-brand) 85%, transparent);
   white-space: nowrap;
 }
 
 .navbar-stat em {
   font-style: normal;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.6);
+  color: color-mix(in srgb, var(--text-on-brand) 60%, transparent);
 }
 
 .navbar-stat-left {

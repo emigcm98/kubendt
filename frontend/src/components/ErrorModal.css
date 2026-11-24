@@ -4,7 +4,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.35);
+  background-color: color-mix(in srgb, var(--scrim-color) 35%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -12,7 +12,7 @@
 }
 
 .error-modal {
-  background: linear-gradient(to bottom, #ffffff, #f9fafb);
+  background: linear-gradient(to bottom, var(--surface), #f9fafb);
   border-radius: var(--radius-lg);
   border: 1px solid var(--danger-bg);
   box-shadow: 0 8px 32px rgba(229, 57, 53, 0.15);
@@ -113,13 +113,13 @@
   font-size: 0.72rem;
   border: 1px solid var(--border-light);
   border-radius: var(--radius-sm);
-  background: #fff;
+  background: var(--surface);
   color: #444;
   cursor: pointer;
 }
 
 .error-modal-copy-btn:hover {
-  background: #f0f0f0;
+  background: var(--surface-muted);
 }
 
 .error-modal-note {

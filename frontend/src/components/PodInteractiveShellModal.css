@@ -10,7 +10,7 @@
   color: var(--term-fg);
   border: 1px solid var(--term-border);
   border-radius: var(--radius-md);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 8px 32px color-mix(in srgb, var(--shadow-color) 60%, transparent);
   user-select: none;
   overflow: hidden;
   /* Drag-resize from the bottom-right corner, like the capture and trace
@@ -36,7 +36,7 @@
   padding: 0 1rem;
   background: linear-gradient(135deg, var(--term-bg-raised) 0%, var(--term-bg) 100%);
   border-bottom: 1px solid var(--term-border);
-  border-radius: 8px 8px 0 0;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
   cursor: grab;
   user-select: none;
   z-index: 1;
@@ -105,7 +105,7 @@
 }
 
 .shell-modal-close-btn:hover {
-  background: rgba(255, 77, 77, 0.1);
+  background: color-mix(in srgb, var(--term-danger) 10%, transparent);
   color: var(--term-danger);
 }
 
@@ -115,7 +115,7 @@
 }
 
 .shell-modal-clear-btn:hover {
-  background: rgba(0, 255, 153, 0.08);
+  background: color-mix(in srgb, var(--term-accent) 8%, transparent);
   color: var(--term-accent);
 }
 
@@ -135,18 +135,18 @@
 
 .shell-status-connecting {
   background: var(--warning-border);
-  box-shadow: 0 0 6px rgba(240, 195, 109, 0.5);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--warning-border) 50%, transparent);
   animation: shell-status-pulse 1.4s ease-in-out infinite;
 }
 
 .shell-status-open {
   background: var(--term-accent);
-  box-shadow: 0 0 6px rgba(0, 255, 153, 0.45);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--term-accent) 45%, transparent);
 }
 
 .shell-status-lost {
   background: var(--term-danger);
-  box-shadow: 0 0 6px rgba(255, 77, 77, 0.45);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--term-danger) 45%, transparent);
 }
 
 @keyframes shell-status-pulse {
@@ -172,7 +172,7 @@
   justify-content: center;
   z-index: 10;
   backdrop-filter: blur(2px);
-  border-radius: 0 0 8px 8px;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
 }
 
 .shell-disconnected-card {
@@ -182,7 +182,7 @@
   padding: 1.4rem 1.8rem;
   text-align: center;
   color: var(--term-fg);
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 8px 28px color-mix(in srgb, var(--shadow-color) 55%, transparent);
   max-width: 420px;
 }
 
@@ -233,7 +233,7 @@
 .shell-disconnected-btn-primary {
   background: var(--primary);
   border-color: var(--primary);
-  color: #fff;
+  color: var(--text-on-brand);
   font-weight: 600;
 }
 
@@ -246,7 +246,7 @@
   position: absolute;
   top: 56px;
   right: 12px;
-  background: rgba(0, 0, 0, 0.55);
+  background: color-mix(in srgb, var(--scrim-color) 55%, transparent);
   color: var(--warning-border);
   font-size: 0.78rem;
   padding: 3px 8px;
@@ -266,7 +266,7 @@
   right: 0;
   bottom: 0;
   background-color: var(--term-bg);
-  border-radius: 0 0 8px 8px;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
   font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
   overflow: hidden;
 }

@@ -3877,7 +3877,7 @@ const NetworkGraph = ({
             </div>
             <div
               style={{
-                color: '#666',
+                color: 'var(--graph-loading-text)',
                 fontSize: '0.9rem',
                 fontWeight: 500,
               }}

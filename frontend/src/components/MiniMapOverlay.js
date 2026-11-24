@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { MiniMap } from 'reactflow';
 import { ReactComponent as MinimizeIcon } from '../assets/images/icons/minimize.svg';
 import { ReactComponent as MaximizeIcon } from '../assets/images/icons/maximize.svg';
@@ -31,22 +31,24 @@ const MiniMapOverlay = ({ selectedNodeId }) => {
     });
   };
 
+  // SVG fill attributes take no var(), so the tokens are read once here.
+  const colors = useMemo(() => {
+    const style = getComputedStyle(document.documentElement);
+    const read = (name) => style.getPropertyValue(`--minimap-${name}`).trim() || undefined;
+    return {
+      router: read('fill-router'),
+      switch: read('fill-switch'),
+      host: read('fill-host'),
+      external: read('fill-external'),
+      other: read('fill-other'),
+      stroke: read('stroke'),
+    };
+  }, []);
+
   const getColor = (node) => {
     const type = node.data?.type || node.type;
-    switch (type) {
-      case 'annotation':
-        return 'transparent';
-      case 'router':
-        return '#3b82f6';
-      case 'switch':
-        return '#6b7280';
-      case 'host':
-        return '#10b981';
-      case 'external':
-        return '#8b5cf6';
-      default:
-        return '#facc15';
-    }
+    if (type === 'annotation') return 'transparent';
+    return colors[type] || colors.other;
   };
 
   const getClassName = (node) => {
@@ -90,7 +92,7 @@ const MiniMapOverlay = ({ selectedNodeId }) => {
       </button>
       <MiniMap
         nodeColor={getColor}
-        nodeStrokeColor="#111"
+        nodeStrokeColor={colors.stroke}
         nodeStrokeWidth={1.5}
         nodeClassName={getClassName}
         zoomable

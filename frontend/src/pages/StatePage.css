@@ -62,7 +62,7 @@
   background: var(--surface);
   color: var(--text-heading);
   font-weight: 600;
-  box-shadow: 0 1px 3px rgba(25, 60, 100, 0.12);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--shadow-color-cool) 12%, transparent);
 }
 
 .state-item-name {

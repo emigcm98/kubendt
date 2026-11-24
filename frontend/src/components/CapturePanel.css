@@ -9,7 +9,7 @@
   background: var(--tool-bg);
   border: 1px solid var(--tool-border);
   border-radius: var(--radius-md);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 12px 40px color-mix(in srgb, var(--shadow-color) 50%, transparent);
   overflow: hidden;
   resize: both;
   color: var(--tool-text-body);
@@ -179,7 +179,7 @@
   background: var(--tool-header-bg);
   border: 1px solid var(--tool-border);
   border-radius: var(--radius-sm);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--shadow-color) 50%, transparent);
   z-index: 5;
 }
 .cap-save-item {
@@ -293,7 +293,7 @@
 
 .cap-row-sel td {
   background: #1d4ed8 !important;
-  color: #fff !important;
+  color: var(--text-on-brand) !important;
 }
 
 /* Draggable column resizer (right edge of each header cell). */

@@ -1,7 +1,7 @@
 .rd-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.35);
+  background: color-mix(in srgb, var(--scrim-color) 35%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -14,9 +14,9 @@
 .rd-card {
   width: min(720px, 92vw);
   max-height: 90vh;
-  background: #fff;
+  background: var(--surface);
   border-radius: var(--radius-lg);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 12px 40px color-mix(in srgb, var(--shadow-color) 25%, transparent);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -154,7 +154,7 @@
 }
 
 .rd-errors code {
-  background: #fff;
+  background: var(--surface);
   padding: 2px 6px;
   border-radius: var(--radius-sm);
 }
@@ -200,7 +200,7 @@
 .rd-pod-group {
   border: 1px solid #e2e6ea;
   border-radius: var(--radius-md);
-  background: #fff;
+  background: var(--surface);
   overflow: hidden;
 }
 
@@ -279,7 +279,7 @@
 .rd-action-item {
   border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
-  background: #fff;
+  background: var(--surface);
   padding: 8px;
 }
 
@@ -355,7 +355,7 @@
 
 .rd-primary {
   background: var(--primary);
-  color: #fff;
+  color: var(--text-on-brand);
   border: none;
   border-radius: var(--radius-md);
   padding: 8px 14px;

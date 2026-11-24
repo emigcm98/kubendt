@@ -1,3 +1,7 @@
+:root {
+  --delete-result-error-hover: #da190b;
+}
+
 .namespace-page {
   padding: 1rem;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -17,7 +21,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: color-mix(in srgb, var(--scrim-color) 50%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -25,9 +29,9 @@
 }
 
 .delete-result-modal {
-  background-color: white;
+  background-color: var(--surface);
   border-radius: var(--radius-lg);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 32px color-mix(in srgb, var(--shadow-color) 20%, transparent);
   width: 90%;
   max-width: 400px;
   padding: 0;
@@ -65,7 +69,7 @@
 }
 
 .delete-result-modal .modal-close-btn:hover {
-  background-color: #f0f0f0;
+  background-color: var(--surface-muted);
   color: var(--text-body);
 }
 
@@ -101,7 +105,7 @@
 
 .delete-result-modal .modal-btn.success {
   background-color: var(--success-accent);
-  color: white;
+  color: var(--text-on-brand);
 }
 
 .delete-result-modal .modal-btn.success:hover {
@@ -110,9 +114,9 @@
 
 .delete-result-modal .modal-btn.error {
   background-color: var(--danger);
-  color: white;
+  color: var(--text-on-brand);
 }
 
 .delete-result-modal .modal-btn.error:hover {
-  background-color: #da190b;
+  background-color: var(--delete-result-error-hover);
 }
