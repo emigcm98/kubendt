@@ -561,14 +561,16 @@ const Home = () => {
             <BoxIcon className="app-icon" aria-hidden="true" />
             Drivers
           </button>
-          <button
-            className="open-api-btn"
-            onClick={() => navigate('/state')}
-            title="Every Kubernetes object KubeNDT keeps in this cluster"
-          >
-            <ClusterIcon className="app-icon" aria-hidden="true" />
-            State
-          </button>
+          {auth.isAdmin && (
+            <button
+              className="open-api-btn"
+              onClick={() => navigate('/state')}
+              title="Every Kubernetes object KubeNDT keeps in this cluster"
+            >
+              <ClusterIcon className="app-icon" aria-hidden="true" />
+              State
+            </button>
+          )}
           <button className="open-api-btn" onClick={handleOpenSwagger}>
             <BookIcon className="app-icon" aria-hidden="true" />
             Open API

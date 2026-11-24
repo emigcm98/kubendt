@@ -549,7 +549,7 @@ func swaggerGetClusterState() {}
 // swaggerGetNamespaceState godoc
 //
 //	@Summary      Namespace state
-//	@Description  The objects of one namespace, a lab or the system one, with the role each plays for KubeNDT.
+//	@Description  The objects of one namespace, a lab or the system one, with the role each plays for KubeNDT. For the namespace's owner and the admins; the system namespace for admins alone.
 //	@Tags         state
 //	@Produce      json
 //	@Param        namespace  path      string  true  "Namespace name"

@@ -58,6 +58,20 @@
   gap: 8px;
 }
 
+/* A form of stacked fields, as the password dialog is. */
+.tokens-create-column {
+  flex-direction: column;
+  margin-top: 12px;
+}
+
+.tokens-create-column .tokens-input {
+  flex: none;
+}
+
+.tokens-modal-narrow {
+  max-width: 400px;
+}
+
 .tokens-input {
   flex: 1;
   padding: 9px 11px;

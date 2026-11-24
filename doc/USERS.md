@@ -20,10 +20,10 @@ The owner of a namespace invites other accounts and gives each a level. An admin
 
 | Level | May |
 |---|---|
-| `viewer` | See the lab: topology, pods, links, files, history, state. |
+| `viewer` | See the lab: topology, pods, links, files, history. |
 | `operator` | Also work on the pods without changing the lab: shells, captures, traces, throughput tests. |
 | `editor` | Also change the lab: deploy, modify, configure, restart, files, layout, history. |
-| owner | Also delete the namespace, clear it, share it and hand it over. |
+| owner | Also delete the namespace, clear it, share it and hand it over, and open its state browser. |
 
 An operator has a shell, so it can change a node by hand. What it cannot do is change the lab through KubeNDT, so nothing it types is kept or replayed.
 

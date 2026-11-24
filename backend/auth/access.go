@@ -11,7 +11,7 @@ type Permission string
 const (
 	// PermAny is any signed-in account.
 	PermAny Permission = "any"
-	// PermView reads the namespace: its pods, links, files, history, state.
+	// PermView reads the namespace: its pods, links, files, history.
 	PermView Permission = "namespace:view"
 	// PermOperate works on the pods without changing the lab: shells,
 	// captures, traceroutes, throughput tests.

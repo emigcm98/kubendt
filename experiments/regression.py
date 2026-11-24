@@ -719,6 +719,8 @@ def users():
         st, r = b.api("POST", f"/network/configure/{ns}", body=conf); ex.check("an editor configures", st == 200 and r.get("failures") == 0, r if st != 200 else "")
         st, r = b.api("PUT", f"/namespaces/access/{ns}", body={"owner": bob, "guests": {}}); ex.check("an editor does not share or take the namespace", st == 403, r)
         st, r = b.api("DELETE", f"/namespaces/{ns}"); ex.check("nor deletes it", st == 403, r)
+        st, r = b.api("GET", f"/state/{ns}"); ex.check("nor opens its state", st == 403, r)
+        st, r = a.api("GET", f"/state/{ns}"); ex.check("its owner does", st == 200, r if st != 200 else "")
 
     st, r = a.api("POST", "/auth/tokens", body={"name": "regression"}); tok = r.get("token") if isinstance(r, dict) else None
     ex.check("alice mints a token", st in (200, 201) and bool(tok), r)
