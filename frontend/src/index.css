@@ -8,6 +8,8 @@
   /* Brand (header banner) */
   --brand: #2b8fd4;
   --brand-edge: #1c74c0;
+  /* The bars on top of every page. */
+  --brand-bar: linear-gradient(to bottom, var(--brand), var(--brand-edge));
 
   /* Primary / interactive */
   --primary: #1976d2;

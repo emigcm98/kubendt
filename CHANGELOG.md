@@ -14,6 +14,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Most colors, shadows and radii of the frontend come from shared design tokens instead of values repeated in each stylesheet, the groundwork for dark mode.
 - `users`, `state` and `cluster` are refused as namespace names, like `drivers`, since the UI has pages under them.
+- The Home is redone around the namespace list, which says who is in each namespace and how big its lab is. The cluster and the kubeconfig move to a `/cluster` page for admins.
+- The sign-in shows a bigger logo, what KubeNDT is in one line, and links to its site and to GitHub.
 
 ## [1.13.0] - 2026-11-24
 

@@ -27,7 +27,7 @@ The owner of a namespace invites other accounts and gives each a level. An admin
 
 An operator has a shell, so it can change a node by hand. What it cannot do is change the lab through KubeNDT, so nothing it types is kept or replayed.
 
-Sharing is `PUT /namespaces/access/{namespace}` with the owner and the guests, or the share dialog on the namespace card and in the namespace menu. Handing a namespace over names a new owner, and the old one stays as an editor. A deleted account leaves every guest list, and its namespaces pass to the account the delete names, or to the admins.
+Sharing is `PUT /namespaces/access/{namespace}` with the owner and the guests, or the share dialog, from a namespace's row on the Home and from the namespace menu. Handing a namespace over names a new owner, and the old one stays as an editor. A deleted account leaves every guest list, and its namespaces pass to the account the delete names, or to the admins.
 
 ## Quotas
 

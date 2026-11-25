@@ -7,7 +7,7 @@
   z-index: 20;
   display: flex;
   align-items: center;
-  background: linear-gradient(to bottom, var(--brand), var(--brand-edge));
+  background: var(--brand-bar);
   border-bottom: 2px solid var(--brand-edge);
   padding: 0.4rem 1rem;
   box-shadow: 0 2px 8px color-mix(in srgb, var(--brand-edge) 25%, transparent);

@@ -1,0 +1,149 @@
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: none;
+  height: 64px;
+  padding: 0 22px;
+  box-sizing: border-box;
+  background: var(--brand-bar);
+  border-bottom: 2px solid var(--brand-edge);
+  color: var(--text-on-brand);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--brand-edge) 25%, transparent);
+  position: relative;
+  z-index: 10;
+}
+
+.app-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  min-width: 0;
+}
+
+.app-header-logo {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 50px;
+  height: 50px;
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--shadow-color) 18%, transparent);
+}
+
+.app-header-logo img {
+  width: 46px;
+  height: 46px;
+  /* The logo's strokes follow light-dark(); the white chip wants the dark ink. */
+  color-scheme: light;
+}
+
+.app-header-name {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  min-width: 0;
+}
+
+.app-header-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.app-header-version {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--text-on-brand) 18%, transparent);
+}
+
+.app-header-tagline {
+  font-size: 12px;
+  color: color-mix(in srgb, var(--text-on-brand) 85%, transparent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The project's links sit by the brand, apart from the tool's buttons. */
+.app-header-links {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: none;
+  padding: 2px 0 2px 14px;
+  border-left: 1px solid color-mix(in srgb, var(--text-on-brand) 35%, transparent);
+}
+
+.app-header-github {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--text-on-brand) 90%, transparent);
+  text-decoration: none;
+}
+
+.app-header-github:hover {
+  color: var(--text-on-brand);
+}
+
+.app-header-github .app-icon {
+  width: 15px;
+  height: 15px;
+}
+
+.app-header-space {
+  flex: 1;
+}
+
+.app-header-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.app-header-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-on-brand);
+  background: color-mix(in srgb, var(--text-on-brand) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--text-on-brand) 28%, transparent);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.app-header-btn:hover {
+  background: color-mix(in srgb, var(--text-on-brand) 24%, transparent);
+}
+
+@media (max-width: 760px) {
+  .app-header {
+    padding: 0 12px;
+    gap: 10px;
+  }
+  .app-header-tagline,
+  .app-header-links {
+    display: none;
+  }
+  .app-header-btn {
+    padding: 0 9px;
+  }
+}

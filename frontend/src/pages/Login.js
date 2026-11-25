@@ -2,25 +2,43 @@ import React, { useState } from 'react';
 import { API_BASE_URL } from '../config';
 import kubendtLogo from '../assets/images/kubendt-logo.svg';
 import { ReactComponent as LockIcon } from '../assets/images/icons/lock.svg';
+import { ReactComponent as GlobeIcon } from '../assets/images/icons/globe.svg';
+import GithubMark from '../components/GithubMark';
 import './Login.css';
 
 const Shell = ({ title, lead, children }) => (
   <div className="login-wrapper">
     <div className="login-card">
       <div className="login-brand">
-        <img src={kubendtLogo} alt="" className="login-logo" />
-        <div className="login-brand-text">
-          <span className="login-brand-name">KubeNDT</span>
-          <span className="login-brand-sub">Network Digital Twin</span>
-        </div>
+        <img src={kubendtLogo} alt="KubeNDT" className="login-logo" />
+        <span className="login-brand-sub">
+          A Kubernetes-native platform for Network Digital Twins
+        </span>
       </div>
       <h1 className="login-title">{title}</h1>
       {lead && <p className="login-lead">{lead}</p>}
       {children}
     </div>
-    <a className="login-site" href="https://kubendt.org" target="_blank" rel="noopener noreferrer">
-      kubendt.org
-    </a>
+    <div className="login-links">
+      <a
+        className="login-site"
+        href="https://kubendt.org"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <GlobeIcon className="app-icon" aria-hidden="true" />
+        kubendt.org
+      </a>
+      <a
+        className="login-site"
+        href="https://github.com/emigcm98/kubendt"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <GithubMark />
+        GitHub
+      </a>
+    </div>
   </div>
 );
 
