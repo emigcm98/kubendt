@@ -1,10 +1,9 @@
 // components/NamespaceFilesNavbar.js
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import BrandMark from './BrandMark';
 import './NamespaceNavbar.css'; // reuse styles
 import { ReactComponent as TopologyIcon } from '../assets/images/icons/topology.svg';
-import { ReactComponent as HomeIcon } from '../assets/images/icons/home.svg';
-import kubendtLogo from '../assets/images/kubendt-logo.svg';
 
 function NamespaceFilesNavbar({ namespace }) {
   const navigate = useNavigate();
@@ -12,22 +11,7 @@ function NamespaceFilesNavbar({ namespace }) {
   return (
     <div className="navbar-container">
       <div className="navbar-left">
-        <button
-          type="button"
-          className="navbar-brand"
-          onClick={() => navigate('/')}
-          title="KubeNDT"
-        >
-          <img src={kubendtLogo} alt="KubeNDT" className="navbar-brand-logo" />
-        </button>
-        <button
-          className="navbar-button"
-          onClick={() => navigate('/')}
-          title="Back to the namespace list"
-        >
-          <HomeIcon className="app-icon" aria-hidden="true" />
-          Home
-        </button>
+        <BrandMark />
       </div>
 
       <div className="navbar-center navbar-center-static" title={`Namespace: ${namespace}`}>

@@ -8,6 +8,7 @@ import { ReactComponent as KeyIcon } from '../assets/images/icons/key.svg';
 import { ReactComponent as CopyIcon } from '../assets/images/icons/copy.svg';
 import { ReactComponent as PowerIcon } from '../assets/images/icons/power.svg';
 import { ReactComponent as ChevronIcon } from '../assets/images/icons/chevron-right.svg';
+import { ReactComponent as UserIcon } from '../assets/images/icons/user.svg';
 import './ProfilePage.css';
 
 const when = (secs) => (secs ? new Date(secs * 1000).toLocaleDateString() : '');
@@ -313,7 +314,7 @@ const ProfilePage = () => {
   const role = auth.role || '';
   return (
     <div className="profile-page">
-      <AppHeader />
+      <AppHeader title={{ icon: UserIcon, label: 'Profile', hint: 'Your account' }} />
       <main className="me-main">
         <section className="me-band">
           <span className="me-avatar">{me.charAt(0).toUpperCase()}</span>

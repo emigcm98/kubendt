@@ -1,0 +1,89 @@
+.brand-mark {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0;
+  background: none;
+  border: none;
+  /* set here, since not every bar sets its text color or its font */
+  color: var(--text-on-brand);
+  font-family: var(--font-sans);
+  cursor: pointer;
+  text-align: left;
+  min-width: 0;
+}
+
+.brand-mark:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--text-on-brand) 70%, transparent);
+  outline-offset: 3px;
+  border-radius: var(--radius-md);
+}
+
+.brand-mark:hover .brand-mark-logo {
+  box-shadow: 0 3px 8px color-mix(in srgb, var(--shadow-color) 25%, transparent);
+}
+
+.brand-mark-logo {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 50px;
+  height: 50px;
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--shadow-color) 18%, transparent);
+}
+
+.brand-mark-logo img {
+  width: 46px;
+  height: 46px;
+  /* The logo's strokes follow light-dark(); the white chip wants the dark ink. */
+  color-scheme: light;
+}
+
+.brand-mark-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1.25;
+  min-width: 0;
+}
+
+.brand-mark-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.brand-mark-version {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--text-on-brand) 18%, transparent);
+}
+
+.brand-mark-tagline {
+  /* room under the line, or the overflow clip eats the descenders */
+  line-height: 1.45;
+  font-size: 12px;
+  color: color-mix(in srgb, var(--text-on-brand) 85%, transparent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Where the bar has a centred pill, the tagline gives way first. */
+@media (max-width: 1280px) {
+  .navbar-container .brand-mark-tagline {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .brand-mark-tagline {
+    display: none;
+  }
+}

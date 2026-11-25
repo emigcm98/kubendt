@@ -496,7 +496,7 @@ const Home = () => {
 
   return (
     <div className="home-page">
-      <AppHeader />
+      <AppHeader links />
 
       {kubeConfigured === false && (
         <div className="home-notice" role="alert">

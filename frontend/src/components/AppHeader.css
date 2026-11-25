@@ -9,84 +9,27 @@
   background: var(--brand-bar);
   border-bottom: 2px solid var(--brand-edge);
   color: var(--text-on-brand);
+  /* the same letters on every page, whatever font the page below picks */
+  font-family: var(--font-sans);
   box-shadow: 0 2px 8px color-mix(in srgb, var(--brand-edge) 25%, transparent);
   position: relative;
   z-index: 10;
 }
 
-.app-header-brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 0;
-  background: none;
-  border: none;
-  color: inherit;
-  cursor: pointer;
-  text-align: left;
-  min-width: 0;
-}
-
-.app-header-logo {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 50px;
-  height: 50px;
-  background: var(--surface);
-  border-radius: var(--radius-md);
-  box-shadow: 0 1px 3px color-mix(in srgb, var(--shadow-color) 18%, transparent);
-}
-
-.app-header-logo img {
-  width: 46px;
-  height: 46px;
-  /* The logo's strokes follow light-dark(); the white chip wants the dark ink. */
-  color-scheme: light;
-}
-
-.app-header-name {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  line-height: 1.25;
-  min-width: 0;
-}
-
-.app-header-title {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 20px;
-  font-weight: 700;
-}
-
-.app-header-version {
-  font-size: 11px;
-  font-weight: 700;
-  padding: 1px 7px;
-  border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--text-on-brand) 18%, transparent);
-}
-
-.app-header-tagline {
-  /* room under the line, or the overflow clip eats the descenders */
-  line-height: 1.45;
-  font-size: 12px;
-  color: color-mix(in srgb, var(--text-on-brand) 85%, transparent);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 /* The project's links sit by the brand, apart from the tool's buttons. */
-.app-header-links {
+/* What follows the brand, the links or the page's title, behind a rule. */
+.app-header-aside {
   display: flex;
-  flex-direction: column;
-  gap: 3px;
+  align-items: center;
   flex: none;
   padding: 2px 0 2px 14px;
   border-left: 1px solid color-mix(in srgb, var(--text-on-brand) 35%, transparent);
+}
+
+.app-header-links {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
 }
 
 .app-header-github {
@@ -106,6 +49,35 @@
 .app-header-github .app-icon {
   width: 15px;
   height: 15px;
+}
+
+/* The page one is on, where the Home shows its links. */
+.app-header-page {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  padding: 5px 14px;
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+  background: color-mix(in srgb, var(--text-on-brand) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--text-on-brand) 24%, transparent);
+  border-radius: var(--radius-lg);
+}
+
+.app-header-page .app-icon {
+  width: 18px;
+  height: 18px;
+}
+
+/* The page's own buttons, apart from the tool's pages. */
+.app-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-right: 12px;
+  border-right: 1px solid color-mix(in srgb, var(--text-on-brand) 35%, transparent);
 }
 
 .app-header-space {
@@ -137,12 +109,23 @@
   background: color-mix(in srgb, var(--text-on-brand) 24%, transparent);
 }
 
+.app-header-btn-on {
+  background: color-mix(in srgb, var(--text-on-brand) 30%, transparent);
+  border-color: color-mix(in srgb, var(--text-on-brand) 55%, transparent);
+}
+
+/* With a page title the tagline gives way first. */
+@media (max-width: 1280px) {
+  .app-header-titled .brand-mark-tagline {
+    display: none;
+  }
+}
+
 @media (max-width: 760px) {
   .app-header {
     padding: 0 12px;
     gap: 10px;
   }
-  .app-header-tagline,
   .app-header-links {
     display: none;
   }
