@@ -67,12 +67,11 @@ func init() {
 		settings.Register(settings.Setting{Key: key, Group: settings.GroupQuotas, Label: label,
 			Default: "0", Hint: hint, Check: checkQuota})
 	}
-	quota(EnvQuotaNamespaces, "Namespaces an account owns", "For accounts with no figure of their own. 0 is no limit.")
-	quota(EnvQuotaPods, "Pods across them", "Counted as the topologies declare them. 0 is no limit.")
-	quota(EnvQuotaPodsPerNamespace, "Pods in one namespace", "0 is no limit.")
+	quota(EnvQuotaNamespaces, "Namespaces an account owns", "")
+	quota(EnvQuotaPods, "Pods across them", "As the topologies declare them.")
+	quota(EnvQuotaPodsPerNamespace, "Pods in one namespace", "")
 	resources := func(key, label, unit string) {
 		settings.Register(settings.Setting{Key: key, Group: settings.GroupResources, Label: label, Unit: unit,
-			Hint:  "For containers without their own, in namespaces made from now on. Empty is none.",
 			Check: checkQuantity})
 	}
 	resources(EnvPodCPURequest, "CPU request", "cores")

@@ -31,7 +31,6 @@ func init() {
 	settings.Register(settings.Setting{
 		Key: passwordMinLengthKey, Group: settings.GroupPasswords, Label: "Shortest password",
 		Unit: "characters", Default: strconv.Itoa(defaultPasswordMinLength),
-		Hint:  "For passwords chosen from now on, not the ones already set.",
 		Check: checkMinLengthSetting, Order: -1,
 	})
 }

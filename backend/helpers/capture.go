@@ -31,7 +31,7 @@ func init() {
 	settings.Register(settings.Setting{
 		Key: CaptureMaxMBEnv, Group: settings.GroupLabs, Label: "Largest capture", Unit: "MB",
 		Default: strconv.Itoa(DefaultCaptureMaxMB),
-		Hint:    "A capture stops when its file reaches it, so it cannot fill a worker's disk.",
+		Hint:    "So a capture cannot fill a worker's disk.",
 		Check: func(v string) error {
 			_, err := parseCaptureMaxMB(v)
 			return err

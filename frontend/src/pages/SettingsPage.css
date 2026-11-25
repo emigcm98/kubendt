@@ -1,0 +1,250 @@
+.settings-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel-from);
+  color: var(--text-body);
+}
+
+.set-main {
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 18px 22px 28px;
+  box-sizing: border-box;
+}
+
+.set-intro {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.set-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+.set-card {
+  display: flex;
+  flex-direction: column;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--shadow-color-cool) 12%, transparent);
+}
+
+.set-card h3 {
+  margin: 0;
+  font-size: 15px;
+  color: var(--text-heading);
+}
+
+.set-note {
+  margin: 3px 0 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.set-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 230px;
+  gap: 14px;
+  padding: 11px 0;
+  border-top: 1px solid var(--border-light);
+}
+
+.set-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.set-label b {
+  font-size: 13px;
+  color: var(--text-heading);
+}
+
+.set-label span {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.set-label code {
+  align-self: flex-start;
+  margin-top: 2px;
+  font-size: 10px;
+  color: var(--text-subtle);
+}
+
+.set-control {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.set-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.set-input input,
+.set-input select {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  padding: 0 9px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-body);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-sizing: border-box;
+}
+
+.set-input input:focus,
+.set-input select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.set-input input:disabled,
+.set-input select:disabled {
+  color: var(--text-muted);
+  background: var(--panel-from);
+}
+
+.set-input em {
+  flex: none;
+  font-size: 12px;
+  font-style: normal;
+  color: var(--text-muted);
+}
+
+.set-source {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.set-badge {
+  padding: 1px 8px;
+  font-weight: 700;
+  border-radius: var(--radius-pill);
+}
+
+.set-badge-saved {
+  color: var(--primary);
+  background: var(--info-bg);
+}
+
+.set-badge-environment {
+  color: var(--text-body);
+  background: var(--border-light);
+}
+
+.set-badge-default {
+  color: var(--text-subtle);
+  background: var(--panel-from);
+}
+
+.set-env {
+  color: var(--text-muted);
+}
+
+.set-reset {
+  padding: 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--primary);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.set-reset:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.set-error {
+  margin: 0;
+  padding: 6px 9px;
+  font-size: 12px;
+  color: var(--danger-strong);
+  background: var(--danger-bg);
+  border-radius: var(--radius-md);
+}
+
+.set-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-light);
+}
+
+.set-done {
+  margin-right: auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--success);
+}
+
+.set-btn,
+.set-btn-quiet {
+  height: 32px;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.set-btn {
+  color: var(--text-on-brand);
+  background: var(--primary);
+  border: none;
+}
+
+.set-btn:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+.set-btn-quiet {
+  color: var(--text-body);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.set-btn:disabled,
+.set-btn-quiet:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 1000px) {
+  .set-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .set-main {
+    padding: 12px;
+  }
+
+  .set-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

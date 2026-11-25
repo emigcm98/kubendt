@@ -87,10 +87,14 @@
   background: var(--info-bg);
 }
 
-.me-role-owner,
+.me-role-owner {
+  color: var(--role-owner);
+  background: var(--role-owner-bg);
+}
+
 .me-role-admin {
-  color: var(--text-on-brand);
-  background: var(--primary);
+  color: var(--role-admin);
+  background: var(--role-admin-bg);
 }
 
 .me-chip {
