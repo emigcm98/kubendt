@@ -15,7 +15,7 @@
 
 .login-card {
   width: 100%;
-  max-width: 380px;
+  max-width: 400px;
   padding: 28px 28px 24px;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -26,31 +26,24 @@
 
 .login-brand {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   margin-bottom: 22px;
+  text-align: center;
 }
 
 .login-logo {
-  width: 44px;
-  height: 44px;
-}
-
-.login-brand-text {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.15;
-}
-
-.login-brand-name {
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: var(--text-heading);
+  width: 96px;
+  height: 96px;
+  /* The logo's strokes follow light-dark(); the white card wants the dark ink. */
+  color-scheme: light;
 }
 
 .login-brand-sub {
-  font-size: 0.74rem;
-  color: var(--text-subtle);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-wrap: balance;
 }
 
 .login-title {
@@ -177,7 +170,15 @@
   text-decoration: underline;
 }
 
+.login-links {
+  display: flex;
+  gap: 18px;
+}
+
 .login-site {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 0.8rem;
   color: var(--text-subtle);
   text-decoration: none;
