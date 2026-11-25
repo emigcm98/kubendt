@@ -361,6 +361,8 @@ func configMapRow(cm *corev1.ConfigMap, nodes map[string]bool) (StateObject, boo
 		row.Role, row.Detail = "layout", layoutDetail(cm.Data[layoutKey])
 	case kind == "layout-attic":
 		row.Role, row.Detail = "layout-attic", "layout of the deleted namespace "+cm.Labels["kubendt/namespace"]
+	case kind == "settings":
+		row.Role, row.Detail = "settings", plural(len(cm.Data), "value")+" saved from the portal"
 	case kind != "":
 		row.Role = kind
 	case cm.Name == IfaceCountsConfigMapName:

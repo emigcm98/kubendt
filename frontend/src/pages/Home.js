@@ -30,7 +30,7 @@ import './Home.css';
 Modal.setAppElement('#root');
 
 // Names the UI routes as pages of its own; the backend refuses them too.
-const RESERVED_NAMESPACE_NAMES = ['drivers', 'users', 'state', 'cluster', 'profile'];
+const RESERVED_NAMESPACE_NAMES = ['drivers', 'users', 'state', 'cluster', 'profile', 'settings'];
 
 const SORT_KEYS = { field: 'kubendt.home.nsSortField', dir: 'kubendt.home.nsSortDir' };
 const stored = (key, fallback) => {

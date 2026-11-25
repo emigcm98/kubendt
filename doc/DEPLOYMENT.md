@@ -115,6 +115,8 @@ The backend's credentials (the kubeconfig, or the ServiceAccount of `deploy/k8s/
 
 ## Environment Variables Reference
 
+The owner may override some of these from the portal's settings: the password's minimum length, the sessions' hours, the default quotas, the pods' requests and limits, the largest capture, the placement and the link MTU. A value saved there wins over the environment until it is dropped, and is kept in the ConfigMap `kubendt-internal-settings` of the system namespace, so every backend follows it. The rest are the process's own and only the environment sets them.
+
 ### Backend
 
 - `KUBECONFIG`: kubeconfig path.

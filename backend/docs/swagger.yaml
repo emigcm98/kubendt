@@ -2762,6 +2762,15 @@ definitions:
         example: 42.50s
         type: string
     type: object
+  types.SaveSettingsRequest:
+    properties:
+      values:
+        additionalProperties:
+          type: string
+        example:
+          KUBENDT_LINK_MTU: "1400"
+        type: object
+    type: object
   types.ScaleSpec:
     properties:
       name:
@@ -2782,6 +2791,66 @@ definitions:
       current_context:
         example: my-cluster
         type: string
+    type: object
+  types.SettingDoc:
+    properties:
+      default:
+        example: "1450"
+        type: string
+      env:
+        description: Env is the environment's value, Saved the portal's when there
+          is one.
+        example: ""
+        type: string
+      group:
+        enum:
+        - passwords
+        - quotas
+        - resources
+        - labs
+        example: labs
+        type: string
+      hint:
+        example: Every link of a lab deployed from now on.
+        type: string
+      key:
+        example: KUBENDT_LINK_MTU
+        type: string
+      label:
+        example: Link MTU
+        type: string
+      options:
+        items:
+          type: string
+        type: array
+      saved:
+        example: "1400"
+        type: string
+      source:
+        enum:
+        - saved
+        - environment
+        - default
+        example: saved
+        type: string
+      unit:
+        example: bytes
+        type: string
+      value:
+        example: "1400"
+        type: string
+    type: object
+  types.SettingsResponse:
+    properties:
+      editable:
+        description: Editable says whether the asking account may save, the owner
+          alone.
+        example: true
+        type: boolean
+      settings:
+        items:
+          $ref: '#/definitions/types.SettingDoc'
+        type: array
     type: object
   types.StateObjectDoc:
     properties:
@@ -5334,6 +5403,57 @@ paths:
       summary: Readiness check
       tags:
       - system
+  /settings:
+    get:
+      description: 'The environment''s settings the portal may change, each with its
+        value and where it comes from: saved from the portal, the environment or the
+        default. Admins read them; editable says whether the asking account may save.'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.SettingsResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: List the settings
+      tags:
+      - settings
+    put:
+      consumes:
+      - application/json
+      description: The owner's alone (403 OWNER_ONLY for an admin). A value is saved
+        and wins over the environment; null drops it so the environment rules again.
+        Every value is checked first and nothing is saved when one is refused (400
+        INVALID_SETTING with its key).
+      parameters:
+      - description: Settings to change
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/types.SaveSettingsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.SettingsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Save settings
+      tags:
+      - settings
   /shell/ws/{namespace}/{podName}:
     get:
       description: 'Opens a WebSocket connection providing an interactive shell inside

@@ -14,6 +14,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"sort"
@@ -21,6 +22,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"kubendt/settings"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -68,9 +71,7 @@ func principalOf(u *userRecord, method string) *Principal {
 }
 
 var (
-	enabled     bool
-	idleTimeout time.Duration
-	maxLifetime time.Duration
+	enabled bool
 
 	mu            sync.RWMutex
 	users         map[string]*userRecord // by name
@@ -112,8 +113,6 @@ func Init() error {
 		return nil
 	}
 	enabled = true
-	idleTimeout = hoursFromEnv("KUBENDT_SESSION_IDLE_HOURS", 12*time.Hour)
-	maxLifetime = hoursFromEnv("KUBENDT_SESSION_MAX_HOURS", 7*24*time.Hour)
 
 	mu.Lock()
 	bound, tokens, users = false, map[string]*tokenEntry{}, map[string]*userRecord{}
@@ -296,7 +295,7 @@ func EndSessions(name string) error {
 func Enabled() bool { return enabled }
 
 // SessionMaxAge is the absolute session lifetime, used as the cookie Max-Age.
-func SessionMaxAge() time.Duration { return maxLifetime }
+func SessionMaxAge() time.Duration { return sessionMax() }
 
 // Authenticate checks a username and password against the accounts; an
 // empty username is the owner account, so a login that names no user keeps
@@ -406,7 +405,7 @@ func ValidateSession(raw string) (p *Principal, refreshed string, ok bool) {
 	if !known || u.Disabled {
 		return nil, "", false
 	}
-	if c.IssuedAt < u.SessionsValidAfter || now.Sub(time.Unix(c.SeenAt, 0)) > idleTimeout || now.Sub(time.Unix(c.IssuedAt, 0)) > maxLifetime {
+	if c.IssuedAt < u.SessionsValidAfter || now.Sub(time.Unix(c.SeenAt, 0)) > sessionIdle() || now.Sub(time.Unix(c.IssuedAt, 0)) > sessionMax() {
 		return nil, "", false
 	}
 	if now.Sub(time.Unix(c.SeenAt, 0)) >= sessionRefreshEvery {
@@ -639,11 +638,47 @@ func hashToken(raw string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-func hoursFromEnv(key string, def time.Duration) time.Duration {
-	if v := os.Getenv(key); v != "" {
-		if h, err := strconv.ParseFloat(v, 64); err == nil && h > 0 {
-			return time.Duration(h * float64(time.Hour))
-		}
+// How long a session lasts idle and at most, in hours. They are read on
+// every request, so a change from the settings applies at once: a session
+// past the new limit ends on its next request.
+const (
+	sessionIdleKey  = "KUBENDT_SESSION_IDLE_HOURS"
+	sessionMaxKey   = "KUBENDT_SESSION_MAX_HOURS"
+	defaultIdle     = 12 * time.Hour
+	defaultLifetime = 7 * 24 * time.Hour
+)
+
+func sessionIdle() time.Duration { return hoursOf(settings.Value(sessionIdleKey), defaultIdle) }
+func sessionMax() time.Duration  { return hoursOf(settings.Value(sessionMaxKey), defaultLifetime) }
+
+func hoursOf(v string, def time.Duration) time.Duration {
+	if h, err := strconv.ParseFloat(strings.TrimSpace(v), 64); err == nil && h > 0 {
+		return time.Duration(h * float64(time.Hour))
 	}
 	return def
+}
+
+func checkHours(v string) error {
+	if v == "" {
+		return nil
+	}
+	// A quarter of an hour at least, or the portal would end its own sessions
+	// before anyone could put it back.
+	if h, err := strconv.ParseFloat(v, 64); err != nil || h < 0.25 || h > 8760 {
+		return fmt.Errorf("a number of hours from 0.25 to 8760, a year")
+	}
+	return nil
+}
+
+func init() {
+	settings.Register(settings.Setting{
+		Key: sessionIdleKey, Group: settings.GroupPasswords, Label: "Session idle",
+		Unit: "hours", Default: "12", Check: checkHours,
+		Hint: "A session unused this long ends. Shortening it ends older sessions on their next request.",
+	})
+	settings.Register(settings.Setting{
+		Key: sessionMaxKey, Group: settings.GroupPasswords, Label: "Session at most",
+		Unit: "hours", Default: "168", Check: checkHours,
+		Hint: "No session lasts longer, in use or not.",
+	})
 }

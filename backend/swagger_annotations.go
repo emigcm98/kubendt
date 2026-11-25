@@ -871,6 +871,31 @@ func swaggerChangePassword() {}
 //	@Router       /auth/quota [get]
 func swaggerAuthQuota() {}
 
+// swaggerListSettings godoc
+//
+//	@Summary      List the settings
+//	@Description  The environment's settings the portal may change, each with its value and where it comes from: saved from the portal, the environment or the default. Admins read them; editable says whether the asking account may save.
+//	@Tags         settings
+//	@Produce      json
+//	@Success      200  {object}  types.SettingsResponse
+//	@Failure      403  {object}  types.ErrorResponse
+//	@Router       /settings [get]
+func swaggerListSettings() {}
+
+// swaggerSaveSettings godoc
+//
+//	@Summary      Save settings
+//	@Description  The owner's alone (403 OWNER_ONLY for an admin). A value is saved and wins over the environment; null drops it so the environment rules again. Every value is checked first and nothing is saved when one is refused (400 INVALID_SETTING with its key).
+//	@Tags         settings
+//	@Accept       json
+//	@Produce      json
+//	@Param        body  body      types.SaveSettingsRequest  true  "Settings to change"
+//	@Success      200   {object}  types.SettingsResponse
+//	@Failure      400   {object}  types.ErrorResponse
+//	@Failure      403   {object}  types.ErrorResponse
+//	@Router       /settings [put]
+func swaggerSaveSettings() {}
+
 // swaggerListUsers godoc
 //
 //	@Summary      List accounts
@@ -1132,6 +1157,8 @@ var _ = types.PodMetricsUnavailableResponse{}
 var _ = types.TraceReportResponse{}
 var _ = types.TraceHopDoc{}
 var _ = types.TraceMetricsDoc{}
+var _ = types.SettingsResponse{}
+var _ = types.SaveSettingsRequest{}
 
 // swaggerExportNetworkConf godoc
 //
