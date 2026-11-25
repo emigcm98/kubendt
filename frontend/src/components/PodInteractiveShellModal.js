@@ -4,8 +4,18 @@ import { FitAddon } from 'xterm-addon-fit';
 import 'xterm/css/xterm.css';
 import { ReactComponent as RefreshIcon } from '../assets/images/icons/refresh.svg';
 import { ReactComponent as WarningIcon } from '../assets/images/icons/warning.svg';
+import { ReactComponent as TerminalIcon } from '../assets/images/icons/terminal.svg';
+import ToolWindowHead from './ToolWindowHead';
+import fitInView from './fitInView';
 import './PodInteractiveShellModal.css';
 import { WS_BASE_URL } from '../config';
+
+// The header chip for each state of the socket.
+const SHELL_STATE = {
+  connecting: ['connecting…', 'busy'],
+  open: ['connected', 'live'],
+  lost: ['disconnected', 'error'],
+};
 
 const PodInteractiveShellModal = ({
   shellId,
@@ -21,7 +31,6 @@ const PodInteractiveShellModal = ({
 }) => {
   const terminalRef = useRef(null);
   const containerRef = useRef(null);
-  const headerRef = useRef(null);
   const term = useRef(null);
   const fitAddon = useRef(null);
   const ws = useRef(null);
@@ -168,10 +177,7 @@ const PodInteractiveShellModal = ({
   const handleHeaderMouseDown = (e) => {
     if (onBringToFront) onBringToFront();
 
-    if (e.target.closest('.shell-modal-close-btn')) return;
-    if (e.target.closest('.shell-modal-minimize-btn')) return;
-    if (e.target.closest('.shell-modal-clear-btn')) return;
-    if (e.target.closest('.shell-modal-reconnect-btn')) return;
+    if (e.target.closest('button')) return;
 
     isDraggingRef.current = true;
     dragOffsetRef.current = {
@@ -230,8 +236,9 @@ const PodInteractiveShellModal = ({
       disableStdin: false,
       fontSize: 15,
       theme: {
-        background: token('--term-bg', '#1e1e1e'),
-        foreground: token('--term-fg', '#e0e0e0'),
+        background: token('--console-bg', '#111821'),
+        foreground: token('--console-fg', '#d6dde6'),
+        cursor: token('--console-accent'),
       },
       fontFamily: "'Menlo', 'Monaco', 'Courier New', monospace",
       scrollback: 1000,
@@ -292,10 +299,14 @@ const PodInteractiveShellModal = ({
       const screen = terminalRef.current.querySelector('.xterm-screen');
       if (!screen || screen.getBoundingClientRect().height < 1) return;
       const style = getComputedStyle(terminalRef.current);
+      // The fit addon leaves out .xterm's own padding, so the window keeps it.
+      const xterm = terminalRef.current.querySelector('.xterm');
+      const inset = xterm ? getComputedStyle(xterm) : null;
       const chrome =
         terminalRef.current.offsetTop +
         parseFloat(style.paddingTop) +
         parseFloat(style.paddingBottom) +
+        (inset ? parseFloat(inset.paddingTop) + parseFloat(inset.paddingBottom) : 0) +
         (containerRef.current.offsetHeight - containerRef.current.clientHeight);
       const target = Math.round(screen.getBoundingClientRect().height + chrome);
       if (Math.abs(containerRef.current.offsetHeight - target) >= 2) {
@@ -380,6 +391,12 @@ const PodInteractiveShellModal = ({
     }
   }, [zIndex]);
 
+  // In view when it opens, whatever the screen.
+  useEffect(() => {
+    fitInView(containerRef.current, positionRef);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // When the shell is restored from minimized state, re-fit so the terminal
   // recalculates its dimensions and the prompt sits correctly.
   useEffect(() => {
@@ -411,47 +428,41 @@ const PodInteractiveShellModal = ({
   return (
     <div
       ref={containerRef}
-      className={`shell-modal-container${minimized ? ' shell-modal-minimized' : ''}`}
+      className={`shell-modal-container tw${minimized ? ' shell-modal-minimized' : ''}`}
       onClick={() => {
         if (!minimized && onBringToFront) onBringToFront();
       }}
     >
-      <div ref={headerRef} className="shell-modal-header" onMouseDown={handleHeaderMouseDown}>
-        <div className="shell-modal-title">
-          <span
-            className={`shell-status-dot shell-status-${connectionState}`}
-            title={`Status: ${connectionState}`}
-          />
-          <span className="shell-pod-name">{podName}</span>
-          <span className="shell-pod-status"> - {shellLabel || shellMode}</span>
-        </div>
-        <div className="shell-modal-buttons">
-          <button
-            className="shell-modal-clear-btn"
-            title="Clear terminal output"
-            onClick={handleClear}
-          >
-            Clear
-          </button>
-          <button
-            className="shell-modal-reconnect-btn"
-            title={connectionState === 'lost' ? 'Reconnect' : 'Force reconnect'}
-            onClick={handleReconnect}
-          >
-            <RefreshIcon className="app-icon" />
-          </button>
-          {onMinimize && (
-            <button className="shell-modal-minimize-btn" title="Minimize" onClick={onMinimize}>
-              −
-            </button>
-          )}
-          <button onClick={handleClose} className="shell-modal-close-btn" title="Close terminal">
-            ✖
-          </button>
-        </div>
-      </div>
+      <ToolWindowHead
+        icon={TerminalIcon}
+        title="Shell"
+        context={`${podName} · ${shellLabel || shellMode}`}
+        status={SHELL_STATE[connectionState]?.[0] || connectionState}
+        tone={SHELL_STATE[connectionState]?.[1] || 'idle'}
+        onMouseDown={handleHeaderMouseDown}
+        onMinimize={onMinimize}
+        onClose={handleClose}
+        closeTitle="Close terminal"
+      >
+        <button
+          type="button"
+          className="tw-btn"
+          title="Clear terminal output"
+          onClick={handleClear}
+        >
+          Clear
+        </button>
+        <button
+          type="button"
+          className="tw-icon-btn"
+          title={connectionState === 'lost' ? 'Reconnect' : 'Force reconnect'}
+          onClick={handleReconnect}
+        >
+          <RefreshIcon className="app-icon" />
+        </button>
+      </ToolWindowHead>
 
-      <div ref={terminalRef} className="modal-terminal" />
+      <div ref={terminalRef} className="modal-terminal tw-console" />
 
       {connectionState === 'lost' && (
         <div className="shell-disconnected-overlay" role="alertdialog" aria-modal="false">
@@ -469,7 +480,7 @@ const PodInteractiveShellModal = ({
                 <RefreshIcon className="app-icon" /> Reconnect
               </button>
               <button className="shell-disconnected-btn" onClick={handleClose}>
-                ✖ Close
+                Close
               </button>
             </div>
           </div>

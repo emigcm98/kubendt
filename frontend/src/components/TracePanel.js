@@ -1,6 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { nodeAddresses } from './addresses';
 import './TracePanel.css';
+import ToolWindowHead from './ToolWindowHead';
+import fitInView from './fitInView';
+import { ReactComponent as DownloadIcon } from '../assets/images/icons/download.svg';
 import { WS_BASE_URL, API_BASE_URL } from '../config';
 import { ReactComponent as TraceIcon } from '../assets/images/icons/trace-icon.svg';
 import { ReactComponent as GlobeIcon } from '../assets/images/icons/globe.svg';
@@ -13,6 +16,18 @@ import { ReactComponent as ClusterIcon } from '../assets/images/icons/cluster.sv
 //
 // The trace is one-shot. Run it, watch the packet go, then scrub back and forth
 // over the finished path. Running again replays from the source.
+
+// The header chip's tone for each state.
+const STATUS_TONE = {
+  connecting: 'busy',
+  starting: 'busy',
+  resolving: 'busy',
+  tracing: 'busy',
+  measuring: 'busy',
+  done: 'ok',
+  lost: 'error',
+  error: 'error',
+};
 
 const STATUS_LABEL = {
   idle: 'ready',
@@ -548,6 +563,12 @@ const TracePanel = ({
       containerRef.current.style.top = `${positionRef.current.y}px`;
     }
   }, []);
+
+  // In view when it opens, whatever the screen.
+  useEffect(() => {
+    fitInView(containerRef.current, positionRef);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   useEffect(() => {
     const onMove = (e) => {
       if (!isDraggingRef.current || !containerRef.current) return;
@@ -590,40 +611,30 @@ const TracePanel = ({
 
   return (
     <div
-      className={`trace-panel${mode === 'metrics' ? ' trace-panel-metrics' : ''}`}
+      className={`trace-panel tw${mode === 'metrics' ? ' trace-panel-metrics' : ''}`}
       ref={containerRef}
       style={{ zIndex }}
       onMouseDown={onBringToFront}
     >
-      <div className="trace-header" onMouseDown={onHeaderMouseDown}>
-        <span className="trace-title">
-          <TraceIcon className="trace-title-icon" width="15" height="15" />
-          Traceroute from {source}
-        </span>
-        <span className={`trace-status trace-status-${status}`}>
-          {STATUS_LABEL[status] || status}
-        </span>
+      <ToolWindowHead
+        icon={TraceIcon}
+        title="Traceroute"
+        context={`from ${source}`}
+        status={STATUS_LABEL[status] || status}
+        tone={STATUS_TONE[status] || 'idle'}
+        onMouseDown={onHeaderMouseDown}
+        onClose={handleClose}
+      >
         <button
-          className="trace-btn trace-btn-icon"
+          type="button"
+          className="tw-icon-btn"
           onClick={exportJson}
-          title="Download results as JSON"
+          title="Download the results as JSON"
           disabled={hops.length === 0}
         >
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true">
-            <path
-              d="M12 3 v11 M8 10 l4 4 4-4"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path d="M5 19 h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-          </svg>
+          <DownloadIcon className="app-icon" />
         </button>
-        <button className="trace-btn trace-btn-close" onClick={handleClose} title="Close">
-          ✕
-        </button>
-      </div>
+      </ToolWindowHead>
 
       <div className="trace-form">
         <div className="trace-row">

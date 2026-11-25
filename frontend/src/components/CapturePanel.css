@@ -1,251 +1,104 @@
-.cap-panel {
-  position: fixed;
-  width: 720px;
-  height: 460px;
-  min-width: 420px;
-  min-height: 260px;
-  display: flex;
-  flex-direction: column;
-  background: var(--tool-bg);
-  border: 1px solid var(--tool-border);
-  border-radius: var(--radius-md);
-  box-shadow: 0 12px 40px color-mix(in srgb, var(--shadow-color) 50%, transparent);
-  overflow: hidden;
-  resize: both;
-  color: var(--tool-text-body);
-  font-family:
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    Roboto,
-    sans-serif;
+/* DNS, the one protocol without a token of its kind. */
+:root {
+  --cap-dns: #00838f;
 }
 
-.cap-panel-min {
+/* The capture window. Its frame, header and bar are the shared tool
+   window's (ToolWindow.css); here the packet list and the layers. */
+.cap-panel {
+  position: fixed;
+  width: 760px;
+  height: 480px;
+  min-width: 460px;
+  min-height: 260px;
+  resize: both;
+}
+
+.tw.cap-panel-min {
   display: none;
 }
 
-/* Header */
-.cap-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 10px;
-  background: var(--tool-header-bg);
-  border-bottom: 1px solid var(--tool-border);
-  cursor: move;
-  user-select: none;
+/* The pcap mark is wide, so it gets its own box in the header. */
+.cap-panel .tw-head-icon {
+  width: 34px;
+  height: 15px;
 }
 
-.cap-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--tool-text-muted);
-  flex: 0 0 auto;
-}
-
-.cap-dot-capturing {
-  background: #22c55e;
-  box-shadow: 0 0 6px #22c55e;
-}
-.cap-dot-connecting {
-  background: var(--tool-warning);
-  box-shadow: 0 0 6px var(--tool-warning);
-}
-.cap-dot-stopped {
-  background: var(--tool-text-muted);
-}
-.cap-dot-lost {
-  background: var(--warning-strong);
-}
-.cap-dot-error {
-  background: var(--danger);
-  box-shadow: 0 0 6px var(--danger);
-}
-
-.cap-title {
-  display: flex;
-  align-items: baseline;
-  gap: 5px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+.tw-input.cap-filter-input {
+  flex: 1;
+  min-width: 160px;
+  font-family: var(--font-mono);
   font-size: 12px;
 }
 
-.cap-title-pod {
-  font-weight: 600;
-  color: var(--tool-text);
-}
-.cap-title-iface {
-  color: var(--tool-accent);
+.cap-filter-input::placeholder {
+  color: var(--text-subtle);
 }
 
-.cap-meta {
-  margin-left: 6px;
-  color: var(--tool-text-muted);
-  font-size: 11px;
-  white-space: nowrap;
-}
-
-.cap-header-btns {
-  margin-left: auto;
-  display: flex;
-  gap: 6px;
-  align-items: center;
-}
-
-.cap-btn {
-  background: var(--tool-bg-raised);
-  border: 1px solid var(--tool-border);
-  color: var(--tool-text-body);
-  border-radius: var(--radius-sm);
-  padding: 3px 9px;
-  font-size: 11px;
-  cursor: pointer;
-  text-decoration: none;
-  line-height: 1.4;
-  white-space: nowrap;
-}
-
-.cap-btn:hover {
-  filter: brightness(1.25);
-}
-.cap-btn-close {
-  color: var(--tool-danger);
-}
-.cap-btn-disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-/* Wireshark-style start (green ▶) / stop (red ■) controls. */
-.cap-btn-start {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--tool-success);
-  border-color: var(--tool-success-strong);
-  background: #16241c;
-}
-.cap-btn-stop {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--tool-danger);
-  border-color: var(--tool-danger-border);
-  background: var(--tool-danger-bg);
-}
-.cap-glyph-play {
-  width: 0;
-  height: 0;
-  border-style: solid;
-  border-width: 5px 0 5px 8px;
-  border-color: transparent transparent transparent #22c55e;
-}
-.cap-glyph-stop {
-  width: 9px;
-  height: 9px;
-  background: var(--danger);
-  border-radius: 1px;
-}
-
-/* Soft-coloured Save (blue) and Clear (red) actions. */
-.cap-btn-save {
-  color: var(--tool-accent);
-  border-color: var(--tool-border-strong);
-  background: #11243a;
-}
-.cap-btn-clear {
-  color: var(--tool-danger);
-  border-color: var(--tool-danger-border);
-  background: var(--tool-danger-bg);
-}
-
-/* Save dropdown. */
 .cap-save-wrap {
   position: relative;
-  display: inline-block;
 }
+
+.cap-save-caret {
+  margin-right: -4px;
+  color: var(--text-muted) !important;
+}
+
 .cap-save-menu {
   position: absolute;
   top: 100%;
   right: 0;
-  margin-top: 4px;
-  min-width: 140px;
-  padding: 4px;
+  z-index: 5;
   display: flex;
   flex-direction: column;
   gap: 2px;
-  background: var(--tool-header-bg);
-  border: 1px solid var(--tool-border);
-  border-radius: var(--radius-sm);
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--shadow-color) 50%, transparent);
-  z-index: 5;
+  min-width: 150px;
+  margin-top: 4px;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--shadow-color) 16%, transparent);
 }
+
 .cap-save-item {
-  background: transparent;
-  border: none;
-  color: var(--tool-text-body);
-  text-align: left;
   padding: 6px 10px;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  color: var(--text-body);
+  background: none;
+  border: none;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 12px;
 }
-.cap-save-item:hover {
-  background: var(--tool-bg-raised);
+
+.cap-save-item:hover:not(:disabled) {
+  background: var(--panel-from);
 }
-.cap-save-item-disabled {
-  opacity: 0.4;
+
+.cap-save-item:disabled {
+  opacity: 0.45;
   cursor: not-allowed;
 }
-.cap-save-item-disabled:hover {
-  background: transparent;
-}
 
-/* Filter bar */
-.cap-filterbar {
-  display: flex;
-  gap: 6px;
-  padding: 6px 8px;
-  background: var(--tool-bg-sunken);
-  border-bottom: 1px solid var(--tool-border);
-}
-
-.cap-filter-input {
-  flex: 1;
-  background: var(--tool-bg-well);
-  border: 1px solid var(--tool-border);
-  color: var(--tool-success);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12px;
-  border-radius: var(--radius-sm);
-  padding: 5px 9px;
-  outline: none;
-}
-
-.cap-filter-input::placeholder {
-  color: var(--tool-text-subtle);
-}
-
-/* Body: table + detail */
 .cap-body {
-  flex: 1;
   display: flex;
+  flex: 1;
   flex-direction: column;
   min-height: 0;
 }
 
 .cap-table-wrap {
   flex: 1 1 60%;
-  overflow: auto;
   min-height: 0;
+  overflow: auto;
 }
 
 .cap-table {
-  border-collapse: collapse;
   width: 100%;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
   font-size: 12px;
   white-space: nowrap;
 }
@@ -253,50 +106,57 @@
 .cap-table thead th {
   position: sticky;
   top: 0;
-  background: var(--tool-header-bg);
-  color: var(--tool-text-muted);
-  text-align: left;
-  font-weight: 600;
-  font-size: 11px;
-  padding: 5px 9px;
-  border-bottom: 1px solid var(--tool-border);
   z-index: 1;
+  padding: 6px 10px;
   overflow: hidden;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-align: left;
   text-overflow: ellipsis;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-light);
 }
 
 .cap-table tbody td {
-  padding: 3px 9px;
-  border-bottom: 1px solid #161d27;
+  padding: 4px 10px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--text-body);
+  border-bottom: 1px solid var(--border-light);
 }
 
 .cap-table tbody tr {
   cursor: pointer;
 }
-.cap-table tbody tr:hover {
-  filter: brightness(1.18);
+
+.cap-table tbody tr:hover td {
+  background: var(--panel-from);
 }
 
 .cap-c-num {
   text-align: right;
-  color: var(--tool-text-muted);
+  color: var(--text-muted) !important;
 }
-.cap-c-proto {
-  font-weight: 600;
-}
+
 .cap-c-info {
-  color: var(--tool-text-dim);
+  font-family: var(--font-sans);
 }
 
-.cap-row-sel td {
-  background: #1d4ed8 !important;
-  color: var(--text-on-brand) !important;
+.cap-row-sel td,
+.cap-table tbody tr.cap-row-sel:hover td {
+  background: var(--info-bg);
 }
 
-/* Draggable column resizer (right edge of each header cell). */
+.cap-row-sel td:first-child {
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+
+/* The handle on each heading's right edge that resizes its column. */
 .cap-col-resizer {
   position: absolute;
   top: 0;
@@ -306,125 +166,115 @@
   cursor: col-resize;
   user-select: none;
 }
+
 .cap-col-resizer:hover {
-  background: #3b82f6;
-  opacity: 0.6;
+  background: color-mix(in srgb, var(--primary) 35%, transparent);
 }
 
-/* protocol colours */
-.cap-p-ospf {
-  background: #13231a;
+/* The protocol as a chip, one color per family. */
+.cap-proto {
+  padding: 0 6px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--panel-from);
+  border-radius: var(--radius-pill);
 }
-.cap-p-ospf .cap-c-proto {
-  color: var(--tool-success);
+
+.cap-p-icmp .cap-proto {
+  color: var(--primary);
+  background: var(--info-bg);
 }
-.cap-p-icmp {
-  background: #241f12;
+
+.cap-p-ospf .cap-proto {
+  color: var(--success);
+  background: var(--success-bg);
 }
-.cap-p-icmp .cap-c-proto {
-  color: var(--tool-warning);
+
+.cap-p-arp .cap-proto {
+  color: var(--warning-text);
+  background: var(--warning-bg);
 }
-.cap-p-arp {
-  background: #1d1426;
+
+.cap-p-tcp .cap-proto {
+  color: var(--role-owner);
+  background: var(--role-owner-bg);
 }
-.cap-p-arp .cap-c-proto {
-  color: #d2a8ff;
-}
-.cap-p-tcp {
-  background: #0e1a24;
-}
-.cap-p-tcp .cap-c-proto {
-  color: #79c0ff;
-}
-.cap-p-dns {
-  background: #0e1f1f;
-}
-.cap-p-dns .cap-c-proto {
-  color: #56d4c4;
-}
-.cap-p-udp {
-  background: #101722;
-}
-.cap-p-udp .cap-c-proto {
-  color: #a5b4c4;
-}
-.cap-p-other .cap-c-proto {
-  color: var(--tool-text-dim);
+
+.cap-p-dns .cap-proto {
+  color: var(--cap-dns);
+  background: color-mix(in srgb, var(--cap-dns) 12%, transparent);
 }
 
 .cap-empty {
   padding: 24px;
-  text-align: center;
-  color: var(--tool-text-subtle);
   font-size: 12px;
+  text-align: center;
+  color: var(--text-muted);
 }
 
-/* Detail pane */
+/* The layers of the packet picked. */
 .cap-detail {
   flex: 1 1 40%;
-  border-top: 1px solid var(--tool-border);
-  background: var(--tool-bg-well);
-  overflow: auto;
   min-height: 90px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  overflow: auto;
+  font-family: var(--font-mono);
   font-size: 12px;
+  background: var(--panel-from);
+  border-top: 1px solid var(--border);
 }
 
 .cap-detail-hint {
   padding: 14px;
-  color: var(--tool-text-subtle);
+  font-family: var(--font-sans);
+  color: var(--text-muted);
 }
 
 .cap-detail-err {
-  color: var(--tool-danger);
+  color: var(--danger);
 }
 
 .cap-detail-tree {
-  padding: 6px 4px;
-  line-height: 1.5;
+  padding: 8px 6px;
+  line-height: 1.55;
 }
 
 .cap-detail-node {
-  cursor: pointer;
-  padding: 1px 4px;
   display: flex;
-  gap: 5px;
   align-items: center;
+  gap: 5px;
+  padding: 1px 4px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
 }
 
 .cap-detail-node:hover {
-  background: var(--tool-bg-sunken);
+  background: var(--surface);
 }
+
 .cap-detail-caret {
-  color: var(--tool-text-muted);
   width: 10px;
+  color: var(--text-muted);
 }
+
 .cap-detail-key {
-  color: var(--tool-accent);
+  color: var(--text-muted);
 }
+
 .cap-detail-key-branch {
-  color: var(--tool-success);
-  font-weight: 600;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  color: var(--text-heading);
 }
 
 .cap-detail-leaf {
-  padding: 1px 4px;
   display: flex;
   gap: 8px;
+  padding: 1px 4px;
 }
 
 .cap-detail-val {
-  color: var(--tool-text);
   word-break: break-all;
-}
-
-.cap-errorbar {
-  padding: 5px 10px;
-  background: var(--tool-danger-bg);
-  border-top: 1px solid var(--tool-danger-border);
-  color: var(--tool-danger);
-  font-size: 11px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  color: var(--text-heading);
 }

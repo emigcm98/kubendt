@@ -1,10 +1,5 @@
 :root {
   --empty-topology-text: #5a6b7a;
-  /* the taskbar of minimized shells, in the terminal family */
-  --term-bg-chip: #2a2a2a;
-  --term-bg-chip-hover: #303030;
-  --term-border-subtle: #3a3a3a;
-  --term-danger-text: #ff6868;
   --graph-loading-text: #666666;
 }
 
@@ -437,89 +432,86 @@
   cursor: not-allowed;
 }
 
-/* Bottom-centered taskbar with chips representing minimized shells */
+/* The bar of minimized tool windows, one chip each, bottom center. */
 .shell-taskbar {
   position: fixed;
   bottom: 14px;
   left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 8px;
-  padding: 6px 10px;
-  background: color-mix(in srgb, var(--term-bg) 92%, transparent);
-  border: 1px solid var(--term-border-subtle);
-  border-radius: var(--radius-pill);
-  box-shadow: 0 6px 20px color-mix(in srgb, var(--shadow-color) 35%, transparent);
   z-index: 9000;
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-pill);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--shadow-color) 18%, transparent);
+  transform: translateX(-50%);
   backdrop-filter: blur(4px);
 }
 
 .shell-taskbar-chip {
   display: inline-flex;
   align-items: stretch;
-  background: var(--term-bg-chip);
-  border: 1px solid var(--term-border);
-  border-radius: var(--radius-pill);
   overflow: hidden;
-  transition:
-    border-color 0.15s ease,
-    background 0.15s ease;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  transition: border-color 0.15s ease;
 }
 
 .shell-taskbar-chip:hover {
-  border-color: var(--term-accent);
-  background: var(--term-bg-chip-hover);
+  border-color: var(--primary);
 }
 
 .shell-taskbar-chip-restore {
-  background: transparent;
-  border: none;
-  color: var(--border-light);
-  padding: 4px 10px 4px 8px;
-  font-size: 0.82rem;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  cursor: pointer;
+  padding: 4px 10px 4px 10px;
   font-family: inherit;
+  font-size: 12px;
+  color: var(--text-body);
+  background: transparent;
+  border: none;
+  cursor: pointer;
 }
 
 .shell-taskbar-chip-icon {
-  color: var(--term-accent);
-  font-size: 0.7rem;
+  font-size: 11px;
+  color: var(--primary);
 }
 
 .shell-taskbar-chip-name {
-  font-weight: 600;
-  font-family: 'Monaco', 'Menlo', monospace;
-  color: var(--term-accent);
   max-width: 160px;
-  white-space: nowrap;
   overflow: hidden;
+  font-family: var(--font-mono);
+  font-weight: 700;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-heading);
 }
 
 .shell-taskbar-chip-mode {
-  color: var(--text-subtle);
-  font-size: 0.72rem;
+  font-size: 11px;
+  color: var(--text-muted);
 }
 
 .shell-taskbar-chip-close {
+  padding: 0 9px;
+  font-size: 12px;
+  color: var(--text-subtle);
   background: transparent;
   border: none;
-  border-left: 1px solid var(--term-border);
-  color: var(--text-subtle);
-  padding: 0 9px;
+  border-left: 1px solid var(--border-light);
   cursor: pointer;
-  font-size: 0.8rem;
   transition:
     background 0.15s ease,
     color 0.15s ease;
 }
 
 .shell-taskbar-chip-close:hover {
-  background: color-mix(in srgb, var(--term-danger) 18%, transparent);
-  color: var(--term-danger-text);
+  color: var(--danger);
+  background: var(--danger-bg);
 }
 
 /* Search input below Save positions / Export topology, centred between them.

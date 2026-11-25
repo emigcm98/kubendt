@@ -1,69 +1,54 @@
-:root {
-  /* one tint per operation */
-  --overlay-import-bg: #fffbe6;
-  --overlay-config-bg: #e6f7ff;
-  --overlay-config-border: #91d5ff;
-  --overlay-modify-bg: #f6ffed;
-  --overlay-modify-border: #b7eb8f;
-  --overlay-clear-bg: #fff1f0;
-  --overlay-clear-border: #ffa39e;
-  --overlay-info-bg: #f0f5ff;
-  --overlay-info-border: #d0dae8;
-}
-
+/* The badge over the graph while an operation runs: a light card like the
+   tool windows, its icon and left edge in the operation's color. */
 .loading-overlay-backdrop {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: color-mix(in srgb, var(--scrim-color) 30%, transparent);
+  inset: 0;
   z-index: 19;
+  background: color-mix(in srgb, var(--scrim-color) 20%, transparent);
   pointer-events: none;
 }
 
 .loading-overlay {
+  --loading-tone: var(--text-muted);
   position: absolute;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%);
-  padding: 1rem 2rem;
-  border-radius: 5px;
   z-index: 20;
-  font-weight: bold;
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  border-width: 1px;
-  border-style: solid;
+  gap: 10px;
+  padding: 14px 22px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-heading);
+  background: var(--surface);
+  border: 1px solid var(--panel-border);
+  border-left: 4px solid var(--loading-tone);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 14px 36px color-mix(in srgb, var(--shadow-color) 20%, transparent);
+  transform: translate(-50%, -50%);
 }
 
 .loading-overlay-icon {
-  font-size: 1.2rem;
+  display: inline-flex;
+  font-size: 18px;
   line-height: 1;
+  color: var(--loading-tone);
 }
 
 .loading-overlay-import {
-  background: var(--overlay-import-bg);
-  border-color: var(--warning-border);
+  --loading-tone: var(--warning);
 }
 
 .loading-overlay-config {
-  background: var(--overlay-config-bg);
-  border-color: var(--overlay-config-border);
+  --loading-tone: var(--primary);
 }
 
 .loading-overlay-modify {
-  background: var(--overlay-modify-bg);
-  border-color: var(--overlay-modify-border);
+  --loading-tone: var(--success-accent);
 }
 
 .loading-overlay-clear {
-  background: var(--overlay-clear-bg);
-  border-color: var(--overlay-clear-border);
-}
-
-.loading-overlay-info {
-  background: var(--overlay-info-bg);
-  border-color: var(--overlay-info-border);
+  --loading-tone: var(--danger);
 }

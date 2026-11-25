@@ -1,75 +1,25 @@
-/* Throughput test window, of the trace panel's family. */
-.iperf-panel {
+/* The throughput window. Its frame and header are the shared tool window's
+   (ToolWindow.css); here its form, the chart, the summary and Run. */
+.tw.iperf-panel {
   position: fixed;
-  width: 420px;
+  width: 440px;
   min-width: 360px;
   max-width: 90vw;
-  display: flex;
-  flex-direction: column;
-  background: var(--tool-bg);
-  color: var(--tool-text-body);
-  border: 1px solid var(--tool-border);
-  border-radius: var(--radius-md);
-  box-shadow: 0 10px 30px color-mix(in srgb, var(--shadow-color) 45%, transparent);
   font-size: 12px;
-  overflow: hidden;
   user-select: none;
 }
 
-.iperf-panel-min {
+.tw.iperf-panel-min {
   display: none;
 }
 
-.iperf-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  background: var(--tool-header-bg);
-  border-bottom: 1px solid var(--tool-border);
-  cursor: move;
-}
-
-.iperf-title {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 600;
-  color: var(--tool-text);
-}
-
-.iperf-title-icon {
-  width: 15px;
-  height: 15px;
-}
-
-.iperf-status {
-  margin-left: auto;
-  font-size: 11px;
-  opacity: 0.8;
-}
-
-.iperf-status-connecting,
-.iperf-status-starting,
-.iperf-status-running {
-  color: var(--tool-accent);
-}
-
-.iperf-status-done {
-  color: var(--tool-success);
-}
-
-.iperf-status-error,
-.iperf-status-lost {
-  color: var(--tool-danger);
-}
-
 .iperf-form {
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--tool-border);
   display: flex;
   flex-direction: column;
   gap: 6px;
+  padding: 10px 12px;
+  background: var(--panel-from);
+  border-bottom: 1px solid var(--border-light);
 }
 
 .iperf-row {
@@ -79,29 +29,40 @@
 }
 
 .iperf-label {
-  width: 44px;
-  color: var(--tool-text-muted);
   flex-shrink: 0;
+  width: 48px;
+  color: var(--text-muted);
 }
 
 .iperf-input,
 .iperf-select {
   flex: 1;
   min-width: 0;
-  background: var(--tool-bg-well);
-  color: var(--tool-text);
-  border: 1px solid var(--tool-border);
-  border-radius: var(--radius-sm);
-  padding: 4px 6px;
+  height: 28px;
+  padding: 0 8px;
+  box-sizing: border-box;
+  font: inherit;
   font-size: 12px;
+  color: var(--text-body);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
   outline: none;
 }
 
 .iperf-input:focus,
 .iperf-select:focus {
-  border-color: var(--tool-accent);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent);
 }
 
+.iperf-input:disabled,
+.iperf-select:disabled {
+  color: var(--text-muted);
+  background: var(--panel-from);
+}
+
+/* The node picker: a select that can mark nodes it cannot reach. */
 .iperf-picker {
   position: relative;
   flex: 1;
@@ -109,12 +70,12 @@
 }
 
 .iperf-picker-btn {
-  width: 100%;
   display: flex;
   align-items: center;
   gap: 6px;
-  cursor: pointer;
+  width: 100%;
   text-align: left;
+  cursor: pointer;
 }
 
 .iperf-picker-btn:disabled {
@@ -123,7 +84,7 @@
 }
 
 .iperf-picker-empty .iperf-picker-text {
-  color: var(--tool-text-muted);
+  color: var(--text-subtle);
 }
 
 .iperf-picker-text {
@@ -135,27 +96,27 @@
 }
 
 .iperf-picker-chevron {
+  flex-shrink: 0;
   width: 14px;
   height: 14px;
-  color: var(--tool-text-muted);
-  flex-shrink: 0;
+  color: var(--text-muted);
 }
 
 .iperf-picker-list {
   position: absolute;
   top: calc(100% + 2px);
-  left: 0;
   right: 0;
+  left: 0;
   z-index: 5;
-  margin: 0;
-  padding: 4px 0;
-  list-style: none;
   max-height: 200px;
+  margin: 0;
+  padding: 4px;
   overflow: auto;
-  background: var(--tool-bg);
-  border: 1px solid var(--tool-border-strong);
-  border-radius: var(--radius-sm);
-  box-shadow: 0 8px 20px color-mix(in srgb, var(--shadow-color) 40%, transparent);
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--shadow-color) 16%, transparent);
 }
 
 .iperf-picker-item {
@@ -163,30 +124,32 @@
   align-items: center;
   gap: 6px;
   padding: 5px 8px;
-  color: var(--tool-text);
+  color: var(--text-body);
+  border-radius: var(--radius-sm);
   cursor: pointer;
 }
 
 .iperf-picker-item:hover {
-  background: var(--tool-bg-raised);
+  background: var(--panel-from);
 }
 
 .iperf-picker-item-current {
-  color: var(--tool-accent);
+  font-weight: 700;
+  color: var(--primary);
 }
 
 .iperf-picker-item-blocked,
 .iperf-picker-item-blocked:hover {
-  color: var(--tool-text-subtle);
+  color: var(--text-subtle);
   background: transparent;
   cursor: default;
 }
 
 .iperf-picker-warn {
+  flex-shrink: 0;
   width: 13px;
   height: 13px;
   color: var(--warning);
-  flex-shrink: 0;
 }
 
 .iperf-input-short {
@@ -196,130 +159,131 @@
 
 .iperf-input-bad,
 .iperf-input-bad:focus {
-  border-color: var(--tool-danger);
+  border-color: var(--danger);
 }
 
 .iperf-form-error {
-  color: var(--tool-danger);
+  padding-left: 56px;
   font-size: 11px;
-  padding-left: 52px;
+  color: var(--danger);
 }
 
 .iperf-unit {
-  color: var(--tool-text-muted);
+  color: var(--text-muted);
 }
 
 .iperf-check {
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   gap: 4px;
-  color: var(--tool-text-dim);
+  color: var(--text-body);
   cursor: pointer;
-  flex-shrink: 0;
 }
 
+.iperf-check input {
+  accent-color: var(--primary);
+}
+
+/* A choice of two, as the trace's mode switch. */
 .iperf-seg {
   display: inline-flex;
-  border: 1px solid var(--tool-border);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
   flex-shrink: 0;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
 }
 
 .iperf-seg-btn {
-  background: var(--tool-bg-well);
-  color: var(--tool-text-muted);
-  border: none;
-  padding: 4px 10px;
+  height: 26px;
+  padding: 0 10px;
+  font: inherit;
   font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: none;
+  border: none;
   cursor: pointer;
 }
 
 .iperf-seg-btn + .iperf-seg-btn {
-  border-left: 1px solid var(--tool-border);
+  border-left: 1px solid var(--border);
 }
 
 .iperf-seg-active {
-  background: var(--tool-bg-raised);
-  color: var(--tool-text);
-  font-weight: 600;
+  color: var(--primary);
+  background: var(--info-bg);
+}
+
+.iperf-seg-btn:disabled {
+  cursor: default;
 }
 
 .iperf-btn {
-  background: var(--tool-bg-raised);
-  color: var(--tool-text-body);
-  border: 1px solid var(--tool-border-strong);
-  border-radius: var(--radius-sm);
-  padding: 4px 8px;
-  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  padding: 0 12px;
+  font: inherit;
   font-size: 12px;
+  font-weight: 700;
   line-height: 1;
+  color: var(--text-body);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
 }
 
 .iperf-btn:hover:not(:disabled) {
-  background: var(--tool-border-strong);
+  color: var(--primary);
+  border-color: var(--primary);
 }
 
 .iperf-btn:disabled {
-  opacity: 0.4;
+  opacity: 0.45;
   cursor: default;
 }
 
 .iperf-btn-run {
-  background: var(--tool-success-solid);
-  border-color: var(--tool-success-strong);
-  color: var(--tool-text);
-  font-weight: 600;
-  padding: 5px 14px;
+  padding: 0 16px;
+  color: var(--text-on-brand);
+  background: var(--primary);
+  border-color: var(--primary);
 }
 
 .iperf-btn-run:hover:not(:disabled) {
-  background: var(--tool-success-solid-hover);
+  color: var(--text-on-brand);
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
 }
 
 .iperf-btn-stop {
-  background: var(--tool-danger-bg);
-  border-color: var(--tool-danger-border);
-  color: var(--tool-danger);
-  font-weight: 600;
-  padding: 5px 14px;
+  padding: 0 16px;
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
 }
 
-.iperf-btn-icon {
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 7px;
-  background: transparent;
-  border-color: transparent;
-  color: var(--tool-text-muted);
-}
-
-.iperf-btn-icon:hover:not(:disabled) {
-  background: var(--tool-bg-raised);
-  color: var(--tool-text);
-}
-
-.iperf-btn-icon .app-icon {
-  width: 14px;
-  height: 14px;
-}
-
-.iperf-btn-close:hover {
-  background: var(--tool-danger-bg);
-  border-color: var(--tool-danger-border);
+.iperf-btn-stop:hover:not(:disabled) {
+  color: var(--danger-strong);
+  background: var(--danger-bg);
+  border-color: var(--danger);
 }
 
 .iperf-error {
-  padding: 6px 10px;
-  background: var(--tool-danger-bg);
-  color: var(--tool-danger);
-  border-bottom: 1px solid var(--tool-danger-border);
-  font-size: 11px;
+  padding: 6px 12px;
+  font-size: 12px;
   word-break: break-word;
+  color: var(--danger-strong);
+  background: var(--danger-bg);
+  border-bottom: 1px solid color-mix(in srgb, var(--danger) 25%, transparent);
 }
 
+/* The chart, one bar a second. */
 .iperf-chart-wrap {
-  padding: 8px 10px 4px;
+  padding: 10px 12px 4px;
 }
 
 .iperf-chart-head {
@@ -327,13 +291,14 @@
   justify-content: space-between;
   min-height: 14px;
   margin-bottom: 2px;
-  color: var(--tool-text-subtle);
+  font-family: var(--font-mono);
   font-size: 10px;
-  font-family: ui-monospace, monospace;
+  color: var(--text-subtle);
 }
 
 .iperf-chart-rate {
-  color: var(--tool-text-dim);
+  font-weight: 700;
+  color: var(--text-heading);
 }
 
 .iperf-chart-row {
@@ -350,11 +315,11 @@
 .iperf-chart-axis span {
   position: absolute;
   right: 0;
-  transform: translateY(-50%);
-  color: var(--tool-text-subtle);
+  font-family: var(--font-mono);
   font-size: 10px;
-  font-family: ui-monospace, monospace;
   white-space: nowrap;
+  color: var(--text-subtle);
+  transform: translateY(-50%);
 }
 
 .iperf-chart {
@@ -366,64 +331,64 @@
 .iperf-legend {
   min-height: 12px;
   margin-top: 2px;
-  color: var(--tool-text-subtle);
   font-size: 10px;
   text-align: right;
+  color: var(--text-subtle);
 }
 
 .iperf-bar {
-  fill: var(--tool-accent);
+  fill: var(--primary);
 }
 
 .iperf-bar-retx {
-  fill: var(--tool-warning);
+  fill: var(--warning-strong);
 }
 
 .iperf-grid {
-  stroke: var(--tool-border);
+  stroke: var(--border);
   stroke-dasharray: 2 3;
 }
 
 .iperf-axis {
-  fill: var(--tool-text-subtle);
+  font-family: var(--font-mono);
   font-size: 10px;
-  font-family: ui-monospace, monospace;
+  fill: var(--text-subtle);
 }
 
 .iperf-empty {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-muted);
-  text-align: center;
   font-style: italic;
+  text-align: center;
+  color: var(--text-muted);
 }
 
 .iperf-summary {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 3px 10px;
-  padding: 6px 10px 8px;
-  border-top: 1px solid var(--tool-border);
+  gap: 4px 12px;
+  padding: 8px 12px 10px;
+  border-top: 1px solid var(--border-light);
 }
 
 .iperf-summary-key {
-  color: var(--tool-text-muted);
+  color: var(--text-muted);
 }
 
 .iperf-summary-val {
-  color: var(--tool-text);
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
+  color: var(--text-heading);
 }
 
 .iperf-controls {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 10px;
-  border-top: 1px solid var(--tool-border);
-  background: var(--tool-bg-sunken);
+  padding: 8px 12px;
+  background: var(--panel-from);
+  border-top: 1px solid var(--border-light);
 }
 
 .iperf-controls .iperf-btn-clear {

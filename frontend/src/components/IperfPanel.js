@@ -1,12 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { nodeAddresses } from './addresses';
 import './IperfPanel.css';
+import ToolWindowHead from './ToolWindowHead';
 import { API_BASE_URL, WS_BASE_URL } from '../config';
 import useDraggableWindow from './useDraggableWindow';
 import { ReactComponent as GaugeIcon } from '../assets/images/icons/gauge.svg';
 import { ReactComponent as DownloadIcon } from '../assets/images/icons/download.svg';
-import { ReactComponent as MinusIcon } from '../assets/images/icons/minus.svg';
-import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
 import { ReactComponent as ChevronDownIcon } from '../assets/images/icons/chevron-down.svg';
 import { ReactComponent as WarningIcon } from '../assets/images/icons/warning.svg';
 
@@ -15,6 +14,16 @@ import { ReactComponent as WarningIcon } from '../assets/images/icons/warning.sv
 // that owns the address unless the lab already runs one there. One bar per
 // second while it runs, the end totals below. The window keeps one size from
 // open to done: the chart and the totals are laid out before anything arrives.
+
+// The header chip's tone for each state.
+const STATUS_TONE = {
+  connecting: 'busy',
+  starting: 'busy',
+  running: 'live',
+  done: 'ok',
+  lost: 'error',
+  error: 'error',
+};
 
 const STATUS_LABEL = {
   idle: 'ready',
@@ -504,41 +513,32 @@ const IperfPanel = ({
   return (
     <div
       ref={containerRef}
-      className={`iperf-panel${minimized ? ' iperf-panel-min' : ''}`}
+      className={`iperf-panel tw${minimized ? ' iperf-panel-min' : ''}`}
       style={{ zIndex }}
       onMouseDown={() => {
         if (!minimized && onBringToFront) onBringToFront();
       }}
     >
-      <div className="iperf-header" onMouseDown={onHeaderMouseDown}>
-        <span className="iperf-title">
-          <GaugeIcon className="iperf-title-icon" />
-          Throughput test from {source}
-        </span>
-        <span className={`iperf-status iperf-status-${status}`}>
-          {STATUS_LABEL[status] || status}
-        </span>
+      <ToolWindowHead
+        icon={GaugeIcon}
+        title="Throughput"
+        context={`from ${source}`}
+        status={STATUS_LABEL[status] || status}
+        tone={STATUS_TONE[status] || 'idle'}
+        onMouseDown={onHeaderMouseDown}
+        onMinimize={onMinimize}
+        onClose={onClose}
+      >
         <button
-          className="iperf-btn iperf-btn-icon"
+          type="button"
+          className="tw-icon-btn"
           onClick={exportJson}
           title="Download the run as JSON"
           disabled={intervals.length === 0}
         >
           <DownloadIcon className="app-icon" />
         </button>
-        {onMinimize && (
-          <button className="iperf-btn iperf-btn-icon" onClick={onMinimize} title="Minimize">
-            <MinusIcon className="app-icon" />
-          </button>
-        )}
-        <button
-          className="iperf-btn iperf-btn-icon iperf-btn-close"
-          onClick={onClose}
-          title="Close"
-        >
-          <CloseIcon className="app-icon" />
-        </button>
-      </div>
+      </ToolWindowHead>
 
       <div className="iperf-form">
         <div className="iperf-row">

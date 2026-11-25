@@ -357,7 +357,7 @@
   top: 0;
   left: 0;
   height: 3px;
-  background: var(--tool-border-strong);
+  background: var(--text-heading);
   border-radius: 2px;
   pointer-events: none;
   z-index: 18;

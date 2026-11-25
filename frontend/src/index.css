@@ -26,31 +26,6 @@
   --panel-header-from: #e3eaf3;
   --panel-header-to: #d8e2ee;
 
-  /* Tool panels (dark floating tools over the graph: capture, traceroute).
-     One shared palette so the panels read as siblings. Component-specific
-     semantic colors (protocol rows, hop kinds) stay in their stylesheets. */
-  --tool-bg: #121821;
-  --tool-header-bg: #1a2230;
-  --tool-bg-raised: #223049; /* chips, buttons, active segments */
-  --tool-bg-sunken: #1b2532; /* bars, badges, bottom strips */
-  --tool-bg-well: #0d1219; /* inputs and scrollable output areas */
-  --tool-border: #2a3340;
-  --tool-border-strong: #35507a;
-  --tool-text: #eaf0f6;
-  --tool-text-body: #d6dde6;
-  --tool-text-dim: #cdd6df;
-  --tool-text-muted: #8a97a6;
-  --tool-text-subtle: #67748a;
-  --tool-accent: #4fc3f7;
-  --tool-success: #7bd88f;
-  --tool-success-strong: #2e8b57;
-  --tool-success-solid: #1f6f43; /* solid green action (run/play) */
-  --tool-success-solid-hover: #268050;
-  --tool-warning: #f0c674;
-  --tool-danger: #fca5a5;
-  --tool-danger-bg: #2b1416;
-  --tool-danger-border: #5b2230;
-
   /* Text */
   --text-heading: #1a3a5c;
   --text-body: #334155;
@@ -95,18 +70,13 @@
   --role-user: var(--primary);
   --role-user-bg: var(--info-bg);
 
-  /* Interactive shell (xterm window). Its own family: the terminal keeps the
-     editor-like dark background and neon accent, and the JS reads these so
-     xterm's canvas theme stays in sync. */
-  --term-bg: #1e1e1e;
-  --term-bg-raised: #2d2d2d;
-  --term-bg-card: #1f1f1f;
-  --term-fg: #e0e0e0;
-  --term-border: #444444;
-  --term-accent: #00ff99;
-  --term-accent-hover: #00cc77;
-  --term-danger: #ff4d4d;
-  --term-link: #00aaff;
+  /* The console wells of the tool windows, the shell's terminal and the
+     logs' text. Dark in both themes. The shell reads them for xterm. */
+  --console-bg: #111821;
+  --console-fg: #d6dde6;
+  --console-muted: #7d8a99;
+  --console-accent: #7bd88f;
+  --console-border: transparent;
 
   /* Shadows and backdrops. Each use mixes the base at its own alpha,
      color-mix(in srgb, var(--shadow-color) 12%, transparent). */
