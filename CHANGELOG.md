@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - The namespace list gives each namespace's guests, the size of its lab in pods and links, and its creation time in RFC 3339.
 - A profile page with one's account, password, API tokens, quota and namespaces, in place of the password and tokens dialogs.
 - `GET` and `PUT /settings`, for the owner to override some of the environment's settings from the portal, applied at once. Admins read them.
+- A settings page for those values, saved by the owner and read by the admins.
 
 ### Changed
 

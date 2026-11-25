@@ -152,9 +152,15 @@
 }
 
 .profile-role-owner,
-.profile-role-admin {
-  background: var(--danger-bg);
-  color: var(--danger);
+.profile-item-tag.profile-item-tag-owner {
+  background: var(--role-owner-bg);
+  color: var(--role-owner);
+}
+
+.profile-role-admin,
+.profile-item-tag.profile-item-tag-admin {
+  background: var(--role-admin-bg);
+  color: var(--role-admin);
 }
 
 .profile-item-tag {

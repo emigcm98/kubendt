@@ -674,11 +674,10 @@ func init() {
 	settings.Register(settings.Setting{
 		Key: sessionIdleKey, Group: settings.GroupPasswords, Label: "Session idle",
 		Unit: "hours", Default: "12", Check: checkHours,
-		Hint: "A session unused this long ends. Shortening it ends older sessions on their next request.",
+		Hint: "Shortening it ends older sessions on their next request.",
 	})
 	settings.Register(settings.Setting{
 		Key: sessionMaxKey, Group: settings.GroupPasswords, Label: "Session at most",
 		Unit: "hours", Default: "168", Check: checkHours,
-		Hint: "No session lasts longer, in use or not.",
 	})
 }

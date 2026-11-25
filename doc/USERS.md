@@ -6,7 +6,7 @@ KubeNDT has accounts. Each one has a role on the platform and a level in every n
 
 | Role | What it is |
 |---|---|
-| `owner` | The account `admin`, created at first start with `KUBENDT_ADMIN_PASSWORD`. It names and demotes admins, and cannot be disabled, deleted or demoted. |
+| `owner` | The account `admin`, created at first start with `KUBENDT_ADMIN_PASSWORD`. It names and demotes admins and saves the platform's settings, and cannot be disabled, deleted or demoted. |
 | `admin` | Has the owner level in every namespace, loads the kubeconfig, sees the cluster and manages the plain users. It never changes the owner or another admin. |
 | `user` | Sees only the namespaces it owns or was invited to. It creates namespaces only when its account says so. |
 

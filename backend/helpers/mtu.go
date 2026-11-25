@@ -46,7 +46,6 @@ func init() {
 	settings.Register(settings.Setting{
 		Key: LinkMTUEnv, Group: settings.GroupLabs, Label: "Link MTU", Unit: "bytes",
 		Default: strconv.Itoa(DefaultLinkMTU),
-		Hint:    "Every link of a lab deployed from now on.",
 		Check: func(v string) error {
 			_, _, err := parsePlatformLinkMTU(v)
 			return err

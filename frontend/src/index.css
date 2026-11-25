@@ -87,6 +87,14 @@
   --info: #1976d2;
   --info-bg: #e3f2fd;
 
+  /* The roles, the same wherever an account is shown. */
+  --role-owner: #6d28d9;
+  --role-owner-bg: #f1ebfd;
+  --role-admin: var(--danger);
+  --role-admin-bg: var(--danger-bg);
+  --role-user: var(--primary);
+  --role-user-bg: var(--info-bg);
+
   /* Interactive shell (xterm window). Its own family: the terminal keeps the
      editor-like dark background and neon accent, and the JS reads these so
      xterm's canvas theme stays in sync. */

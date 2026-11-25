@@ -212,10 +212,14 @@
   white-space: nowrap;
 }
 
-.users-tag-owner,
+.users-tag-owner {
+  background: var(--role-owner-bg);
+  color: var(--role-owner);
+}
+
 .users-tag-admin {
-  background: var(--danger-bg);
-  color: var(--danger);
+  background: var(--role-admin-bg);
+  color: var(--role-admin);
 }
 
 .users-tag-off {

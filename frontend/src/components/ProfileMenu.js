@@ -6,10 +6,11 @@ import { ReactComponent as UserIcon } from '../assets/images/icons/user.svg';
 import { ReactComponent as PowerIcon } from '../assets/images/icons/power.svg';
 import { ReactComponent as UsersIcon } from '../assets/images/icons/users.svg';
 import { ReactComponent as ClusterIcon } from '../assets/images/icons/cluster.svg';
+import { ReactComponent as SlidersIcon } from '../assets/images/icons/sliders.svg';
 
 // Header account menu: click the account chip to see who is signed in and
-// their role, then one's profile, the accounts and the cluster for admins,
-// and sign out.
+// their role, then one's profile, the accounts, the cluster and the
+// settings for admins (the owner alone saves those), and sign out.
 export default function ProfileMenu() {
   const auth = useAuth();
   const navigate = useNavigate();
@@ -49,7 +50,7 @@ export default function ProfileMenu() {
         <Icon className="app-icon" />
       </span>
       {label}
-      {tag && <span className="profile-item-tag">{tag}</span>}
+      {tag && <span className={`profile-item-tag profile-item-tag-${tag}`}>{tag}</span>}
     </button>
   );
 
@@ -80,6 +81,14 @@ export default function ProfileMenu() {
           {item('Profile', UserIcon, () => navigate('/profile'))}
           {auth.isAdmin && item('Accounts', UsersIcon, () => navigate('/users'), '', 'admin')}
           {auth.isAdmin && item('Cluster', ClusterIcon, () => navigate('/cluster'), '', 'admin')}
+          {auth.isAdmin &&
+            item(
+              'Settings',
+              SlidersIcon,
+              () => navigate('/settings'),
+              '',
+              auth.role === 'owner' ? 'owner' : 'admin'
+            )}
           <div className="profile-sep" />
           {item('Sign out', PowerIcon, () => auth.logout(), ' profile-item-danger')}
         </div>

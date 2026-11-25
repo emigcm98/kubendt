@@ -50,7 +50,7 @@ func init() {
 	settings.Register(settings.Setting{
 		Key: PlacementEnv, Group: settings.GroupLabs, Label: "Placement",
 		Options: []string{"", PlacementPack, PlacementSpread},
-		Hint:    "Where a topology that names none puts its pods. Pack fills a worker first, spread shares them out, empty leaves it to the scheduler.",
+		Hint:    "Pack fills a worker first, spread shares the pods out.",
 		Check: func(v string) error {
 			if _, ok := placementWord(v); !ok {
 				return fmt.Errorf("one of %s or %s, or empty", PlacementPack, PlacementSpread)
