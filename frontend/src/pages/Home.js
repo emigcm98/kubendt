@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import Modal from 'react-modal';
 import AlertModal from '../components/AlertModal';
 import AppHeader from '../components/AppHeader';
-import ApiTokensModal from '../components/ApiTokensModal';
 import DeleteExtrasCheckboxes from '../components/DeleteExtrasCheckboxes';
 import ErrorModal from '../components/ErrorModal';
 import HomeSide from '../components/HomeSide';
@@ -31,7 +30,7 @@ import './Home.css';
 Modal.setAppElement('#root');
 
 // Names the UI routes as pages of its own; the backend refuses them too.
-const RESERVED_NAMESPACE_NAMES = ['drivers', 'users', 'state', 'cluster'];
+const RESERVED_NAMESPACE_NAMES = ['drivers', 'users', 'state', 'cluster', 'profile'];
 
 const SORT_KEYS = { field: 'kubendt.home.nsSortField', dir: 'kubendt.home.nsSortDir' };
 const stored = (key, fallback) => {
@@ -117,7 +116,12 @@ const People = ({ ns, me }) => {
       {p.owner ? (
         <Person name={p.owner} level="owner" owner me={me} />
       ) : (
-        <span className="ns-person ns-person-none">no owner</span>
+        <span
+          className="ns-person ns-person-none"
+          title="Made before there were accounts. Give it an owner with Share or hand over."
+        >
+          no owner
+        </span>
       )}
       {p.self && <Person name={p.self[0]} level={p.self[1]} me={me} />}
       {p.named.map(([n, l]) => (
@@ -185,7 +189,6 @@ const Home = () => {
   const [deleteFilesChecked, setDeleteFilesChecked] = useState(false);
   const [deletingNamespace, setDeletingNamespace] = useState(false);
   const [shareTarget, setShareTarget] = useState('');
-  const [tokensOpen, setTokensOpen] = useState(false);
   const [nodeOpen, setNodeOpen] = useState(null);
 
   // Kubernetes RFC 1123 label rules: lowercase alphanumeric and '-',
@@ -613,12 +616,11 @@ const Home = () => {
           namespaces={namespaces}
           me={me}
           onOpen={openNamespace}
-          onOpenTokens={() => setTokensOpen(true)}
+          onOpenTokens={() => navigate('/profile#tokens')}
           onOpenNode={setNodeOpen}
         />
       </main>
 
-      {tokensOpen && <ApiTokensModal onClose={() => setTokensOpen(false)} />}
       {nodeOpen && <K8sNodeInfoPanel nodeName={nodeOpen} onClose={() => setNodeOpen(null)} />}
       {shareTarget && (
         <ShareNamespaceModal

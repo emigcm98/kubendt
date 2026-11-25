@@ -9,13 +9,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Added
 
 - The namespace list gives each namespace's guests, the size of its lab in pods and links, and its creation time in RFC 3339.
+- A profile page with one's account, password, API tokens, quota and namespaces, in place of the password and tokens dialogs.
 
 ### Changed
 
 - Most colors, shadows and radii of the frontend come from shared design tokens instead of values repeated in each stylesheet, the groundwork for dark mode.
-- `users`, `state` and `cluster` are refused as namespace names, like `drivers`, since the UI has pages under them.
+- `users`, `state`, `cluster` and `profile` are refused as namespace names, like `drivers`, since the UI has pages under them.
 - The Home is redone around the namespace list, which says who is in each namespace and how big its lab is. The cluster and the kubeconfig move to a `/cluster` page for admins.
 - The sign-in shows a bigger logo, what KubeNDT is in one line, and links to its site and to GitHub.
+
+### Fixed
+
+- A wrong current password when changing it no longer signs the account out.
 
 ## [1.13.0] - 2026-11-24
 

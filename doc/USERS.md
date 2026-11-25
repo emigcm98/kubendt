@@ -46,7 +46,7 @@ With `KUBENDT_POD_CPU_REQUEST`, `KUBENDT_POD_MEMORY_REQUEST`, `KUBENDT_POD_CPU_L
 
 ## API tokens
 
-A token acts as the account that minted it and never above it. It is minted with a session or the password, never with another token. The owner sees and revokes everyone's tokens, an admin those of the plain users, each account its own. Tokens minted before accounts existed are the owner's.
+Each account mints and revokes its tokens and changes its password on its profile page, `/profile`. A token acts as the account that minted it and never above it. It is minted with a session or the password, never with another token. The owner sees and revokes everyone's tokens, an admin those of the plain users, each account its own. Tokens minted before accounts existed are the owner's.
 
 ## Where it is kept
 

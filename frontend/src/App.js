@@ -3,6 +3,7 @@ import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import ClusterPage from './pages/ClusterPage';
+import ProfilePage from './pages/ProfilePage';
 import DriversPage from './pages/DriversPage';
 import NamespacePage from './pages/NamespacePage';
 import NamespaceFilesPage from './pages/NamespaceFilesPage';
@@ -15,6 +16,7 @@ function App() {
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/cluster" element={<ClusterPage />} />
+      <Route path="/profile" element={<ProfilePage />} />
       <Route path="/drivers/:driver?" element={<DriversPage />} />
       <Route path="/state" element={<StatePage />} />
       <Route path="/users" element={<UsersPage />} />

@@ -76,6 +76,12 @@
   flex-shrink: 0;
 }
 
+/* The white disc is for the blue bar; on the white menu it turns blue. */
+.profile-dropdown .profile-avatar {
+  color: var(--text-on-brand);
+  background: var(--primary);
+}
+
 .profile-info-text {
   display: flex;
   flex-direction: column;

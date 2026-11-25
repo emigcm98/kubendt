@@ -6,7 +6,7 @@ import { ReactComponent as ChevronIcon } from '../assets/images/icons/chevron-ri
 const EXAMPLES_URL = 'https://github.com/emigcm98/kubendt/tree/main/deploy/examples';
 
 // Reads a JSON endpoint now and then every `every` ms while mounted.
-const usePolled = (path, every) => {
+export const usePolled = (path, every) => {
   const [state, setState] = useState({ data: null, status: 0 });
   useEffect(() => {
     let alive = true;
@@ -196,7 +196,7 @@ const limitLine = (label, used, limit) => (
   </>
 );
 
-const QuotaCard = ({ namespaces, me }) => {
+export const QuotaCard = ({ namespaces, me }) => {
   const { data } = usePolled('/auth/quota', 60000);
   const q = data?.quota || {};
   const u = data?.usage || {};
