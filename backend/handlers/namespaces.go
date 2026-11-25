@@ -18,7 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// Listar Pods (aquellos con kubendt)
+// ListNamespaces lists the KubeNDT namespaces the account may see.
 func ListNamespaces(c *gin.Context) {
 
 	namespaces, err := kubeclient.Clientset.CoreV1().Namespaces().List(c.Request.Context(), metav1.ListOptions{
@@ -28,6 +28,13 @@ func ListNamespaces(c *gin.Context) {
 		log.Printf("Error fetching namespaces: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	}
+
+	// Without the cluster-wide lists each namespace is asked on its own, and
+	// the counts are left out.
+	sizes, err := helpers.LabSizes(c.Request.Context())
+	if err != nil {
+		log.Printf("⚠️ Could not size the labs at once: %v", err)
 	}
 
 	// Admins see every namespace; an account sees the ones it owns or is a
@@ -48,10 +55,15 @@ func ListNamespaces(c *gin.Context) {
 			status = "Terminating"
 		}
 
-		hasTopology, err := helpers.NamespaceHasTopology(namespace.Name)
-		if err != nil {
+		size := &helpers.LabSize{}
+		if sizes != nil {
+			if s := sizes[namespace.Name]; s != nil {
+				size = s
+			}
+		} else if has, err := helpers.NamespaceHasTopology(namespace.Name); err != nil {
 			log.Printf("⚠️ Could not sync topology state for '%s': %v", namespace.Name, err)
-			hasTopology = false
+		} else {
+			size.HasTopology = has
 		}
 
 		namespaceList = append(namespaceList, gin.H{
@@ -60,8 +72,12 @@ func ListNamespaces(c *gin.Context) {
 			"createdAt": createdAt.Format("2006-01-02 15:04:05"),
 			"uptime": fmt.Sprintf("%d days, %d hours, %d minutes",
 				int(uptime.Hours())/24, int(uptime.Hours())%24, int(uptime.Minutes())%60),
-			"has_topology": hasTopology,
+			"created":      createdAt.UTC().Format(time.RFC3339),
+			"has_topology": size.HasTopology,
+			"pods":         size.Pods,
+			"links":        size.Links,
 			"owner":        access.Owner,
+			"guests":       access.Guests,
 			"level":        level,
 		})
 	}
@@ -71,7 +87,7 @@ func ListNamespaces(c *gin.Context) {
 
 // Names the frontend routes as pages of its own: a namespace called like
 // one could never be opened. The list grows with the pages.
-var reservedNamespaceNames = map[string]bool{"drivers": true}
+var reservedNamespaceNames = map[string]bool{"drivers": true, "users": true, "state": true, "cluster": true}
 
 func CreateNamespace(c *gin.Context) {
 	var request struct {

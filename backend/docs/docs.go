@@ -1597,7 +1597,7 @@ const docTemplate = `{
         },
         "/namespaces/": {
             "get": {
-                "description": "Returns all Kubernetes namespaces labelled kubendt/enabled=true.",
+                "description": "Returns the namespaces labelled kubendt/enabled=true that the account may see, each with its owner, guests, the account's level and the size of its lab.",
                 "produces": [
                     "application/json"
                 ],
@@ -5712,9 +5712,25 @@ const docTemplate = `{
         "types.NamespaceInfo": {
             "type": "object",
             "properties": {
+                "created": {
+                    "description": "Created is the creation time in RFC 3339, in UTC.",
+                    "type": "string",
+                    "example": "2026-01-15T09:30:00Z"
+                },
                 "createdAt": {
                     "type": "string",
                     "example": "2026-01-15 10:30:00"
+                },
+                "guests": {
+                    "description": "Guests are the other accounts in it, each with its level.",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    },
+                    "example": {
+                        "bob": "editor",
+                        "carol": "viewer"
+                    }
                 },
                 "has_topology": {
                     "description": "HasTopology reflects whether a KubeNDT topology is currently deployed\nin this namespace (StatefulSets/Topology CRDs registered). Updated by\ndeploy / modify / clear flows and cheap to read (DB lookup).",
@@ -5726,6 +5742,10 @@ const docTemplate = `{
                     "type": "string",
                     "example": "editor"
                 },
+                "links": {
+                    "type": "integer",
+                    "example": 7
+                },
                 "name": {
                     "type": "string",
                     "example": "prueba"
@@ -5734,6 +5754,11 @@ const docTemplate = `{
                     "description": "Owner is the account the namespace belongs to, \"\" for one from before\nthe accounts, which admins alone see.",
                     "type": "string",
                     "example": "alice"
+                },
+                "pods": {
+                    "description": "Pods counts the nodes the topology declares, Links its links once each.",
+                    "type": "integer",
+                    "example": 8
                 },
                 "status": {
                     "type": "string",

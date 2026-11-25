@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"context"
 	"testing"
 
 	"kubendt/types"
@@ -73,5 +74,37 @@ func TestRegisteredLinkUIDsComeFromEveryNamespace(t *testing.T) {
 	_, err = PrepareUniqueLinkUIDs("c", []types.LinkSpec{{Node: "x", LocalIntf: "eth1", PeerNode: "y", PeerIntf: "eth1", UID: &uid}})
 	if err == nil {
 		t.Fatal("a uid another namespace holds must be refused")
+	}
+}
+
+func TestLabSizesCountNodesAndLinksOnce(t *testing.T) {
+	two, three := int32(2), int32(3)
+	cs := fake.NewClientset(
+		&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "r1", Namespace: "a"}, Spec: appsv1.StatefulSetSpec{Replicas: &two}},
+		&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "h", Namespace: "a"}, Spec: appsv1.StatefulSetSpec{Replicas: &three}},
+		&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "x", Namespace: "b"}},
+	)
+	prev := allStatefulSets
+	allStatefulSets = func() appsv1client.StatefulSetInterface { return cs.AppsV1().StatefulSets("") }
+	t.Cleanup(func() { allStatefulSets = prev })
+	fakeTopologies(t,
+		// one link listed by both ends, one to the outside
+		topologyCR("a", "r1-0", map[string]interface{}{"local_intf": "eth1", "peer_pod": "h-0", "peer_intf": "eth1"},
+			map[string]interface{}{"local_intf": "eth2", "peer_pod": "localhost", "peer_intf": "ext0"}),
+		topologyCR("a", "h-0", map[string]interface{}{"local_intf": "eth1", "peer_pod": "r1-0", "peer_intf": "eth1"}),
+	)
+
+	sizes, err := LabSizes(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if a := sizes["a"]; a == nil || !a.HasTopology || a.Pods != 5 || a.Links != 2 {
+		t.Errorf("a: %+v, want a topology of 5 pods and 2 links", a)
+	}
+	if b := sizes["b"]; b == nil || !b.HasTopology || b.Pods != 1 || b.Links != 0 {
+		t.Errorf("b: %+v, want 1 pod and no links", b)
+	}
+	if sizes["empty"] != nil {
+		t.Errorf("a namespace with nothing has no entry: %+v", sizes["empty"])
 	}
 }
