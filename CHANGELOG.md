@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - The Home is redone around the namespace list, which says who is in each namespace and how big its lab is. The cluster and the kubeconfig move to a `/cluster` page for admins.
 - The sign-in shows a bigger logo, what KubeNDT is in one line, and links to its site and to GitHub.
 - Every page's blue bar has the same height and the same brand, which leads to the main page, in place of the Home buttons. The pages outside a namespace share the Home's bar, with their title beside the brand.
+- The error page keeps the bar and says what happened, with a way back.
 
 ### Fixed
 

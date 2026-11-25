@@ -25,7 +25,10 @@ function App() {
       <Route path="/:namespace/files" element={<NamespaceFilesPage />} />
       <Route path="/:namespace/state" element={<StatePage />} />
       <Route path="/:namespace" element={<NamespacePage />} />
-      <Route path="*" element={<ErrorPage statusCode={404} rawMessage="Route not found" />} />
+      <Route
+        path="*"
+        element={<ErrorPage statusCode={404} rawMessage="No page lives at this address." />}
+      />
     </Routes>
   );
 }
