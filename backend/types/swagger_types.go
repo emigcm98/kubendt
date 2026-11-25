@@ -18,6 +18,13 @@ type NamespaceInfo struct {
 	// Level is what the asking account may do in it: viewer, operator,
 	// editor or owner. Admins hold owner everywhere.
 	Level string `json:"level" example:"editor"`
+	// Guests are the other accounts in it, each with its level.
+	Guests map[string]string `json:"guests" swaggertype:"object,string" example:"bob:editor,carol:viewer"`
+	// Pods counts the nodes the topology declares, Links its links once each.
+	Pods  int `json:"pods" example:"8"`
+	Links int `json:"links" example:"7"`
+	// Created is the creation time in RFC 3339, in UTC.
+	Created string `json:"created" example:"2026-01-15T09:30:00Z"`
 }
 
 // NamespacesListResponse is returned by GET /namespaces/.

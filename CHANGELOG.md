@@ -6,9 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- The namespace list gives each namespace's guests, the size of its lab in pods and links, and its creation time in RFC 3339.
+
 ### Changed
 
 - Most colors, shadows and radii of the frontend come from shared design tokens instead of values repeated in each stylesheet, the groundwork for dark mode.
+- `users`, `state` and `cluster` are refused as namespace names, like `drivers`, since the UI has pages under them.
 
 ## [1.13.0] - 2026-11-24
 

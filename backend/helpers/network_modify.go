@@ -689,6 +689,17 @@ func RemoveLinksReferencingDeletedPods(namespace string, deletedPods map[string]
 	return touched, nil
 }
 
+// linkKeyBothEnds names a link the same from either end, since each end's
+// Topology object lists it.
+func linkKeyBothEnds(pod, localIntf, peerPod, peerIntf string) string {
+	left := pod + "/" + localIntf
+	right := peerPod + "/" + peerIntf
+	if right < left {
+		left, right = right, left
+	}
+	return left + "<->" + right
+}
+
 func BuildLinksFromTopologyCRDs(namespace string) ([]types.LinkSpec, error) {
 	topologyList, err := kubeclient.DynamicClient.Resource(TopologyGVR).Namespace(namespace).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
@@ -718,12 +729,7 @@ func BuildLinksFromTopologyCRDs(namespace string) ([]types.LinkSpec, error) {
 			localIntf := fmt.Sprintf("%v", linkMap["local_intf"])
 			peerIntf := fmt.Sprintf("%v", linkMap["peer_intf"])
 
-			left := podName + "/" + localIntf
-			right := peerPod + "/" + peerIntf
-			key := left + "<->" + right
-			if right < left {
-				key = right + "<->" + left
-			}
+			key := linkKeyBothEnds(podName, localIntf, peerPod, peerIntf)
 			if _, exists := seen[key]; exists {
 				continue
 			}

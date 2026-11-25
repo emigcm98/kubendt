@@ -1593,9 +1593,21 @@ definitions:
     type: object
   types.NamespaceInfo:
     properties:
+      created:
+        description: Created is the creation time in RFC 3339, in UTC.
+        example: "2026-01-15T09:30:00Z"
+        type: string
       createdAt:
         example: "2026-01-15 10:30:00"
         type: string
+      guests:
+        additionalProperties:
+          type: string
+        description: Guests are the other accounts in it, each with its level.
+        example:
+          bob: editor
+          carol: viewer
+        type: object
       has_topology:
         description: |-
           HasTopology reflects whether a KubeNDT topology is currently deployed
@@ -1609,6 +1621,9 @@ definitions:
           editor or owner. Admins hold owner everywhere.
         example: editor
         type: string
+      links:
+        example: 7
+        type: integer
       name:
         example: prueba
         type: string
@@ -1618,6 +1633,11 @@ definitions:
           the accounts, which admins alone see.
         example: alice
         type: string
+      pods:
+        description: Pods counts the nodes the topology declares, Links its links
+          once each.
+        example: 8
+        type: integer
       status:
         example: Active
         type: string
@@ -4283,7 +4303,9 @@ paths:
       - kubeconfig
   /namespaces/:
     get:
-      description: Returns all Kubernetes namespaces labelled kubendt/enabled=true.
+      description: Returns the namespaces labelled kubendt/enabled=true that the account
+        may see, each with its owner, guests, the account's level and the size of
+        its lab.
       produces:
       - application/json
       responses:

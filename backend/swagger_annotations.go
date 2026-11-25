@@ -49,7 +49,7 @@ func swaggerVersion() {}
 // swaggerListNamespaces godoc
 //
 //	@Summary      List namespaces
-//	@Description  Returns all Kubernetes namespaces labelled kubendt/enabled=true.
+//	@Description  Returns the namespaces labelled kubendt/enabled=true that the account may see, each with its owner, guests, the account's level and the size of its lab.
 //	@Tags         namespaces
 //	@Produce      json
 //	@Success      200  {object}  types.NamespacesListResponse
