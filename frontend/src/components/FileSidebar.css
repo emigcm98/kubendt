@@ -1,286 +1,347 @@
+/* The files of a namespace, a card on the left of the file manager: its
+   actions on top, the tree scrolling in the middle, a place to drop files at
+   its foot. */
 .sidebar {
-  width: 220px;
-  min-width: 220px;
-  background-color: #f2f2f2;
-  border-right: 1px solid var(--border-light);
-  padding: 1rem;
   display: flex;
   flex-direction: column;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  /* Overflow lives on .file-list so the header/search/quick-actions
-     stay anchored at the top and tooltips can extend freely. */
+  min-height: 0;
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--shadow-color-cool) 12%, transparent);
 }
 
 .sidebar-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  font-weight: bold;
-  margin-bottom: 0.5rem;
+  gap: 6px;
+  padding: 14px 14px 10px;
 }
 
 .sidebar-title {
-  font-size: 1rem;
-  line-height: 1;
-}
-
-.actions {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-heading);
 }
 
-.actions button {
-  background: none;
-  border: none;
-  font-size: 1rem;
-  cursor: pointer;
-  padding: 4px 5px;
-  line-height: 1;
-  border-radius: var(--radius-sm);
-  transition: background-color 0.15s ease;
-}
-
-.actions button:hover {
-  background-color: color-mix(in srgb, var(--primary) 12%, transparent);
-}
-
-/* Quick-actions toolbar: sits BELOW the header on its own row, holds
-   the "create" + "refresh" group. Left-aligned, tight spacing. */
-.actions-quick {
-  margin-bottom: 0.6rem;
-}
-
-/* Soft divider that separates the controls from the file tree. */
-.sidebar-divider {
-  height: 1px;
-  background-color: var(--border-light);
-  margin: 0 0 0.55rem;
-  flex-shrink: 0;
-}
-
-.file-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  flex-grow: 1;
-  min-height: 0;
-  overflow-y: auto;
-}
-
-.nested-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.file-list li,
-.nested-list li {
-  padding: 0.4rem 0.6rem;
-  margin-bottom: 0.3rem;
-  background-color: #e6eaf0;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: background 0.2s ease;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.file-list li:hover,
-.nested-list li:hover {
-  background-color: #d4e1ed;
-}
-
-.file-list .selected,
-.nested-list .selected {
-  background-color: var(--primary);
-  color: white;
-  font-weight: bold;
-}
-
-.file-list .drag-over,
-.nested-list .drag-over {
-  background-color: var(--info-bg) !important;
-  border: 2px dashed var(--primary);
-  box-shadow: inset 0 0 4px color-mix(in srgb, var(--primary) 30%, transparent);
-}
-
-/* OS files dragged over the tree root: a dashed frame invites the drop. */
-.file-list.os-drag-over {
-  outline: 2px dashed var(--primary);
-  outline-offset: -4px;
-  background-color: var(--info-bg);
-  border-radius: var(--radius-sm);
-}
-
-.expand-btn {
-  background: none;
-  border: none;
-  font-size: 0.8rem;
-  cursor: pointer;
-  padding: 0;
-  width: 16px;
-  min-width: 16px;
-  color: inherit;
-  transition: transform 0.1s ease;
-}
-
-.expand-btn:hover {
-  transform: scale(1.2);
-}
-
-.folder-icon,
-.file-icon {
-  flex-shrink: 0;
-  width: 1rem;
-  height: 1rem;
-}
-
-/* Amber folders / neutral files in the tree, matching the file-manager palette. */
-.folder-icon {
-  color: var(--warning);
-}
-.file-icon {
+.sidebar-file-count {
+  padding: 1px 8px;
+  font-size: 12px;
+  font-weight: 700;
   color: var(--text-muted);
+  background: var(--border-light);
+  border-radius: var(--radius-pill);
 }
 
-.folder-name,
-.file-name {
-  flex-grow: 1;
-  display: inline-flex;
+.sidebar-space {
+  flex: 1;
+}
+
+.sidebar-icon-btn {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.sidebar-icon-btn:hover,
+.hover-card-trigger[aria-expanded='true'] .sidebar-icon-btn {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.sidebar-menu {
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+  margin: -4px -6px;
+}
+
+.sidebar-menu button {
+  display: flex;
   align-items: center;
-  gap: 4px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  gap: 8px;
+  padding: 7px 8px;
+  font-size: 13px;
+  text-align: left;
+  color: var(--text-body);
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
 }
 
-.file-list li.selected .dirty-dot,
-.nested-list li.selected .dirty-dot {
-  color: var(--danger-bg) !important;
+.sidebar-menu button:hover:not(:disabled) {
+  background: var(--panel-from);
 }
 
-.sensitive-lock {
-  font-size: 0.85em;
-  line-height: 1;
-  user-select: none;
-  flex-shrink: 0;
-  filter: drop-shadow(0 0 1px color-mix(in srgb, var(--shadow-color) 15%, transparent));
+.sidebar-menu button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-/* Danger action button (delete all files) */
-.actions .action-btn-danger {
-  opacity: 0.55;
-  transition:
-    opacity 0.15s ease,
-    background-color 0.15s ease,
-    transform 0.15s ease;
+.sidebar-menu .sidebar-menu-danger {
+  color: var(--danger);
 }
 
-.actions .action-btn-danger:hover {
-  opacity: 1;
-  background-color: color-mix(in srgb, var(--danger) 12%, transparent);
+.sidebar-menu .sidebar-menu-danger:hover:not(:disabled) {
+  background: var(--danger-bg);
 }
 
-/* Search / filter input above the file tree */
+.sidebar-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding: 0 14px 10px;
+}
+
+.sidebar-actions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-body);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.sidebar-actions button .app-icon {
+  color: var(--primary);
+}
+
+.sidebar-actions button:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
 .sidebar-search {
   position: relative;
-  margin-bottom: 0.6rem;
+  display: flex;
+  align-items: center;
+  margin: 0 14px 10px;
 }
 
 .sidebar-search-icon {
   position: absolute;
-  top: 50%;
-  left: 8px;
-  transform: translateY(-50%);
-  width: 0.9rem;
-  height: 0.9rem;
+  left: 10px;
+  width: 14px;
+  height: 14px;
   color: var(--text-subtle);
   pointer-events: none;
 }
 
 .sidebar-search input {
-  width: 100%;
-  padding: 0.4rem 1.8rem 0.4rem 1.9rem;
-  border: 1px solid #c5cdd6;
-  border-radius: var(--radius-sm);
-  background-color: var(--surface);
-  font-size: 0.85rem;
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  padding: 0 30px 0 32px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-body);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
   box-sizing: border-box;
-  transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
 }
 
 .sidebar-search input:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 15%, transparent);
 }
 
 .sidebar-search-clear {
   position: absolute;
-  top: 50%;
-  right: 4px;
-  transform: translateY(-50%);
+  right: 6px;
+  display: grid;
+  place-items: center;
+  padding: 2px;
+  color: var(--text-subtle);
   background: none;
   border: none;
-  font-size: 0.8rem;
-  color: var(--text-subtle);
   cursor: pointer;
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-  line-height: 1;
 }
 
 .sidebar-search-clear:hover {
-  color: var(--danger);
-  background-color: #ffeaea;
+  color: var(--text-body);
 }
 
-.file-search-hit {
-  background-color: #fff3a3;
-  color: inherit;
-  padding: 0 1px;
-  border-radius: 2px;
-}
-
-.file-search-empty {
+/* The tree */
+.file-list {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 6px 8px;
+  overflow-y: auto;
   list-style: none;
-  padding: 0.6rem 0.4rem;
-  color: var(--text-subtle);
-  font-style: italic;
-  font-size: 0.85rem;
-  background: transparent !important;
-  cursor: default !important;
+  border-top: 1px solid var(--border-light);
 }
 
-/* Tooltips are now provided by the portal-based <Tooltip> component
-   (see Tooltip.js / Tooltip.css). The old CSS-pseudo approach was
-   replaced because pseudo-elements are clipped by ancestor overflow
-   and trapped inside parent stacking contexts. */
+.nested-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
 
-/* File count badge next to the "Files" title. */
-.sidebar-file-count {
-  margin-left: 6px;
-  padding: 1px 7px;
-  font-size: 0.72rem;
+.file-list li,
+.nested-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding-right: 8px;
+  font-size: 13px;
+  color: var(--text-body);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.file-list li:hover,
+.nested-list li:hover {
+  background: var(--panel-from);
+}
+
+.file-list li.selected,
+.nested-list li.selected {
   font-weight: 700;
   color: var(--primary);
   background: var(--info-bg);
-  border-radius: var(--radius-pill);
-  vertical-align: middle;
 }
 
-/* Disabled toolbar actions (nothing to export / delete). A class, not the
-   disabled attribute, so the tooltip still fires on hover. Wins over the
-   danger-button hover so it stays dimmed and doesn't light up. */
-.actions button.is-disabled,
-.actions button.is-disabled:hover,
-.actions .action-btn-danger.is-disabled,
-.actions .action-btn-danger.is-disabled:hover {
-  opacity: 0.4;
+.file-list li.selected .file-icon {
+  color: var(--primary);
+}
+
+.file-list .drag-over,
+.nested-list .drag-over {
+  background: var(--info-bg);
+  box-shadow: inset 0 0 0 2px var(--primary);
+}
+
+.file-list.os-drag-over {
+  background: var(--info-bg);
+  box-shadow: inset 0 0 0 2px var(--primary);
+}
+
+.expand-btn {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  color: var(--text-subtle);
   background: none;
-  cursor: not-allowed;
+  border: none;
+  cursor: pointer;
+}
+
+.expand-btn:hover {
+  color: var(--text-body);
+}
+
+.expand-btn .app-icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* The room a folder's chevron takes, so a file's icon lines up. */
+.expand-gap {
+  flex: none;
+  width: 16px;
+}
+
+.folder-icon,
+.file-icon {
+  flex: none;
+  width: 15px;
+  height: 15px;
+}
+
+.folder-icon {
+  color: var(--warning);
+}
+
+.file-icon {
+  color: var(--text-subtle);
+}
+
+.folder-name,
+.file-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-marks {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  flex: none;
+}
+
+.sensitive-lock {
+  display: inline-flex;
+  color: var(--warning-text);
+}
+
+.sensitive-lock .app-icon {
+  width: 13px;
+  height: 13px;
+}
+
+.file-dirty {
+  width: 7px;
+  height: 7px;
+  background: var(--danger);
+  border-radius: 50%;
+}
+
+.file-search-hit {
+  padding: 0 1px;
+  color: inherit;
+  background: var(--warning-bg);
+  border-radius: 2px;
+}
+
+.file-list li.file-search-empty {
+  height: auto;
+  padding: 10px 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.file-list li.file-search-empty:hover {
+  background: none;
+}
+
+.sidebar-drop {
+  margin: 8px 14px 14px;
+  padding: 10px;
+  font-size: 12px;
+  text-align: center;
+  color: var(--text-muted);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+}
+
+.sidebar-drop-on {
+  color: var(--primary);
+  background: var(--info-bg);
+  border-color: var(--primary);
 }

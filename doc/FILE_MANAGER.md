@@ -43,7 +43,7 @@ Each file has a `sensitive` flag (default `false`). The flag is the kind of the 
 
 Setting the flag:
 
-- Via the file manager UI (lock icon) or `PUT /file-meta/:namespace/*filename`. Accepts true or false.
+- Via the file manager, Mark as sensitive in the open file's menu or the tree's, or `PUT /file-meta/:namespace/*filename`. Accepts true or false.
 - Via the topology JSON on `deploy-network` or `modify-network`: any mount with `"sensitive": true` makes the file a Secret before the pods are created. Cannot unmark from JSON (`omitempty` makes absent and false indistinguishable).
 
 Flipping the flag moves the content to an object of the other kind at once. Pods that mount the file keep the object they mounted until they are redeployed, the old one staying for them as a mount; the response says so with `redeploy_required: true` and the count of mounting pods.

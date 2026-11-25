@@ -1,672 +1,234 @@
-/* Root wrapper: exactly one viewport tall, navbar takes its natural height,
-   files-page fills the rest, no magic numbers needed. */
+/* The file manager as tall as the window: the files on the left, the open
+   file on the right, each a card. */
 .files-page-root {
   display: flex;
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
+  background: var(--panel-from);
 }
 
 .files-page {
   flex: 1 1 0;
   min-height: 0;
-  display: flex;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 18px;
+  padding: 18px 22px;
   overflow: hidden;
-}
-
-/* === Editor === */
-.editor-container {
-  flex-grow: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow-y: auto;
 }
 
 .file-editor {
-  flex: 1 1 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   min-height: 0;
-  display: flex;
-  flex-direction: column;
-  padding: 1rem;
-  background: white;
   overflow: hidden;
-  position: relative;
-}
-
-.cm-editor {
-  flex: 1 1 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
-  font-size: 14px;
-  overflow: auto;
-}
-
-.cm-scroller {
-  flex-grow: 1;
-  height: 100%;
-  overflow: auto;
+  background: var(--surface);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--shadow-color-cool) 12%, transparent);
 }
 
 .editor-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  font-weight: bold;
-  margin-bottom: 0.5rem;
-  background: #f9f9f9;
-  border-bottom: 1px solid var(--border-light);
-  padding: 0.5rem 1rem;
-}
-
-.editor-header button {
-  background-color: var(--primary);
-  color: white;
-  border: none;
-  border-radius: var(--radius-sm);
-  padding: 0.7rem 1.4rem;
-  cursor: pointer;
-  font-weight: bold;
-  font-size: 0.95rem;
-  transition: background 0.2s ease;
-}
-
-.editor-header button:hover {
-  background-color: var(--primary-hover);
-}
-
-/* === Placeholder cuando no hay archivo seleccionado === */
-.editor-placeholder {
-  flex-grow: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.2rem;
-  color: var(--text-subtle);
-  border: 2px dashed var(--border-light);
-  border-radius: var(--radius-lg);
-  background-color: var(--panel-from);
-  margin: 1rem;
-}
-
-.dirty-dot-header {
-  margin-left: 8px;
-  font-size: 22px;
-  line-height: 1;
-  color: var(--danger);
-  vertical-align: middle;
-}
-
-/* Modal crear fichero / carpeta */
-.create-file-modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: color-mix(in srgb, var(--scrim-color) 35%, transparent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.create-file-modal {
-  background-color: white;
-  border-radius: var(--radius-lg);
-  box-shadow: 0 8px 32px color-mix(in srgb, var(--shadow-color) 25%, transparent);
-  width: 90%;
-  max-width: 420px;
-  padding: 0;
-  outline: none;
-  overflow: hidden;
-}
-
-.create-file-modal-header {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 16px;
-  border-bottom: 1px solid var(--border-light);
-  background-color: #f9fafb;
-  font-size: 1rem;
-  font-weight: 700;
-  color: #000000;
-}
-
-.create-file-modal-body {
-  padding: 16px;
-}
-
-.create-file-modal-body label {
-  display: block;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--text-body);
-  margin-bottom: 0.5rem;
-  margin-top: 0.8rem;
-}
-
-.create-file-modal-body label:first-of-type {
-  margin-top: 0;
-  font-size: 0.95rem;
-  font-family: monospace;
-  box-sizing: border-box;
-  transition: border-color 0.2s ease;
-}
-
-.create-file-modal-body input:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 10%, transparent);
-}
-
-.create-file-modal-footer {
-  display: flex;
-  gap: 8px;
+  gap: 10px;
   padding: 12px 16px;
-  border-top: 1px solid var(--border-light);
-  background-color: #fafafa;
-  justify-content: flex-end;
-}
-
-.create-file-modal-footer button {
-  padding: 6px 16px;
-  border: none;
-  border-radius: var(--radius-sm);
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.create-file-modal-footer .btn-cancel {
-  background-color: var(--surface-muted);
-  color: var(--text-body);
-}
-
-.create-file-modal-footer .btn-cancel:hover {
-  background-color: var(--border-light);
-  transform: translateY(-1px);
-}
-
-.create-file-modal-footer .btn-create {
-  background-color: var(--primary);
-  color: white;
-}
-
-.create-file-modal-footer .btn-create:hover {
-  background-color: var(--primary-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--primary) 30%, transparent);
-}
-
-.create-file-modal-footer .btn-danger {
-  background-color: var(--danger);
-  color: white;
-}
-
-.create-file-modal-footer .btn-danger:hover {
-  background-color: var(--danger-strong);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--danger) 35%, transparent);
-}
-
-.create-file-modal-footer button:active {
-  transform: translateY(0);
-}
-
-/* Indicador de guardado sutil - Centrado */
-.save-indicator {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  padding: 1rem 1.5rem;
-  border-radius: var(--radius-lg);
-  font-size: 0.95rem;
-  font-weight: 500;
-  z-index: 999;
-  animation: fadeIn 0.2s ease-out;
-  backdrop-filter: blur(4px);
-}
-
-.save-indicator.save-saving {
-  background-color: rgba(59, 130, 246, 0.9);
-  color: white;
-  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.2);
-}
-
-.save-indicator.save-saved {
-  background-color: rgba(16, 185, 129, 0.9);
-  color: white;
-  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.2);
-  animation: fadeInOut 2s ease-out forwards;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.9);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
-}
-
-@keyframes fadeInOut {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.9);
-  }
-  10% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
-  90% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.9);
-  }
-}
-
-/* Import Archive Modal */
-.import-modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: color-mix(in srgb, var(--scrim-color) 35%, transparent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.import-modal {
-  background-color: white;
-  border-radius: var(--radius-lg);
-  box-shadow: 0 8px 32px color-mix(in srgb, var(--shadow-color) 25%, transparent);
-  width: 90%;
-  max-width: 500px;
-  padding: 0;
-  outline: none;
-  overflow: hidden;
-}
-
-.import-modal-header {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 16px;
   border-bottom: 1px solid var(--border-light);
-  background-color: #f9fafb;
-  font-size: 1rem;
-  font-weight: 700;
-  color: #000000;
 }
 
-.import-modal-body {
-  padding: 32px 24px;
-}
-
-.import-drop-zone {
-  position: relative;
-  border: 2px dashed #d0d0d0;
-  border-radius: var(--radius-md);
-  padding: 40px 20px;
-  text-align: center;
-  background-color: #f8f8f8;
-  transition: all 0.2s ease;
-  cursor: pointer;
-}
-
-.import-drop-zone:hover {
-  border-color: var(--primary);
-  background-color: #f0f5ff;
-}
-
-.drop-zone-content {
-  pointer-events: none;
-}
-
-.import-modal-footer {
+.editor-crumbs {
   display: flex;
-  gap: 8px;
-  padding: 12px 24px;
-  border-top: 1px solid var(--border-light);
-  background-color: #fafafa;
-  justify-content: flex-end;
+  align-items: center;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 14px;
+  white-space: nowrap;
+  color: var(--text-muted);
 }
 
-.import-modal-footer button {
-  padding: 6px 16px;
-  border: none;
-  border-radius: var(--radius-sm);
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
+.editor-crumbs b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 15px;
+  color: var(--text-heading);
 }
 
-.import-modal-footer .btn-cancel {
-  background-color: var(--surface-muted);
-  color: var(--text-body);
+.editor-crumb-sep {
+  margin: 0 6px;
+  color: var(--text-subtle);
 }
 
-.import-modal-footer .btn-cancel:hover {
-  background-color: var(--border-light);
+.editor-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: var(--radius-pill);
 }
 
-/* Import Status Indicator */
-.import-status {
-  position: fixed;
-  bottom: 30px;
-  right: 30px;
-  padding: 12px 24px;
+.editor-badge .app-icon {
+  width: 11px;
+  height: 11px;
+}
+
+.editor-badge-unsaved {
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+
+.editor-badge-sensitive {
+  color: var(--warning-text);
+  background: var(--warning-bg);
+}
+
+.editor-space {
+  flex: 1;
+}
+
+.editor-btn,
+.editor-btn-quiet {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  height: 32px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 700;
   border-radius: var(--radius-md);
-  font-size: 0.95rem;
-  font-weight: 500;
-  z-index: 1001;
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--shadow-color) 15%, transparent);
-  animation: slideInRight 0.3s ease-out;
+  cursor: pointer;
 }
 
-.import-status-importing {
-  background-color: var(--primary);
-  color: white;
+.editor-btn {
+  color: var(--text-on-brand);
+  background: var(--primary);
+  border: none;
 }
 
-.import-status-success {
-  background-color: var(--success-accent);
-  color: white;
-  animation: slideOutRight 3s ease-out forwards;
+.editor-btn:hover {
+  background: var(--primary-hover);
 }
 
-.import-status-error {
-  background-color: var(--danger);
-  color: white;
-  animation: slideOutRight 3s ease-out forwards;
+.editor-btn-quiet {
+  color: var(--text-body);
+  background: var(--surface);
+  border: 1px solid var(--border);
 }
 
-@keyframes slideInRight {
-  from {
-    transform: translateX(400px);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
+.editor-btn-quiet:hover {
+  color: var(--primary);
+  border-color: var(--primary);
 }
 
-@keyframes slideOutRight {
-  0% {
-    transform: translateX(0);
-    opacity: 1;
-  }
-  85% {
-    transform: translateX(0);
-    opacity: 1;
-  }
-  100% {
-    transform: translateX(400px);
-    opacity: 0;
-  }
-}
-/* === Context Menu === */
-.context-menu {
-  position: fixed;
-  background: white;
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-sm);
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--shadow-color) 15%, transparent);
-  z-index: 9999;
-  min-width: 150px;
-  padding: 0;
+.editor-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   overflow: hidden;
 }
 
-.context-menu-item {
-  display: block;
-  width: 100%;
-  padding: 0.6rem 1rem;
-  background: none;
-  border: none;
-  text-align: left;
-  cursor: pointer;
-  font-size: 14px;
-  color: var(--text-body);
-  transition: background-color 0.1s ease;
+.file-editor .cm-editor {
+  flex: 1 1 0;
+  min-height: 0;
+  font-size: 13px;
 }
 
-.context-menu-item:hover {
-  background-color: var(--surface-muted);
+.file-editor .cm-editor.cm-focused {
+  outline: none;
 }
 
-.context-menu-item.delete {
-  color: var(--danger);
+.file-editor .cm-scroller {
+  font-family: var(--font-mono);
+  overflow: auto;
 }
 
-.context-menu-item.delete:hover {
-  background-color: var(--danger-bg);
+.file-editor .cm-gutters {
+  color: var(--text-subtle);
+  background: var(--panel-from);
+  border-right: 1px solid var(--border-light);
 }
 
-.context-menu-divider {
-  height: 1px;
-  background-color: var(--border-light);
-  margin: 0;
-}
-/* === Toast Notifications === */
-.toast {
-  position: fixed;
-  bottom: 2rem;
-  right: 2rem;
-  padding: 0.75rem 1.25rem;
-  border-radius: var(--radius-sm);
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--shadow-color) 15%, transparent);
-  font-size: 14px;
-  z-index: 10000;
-  animation: slideInUp 0.3s ease;
-}
-
-.toast-success {
-  background-color: var(--success-accent);
-  color: white;
-}
-
-.toast-error {
-  background-color: var(--danger);
-  color: white;
-}
-
-.toast-info {
-  background-color: #2196f3;
-  color: white;
-}
-
-@keyframes slideInUp {
-  from {
-    transform: translateY(100px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-/* === Folder Location Display === */
-.folder-location {
-  padding: 0.5rem 0;
-  margin-bottom: 0.75rem;
+.editor-foot {
+  display: flex;
+  gap: 16px;
+  padding: 8px 16px;
   font-size: 12px;
   color: var(--text-muted);
-  border-bottom: 1px solid var(--border-light);
+  background: var(--panel-from);
+  border-top: 1px solid var(--border-light);
 }
 
-.folder-location strong {
-  color: var(--text-body);
-  font-family: 'Courier New', monospace;
+.editor-foot kbd {
+  padding: 1px 5px;
+  font: 11px var(--font-mono);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
 }
 
-/* Sensitive-file shield: covers the editor with a "click to reveal" UX
-   for files marked sensitive. Same look-and-feel as the rest of the
-   panels (rounded card, soft shadow). */
-.sensitive-shield {
+/* No file open, or none at all */
+.editor-empty {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.6rem;
-  margin: 1rem;
-  padding: 2rem;
-  background: linear-gradient(to bottom, var(--warning-bg), #fff3d0);
-  border: 1px solid #e5c460;
-  border-radius: var(--radius-md);
-  color: #5a3a00;
+  padding: 24px;
   text-align: center;
-}
-
-.sensitive-shield-icon {
-  width: 2.2rem;
-  height: 2.2rem;
-  filter: drop-shadow(0 1px 2px color-mix(in srgb, var(--shadow-color) 10%, transparent));
-}
-
-.sensitive-shield-title {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: #4a2a00;
-}
-
-.sensitive-shield-message {
-  font-size: 0.9rem;
-  max-width: 480px;
-  line-height: 1.45;
-  color: #5a3a00;
-}
-
-.sensitive-shield-show {
-  margin-top: 0.4rem;
-  padding: 0.5rem 1rem;
-  background: #4a2a00;
-  color: var(--text-on-brand);
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-size: 0.92rem;
-  font-weight: 600;
-}
-
-.sensitive-shield-show:hover {
-  background: #2f1900;
-}
-
-.sensitive-lock {
-  font-size: 0.85em;
-  margin-right: 0.25em;
-  user-select: none;
-}
-
-/* === Empty-repo state (no files yet) === */
-.editor-empty {
-  flex-grow: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  text-align: center;
-  border: 2px dashed var(--border-light);
-  border-radius: var(--radius-lg);
-  background-color: var(--panel-from);
-  margin: 1rem;
-  padding: 2rem;
 }
 
 .editor-empty-icon {
-  width: 3rem;
-  height: 3rem;
-  color: var(--text-subtle);
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 12px;
+  color: var(--primary);
+  background: var(--info-bg);
+  border-radius: 50%;
+}
+
+.editor-empty-icon .app-icon {
+  width: 26px;
+  height: 26px;
 }
 
 .editor-empty-title {
-  font-size: 1.15rem;
+  margin-bottom: 6px;
+  font-size: 18px;
   font-weight: 700;
   color: var(--text-heading);
 }
 
 .editor-empty-message {
+  margin-bottom: 16px;
+  font-size: 13px;
   color: var(--text-muted);
-  font-size: 0.95rem;
-  max-width: 42ch;
 }
 
 .editor-empty-actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 8px;
-  justify-content: center;
+  gap: 8px;
 }
 
-.editor-empty-actions button {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.18s ease;
-}
-
-.editor-empty-actions .btn-create {
-  background-color: var(--primary);
-  border-color: var(--primary);
-  color: var(--text-on-brand);
-}
-
-.editor-empty-actions .btn-create:hover {
-  background-color: var(--primary-hover);
-  transform: translateY(-1px);
-}
-
-.editor-empty-actions .btn-neutral {
-  background-color: var(--surface);
-  color: var(--text-heading);
-}
-
-.editor-empty-actions .btn-neutral:hover {
-  background-color: var(--panel-to);
-  transform: translateY(-1px);
-}
-
-/* === OS-file drop overlay on the editor === */
+/* OS files dragged over the editor when no file is open */
 .editor-drop-overlay {
   position: absolute;
-  inset: 0.5rem;
+  inset: 12px;
   z-index: 5;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  font-size: 1.1rem;
+  gap: 8px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--primary);
   background: color-mix(in srgb, var(--info-bg) 92%, transparent);
@@ -676,27 +238,405 @@
 }
 
 .editor-drop-overlay .app-icon {
-  width: 2.2rem;
-  height: 2.2rem;
+  width: 28px;
+  height: 28px;
 }
 
-/* === Export format modal === */
-.export-format-select {
-  width: 100%;
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-size: 0.9rem;
-  background: var(--surface);
+/* A sensitive file's content stays covered until asked for. */
+.sensitive-shield {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  text-align: center;
+}
+
+.sensitive-shield-icon {
+  width: 30px;
+  height: 30px;
+  color: var(--warning-text);
+}
+
+.sensitive-shield-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-heading);
+}
+
+.sensitive-shield-message {
+  max-width: 420px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.sensitive-shield-show {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  height: 32px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 700;
   color: var(--text-body);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.sensitive-shield-show:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+/* The tree's context menu */
+.context-menu {
+  position: fixed;
+  z-index: 1000;
+  min-width: 180px;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 32px color-mix(in srgb, var(--shadow-color) 18%, transparent);
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 8px;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  color: var(--text-body);
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.context-menu-item:hover {
+  background: var(--panel-from);
+}
+
+.context-menu-item.delete {
+  color: var(--danger);
+}
+
+.context-menu-item.delete:hover {
+  background: var(--danger-bg);
+}
+
+.context-menu-divider {
+  height: 1px;
+  margin: 4px 2px;
+  background: var(--border-light);
+}
+
+/* The file manager's own dialogs: new file and folder, rename, import and
+   export, one look for all. The confirmations are the shared AlertModal's. */
+.create-file-modal-overlay,
+.import-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: color-mix(in srgb, var(--scrim-color) 35%, transparent);
+}
+
+.create-file-modal,
+.import-modal {
+  width: 100%;
+  max-width: 440px;
+  overflow: hidden;
+  color: var(--text-body);
+  background: var(--surface);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 16px 40px color-mix(in srgb, var(--shadow-color) 22%, transparent);
+}
+
+.create-file-modal-header,
+.import-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 20px 12px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-heading);
+}
+
+.create-file-modal-header .app-icon,
+.import-modal-header .app-icon {
+  color: var(--primary);
+}
+
+.create-file-modal-body,
+.import-modal-body {
+  padding: 4px 20px 16px;
+}
+
+.create-file-modal-body label {
+  display: block;
+  margin: 10px 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.create-file-modal-body input,
+.create-file-modal-body select {
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--text-body);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-sizing: border-box;
+}
+
+.create-file-modal-body input:focus,
+.create-file-modal-body select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent);
+}
+
+.create-file-modal-footer,
+.import-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 20px;
+  background: var(--panel-from);
+  border-top: 1px solid var(--border-light);
+}
+
+.create-file-modal-footer button,
+.import-modal-footer button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.create-file-modal-footer .btn-cancel,
+.import-modal-footer .btn-cancel {
+  color: var(--text-body);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.create-file-modal-footer .btn-cancel:hover,
+.import-modal-footer .btn-cancel:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.create-file-modal-footer .btn-create {
+  color: var(--text-on-brand);
+  background: var(--primary);
+  border: none;
+}
+
+.create-file-modal-footer .btn-create:hover {
+  background: var(--primary-hover);
+}
+
+.create-file-modal-footer .btn-danger {
+  color: var(--text-on-brand);
+  background: var(--danger);
+  border: none;
+}
+
+.create-file-modal-footer .btn-danger:hover {
+  background: var(--danger-strong);
+}
+
+.folder-location {
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--text-muted);
+  background: var(--panel-from);
+  border-radius: var(--radius-md);
+}
+
+.folder-location strong {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--text-heading);
+}
+
+.import-drop-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 26px 16px;
+  text-align: center;
+  background: var(--panel-from);
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+}
+
+.import-drop-zone:hover,
+.import-drop-zone:focus-visible,
+.import-drop-zone-on {
+  background: var(--info-bg);
+  border-color: var(--primary);
+  outline: none;
+}
+
+.import-drop-zone b {
+  margin-top: 6px;
+  font-size: 15px;
+  color: var(--text-heading);
+}
+
+.import-drop-zone span {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.import-drop-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  color: var(--primary);
+  background: var(--surface);
+  border-radius: 50%;
+}
+
+.import-drop-icon .app-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.import-formats {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 .export-unsaved-note {
   margin: 12px 0 0;
   padding: 8px 10px;
-  font-size: 0.85rem;
+  font-size: 12px;
   color: var(--warning-text);
   background: var(--warning-bg);
   border: 1px solid var(--warning-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
+}
+
+/* While a file saves, a quiet pill at the foot of the page. */
+.save-indicator {
+  position: fixed;
+  bottom: 22px;
+  left: 50%;
+  z-index: 999;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--radius-pill);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--shadow-color) 15%, transparent);
+  animation: fm-fade 0.15s ease-out;
+}
+
+.save-indicator.save-saving {
+  color: var(--primary);
+  background: var(--info-bg);
+}
+
+.save-indicator.save-saved {
+  color: var(--success);
+  background: var(--success-bg);
+}
+
+/* What an import or an action just did, at the bottom right. */
+.toast,
+.import-status {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 1001;
+  max-width: 380px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid;
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--shadow-color) 15%, transparent);
+  animation: fm-rise 0.15s ease-out;
+}
+
+.import-status {
+  bottom: 74px;
+}
+
+.toast-success,
+.import-status-success {
+  color: var(--success);
+  background: var(--success-bg);
+  border-color: color-mix(in srgb, var(--success) 30%, transparent);
+}
+
+.toast-error,
+.import-status-error {
+  color: var(--danger-strong);
+  background: var(--danger-bg);
+  border-color: color-mix(in srgb, var(--danger) 30%, transparent);
+}
+
+.toast-warning {
+  color: var(--warning-text);
+  background: var(--warning-bg);
+  border-color: var(--warning-border);
+}
+
+.toast-info,
+.import-status-importing {
+  color: var(--primary);
+  background: var(--info-bg);
+  border-color: color-mix(in srgb, var(--primary) 30%, transparent);
+}
+
+@keyframes fm-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fm-fade {
+  from {
+    opacity: 0;
+  }
 }

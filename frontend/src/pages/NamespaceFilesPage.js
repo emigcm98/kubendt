@@ -13,6 +13,12 @@ import { ReactComponent as EyeIcon } from '../assets/images/icons/eye.svg';
 import { ReactComponent as FileIcon } from '../assets/images/icons/file.svg';
 import { ReactComponent as FolderIcon } from '../assets/images/icons/folder.svg';
 import { ReactComponent as EditIcon } from '../assets/images/icons/edit.svg';
+import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
+import { ReactComponent as UnlockIcon } from '../assets/images/icons/unlock.svg';
+import { ReactComponent as DownloadIcon } from '../assets/images/icons/download.svg';
+import { ReactComponent as UploadIcon } from '../assets/images/icons/upload.svg';
+import { ReactComponent as MoreIcon } from '../assets/images/icons/more.svg';
+import HoverCard from '../components/HoverCard';
 
 import CodeMirror from '@uiw/react-codemirror';
 import { json } from '@codemirror/lang-json';
@@ -59,6 +65,7 @@ function NamespaceFilesPage() {
   const [pendingArchives, setPendingArchives] = useState([]);
   // True while OS files are being dragged over the editor/sidebar drop zones.
   const [draggingFiles, setDraggingFiles] = useState(false);
+  const [importDragging, setImportDragging] = useState(false);
   const [newFileName, setNewFileName] = useState('');
   const [newFolderName, setNewFolderName] = useState('');
   const [renameSourcePath, setRenameSourcePath] = useState('');
@@ -953,25 +960,90 @@ function NamespaceFilesPage() {
           {selectedFile ? (
             <>
               <div className="editor-header">
-                <strong>
-                  {selectedIsSensitive && (
-                    <span
-                      className="sensitive-lock"
-                      title="Sensitive file (stored as a Kubernetes Secret when mounted)"
-                      aria-label="Sensitive"
-                    >
-                      <LockIcon className="app-icon" />
+                <span className="editor-crumbs" title={selectedFile}>
+                  {selectedFile
+                    .split('/')
+                    .slice(0, -1)
+                    .map((part, i) => (
+                      <span key={i}>
+                        {part}
+                        <span className="editor-crumb-sep">/</span>
+                      </span>
+                    ))}
+                  <b>{selectedFile.split('/').pop()}</b>
+                </span>
+                {selectedIsSensitive && (
+                  <span
+                    className="editor-badge editor-badge-sensitive"
+                    title="Kept as a Kubernetes Secret when mounted"
+                  >
+                    <LockIcon className="app-icon" /> sensitive
+                  </span>
+                )}
+                {unsavedFiles.has(selectedFile) && (
+                  <span className="editor-badge editor-badge-unsaved">unsaved</span>
+                )}
+                <span className="editor-space" />
+                <button
+                  type="button"
+                  className="editor-btn-quiet"
+                  onClick={() => downloadFile(selectedFile)}
+                >
+                  <DownloadIcon className="app-icon" /> Download
+                </button>
+                <HoverCard
+                  openOn="click"
+                  align="end"
+                  label="More on this file"
+                  trigger={
+                    <span className="sidebar-icon-btn">
+                      <MoreIcon className="app-icon" />
                     </span>
+                  }
+                >
+                  {(close) => (
+                    <div className="sidebar-menu">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          close();
+                          requestRename(selectedFile);
+                        }}
+                      >
+                        <EditIcon className="app-icon" /> Rename
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          close();
+                          toggleSensitive(selectedFile, selectedIsSensitive);
+                        }}
+                      >
+                        {selectedIsSensitive ? (
+                          <>
+                            <UnlockIcon className="app-icon" /> Mark as non-sensitive
+                          </>
+                        ) : (
+                          <>
+                            <LockIcon className="app-icon" /> Mark as sensitive
+                          </>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        className="sidebar-menu-danger"
+                        onClick={() => {
+                          close();
+                          requestDeleteFile(selectedFile);
+                        }}
+                      >
+                        <TrashIcon className="app-icon" /> Delete
+                      </button>
+                    </div>
                   )}
-                  {selectedFile}
-                  {unsavedFiles.has(selectedFile) && (
-                    <span className="dirty-dot-header" title="Unsaved changes">
-                      •
-                    </span>
-                  )}
-                </strong>
-                <button onClick={handleSave}>
-                  <SaveIcon className="app-icon" /> Save File
+                </HoverCard>
+                <button type="button" className="editor-btn" onClick={handleSave}>
+                  <SaveIcon className="app-icon" /> Save
                 </button>
               </div>
               {selectedIsSensitive && !revealSensitive ? (
@@ -1018,21 +1090,53 @@ function NamespaceFilesPage() {
                   />
                 </div>
               )}
+              {!(selectedIsSensitive && !revealSensitive) && (
+                <div className="editor-foot">
+                  <span>
+                    {fileContent.split('\n').length}{' '}
+                    {fileContent.split('\n').length === 1 ? 'line' : 'lines'}
+                  </span>
+                  <span>{new TextEncoder().encode(fileContent).length} bytes</span>
+                  <span className="editor-space" />
+                  <span>
+                    <kbd>Ctrl</kbd> + <kbd>S</kbd> saves
+                  </span>
+                </div>
+              )}
             </>
           ) : (files || []).length === 0 ? (
             <div
               className="editor-empty"
               onContextMenu={(e) => handleContextMenu(e, { type: 'root', path: null })}
             >
-              <FileIcon className="editor-empty-icon" />
+              <span className="editor-empty-icon" aria-hidden="true">
+                <FileIcon className="app-icon" />
+              </span>
               <div className="editor-empty-title">No files yet</div>
               <div className="editor-empty-message">
-                Create a file or folder, or drop files here to get started.
+                Files here can be mounted into the pods. Add some, or drop them here.
               </div>
               <div className="editor-empty-actions">
                 <button
-                  className="btn-create"
-                  title="Create a new file"
+                  type="button"
+                  className="editor-btn-quiet"
+                  onClick={() => setShowImportModal(true)}
+                >
+                  <UploadIcon className="app-icon" /> Import a .zip
+                </button>
+                <button
+                  type="button"
+                  className="editor-btn-quiet"
+                  onClick={() => {
+                    setTargetFolder('');
+                    setShowCreateFolderModal(true);
+                  }}
+                >
+                  <FolderIcon className="app-icon" /> New folder
+                </button>
+                <button
+                  type="button"
+                  className="editor-btn"
                   onClick={() => {
                     setTargetFolder('');
                     setShowCreateFileModal(true);
@@ -1040,31 +1144,30 @@ function NamespaceFilesPage() {
                 >
                   <FileIcon className="app-icon" /> New file
                 </button>
-                <button
-                  className="btn-neutral"
-                  title="Create a new folder"
-                  onClick={() => {
-                    setTargetFolder('');
-                    setShowCreateFolderModal(true);
-                  }}
-                >
-                  <FolderIcon className="app-icon icon-folder" /> New folder
-                </button>
-                <button
-                  className="btn-neutral"
-                  title="Import a .zip or .tar.gz archive"
-                  onClick={() => setShowImportModal(true)}
-                >
-                  <BoxIcon className="app-icon" /> Import archive
-                </button>
               </div>
             </div>
           ) : (
             <div
-              className="editor-placeholder"
+              className="editor-empty"
               onContextMenu={(e) => handleContextMenu(e, { type: 'root', path: null })}
             >
-              <FileIcon className="app-icon" /> Select or create a file to start editing
+              <span className="editor-empty-icon" aria-hidden="true">
+                <FileIcon className="app-icon" />
+              </span>
+              <div className="editor-empty-title">No file open</div>
+              <div className="editor-empty-message">Pick one on the left, or start a new one.</div>
+              <div className="editor-empty-actions">
+                <button
+                  type="button"
+                  className="editor-btn"
+                  onClick={() => {
+                    setTargetFolder('');
+                    setShowCreateFileModal(true);
+                  }}
+                >
+                  <FileIcon className="app-icon" /> New file
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -1075,12 +1178,12 @@ function NamespaceFilesPage() {
         <div className="create-file-modal-overlay" onClick={() => setShowCreateFolderModal(false)}>
           <div className="create-file-modal" onClick={(e) => e.stopPropagation()}>
             <div className="create-file-modal-header">
-              <FolderIcon className="app-icon icon-folder" /> New Folder
+              <FolderIcon className="app-icon" /> New folder
             </div>
             <div className="create-file-modal-body">
               {targetFolder && (
                 <div className="folder-location">
-                  Location: <strong>{targetFolder}</strong>
+                  In <strong>{targetFolder}</strong>
                 </div>
               )}
               <label htmlFor="foldername-input">Folder name</label>
@@ -1103,7 +1206,7 @@ function NamespaceFilesPage() {
                 Cancel
               </button>
               <button className="btn-create" onClick={handleCreateFolder}>
-                Create Folder
+                Create folder
               </button>
             </div>
           </div>
@@ -1115,12 +1218,12 @@ function NamespaceFilesPage() {
         <div className="create-file-modal-overlay" onClick={() => setShowCreateFileModal(false)}>
           <div className="create-file-modal" onClick={(e) => e.stopPropagation()}>
             <div className="create-file-modal-header">
-              <FileIcon className="app-icon" /> New File
+              <FileIcon className="app-icon" /> New file
             </div>
             <div className="create-file-modal-body">
               {targetFolder && (
                 <div className="folder-location">
-                  Location: <strong>{targetFolder}</strong>
+                  In <strong>{targetFolder}</strong>
                 </div>
               )}
               <label htmlFor="filename-input">Filename</label>
@@ -1143,7 +1246,7 @@ function NamespaceFilesPage() {
                 Cancel
               </button>
               <button className="btn-create" onClick={handleConfirmCreateFile}>
-                Create File
+                Create file
               </button>
             </div>
           </div>
@@ -1202,7 +1305,7 @@ function NamespaceFilesPage() {
             </div>
             <div className="create-file-modal-body">
               <div className="folder-location">
-                Current: <strong>{renameSourcePath}</strong>
+                Renaming <strong>{renameSourcePath}</strong>
               </div>
               <label htmlFor="rename-input">New name</label>
               <input
@@ -1235,7 +1338,7 @@ function NamespaceFilesPage() {
         <div className="import-modal-overlay" onClick={() => setShowImportModal(false)}>
           <div className="import-modal" onClick={(e) => e.stopPropagation()}>
             <div className="import-modal-header">
-              <BoxIcon className="app-icon icon-import" /> Import Archive
+              <UploadIcon className="app-icon" /> Import an archive
             </div>
             <div className="import-modal-body">
               <input
@@ -1253,7 +1356,7 @@ function NamespaceFilesPage() {
               <div
                 role="button"
                 tabIndex={0}
-                className="import-drop-zone"
+                className={`import-drop-zone${importDragging ? ' import-drop-zone-on' : ''}`}
                 onClick={() => importFileInputRef.current?.click()}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
@@ -1264,6 +1367,7 @@ function NamespaceFilesPage() {
                 onDrop={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
+                  setImportDragging(false);
                   const files = e.dataTransfer.files;
                   if (files && files.length > 0) {
                     beginImport([files[0]]);
@@ -1272,26 +1376,19 @@ function NamespaceFilesPage() {
                 onDragOver={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
+                  setImportDragging(true);
                 }}
+                onDragLeave={() => setImportDragging(false)}
               >
-                <div className="drop-zone-content">
-                  <FolderIcon
-                    style={{
-                      width: '2.5rem',
-                      height: '2.5rem',
-                      marginBottom: '0.5rem',
-                      color: '#d99a2b',
-                    }}
-                  />
-                  <div style={{ fontWeight: 'bold', marginBottom: '0.3rem' }}>
-                    Drop archive here
-                  </div>
-                  <div style={{ fontSize: '0.85rem', color: '#666' }}>or click to select</div>
-                </div>
+                <span className="import-drop-icon" aria-hidden="true">
+                  <UploadIcon className="app-icon" />
+                </span>
+                <b>Drop an archive here</b>
+                <span>or click to choose one</span>
               </div>
-              <div style={{ marginTop: '1rem', fontSize: '0.85rem', color: '#666' }}>
-                Supported formats: .zip, .tar.gz, .tgz
-              </div>
+              <p className="import-formats">
+                .zip, .tar.gz or .tgz, unpacked into the namespace's files.
+              </p>
             </div>
             <div className="import-modal-footer">
               <button className="btn-cancel" onClick={() => setShowImportModal(false)}>
@@ -1307,7 +1404,7 @@ function NamespaceFilesPage() {
         <div className="create-file-modal-overlay" onClick={() => setShowExportModal(false)}>
           <div className="create-file-modal" onClick={(e) => e.stopPropagation()}>
             <div className="create-file-modal-header">
-              <SaveIcon className="app-icon" /> Export files
+              <DownloadIcon className="app-icon" /> Export the files
             </div>
             <div className="create-file-modal-body">
               <label htmlFor="export-format">Format</label>
@@ -1334,7 +1431,7 @@ function NamespaceFilesPage() {
                 Cancel
               </button>
               <button className="btn-create" onClick={confirmExport}>
-                <SaveIcon className="app-icon" /> Export
+                <DownloadIcon className="app-icon" /> Export
               </button>
             </div>
           </div>
