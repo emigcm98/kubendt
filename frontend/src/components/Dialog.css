@@ -1,0 +1,284 @@
+/* One look for every dialog: a card on a scrim, a header with an icon and a
+   title, a body that scrolls when it runs long and a footer with the actions.
+   Fields are opt-in classes, so a dialog's own checkboxes keep their look. */
+.dlg-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: color-mix(in srgb, var(--scrim-color) 35%, transparent);
+}
+
+/* Confirmations and errors open over the dialogs that raise them. */
+.dlg-overlay-top {
+  z-index: 1500;
+}
+
+/* The graph behind stays usable, only the card takes the pointer. */
+.dlg-overlay-pass {
+  pointer-events: none;
+}
+
+.dlg-overlay-pass .dlg {
+  pointer-events: auto;
+}
+
+.dlg {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 440px;
+  max-height: calc(100vh - 32px);
+  box-sizing: border-box;
+  overflow: hidden;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.45;
+  text-align: left;
+  color: var(--text-body);
+  background: var(--surface);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 16px 40px color-mix(in srgb, var(--shadow-color) 22%, transparent);
+  outline: none;
+}
+
+.dlg-mid {
+  max-width: 600px;
+}
+
+.dlg-wide {
+  max-width: 760px;
+}
+
+.dlg-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  padding: 16px 20px 12px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-heading);
+}
+
+.dlg-head > .app-icon {
+  color: var(--primary);
+}
+
+.dlg-head-success > .app-icon {
+  color: var(--success-accent);
+}
+
+.dlg-head-warning > .app-icon {
+  color: var(--warning);
+}
+
+.dlg-head-danger > .app-icon {
+  color: var(--danger);
+}
+
+.dlg-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--text-heading);
+  overflow-wrap: anywhere;
+}
+
+.dlg-drag {
+  cursor: move;
+  user-select: none;
+}
+
+.dlg-close {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  margin: -4px -8px -4px 0;
+  padding: 0;
+  font-size: 16px;
+  color: var(--text-subtle);
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.dlg-close:hover:not(:disabled) {
+  color: var(--text-heading);
+  background: var(--panel-from);
+}
+
+.dlg-close:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dlg-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 20px 16px;
+}
+
+.dlg-text {
+  margin: 0;
+  color: var(--text-body);
+  overflow-wrap: anywhere;
+}
+
+.dlg-text + .dlg-text {
+  margin-top: 8px;
+}
+
+.dlg-muted {
+  color: var(--text-muted);
+}
+
+.dlg-hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.dlg-label {
+  display: block;
+  margin: 10px 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.dlg-input {
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--text-body);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-sizing: border-box;
+}
+
+.dlg-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent);
+}
+
+.dlg-input:disabled {
+  color: var(--text-muted);
+  background: var(--panel-from);
+  cursor: not-allowed;
+}
+
+.dlg-input[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.dlg-input[aria-invalid='true']:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 15%, transparent);
+}
+
+/* A field and its button on one line, as in an invite form. */
+.dlg-inline {
+  display: flex;
+  gap: 8px;
+}
+
+.dlg-inline .dlg-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.dlg-inline select.dlg-input {
+  flex: none;
+  width: auto;
+}
+
+.dlg-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex: none;
+  padding: 12px 20px;
+  background: var(--panel-from);
+  border-top: 1px solid var(--border-light);
+}
+
+.dlg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: none;
+  height: 34px;
+  padding: 0 16px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.dlg-btn-quiet {
+  color: var(--text-body);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.dlg-btn-quiet:hover:not(:disabled) {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.dlg-btn-primary {
+  color: var(--text-on-brand);
+  background: var(--primary);
+  border: 1px solid var(--primary);
+}
+
+.dlg-btn-primary:hover:not(:disabled) {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+
+.dlg-btn-danger {
+  color: var(--text-on-brand);
+  background: var(--danger);
+  border: 1px solid var(--danger);
+}
+
+.dlg-btn-danger:hover:not(:disabled) {
+  background: var(--danger-strong);
+  border-color: var(--danger-strong);
+}
+
+.dlg-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.dlg-spin {
+  animation: dlg-spin 0.8s linear infinite;
+}
+
+@keyframes dlg-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

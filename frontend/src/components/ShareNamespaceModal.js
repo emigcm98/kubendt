@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
 import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
+import { ReactComponent as UsersIcon } from '../assets/images/icons/users.svg';
 import { API_BASE_URL } from '../config';
-import './ApiTokensModal.css';
+import AlertModal from './AlertModal';
+import './Dialog.css';
 import './ShareNamespaceModal.css';
 
 const LEVELS = ['viewer', 'operator', 'editor'];
@@ -21,6 +23,7 @@ export default function ShareNamespaceModal({ namespace, onClose, onChanged, rea
   const [newGuest, setNewGuest] = useState('');
   const [newLevel, setNewLevel] = useState('viewer');
   const [newOwner, setNewOwner] = useState('');
+  const [handoverTo, setHandoverTo] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -43,6 +46,15 @@ export default function ShareNamespaceModal({ namespace, onClose, onChanged, rea
   useEffect(() => {
     load();
   }, [load]);
+
+  // Esc closes the dialog, unless the handover confirmation is open on top.
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape' && !handoverTo) onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [handoverTo, onClose]);
 
   const save = async (nextOwner, nextGuests) => {
     setBusy(true);
@@ -87,12 +99,16 @@ export default function ShareNamespaceModal({ namespace, onClose, onChanged, rea
     return save(owner, next);
   };
 
-  const handOver = async (e) => {
+  const askHandOver = (e) => {
     e.preventDefault();
     const name = newOwner.trim();
     if (!name || name === owner) return;
-    const stay = owner ? ' You stay as an editor.' : '';
-    if (!window.confirm(`Hand ${namespace} over to ${name}?${stay}`)) return;
+    setHandoverTo(name);
+  };
+
+  const handOver = async () => {
+    const name = handoverTo;
+    setHandoverTo('');
     // A namespace from before the accounts has no owner to keep as a guest.
     const next = owner ? { ...guests, [owner]: 'editor' } : { ...guests };
     delete next[name];
@@ -103,126 +119,151 @@ export default function ShareNamespaceModal({ namespace, onClose, onChanged, rea
 
   return (
     <>
-      <div className="tokens-backdrop" onClick={onClose} />
-      <div
-        className="tokens-modal share-modal"
-        role="dialog"
-        aria-label={readOnly ? 'Who has access' : 'Share namespace'}
-      >
-        <div className="tokens-header">
-          <h2>
-            {readOnly ? 'Who is in' : 'Share'} <code>{namespace}</code>
-          </h2>
-          <button className="tokens-close" onClick={onClose} title="Close">
-            <CloseIcon className="app-icon" />
-          </button>
-        </div>
+      <div className="dlg-overlay" onClick={onClose}>
+        <div
+          className="dlg share-modal"
+          role="dialog"
+          aria-label={readOnly ? 'Who has access' : 'Share namespace'}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="dlg-head">
+            <UsersIcon className="app-icon" aria-hidden="true" />
+            <h2 className="dlg-title">
+              {readOnly ? 'Who is in' : 'Share'} <code className="share-ns">{namespace}</code>
+            </h2>
+            <button className="dlg-close" onClick={onClose} title="Close">
+              <CloseIcon className="app-icon" />
+            </button>
+          </div>
 
-        <div className="share-owner">
-          <span className="share-label">Owner</span>
-          <strong>{owner || 'nobody, the admins'}</strong>
-        </div>
-
-        <div className="share-label">Guests</div>
-        <div className="share-list">
-          {names.length === 0 && (
-            <div className="tokens-empty">Nobody else sees this namespace.</div>
-          )}
-          {names.map((name) => (
-            <div key={name} className="share-row">
-              <span className="share-name">{name}</span>
-              {readOnly ? (
-                <span className="share-level" title={LEVEL_HELP[guests[name]]}>
-                  {guests[name]}
-                </span>
-              ) : (
-                <>
-                  <select
-                    className="tokens-expiry"
-                    value={guests[name]}
-                    onChange={(e) => setLevel(name, e.target.value)}
-                    disabled={busy}
-                    title={LEVEL_HELP[guests[name]]}
-                  >
-                    {LEVELS.map((l) => (
-                      <option key={l} value={l}>
-                        {l}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    className="tokens-revoke"
-                    onClick={() => removeGuest(name)}
-                    disabled={busy}
-                    title="Remove"
-                  >
-                    <TrashIcon className="app-icon" aria-hidden="true" />
-                  </button>
-                </>
-              )}
+          <div className="dlg-body">
+            <div className="share-owner">
+              <span className="dlg-label">Owner</span>
+              <strong>{owner || 'nobody, the admins'}</strong>
             </div>
-          ))}
-        </div>
 
-        {readOnly ? (
-          <p className="tokens-hint share-help">
-            Viewer sees, operator works on the pods, editor changes the lab.
-          </p>
-        ) : (
-          <>
-            <form className="tokens-create" onSubmit={addGuest}>
-              <input
-                className="tokens-input"
-                placeholder="Account to invite"
-                value={newGuest}
-                onChange={(e) => setNewGuest(e.target.value)}
-              />
-              <select
-                className="tokens-expiry"
-                value={newLevel}
-                onChange={(e) => setNewLevel(e.target.value)}
-                title={LEVEL_HELP[newLevel]}
-              >
-                {LEVELS.map((l) => (
-                  <option key={l} value={l}>
-                    {l}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="submit"
-                className="tokens-create-btn"
-                disabled={busy || !loaded || !newGuest.trim()}
-              >
-                Invite
-              </button>
-            </form>
-            <p className="tokens-hint share-help">
+            <div className="dlg-label">Guests</div>
+            <div className="share-list">
+              {names.length === 0 && (
+                <div className="share-empty">Nobody else sees this namespace.</div>
+              )}
+              {names.map((name) => (
+                <div key={name} className="share-row">
+                  <span className="share-name">{name}</span>
+                  {readOnly ? (
+                    <span className="share-level" title={LEVEL_HELP[guests[name]]}>
+                      {guests[name]}
+                    </span>
+                  ) : (
+                    <>
+                      <select
+                        className="dlg-input share-level-select"
+                        value={guests[name]}
+                        onChange={(e) => setLevel(name, e.target.value)}
+                        disabled={busy}
+                        title={LEVEL_HELP[guests[name]]}
+                      >
+                        {LEVELS.map((l) => (
+                          <option key={l} value={l}>
+                            {l}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        className="share-remove"
+                        onClick={() => removeGuest(name)}
+                        disabled={busy}
+                        title="Remove"
+                      >
+                        <TrashIcon className="app-icon" aria-hidden="true" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {!readOnly && (
+              <form className="dlg-inline share-invite" onSubmit={addGuest}>
+                <input
+                  className="dlg-input"
+                  placeholder="Account to invite"
+                  value={newGuest}
+                  onChange={(e) => setNewGuest(e.target.value)}
+                />
+                <select
+                  className="dlg-input"
+                  value={newLevel}
+                  onChange={(e) => setNewLevel(e.target.value)}
+                  title={LEVEL_HELP[newLevel]}
+                >
+                  {LEVELS.map((l) => (
+                    <option key={l} value={l}>
+                      {l}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="submit"
+                  className="dlg-btn dlg-btn-primary"
+                  disabled={busy || !loaded || !newGuest.trim()}
+                >
+                  Invite
+                </button>
+              </form>
+            )}
+            <p className="dlg-hint">
               Viewer sees, operator works on the pods, editor changes the lab.
             </p>
 
-            <form className="tokens-create share-handover" onSubmit={handOver}>
-              <input
-                className="tokens-input"
-                placeholder="Hand over to"
-                value={newOwner}
-                onChange={(e) => setNewOwner(e.target.value)}
-              />
-              <button
-                type="submit"
-                className="tokens-create-btn tokens-create-btn-quiet"
-                disabled={busy || !loaded || !newOwner.trim() || newOwner.trim() === owner}
-              >
-                Hand over
-              </button>
-            </form>
-          </>
-        )}
+            {!readOnly && (
+              <>
+                <div className="dlg-label">Hand over</div>
+                <form className="dlg-inline" onSubmit={askHandOver}>
+                  <input
+                    className="dlg-input"
+                    placeholder="New owner"
+                    value={newOwner}
+                    onChange={(e) => setNewOwner(e.target.value)}
+                  />
+                  <button
+                    type="submit"
+                    className="dlg-btn dlg-btn-quiet"
+                    disabled={busy || !loaded || !newOwner.trim() || newOwner.trim() === owner}
+                  >
+                    Hand over
+                  </button>
+                </form>
+              </>
+            )}
 
-        {error && <div className="tokens-error">{error}</div>}
-        {saved && !error && <div className="share-saved">Saved.</div>}
+            {error && <div className="share-error">{error}</div>}
+            {saved && !error && <div className="share-saved">Saved.</div>}
+          </div>
+
+          <div className="dlg-foot">
+            <button className="dlg-btn dlg-btn-quiet" onClick={onClose}>
+              Close
+            </button>
+          </div>
+        </div>
       </div>
+
+      <AlertModal
+        isOpen={!!handoverTo}
+        type="confirm"
+        title="Hand over"
+        message={
+          <>
+            Hand <strong>{namespace}</strong> over to <strong>{handoverTo}</strong>?
+            {owner ? ` ${owner} stays as an editor.` : ''}
+          </>
+        }
+        confirmText="Hand over"
+        onConfirm={handOver}
+        onCancel={() => setHandoverTo('')}
+      />
     </>
   );
 }

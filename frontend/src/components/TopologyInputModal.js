@@ -8,15 +8,16 @@ import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
 import { ReactComponent as FolderIcon } from '../assets/images/icons/folder.svg';
 import { ReactComponent as FileIcon } from '../assets/images/icons/file.svg';
 import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
+import './Dialog.css';
 import './TopologyInputModal.css';
 
 const TopologyInputModal = ({
   isOpen,
   title,
+  icon: Icon,
   description,
   warningText,
   confirmLabel = 'Submit',
-  confirmVariant = 'primary', // 'primary' | 'warning'
   placeholder,
   sampleSnippet,
   semanticValidator, // optional: (parsedJson) => void; throws Error on invalid payload
@@ -94,7 +95,7 @@ const TopologyInputModal = ({
   const handleHeaderMouseDown = (e) => {
     if (e.button !== 0) return;
     // Don't initiate a drag when the user is going for the close button.
-    if (e.target.closest && e.target.closest('.modal-close-btn')) return;
+    if (e.target.closest && e.target.closest('.dlg-close')) return;
     dragRef.current = {
       dragging: true,
       startX: e.clientX,
@@ -204,7 +205,6 @@ const TopologyInputModal = ({
 
   if (!isOpen) return null;
 
-  const confirmClass = `modal-btn modal-btn-confirm${confirmVariant === 'warning' ? ' modal-btn-warning' : ''}`;
   const submitDisabledReason = !text
     ? 'Provide a JSON to continue'
     : parseError
@@ -217,8 +217,9 @@ const TopologyInputModal = ({
     <Modal
       isOpen={isOpen}
       onRequestClose={onClose}
-      className="topology-input-modal"
-      overlayClassName="topology-input-overlay"
+      className="dlg dlg-wide topology-input-modal"
+      overlayClassName="dlg-overlay dlg-overlay-pass"
+      contentLabel={title}
       shouldCloseOnOverlayClick={false}
       shouldCloseOnEsc
       style={{ content: { transform: `translate(${pos.x}px, ${pos.y}px)` } }}
@@ -226,18 +227,15 @@ const TopologyInputModal = ({
         modalRef.current = node;
       }}
     >
-      <div
-        className="modal-header topology-input-drag-handle"
-        onMouseDown={handleHeaderMouseDown}
-        title="Drag to move"
-      >
-        <h2>{title}</h2>
-        <button className="modal-close-btn" onClick={onClose} title="Close (Esc)">
+      <div className="dlg-head dlg-drag" onMouseDown={handleHeaderMouseDown} title="Drag to move">
+        {Icon && <Icon className="app-icon" aria-hidden="true" />}
+        <h2 className="dlg-title">{title}</h2>
+        <button className="dlg-close" onClick={onClose} title="Close (Esc)">
           <CloseIcon className="app-icon" />
         </button>
       </div>
 
-      <div className="modal-body">
+      <div className="dlg-body tinput-body">
         {description && <p className="tinput-description">{description}</p>}
         {warningText && (
           <div className="tinput-warning">
@@ -340,12 +338,12 @@ const TopologyInputModal = ({
         </div>
       </div>
 
-      <div className="modal-footer">
-        <button className="modal-btn modal-btn-cancel" onClick={onClose}>
+      <div className="dlg-foot">
+        <button className="dlg-btn dlg-btn-quiet" onClick={onClose}>
           Cancel
         </button>
         <button
-          className={confirmClass}
+          className="dlg-btn dlg-btn-primary"
           onClick={handleSubmit}
           disabled={!isSubmittable}
           title={submitDisabledReason}

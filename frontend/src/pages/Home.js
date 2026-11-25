@@ -25,6 +25,7 @@ import { ReactComponent as MoreIcon } from '../assets/images/icons/more.svg';
 import { ReactComponent as ShareIcon } from '../assets/images/icons/users.svg';
 import { ReactComponent as FolderIcon } from '../assets/images/icons/folder.svg';
 import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
+import '../components/Dialog.css';
 import './Home.css';
 
 Modal.setAppElement('#root');
@@ -635,17 +636,18 @@ const Home = () => {
       <Modal
         isOpen={isModalOpen}
         onRequestClose={() => !creatingNamespace && setIsModalOpen(false)}
-        className="create-namespace-modal"
-        overlayClassName="create-namespace-overlay"
+        className="dlg create-namespace-modal"
+        overlayClassName="dlg-overlay"
+        contentLabel="New namespace"
         shouldCloseOnEsc={!creatingNamespace}
         shouldCloseOnOverlayClick={!creatingNamespace}
       >
-        <div className="modal-header">
-          <h2>
-            <PlusIcon className="app-icon" aria-hidden="true" /> Create Namespace
-          </h2>
+        <div className="dlg-head">
+          <PlusIcon className="app-icon" aria-hidden="true" />
+          <h2 className="dlg-title">New namespace</h2>
           <button
-            className="modal-close-btn"
+            className="dlg-close"
+            title="Close"
             onClick={() => setIsModalOpen(false)}
             disabled={creatingNamespace}
           >
@@ -653,18 +655,18 @@ const Home = () => {
           </button>
         </div>
 
-        <div className="modal-body">
-          <p className="ns-modal-intro">
-            A Kubernetes namespace is a logical partition where KubeNDT will deploy your topology
-            (pods, links, files…). Pick a name that follows the RFC 1123 conventions below.
+        <div className="dlg-body">
+          <p className="dlg-text dlg-muted ns-modal-intro">
+            A namespace holds one lab, its pods, links and files.
           </p>
 
-          <label htmlFor="ns-input" className="ns-input-label">
-            Namespace name
+          <label htmlFor="ns-input" className="dlg-label">
+            Name
           </label>
           <div className="ns-input-wrapper">
             <input
               id="ns-input"
+              className="dlg-input"
               type="text"
               value={newNamespaceName}
               onChange={(e) => {
@@ -707,23 +709,22 @@ const Home = () => {
             nsNameValidation?.ok !== false &&
             namespaces.some((n) => n.name === newNamespaceName.trim()) && (
               <p className="ns-dup-warning" role="alert">
-                <WarningIcon className="app-icon" aria-hidden="true" /> A namespace named “
-                {newNamespaceName.trim()}” already exists in this cluster. Choose a different name
-                or open the existing one.
+                <WarningIcon className="app-icon" aria-hidden="true" /> “{newNamespaceName.trim()}”
+                already exists, pick another name.
               </p>
             )}
         </div>
 
-        <div className="modal-footer">
+        <div className="dlg-foot">
           <button
-            className="modal-btn modal-btn-cancel"
+            className="dlg-btn dlg-btn-quiet"
             onClick={() => setIsModalOpen(false)}
             disabled={creatingNamespace}
           >
             Cancel
           </button>
           <button
-            className="modal-btn modal-btn-confirm"
+            className="dlg-btn dlg-btn-primary"
             onClick={handleCreateNamespace}
             disabled={
               creatingNamespace ||
@@ -735,10 +736,10 @@ const Home = () => {
           >
             {creatingNamespace ? (
               <>
-                <LoadingIcon className="app-icon" aria-hidden="true" /> Creating...
+                <LoadingIcon className="app-icon dlg-spin" aria-hidden="true" /> Creating…
               </>
             ) : (
-              '✓ Create'
+              'Create'
             )}
           </button>
         </div>
@@ -780,7 +781,7 @@ const Home = () => {
       <AlertModal
         isOpen={namespaceWarningOpen}
         type="warning"
-        title="Namespace Terminating"
+        title="Namespace terminating"
         message="This namespace is still terminating and cannot be opened yet. Wait until it disappears or becomes active again."
         onConfirm={() => setNamespaceWarningOpen(false)}
         onCancel={() => setNamespaceWarningOpen(false)}

@@ -1,88 +1,128 @@
-.share-modal {
-  max-width: 520px;
+/* Who is in a namespace and at what level, on the shared dialog look. */
+.dlg.share-modal {
+  max-width: 480px;
 }
 
-.share-modal h2 code {
+.share-ns {
   padding: 1px 6px;
-  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
   background: var(--panel-from);
-  font-size: 0.9em;
-}
-
-.share-label {
-  margin: 10px 0 6px;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-subtle);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
 }
 
 .share-owner {
   display: flex;
   align-items: baseline;
   gap: 10px;
-  font-size: 0.9rem;
 }
 
-.share-owner .share-label {
+.share-owner .dlg-label {
   margin: 0;
+}
+
+.share-owner strong {
+  color: var(--text-heading);
 }
 
 .share-list {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin-bottom: 10px;
+  max-height: 240px;
+  margin-bottom: 12px;
+  overflow-y: auto;
+}
+
+.share-empty {
+  padding: 12px;
+  font-size: 13px;
+  text-align: center;
+  color: var(--text-muted);
+  background: var(--panel-from);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
 }
 
 .share-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 8px;
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-sm);
+  padding: 6px 6px 6px 12px;
   background: var(--panel-from);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
 }
 
 .share-name {
   flex: 1;
   min-width: 0;
+  overflow: hidden;
   font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--text-heading);
 }
 
 .share-level {
   padding: 1px 8px;
-  border-radius: var(--radius-pill);
-  background: var(--info-bg);
-  color: var(--primary);
-  font-size: 0.72rem;
+  font-size: 12px;
   font-weight: 700;
+  color: var(--primary);
+  background: var(--info-bg);
+  border-radius: var(--radius-pill);
 }
 
-.share-help {
-  margin-top: 8px;
+.share-row .share-level-select {
+  width: auto;
+  height: 30px;
+  font-size: 13px;
 }
 
-.share-handover {
-  margin-top: 12px;
-}
-
-.tokens-create-btn-quiet {
-  background: var(--surface);
+.share-remove {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  padding: 0;
   color: var(--text-muted);
+  background: var(--surface);
   border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
 }
 
-.tokens-create-btn-quiet:hover:not(:disabled) {
-  background: var(--panel-header-from);
-  color: var(--text-heading);
+.share-remove:hover:not(:disabled) {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.share-remove:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.share-invite .dlg-btn,
+.share-modal .dlg-inline .dlg-btn {
+  height: 36px;
+}
+
+.share-error {
+  margin-top: 12px;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--danger-strong);
+  background: var(--danger-bg);
+  border: 1px solid color-mix(in srgb, var(--danger) 25%, transparent);
+  border-radius: var(--radius-md);
 }
 
 .share-saved {
-  margin-top: 8px;
-  font-size: 0.82rem;
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--success);
 }

@@ -1,160 +1,56 @@
-.error-modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: color-mix(in srgb, var(--scrim-color) 35%, transparent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1500;
-}
-
-.error-modal {
-  background: linear-gradient(to bottom, var(--surface), #f9fafb);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--danger-bg);
-  box-shadow: 0 8px 32px rgba(229, 57, 53, 0.15);
-  width: 90%;
-  max-width: 500px;
-  padding: 0;
-  outline: none;
-}
-
-.error-modal-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 1.5rem;
-  border-bottom: 1px solid var(--danger-bg);
-  background: linear-gradient(to bottom, var(--danger-bg), var(--danger-bg));
-}
-
-.error-modal-icon {
-  display: block;
-  width: 26px;
-  height: 26px;
-  color: var(--danger-strong);
-  flex-shrink: 0;
-}
-
-.error-modal-header h2 {
-  margin: 0;
-  color: var(--danger-strong);
-  font-size: 1.3rem;
-  font-weight: 700;
-  flex: 1;
-}
-
-.error-modal-close-btn {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: var(--danger-strong);
-  padding: 0;
-  width: 30px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-sm);
-  transition: all 0.2s;
-  flex-shrink: 0;
-}
-
-.error-modal-close-btn:hover {
-  background-color: rgba(229, 57, 53, 0.1);
-  color: var(--danger-strong);
-}
-
-.error-modal-body {
-  padding: 1.5rem;
-}
-
-.error-modal-body p {
-  margin: 0;
-  color: var(--text-body);
-  font-size: 0.95rem;
-  line-height: 1.6;
-  word-break: break-word;
-}
-
+/* The raw error in a box that can be copied, on the shared dialog look. */
 .error-modal-details {
-  margin-top: 0.25rem;
+  position: relative;
+  margin-top: 4px;
 }
 
-.error-modal-details-bar {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 6px;
+.dlg-text + .error-modal-details {
+  margin-top: 10px;
 }
 
 .error-modal-details-text {
+  max-height: 240px;
   margin: 0;
-  padding: 0.75rem 0.85rem;
-  background: #f6f8fa;
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-sm);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.8rem;
-  line-height: 1.45;
-  color: #24292f;
+  padding: 10px 12px;
+  padding-right: 84px;
+  overflow: auto;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
-  max-height: 220px;
-  overflow: auto;
+  color: var(--text-heading);
+  background: var(--panel-from);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
   user-select: text;
 }
 
-.error-modal-copy-btn {
-  padding: 3px 10px;
-  font-size: 0.72rem;
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-sm);
+.error-modal-copy {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 8px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
   background: var(--surface);
-  color: #444;
-  cursor: pointer;
-}
-
-.error-modal-copy-btn:hover {
-  background: var(--surface-muted);
-}
-
-.error-modal-note {
-  margin-top: 0.85rem !important;
-  font-size: 0.85rem !important;
-  color: var(--text-muted) !important;
-}
-
-.error-modal-footer {
-  display: flex;
-  gap: 0.8rem;
-  padding: 1.5rem;
-  border-top: 1px solid var(--danger-bg);
-  justify-content: center;
-}
-
-.error-modal-btn {
-  padding: 0.6rem 1.5rem;
-  font-size: 0.95rem;
-  border: none;
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  font-weight: 600;
-  transition: all 0.2s;
-  background: linear-gradient(135deg, var(--danger-strong) 0%, var(--danger-strong) 100%);
-  color: white;
-  box-shadow: 0 2px 8px rgba(229, 57, 53, 0.25);
 }
 
-.error-modal-btn:hover {
-  background: linear-gradient(135deg, #e82e2e 0%, var(--danger-strong) 100%);
-  box-shadow: 0 4px 12px rgba(229, 57, 53, 0.35);
-  transform: translateY(-1px);
+.error-modal-copy:hover {
+  color: var(--primary);
+  border-color: var(--primary);
 }
 
-.error-modal-btn:active {
-  transform: translateY(0);
+.dlg-text.error-modal-note {
+  margin-top: 10px;
+  font-size: 13px;
 }
