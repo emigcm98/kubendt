@@ -64,7 +64,7 @@ const AppHeader = ({ links = false, title = null, actions = null, current = '' }
           title="Every driver and what its nodes can do"
         >
           <BoxIcon className="app-icon" aria-hidden="true" />
-          Drivers
+          <span className="app-header-btn-label">Drivers</span>
         </button>
         {auth.isAdmin && (
           <button
@@ -75,7 +75,7 @@ const AppHeader = ({ links = false, title = null, actions = null, current = '' }
             title="Every Kubernetes object KubeNDT keeps in this cluster"
           >
             <ClusterIcon className="app-icon" aria-hidden="true" />
-            State
+            <span className="app-header-btn-label">State</span>
           </button>
         )}
         <button
@@ -85,7 +85,7 @@ const AppHeader = ({ links = false, title = null, actions = null, current = '' }
           title="The REST API, in Swagger"
         >
           <BookIcon className="app-icon" aria-hidden="true" />
-          API
+          <span className="app-header-btn-label">API</span>
         </button>
         {auth.enabled && <ProfileMenu />}
       </nav>

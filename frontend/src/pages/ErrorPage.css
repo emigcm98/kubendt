@@ -1,61 +1,113 @@
-/* src/components/ErrorPage.css */
-
-.error-page-container {
+.error-page {
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  background-color: #f9f9f9;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  box-sizing: border-box;
-  padding: 2rem;
+  background: var(--panel-from);
+  color: var(--text-body);
+}
+
+.error-main {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
 }
 
 .error-card {
-  background: white;
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-lg);
-  padding: 3rem;
-  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   width: 100%;
+  max-width: 460px;
+  padding: 26px 28px 26px;
+  box-sizing: border-box;
   text-align: center;
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--shadow-color) 5%, transparent);
+  background: var(--surface);
+  border: 1px solid var(--panel-border);
+  border-top: 5px solid var(--error-tone);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--panel-shadow);
 }
 
-.error-icon {
-  display: block;
-  width: 64px;
-  height: 64px;
-  margin: 0 auto 1rem;
-  color: var(--danger);
+/* A refusal or a miss speaks the brand's blue; a failure is red. */
+.error-card-refused {
+  --error-tone: var(--brand-edge);
 }
 
-.error-title {
-  font-size: 3rem;
+.error-card-fail {
+  --error-tone: var(--danger);
+}
+
+.error-code {
+  font-size: 60px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -1px;
+  color: var(--error-tone);
+}
+
+.error-card-refused .error-code {
+  background: var(--brand-bar);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.error-card h1 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 8px;
+  font-size: 22px;
   color: var(--text-heading);
-  margin-bottom: 0.5rem;
 }
 
-.error-message {
-  font-size: 1.2rem;
+.error-card h1 .app-icon {
+  width: 20px;
+  height: 20px;
+  color: var(--error-tone);
+}
+
+.error-card p {
+  margin: 0 0 22px;
+  font-size: 14px;
+  line-height: 1.5;
   color: var(--text-muted);
-  margin-bottom: 2rem;
-  font-style: italic;
+  overflow-wrap: anywhere;
 }
 
-.error-button {
-  padding: 0.5rem 1.2rem;
-  font-size: 0.9rem;
-  background-color: var(--primary);
-  color: white;
-  border: none;
-  border-radius: var(--radius-sm);
-  font-weight: bold;
+.error-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.error-btn,
+.error-btn-quiet {
+  height: 34px;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background 0.2s ease;
 }
 
-.error-button:hover {
-  background-color: var(--primary-hover);
+.error-btn {
+  color: var(--text-on-brand);
+  background: var(--primary);
+  border: none;
+}
+
+.error-btn:hover {
+  background: var(--primary-hover);
+}
+
+.error-btn-quiet {
+  color: var(--text-body);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.error-btn-quiet:hover {
+  color: var(--primary);
+  border-color: var(--primary);
 }

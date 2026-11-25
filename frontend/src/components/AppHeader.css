@@ -121,6 +121,20 @@
   }
 }
 
+/* A phone: the logo alone for the brand, the buttons by their icons. */
+@media (max-width: 600px) {
+  .app-header .brand-mark-name,
+  .app-header .profile-name,
+  .app-header-btn-label,
+  .app-header-aside {
+    display: none;
+  }
+
+  .app-header-nav {
+    gap: 6px;
+  }
+}
+
 @media (max-width: 760px) {
   .app-header {
     padding: 0 12px;
