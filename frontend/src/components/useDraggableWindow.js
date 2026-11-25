@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import fitInView from './fitInView';
 
 // Drag a floating window by its header, clamped to the viewport so the header
 // can never leave the screen. The window positions itself with absolute
@@ -14,6 +15,7 @@ export default function useDraggableWindow({ containerRef, onBringToFront, ignor
     if (el) {
       el.style.left = `${positionRef.current.x}px`;
       el.style.top = `${positionRef.current.y}px`;
+      fitInView(el, positionRef);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

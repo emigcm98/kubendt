@@ -1,173 +1,61 @@
+/* The traffic control window. Its frame and header are the shared tool
+   window's (ToolWindow.css); here its size and its forms. */
 .tc-panel {
   position: fixed;
-  width: 420px;
+  width: 460px;
   height: 620px;
   min-width: 300px;
   min-height: 320px;
-  display: flex;
-  flex-direction: column;
-  background: var(--tool-bg);
-  border: 1px solid var(--tool-border);
-  border-radius: var(--radius-md);
-  box-shadow: 0 12px 40px color-mix(in srgb, var(--shadow-color) 50%, transparent);
-  overflow: hidden;
   resize: both;
-  color: var(--tool-text-body);
-  font-family:
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    Roboto,
-    sans-serif;
 }
 
-.tc-panel-min {
+.tw.tc-panel-min {
   display: none;
 }
 
-/* Header */
-.tc-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 10px;
-  background: var(--tool-header-bg);
-  border-bottom: 1px solid var(--tool-border);
-  cursor: move;
-  user-select: none;
-}
-
-.tc-header-icon {
-  width: 15px;
-  height: 15px;
-  color: var(--tool-accent);
-  flex: 0 0 auto;
-}
-
-.tc-title {
-  display: flex;
-  align-items: baseline;
-  gap: 5px;
-  font-size: 12px;
-  min-width: 0;
-  white-space: nowrap;
-}
-
-/* The words stay in the panel's font and never wrap; the pod and the
-   interface are the monospace part, and only the pod name may truncate. */
-.tc-title-label {
-  flex-shrink: 0;
-  font-weight: 600;
-  color: var(--tool-text);
-}
-
-.tc-title-pod {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-weight: 600;
-  color: var(--tool-text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.tc-title-iface {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  color: var(--tool-accent);
-  flex: 0 0 auto;
-}
-
-.tc-status {
-  margin-left: 6px;
-  font-size: 10.5px;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: var(--radius-pill);
-  white-space: nowrap;
-  border: 1px solid var(--tool-border);
-  background: var(--tool-bg-sunken);
-  color: var(--tool-text-muted);
-}
-
-.tc-status.on {
-  color: var(--tool-success);
-  border-color: var(--tool-success-strong);
-}
-
-.tc-status.draft {
-  color: var(--tool-warning);
-  border-color: var(--tool-warning);
-}
-
-.tc-header-btns {
-  margin-left: auto;
-  display: flex;
-  gap: 6px;
-  align-items: center;
-}
-
-.tc-btn {
-  background: var(--tool-bg-raised);
-  border: 1px solid var(--tool-border);
-  color: var(--tool-text-body);
-  border-radius: var(--radius-sm);
-  padding: 2px 9px;
-  font-size: 12px;
-  line-height: 1.3;
-  cursor: pointer;
-}
-
-.tc-btn:hover {
-  filter: brightness(1.25);
-}
-
-.tc-btn-close {
-  color: var(--tool-danger);
-}
-
-/* Body */
 .tc-body {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding: 12px;
   display: flex;
+  flex: 1;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 10px;
+  min-height: 0;
+  padding: 12px 14px;
+  overflow-y: auto;
 }
 
 .tc-loading {
-  font-size: 0.85rem;
-  color: var(--tool-text-muted);
+  font-size: 13px;
+  color: var(--text-muted);
 }
 
 .tc-error {
-  font-size: 0.85rem;
-  color: var(--tool-danger);
+  font-size: 13px;
+  color: var(--danger);
 }
 
-/* Feedback banner after apply / remove */
+/* What an apply or a remove did. */
 .tc-feedback {
   display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: 0.82rem;
+  gap: 6px;
+  padding: 8px 10px;
+  font-size: 13px;
   font-weight: 600;
-  padding: 0.45rem 0.6rem;
-  border-radius: var(--radius-sm);
   border: 1px solid transparent;
+  border-radius: var(--radius-md);
   animation: tc-feedback-in 0.2s ease-out both;
 }
 
 .tc-feedback.ok {
-  background: var(--tool-bg-sunken);
-  color: var(--tool-success);
-  border-color: var(--tool-success-strong);
+  color: var(--success);
+  background: var(--success-bg);
+  border-color: color-mix(in srgb, var(--success) 30%, transparent);
 }
 
 .tc-feedback.error {
-  background: var(--tool-danger-bg);
-  color: var(--tool-danger);
-  border-color: var(--tool-danger-border);
+  color: var(--danger-strong);
+  background: var(--danger-bg);
+  border-color: color-mix(in srgb, var(--danger) 30%, transparent);
 }
 
 .tc-feedback .app-icon {
@@ -186,97 +74,98 @@
   }
 }
 
-/* Per-qdisc short description */
+/* One line on what a qdisc does. */
 .tc-desc {
-  font-size: 0.8rem;
-  color: var(--tool-text-muted);
-  line-height: 1.4;
-  margin: 0 0 0.3rem 0;
+  margin: 0 0 4px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-muted);
 }
 
 .tc-config {
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 8px;
 }
 
 .tc-config label {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  font-size: 0.86rem;
-  color: var(--tool-text-body);
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--text-body);
+}
+
+.tc-config input,
+.tc-config select {
+  height: 30px;
+  padding: 0 8px;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-body);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
 }
 
 .tc-config input {
   width: 96px;
-  padding: 4px 6px;
-  margin-left: 0.4rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--tool-border);
-  background: var(--tool-bg-well);
-  color: var(--tool-text);
-  font-size: 0.85rem;
+  margin-left: 6px;
 }
 
-.tc-config input:focus {
+.tc-config input:focus,
+.tc-config select:focus {
   outline: none;
-  border-color: var(--tool-accent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--tool-accent) 20%, transparent);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent);
 }
 
 .tc-config .tc-unit {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 4px;
 }
 
 .tc-config .tc-unit input {
   width: 72px;
 }
 
-.tc-config select {
-  padding: 4px 6px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--tool-border);
-  background: var(--tool-bg-well);
-  color: var(--tool-text);
-  font-size: 0.85rem;
-}
-
-/* Shape the peer's interface too */
+/* Shape the peer's interface too. */
 .tc-both-ends {
   display: flex !important;
   justify-content: flex-start !important;
-  gap: 0.4rem;
-  font-size: 0.82rem;
-  color: var(--tool-text-body);
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-body);
 }
 
 .tc-both-ends input {
   width: auto !important;
+  height: auto !important;
   margin: 0 !important;
+  accent-color: var(--primary);
 }
 
-/* htb class editor */
+/* The htb class editor. */
 .tc-class {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
-  padding: 0.5rem 0.6rem;
-  border: 1px solid var(--tool-border);
-  border-radius: var(--radius-sm);
-  background: var(--tool-bg-sunken);
+  gap: 6px;
+  padding: 8px 10px;
+  background: var(--panel-from);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
 }
 
 .tc-class.default {
-  border-color: var(--tool-accent);
+  border-color: var(--primary);
 }
 
 .tc-class-head {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 8px;
 }
 
 .tc-config .tc-class-head .tc-class-name {
@@ -289,101 +178,121 @@
 .tc-class-default {
   display: flex !important;
   justify-content: flex-start !important;
-  gap: 0.3rem;
-  font-size: 0.78rem !important;
-  color: var(--tool-text-muted) !important;
+  gap: 4px;
+  font-size: 12px !important;
+  color: var(--text-muted) !important;
 }
 
 .tc-class-default input {
   width: auto !important;
+  height: auto !important;
   margin: 0 !important;
+  accent-color: var(--primary);
 }
 
 .tc-class-shaping {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
-  padding-left: 0.6rem;
-  border-left: 2px solid var(--tool-border);
+  gap: 6px;
+  padding-left: 10px;
+  border-left: 2px solid var(--border);
 }
 
 .tc-class-matches {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 6px;
 }
 
 .tc-match {
   display: grid;
   grid-template-columns: 1.2fr 1.4fr 1.4fr auto;
-  gap: 0.3rem;
   align-items: center;
+  gap: 4px;
 }
 
 .tc-config .tc-match input,
 .tc-config .tc-match select {
   width: 100%;
   min-width: 0;
+  height: 28px;
   margin: 0;
-  padding: 3px 5px;
-  font-size: 0.78rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--tool-border);
-  background: var(--tool-bg-well);
-  color: var(--tool-text);
+  padding: 0 6px;
+  font-size: 12px;
 }
 
 .tc-match .tc-btn {
   justify-self: end;
 }
 
+/* The small square buttons that remove a class or a match. */
+.tc-btn {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.tc-btn:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
 .tc-form-btn.tc-small {
   align-self: flex-start;
-  padding: 3px 9px;
-  font-size: 0.78rem;
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
 }
 
-/* Section headings of the composite form */
+/* The section headings of the forms. */
 .tc-section {
-  margin-top: 0.35rem;
-  font-size: 0.68rem;
+  margin-top: 6px;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.4px;
   text-transform: uppercase;
-  color: var(--tool-text-subtle);
+  color: var(--text-muted);
 }
 
-/* Interface picker: one chip per interface, a dot on the shaped ones */
+/* One chip per interface, a dot on the shaped ones. */
 .tc-ifaces {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
-  margin-bottom: 0.2rem;
+  gap: 6px;
 }
 
 .tc-iface-chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 3px 9px;
+  gap: 6px;
+  padding: 2px 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-pill);
-  border: 1px solid var(--tool-border);
-  background: var(--tool-bg-sunken);
-  color: var(--tool-text-muted);
-  font-size: 0.8rem;
-  font-weight: 600;
   cursor: pointer;
 }
 
 .tc-iface-chip:hover {
-  color: var(--tool-text);
-  border-color: var(--tool-border-strong);
+  color: var(--primary);
+  border-color: var(--primary);
 }
 
 .tc-iface-chip.selected {
-  color: var(--tool-text);
-  background: var(--tool-bg-raised);
-  border-color: var(--tool-accent);
+  color: var(--primary);
+  background: var(--info-bg);
+  border-color: var(--primary);
 }
 
 .tc-iface-chip:disabled {
@@ -394,114 +303,146 @@
 .tc-iface-dot {
   width: 7px;
   height: 7px;
+  background: var(--success-accent);
   border-radius: 50%;
-  background: var(--tool-success);
 }
 
 .tc-ifaces-empty {
-  font-size: 0.82rem;
-  color: var(--tool-text-muted);
+  font-size: 13px;
+  color: var(--text-muted);
 }
 
-/* No-qdisc empty state */
+/* An interface with no qdisc of ours: what it has, and a way to add one. */
 .tc-empty {
-  text-align: center;
-  font-size: 0.85rem;
-  color: var(--tool-text-muted);
   display: flex;
   flex-direction: column;
-  gap: 0.7rem;
-  margin-top: 0.4rem;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-body);
+}
+
+.tc-empty-text {
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--panel-from);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
 }
 
 .tc-empty-text code {
-  background: var(--tool-bg-well);
-  padding: 1px 5px;
-  border-radius: var(--radius-sm);
-  font-size: 0.8rem;
-  color: var(--tool-text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-heading);
 }
 
 .tc-add {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 0.5rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 6px;
 }
 
 .tc-select {
-  padding: 0.4rem 0.5rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--tool-border);
-  font-size: 0.85rem;
-  background: var(--tool-bg-well);
-  color: var(--tool-text);
+  height: 30px;
+  min-width: 0;
+  padding: 0 6px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-body);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
   cursor: pointer;
+}
+
+.tc-select:focus {
+  outline: none;
+  border-color: var(--primary);
 }
 
 .tc-hint {
-  font-size: 0.76rem;
-  color: var(--tool-text-subtle);
-  line-height: 1.4;
   margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-muted);
 }
 
 .tc-hint strong {
-  color: var(--tool-text-dim);
+  color: var(--text-body);
 }
 
-/* Action buttons */
 .tc-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.9rem;
+  gap: 6px;
+  margin-top: 12px;
 }
 
+/* The form's actions under the scroll, always in sight, the main one on the
+   right as in the dialogs. */
+.tc-actions.tc-foot {
+  flex: none;
+  flex-wrap: nowrap;
+  margin: 0;
+  padding: 10px 14px;
+  background: var(--panel-from);
+  border-top: 1px solid var(--border-light);
+}
+
+.tc-foot-space {
+  flex: 1;
+}
+
+.tc-foot .tc-form-btn.primary {
+  flex: none;
+  padding: 0 16px;
+}
+
+/* The form buttons, in the tool window's shapes (ToolWindow.css .tw-btn). */
 .tc-form-btn {
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
-  padding: 0.4rem 0.9rem;
-  font-size: 0.85rem;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-body);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition:
-    filter 0.15s,
-    background 0.15s,
-    border-color 0.15s,
-    transform 0.1s;
-}
-
-.tc-form-btn:active {
-  transform: translateY(1px);
 }
 
 .tc-form-btn.primary {
-  background: var(--tool-accent);
-  color: var(--tool-bg);
   flex: 1 1 auto;
+  color: var(--text-on-brand);
+  background: var(--primary);
+  border-color: var(--primary);
 }
 
 .tc-form-btn.primary:hover {
-  filter: brightness(1.08);
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+
+.tc-add .tc-form-btn.primary {
+  flex: none;
 }
 
 .tc-form-btn.danger {
-  background: var(--tool-danger-bg);
-  color: var(--tool-danger);
-  border-color: var(--tool-danger-border);
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
 }
 
 .tc-form-btn.danger:hover {
-  filter: brightness(1.2);
-}
-
-.tc-form-btn.ghost {
-  background: var(--tool-bg-raised);
-  color: var(--tool-text-body);
-  border-color: var(--tool-border);
+  color: var(--danger-strong);
+  background: var(--danger-bg);
+  border-color: var(--danger);
 }
 
 .tc-form-btn.ghost:hover {
-  filter: brightness(1.25);
+  color: var(--primary);
+  border-color: var(--primary);
 }

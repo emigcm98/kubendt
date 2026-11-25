@@ -4,6 +4,7 @@ import useDraggableWindow from './useDraggableWindow';
 import { ReactComponent as LogsIcon } from '../assets/images/icons/logs.svg';
 import { ReactComponent as DownloadIcon } from '../assets/images/icons/download.svg';
 import { ReactComponent as CopyIcon } from '../assets/images/icons/copy.svg';
+import ToolWindowHead from './ToolWindowHead';
 import './PodLogsModal.css';
 
 // A floating viewer of a pod's container log, of the same family as the
@@ -16,6 +17,26 @@ const TAIL_OPTIONS = [200, 500, 2000, 0];
 // Built from the code so the lint rule on control characters in literals
 // stays quiet: ESC [ ... letter, the colour and cursor sequences.
 const ANSI = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*[A-Za-z]`, 'g');
+
+// The line with what the filter matched marked, case aside as the filter.
+const markHits = (line, needle) => {
+  const parts = [];
+  const lower = line.toLowerCase();
+  let from = 0;
+  let at = lower.indexOf(needle);
+  while (at !== -1) {
+    if (at > from) parts.push(line.slice(from, at));
+    parts.push(
+      <mark key={at} className="logs-hit">
+        {line.slice(at, at + needle.length)}
+      </mark>
+    );
+    from = at + needle.length;
+    at = lower.indexOf(needle, from);
+  }
+  if (from < line.length) parts.push(line.slice(from));
+  return parts;
+};
 
 const PodLogsModal = ({
   logId,
@@ -141,53 +162,39 @@ const PodLogsModal = ({
     lost: 'connection lost',
   }[status];
 
+  const statusTone = { connecting: 'busy', open: 'live', lost: 'error' }[status] || 'idle';
+
   return (
     <div
       ref={containerRef}
-      className={`shell-modal-container logs-modal${minimized ? ' shell-modal-minimized' : ''}`}
+      className={`shell-modal-container logs-modal tw${minimized ? ' shell-modal-minimized' : ''}`}
       style={{ zIndex }}
       onClick={() => {
         if (!minimized && onBringToFront) onBringToFront();
       }}
       data-log-id={logId}
     >
-      <div className="shell-modal-header" onMouseDown={onHeaderMouseDown}>
-        <div className="shell-modal-title">
-          <LogsIcon className="logs-title-icon" aria-hidden="true" />
-          <span className="shell-pod-name">{podName}</span>
-          <span className="shell-pod-status">
-            {' '}
-            - Logs{meta?.container ? ` (${meta.container})` : ''} · {statusText}
-          </span>
-        </div>
-        <div className="shell-modal-buttons">
-          <button
-            className="shell-modal-clear-btn"
-            title="Clear the view"
-            onClick={() => setLines([])}
-          >
-            Clear
-          </button>
-          {onMinimize && (
-            <button className="shell-modal-minimize-btn" title="Minimize" onClick={onMinimize}>
-              −
-            </button>
-          )}
-          <button onClick={onClose} className="shell-modal-close-btn" title="Close logs">
-            ✖
-          </button>
-        </div>
-      </div>
+      <ToolWindowHead
+        icon={LogsIcon}
+        title="Logs"
+        context={meta?.container ? `${podName} · ${meta.container}` : podName}
+        status={statusText}
+        tone={statusTone}
+        onMouseDown={onHeaderMouseDown}
+        onMinimize={onMinimize}
+        onClose={onClose}
+        closeTitle="Close logs"
+      />
 
-      <div className="logs-toolbar">
+      <div className="tw-bar">
         <input
           type="text"
-          className="logs-filter"
-          placeholder="Filter lines…"
+          className="tw-input logs-filter"
+          placeholder="Filter lines"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
         />
-        <label className="logs-toggle" title="Scroll with new lines">
+        <label className="tw-check" title="Scroll with new lines">
           <input
             type="checkbox"
             checked={follow}
@@ -200,7 +207,7 @@ const PodLogsModal = ({
           />
           Follow
         </label>
-        <label className="logs-toggle" title="Prefix each line with its time">
+        <label className="tw-check" title="Prefix each line with its time">
           <input
             type="checkbox"
             checked={timestamps}
@@ -210,7 +217,7 @@ const PodLogsModal = ({
         </label>
         {meta?.restarts > 0 && (
           <label
-            className="logs-toggle"
+            className="tw-check"
             title={`The container restarted ${meta.restarts} time(s), read the log of the previous instance`}
           >
             <input
@@ -222,7 +229,7 @@ const PodLogsModal = ({
           </label>
         )}
         <select
-          className="logs-select"
+          className="tw-input"
           value={tail}
           onChange={(e) => setTail(Number(e.target.value))}
           title="How many lines to start with"
@@ -235,7 +242,7 @@ const PodLogsModal = ({
         </select>
         {meta?.containers?.length > 1 && (
           <select
-            className="logs-select"
+            className="tw-input"
             value={container || meta.container}
             onChange={(e) => setContainer(e.target.value)}
             title="Container to read"
@@ -250,15 +257,33 @@ const PodLogsModal = ({
         <span className="logs-count">
           {needle ? `${visible.length} of ${lines.length}` : `${lines.length} lines`}
         </span>
-        <button className="logs-icon-btn" title="Copy the visible lines" onClick={copy}>
+        <button
+          type="button"
+          className="tw-icon-btn logs-act"
+          title="Copy the visible lines"
+          onClick={copy}
+        >
           <CopyIcon className="app-icon" aria-hidden="true" />
         </button>
-        <button className="logs-icon-btn" title="Download the visible lines" onClick={download}>
+        <button
+          type="button"
+          className="tw-icon-btn logs-act"
+          title="Download the visible lines"
+          onClick={download}
+        >
           <DownloadIcon className="app-icon" aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          className="tw-btn"
+          title="Clear the view"
+          onClick={() => setLines([])}
+        >
+          Clear
         </button>
       </div>
 
-      <div ref={bodyRef} className="logs-body" onScroll={onScroll}>
+      <div ref={bodyRef} className="logs-body tw-console" onScroll={onScroll}>
         {visible.length === 0 ? (
           <div className="logs-empty">
             {status === 'connecting'
@@ -270,7 +295,7 @@ const PodLogsModal = ({
         ) : (
           visible.map((line, i) => (
             <div key={i} className="logs-line">
-              {line}
+              {needle ? markHits(line, needle) : line}
             </div>
           ))
         )}

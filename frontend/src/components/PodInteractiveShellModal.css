@@ -1,3 +1,6 @@
+/* The shell window, and the size and resize the logs window shares. Its
+   frame and header are the shared tool window's (ToolWindow.css), the
+   terminal is a console well, dark in both themes. */
 .shell-modal-container {
   position: fixed;
   width: 900px;
@@ -6,298 +9,54 @@
   min-height: 260px;
   max-width: 96vw;
   max-height: 92vh;
-  background-color: var(--term-bg);
-  color: var(--term-fg);
-  border: 1px solid var(--term-border);
-  border-radius: var(--radius-md);
-  box-shadow: 0 8px 32px color-mix(in srgb, var(--shadow-color) 60%, transparent);
   user-select: none;
-  overflow: hidden;
-  /* Drag-resize from the bottom-right corner, like the capture and trace
-     panels. The terminal re-fits itself through its ResizeObserver. */
+  /* Resized from the bottom right corner. The terminal fits itself again
+     through its ResizeObserver. */
   resize: both;
 }
 
-/* Hide the floating window without unmounting it; the WS + xterm session stay alive,
-   and a chip in the taskbar restores it. */
+/* Hidden, not unmounted, so the socket and the terminal stay alive while a
+   chip in the taskbar can bring it back. */
 .shell-modal-minimized {
   display: none !important;
 }
 
-.shell-modal-header {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 50px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 1rem;
-  background: linear-gradient(135deg, var(--term-bg-raised) 0%, var(--term-bg) 100%);
-  border-bottom: 1px solid var(--term-border);
-  border-radius: var(--radius-md) var(--radius-md) 0 0;
-  cursor: grab;
-  user-select: none;
-  z-index: 1;
-}
-
-.shell-modal-header:active {
-  cursor: grabbing;
-}
-
-.shell-modal-title {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.95rem;
-  color: var(--term-fg);
-  flex: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.shell-pod-name {
-  font-weight: 700;
-  color: var(--term-accent);
-  font-family: 'Monaco', 'Menlo', monospace;
-  font-size: 0.9rem;
-}
-
-.shell-pod-status {
-  color: var(--text-subtle);
-  font-size: 0.85rem;
-}
-
-.shell-modal-buttons {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.shell-modal-close-btn,
-.shell-modal-minimize-btn,
-.shell-modal-clear-btn,
-.shell-modal-reconnect-btn {
-  background: transparent;
-  color: var(--text-subtle);
-  border: none;
-  font-size: 1.05rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  padding: 0.3rem 0.55rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-sm);
-}
-
-/* "Clear" is a text label, not a glyph, use a smaller weighted font so it
-   sits visually balanced next to the icon buttons. */
-.shell-modal-clear-btn {
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  padding: 0.3rem 0.7rem;
-  border: 1px solid var(--term-border);
-}
-
-.shell-modal-close-btn:hover {
-  background: color-mix(in srgb, var(--term-danger) 10%, transparent);
-  color: var(--term-danger);
-}
-
-.shell-modal-minimize-btn:hover {
-  background: rgba(255, 200, 0, 0.1);
-  color: var(--warning);
-}
-
-.shell-modal-clear-btn:hover {
-  background: color-mix(in srgb, var(--term-accent) 8%, transparent);
-  color: var(--term-accent);
-}
-
-.shell-modal-reconnect-btn:hover {
-  background: rgba(86, 156, 214, 0.12);
-  color: var(--tool-accent);
-}
-
-/* Tiny dot in the title showing socket state */
-.shell-status-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.shell-status-connecting {
-  background: var(--warning-border);
-  box-shadow: 0 0 6px color-mix(in srgb, var(--warning-border) 50%, transparent);
-  animation: shell-status-pulse 1.4s ease-in-out infinite;
-}
-
-.shell-status-open {
-  background: var(--term-accent);
-  box-shadow: 0 0 6px color-mix(in srgb, var(--term-accent) 45%, transparent);
-}
-
-.shell-status-lost {
-  background: var(--term-danger);
-  box-shadow: 0 0 6px color-mix(in srgb, var(--term-danger) 45%, transparent);
-}
-
-@keyframes shell-status-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.35;
-  }
-}
-
-/* Overlay shown when the WebSocket closes, terminal stays visible underneath */
-.shell-disconnected-overlay {
-  position: absolute;
-  top: 50px;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(20, 20, 20, 0.78);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10;
-  backdrop-filter: blur(2px);
-  border-radius: 0 0 var(--radius-md) var(--radius-md);
-}
-
-.shell-disconnected-card {
-  background: var(--term-bg-card);
-  border: 1px solid var(--term-danger);
-  border-radius: var(--radius-md);
-  padding: 1.4rem 1.8rem;
-  text-align: center;
-  color: var(--term-fg);
-  box-shadow: 0 8px 28px color-mix(in srgb, var(--shadow-color) 55%, transparent);
-  max-width: 420px;
-}
-
-.shell-disconnected-icon {
-  width: 2rem;
-  height: 2rem;
-  color: var(--term-danger);
-  margin-bottom: 0.3rem;
-}
-
-.shell-disconnected-title {
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: var(--term-danger);
-  margin-bottom: 0.4rem;
-}
-
-.shell-disconnected-subtitle {
-  font-size: 0.9rem;
-  color: var(--term-fg);
-  margin-bottom: 1rem;
-}
-
-.shell-disconnected-actions {
-  display: flex;
-  justify-content: center;
-  gap: 0.6rem;
-}
-
-.shell-disconnected-btn {
-  background: var(--term-bg-raised);
-  color: var(--term-fg);
-  border: 1px solid var(--term-border);
-  padding: 0.45rem 1rem;
-  font-size: 0.9rem;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease;
-}
-
-.shell-disconnected-btn:hover {
-  background: var(--term-border);
-  border-color: var(--text-muted);
-}
-
-.shell-disconnected-btn-primary {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: var(--text-on-brand);
-  font-weight: 600;
-}
-
-.shell-disconnected-btn-primary:hover {
-  background: var(--primary-hover);
-  border-color: var(--primary-hover);
-}
-
-.shell-connecting-indicator {
-  position: absolute;
-  top: 56px;
-  right: 12px;
-  background: color-mix(in srgb, var(--scrim-color) 55%, transparent);
-  color: var(--warning-border);
-  font-size: 0.78rem;
-  padding: 3px 8px;
-  border-radius: var(--radius-sm);
-  pointer-events: none;
-}
-
-/* Terminal inset: any breathing room goes on .xterm below, the only element
-   whose padding the fit addon measures. On this container it would not work
-   (.xterm is absolutely positioned against the padding box, so it ignores it
-   and the space ends up unused on the right), and on .xterm-screen it clips
-   the last row by an amount that depends on device pixel ratio. */
+/* The space for the terminal. Any inset goes on .xterm below, the only
+   element whose padding the fit addon measures: here .xterm, absolutely
+   placed, would ignore it, and on .xterm-screen it would clip the last row
+   by an amount that depends on the pixel ratio. */
 .modal-terminal {
-  position: absolute;
-  top: 50px;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: var(--term-bg);
-  border-radius: 0 0 var(--radius-md) var(--radius-md);
-  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  position: relative;
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
+  font-family: var(--font-mono);
 }
 
-/* xterm customization */
 .modal-terminal .xterm {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 0 0 0 2px;
+  inset: 0;
   margin: 0;
+  padding: 4px 0 0 8px;
 }
 
 .modal-terminal .xterm-screen {
-  background-color: var(--term-bg);
-  color: var(--term-fg);
+  color: var(--console-fg);
+  background-color: var(--console-bg);
 }
 
 .modal-terminal .xterm-viewport {
-  background-color: var(--term-bg);
+  background-color: var(--console-bg);
+  scrollbar-color: var(--console-muted) var(--console-bg);
+  scrollbar-width: thin;
 }
 
 .modal-terminal .xterm-rows {
   padding: 0;
 }
 
-/* Text selection */
 .modal-terminal .xterm-selection {
-  background-color: rgba(255, 255, 255, 0.3);
+  background-color: color-mix(in srgb, var(--console-fg) 30%, transparent);
 }
 
 .modal-terminal .xterm-selection-text {
@@ -305,52 +64,137 @@
 }
 
 .modal-terminal .xterm-cursor-block {
-  background-color: var(--term-accent);
-  color: var(--term-bg);
+  color: var(--console-bg);
+  background-color: var(--console-accent);
 }
 
 .modal-terminal .xterm-cursor-line {
-  background-color: var(--term-accent);
+  background-color: var(--console-accent);
 }
 
-/* Scrollbar styling */
 .modal-terminal .xterm-viewport::-webkit-scrollbar {
   width: 8px;
 }
 
 .modal-terminal .xterm-viewport::-webkit-scrollbar-track {
-  background: var(--term-bg);
+  background: var(--console-bg);
 }
 
 .modal-terminal .xterm-viewport::-webkit-scrollbar-thumb {
-  background-color: var(--term-accent);
+  background-color: var(--console-muted);
+  border: 1px solid var(--console-bg);
   border-radius: var(--radius-sm);
-  border: 1px solid var(--term-bg);
 }
 
-.modal-terminal .xterm-viewport::-webkit-scrollbar-thumb:hover {
-  background-color: var(--term-accent-hover);
-}
-
-/* Firefox scrollbar */
-.modal-terminal .xterm-viewport {
-  scrollbar-color: var(--term-accent) var(--term-bg);
-  scrollbar-width: thin;
-}
-
-/* Ensure xterm text doesn't blur or flicker */
+/* Keeps the measuring element from blurring or flickering the text. */
 .modal-terminal .xterm-char-measure-element {
   display: inline-block !important;
 }
 
 .modal-terminal .xterm-link {
-  color: var(--term-link) !important;
-  border-bottom: 1px solid var(--term-link) !important;
+  color: var(--console-accent) !important;
   text-decoration: none !important;
+  border-bottom: 1px solid var(--console-accent) !important;
   cursor: pointer;
 }
 
-/* Smooth rendering */
 .modal-terminal .xterm-glyph-run {
   will-change: auto;
+}
+
+/* When the socket closes the terminal stays visible under a card. */
+.shell-disconnected-overlay {
+  position: absolute;
+  top: 42px;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--console-bg) 78%, transparent);
+  backdrop-filter: blur(2px);
+}
+
+.shell-disconnected-card {
+  max-width: 420px;
+  padding: 20px 24px;
+  text-align: center;
+  color: var(--text-body);
+  background: var(--surface);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 32px color-mix(in srgb, var(--shadow-color) 30%, transparent);
+}
+
+.shell-disconnected-icon {
+  width: 28px;
+  height: 28px;
+  margin-bottom: 6px;
+  color: var(--danger);
+}
+
+.shell-disconnected-title {
+  margin-bottom: 6px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-heading);
+}
+
+.shell-disconnected-subtitle {
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.shell-disconnected-actions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.shell-disconnected-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 16px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-body);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.shell-disconnected-btn:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.shell-disconnected-btn-primary {
+  color: var(--text-on-brand);
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.shell-disconnected-btn-primary:hover {
+  color: var(--text-on-brand);
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+
+.shell-connecting-indicator {
+  position: absolute;
+  top: 50px;
+  right: 14px;
+  padding: 3px 8px;
+  font-size: 12px;
+  color: var(--console-fg);
+  background: color-mix(in srgb, var(--console-fg) 12%, transparent);
+  border-radius: var(--radius-sm);
+  pointer-events: none;
 }

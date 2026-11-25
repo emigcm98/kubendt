@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import './TCPanel.css';
+import ToolWindowHead from './ToolWindowHead';
+import fitInView from './fitInView';
 import { API_BASE_URL } from '../config';
 import { ReactComponent as SlidersIcon } from '../assets/images/icons/sliders.svg';
 import { ReactComponent as WarningIcon } from '../assets/images/icons/warning.svg';
@@ -527,6 +529,12 @@ const TCPanel = ({
     }
   }, [zIndex]);
 
+  // In view when it opens, whatever the screen.
+  useEffect(() => {
+    fitInView(containerRef.current, positionRef);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     const onMove = (e) => {
       if (!isDraggingRef.current || !containerRef.current) return;
@@ -837,8 +845,18 @@ const TCPanel = ({
     );
   };
 
+  // Pinned under the form, so Apply stays in sight while a long htb scrolls.
   const renderActions = () => (
-    <div className="tc-actions">
+    <div className="tc-actions tc-foot">
+      <button className="tc-form-btn ghost" title="Reload current settings" onClick={fetchStates}>
+        Refresh
+      </button>
+      <span className="tc-foot-space" />
+      {!isDraft && (
+        <button className="tc-form-btn danger" onClick={handleDeleteQdisc}>
+          Remove
+        </button>
+      )}
       {isDraft && (
         <button className="tc-form-btn ghost" onClick={handleCancelDraft}>
           Cancel
@@ -846,14 +864,6 @@ const TCPanel = ({
       )}
       <button className="tc-form-btn primary" onClick={handleApplyQdisc}>
         {isDraft ? 'Apply' : 'Update'}
-      </button>
-      {!isDraft && (
-        <button className="tc-form-btn danger" onClick={handleDeleteQdisc}>
-          Remove
-        </button>
-      )}
-      <button className="tc-form-btn ghost" title="Reload current settings" onClick={fetchStates}>
-        Refresh
       </button>
     </div>
   );
@@ -932,7 +942,6 @@ const TCPanel = ({
       {numberField('Queue limit (packets)', 'limit', 1, 1000000)}
       {renderExtras()}
       {renderBothEnds()}
-      {renderActions()}
     </div>
   );
 
@@ -954,7 +963,6 @@ const TCPanel = ({
       {numberField('Latency (ms)', 'latency', 1, 5000)}
       {renderExtras()}
       {renderBothEnds()}
-      {renderActions()}
     </div>
   );
 
@@ -1134,7 +1142,6 @@ const TCPanel = ({
       </button>
       {renderExtras()}
       {renderBothEnds()}
-      {renderActions()}
     </div>
   );
 
@@ -1155,33 +1162,26 @@ const TCPanel = ({
     : shapedCount > 0
       ? `${shapedCount} shaped`
       : 'No shaping';
-  const statusClass = qdiscData ? (isDraft ? 'draft' : 'on') : shapedCount > 0 ? 'on' : 'off';
+  const statusTone = qdiscData ? (isDraft ? 'warn' : 'live') : shapedCount > 0 ? 'live' : 'idle';
 
   return (
     <div
       ref={containerRef}
-      className={`tc-panel${minimized ? ' tc-panel-min' : ''}`}
+      className={`tc-panel tw${minimized ? ' tc-panel-min' : ''}`}
       onClick={() => {
         if (!minimized && onBringToFront) onBringToFront();
       }}
     >
-      <div className="tc-header" onMouseDown={onHeaderMouseDown}>
-        <SlidersIcon className="tc-header-icon" />
-        <span className="tc-title">
-          <span className="tc-title-label">Traffic control</span>
-          <span className="tc-title-pod">{pod}</span>
-          {selected && <span className="tc-title-iface">· {selected}</span>}
-        </span>
-        <span className={`tc-status ${statusClass}`}>{statusLabel}</span>
-        <div className="tc-header-btns">
-          <button className="tc-btn" onClick={onMinimize} title="Minimize">
-            –
-          </button>
-          <button className="tc-btn tc-btn-close" onClick={onClose} title="Close">
-            ✕
-          </button>
-        </div>
-      </div>
+      <ToolWindowHead
+        icon={SlidersIcon}
+        title="Traffic control"
+        context={selected ? `${pod} · ${selected}` : pod}
+        status={statusLabel}
+        tone={statusTone}
+        onMouseDown={onHeaderMouseDown}
+        onMinimize={onMinimize}
+        onClose={onClose}
+      />
 
       <div className="tc-body">
         {renderIfaces()}
@@ -1194,6 +1194,7 @@ const TCPanel = ({
         {loadError && <p className="tc-error">{loadError}</p>}
         {states && renderForm()}
       </div>
+      {states && selected && qdiscData && isManagedQdisc(qdiscData.qdisc) && renderActions()}
     </div>
   );
 };

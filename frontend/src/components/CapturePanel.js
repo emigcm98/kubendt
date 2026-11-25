@@ -3,6 +3,12 @@ import './CapturePanel.css';
 import { WS_BASE_URL, API_BASE_URL } from '../config';
 import { ReactComponent as PcapIcon } from '../assets/images/icons/pcap.svg';
 import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
+import { ReactComponent as DownloadIcon } from '../assets/images/icons/download.svg';
+import { ReactComponent as ChevronDownIcon } from '../assets/images/icons/chevron-down.svg';
+import { ReactComponent as StopIcon } from '../assets/images/icons/square.svg';
+import { ReactComponent as PlayIcon } from '../assets/images/icons/play.svg';
+import ToolWindowHead from './ToolWindowHead';
+import fitInView from './fitInView';
 
 const MAX_PACKETS = 5000; // ring-buffer cap held in memory
 const MAX_RENDERED = 2000; // most recent rows actually rendered
@@ -19,6 +25,15 @@ const COLS = [
 ];
 
 // Coarse protocol → colour class, à la Wireshark's colouring rules.
+// The header chip's tone for each state of the capture.
+const STATE_TONE = {
+  connecting: 'busy',
+  starting: 'busy',
+  capturing: 'live',
+  lost: 'error',
+  error: 'error',
+};
+
 const protoClass = (proto) => {
   const p = (proto || '').toUpperCase();
   if (p.includes('OSPF')) return 'cap-p-ospf';
@@ -429,6 +444,12 @@ const CapturePanel = ({
     }
   }, [zIndex]);
 
+  // In view when it opens, whatever the screen.
+  useEffect(() => {
+    fitInView(containerRef.current, positionRef);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     const onMove = (e) => {
       if (!isDraggingRef.current || !containerRef.current) return;
@@ -493,92 +514,28 @@ const CapturePanel = ({
   return (
     <div
       ref={containerRef}
-      className={`cap-panel${minimized ? ' cap-panel-min' : ''}`}
+      className={`cap-panel tw${minimized ? ' cap-panel-min' : ''}`}
       onClick={() => {
         if (!minimized && onBringToFront) onBringToFront();
       }}
     >
-      <div className="cap-header" onMouseDown={onHeaderMouseDown}>
-        <span className={`cap-dot cap-dot-${state}`} title={statusLabel} />
-        <PcapIcon style={{ color: 'var(--tool-accent)' }} />
-        <span className="cap-title">
-          <span className="cap-title-pod">{pod}</span>
-          <span className="cap-title-iface">· {iface}</span>
-        </span>
-        <span className="cap-meta" title={notice || undefined}>
-          {count} pkts · {statusLabel}
-        </span>
-        <div className="cap-header-btns">
-          {live ? (
-            <button className="cap-btn cap-btn-stop" onClick={stop} title="Stop capture">
-              <span className="cap-glyph-stop" /> Stop
-            </button>
-          ) : (
-            <button
-              className="cap-btn cap-btn-start"
-              onClick={start}
-              title="Start / resume capture"
-            >
-              <span className="cap-glyph-play" /> Start
-            </button>
-          )}
-          <div className="cap-save-wrap" ref={saveWrapRef}>
-            <button
-              className={`cap-btn cap-btn-save${container ? '' : ' cap-btn-disabled'}`}
-              onClick={() => container && setSaveMenuOpen((o) => !o)}
-              disabled={!container}
-              title="Export capture (.pcap)"
-            >
-              ⤓ Save ▾
-            </button>
-            {saveMenuOpen && (
-              <div className="cap-save-menu">
-                <button
-                  className="cap-save-item"
-                  onClick={() => {
-                    setSaveMenuOpen(false);
-                    downloadPcap(false);
-                  }}
-                >
-                  Whole capture
-                </button>
-                <button
-                  className={`cap-save-item${displayFilter ? '' : ' cap-save-item-disabled'}`}
-                  disabled={!displayFilter}
-                  onClick={() => {
-                    if (!displayFilter) return;
-                    setSaveMenuOpen(false);
-                    downloadPcap(true);
-                  }}
-                  title={
-                    displayFilter
-                      ? 'Export only the filtered packets'
-                      : 'Apply a display filter first'
-                  }
-                >
-                  Filtered only
-                </button>
-              </div>
-            )}
-          </div>
-          <button className="cap-btn cap-btn-clear" onClick={handleClear} title="Clear packet list">
-            Clear
-          </button>
-          {onMinimize && (
-            <button className="cap-btn" onClick={onMinimize} title="Minimize">
-              −
-            </button>
-          )}
-          <button className="cap-btn cap-btn-close" onClick={handleClose} title="Close capture">
-            <CloseIcon className="app-icon" />
-          </button>
-        </div>
-      </div>
+      <ToolWindowHead
+        icon={PcapIcon}
+        title="Capture"
+        context={`${pod} · ${iface}`}
+        status={`${statusLabel} · ${count} packet${count === 1 ? '' : 's'}`}
+        statusTitle={notice || undefined}
+        tone={STATE_TONE[state] || 'idle'}
+        onMouseDown={onHeaderMouseDown}
+        onMinimize={onMinimize}
+        onClose={handleClose}
+        closeTitle="Close capture"
+      />
 
-      <div className="cap-filterbar">
+      <div className="tw-bar">
         <input
-          className="cap-filter-input"
-          placeholder="display filter — e.g. ospf   icmp   ip==10.0.0.2   proto==tcp"
+          className="tw-input cap-filter-input"
+          placeholder="Display filter, e.g. ospf  icmp  ip==10.0.0.2  proto==tcp"
           spellCheck={false}
           value={filterInput}
           onChange={(e) => setFilterInput(e.target.value)}
@@ -586,25 +543,78 @@ const CapturePanel = ({
             if (e.key === 'Enter') setDisplayFilter(filterInput);
           }}
         />
+        {displayFilter && (
+          <button
+            type="button"
+            className="tw-icon-btn"
+            onClick={() => {
+              setDisplayFilter('');
+              setFilterInput('');
+            }}
+            title="Clear the filter"
+          >
+            <CloseIcon className="app-icon" />
+          </button>
+        )}
         <button
-          className="cap-btn"
+          className="tw-btn"
           onClick={() => setDisplayFilter(filterInput)}
           title="Apply filter"
         >
           Apply
         </button>
-        {displayFilter && (
-          <button
-            className="cap-btn"
-            onClick={() => {
-              setDisplayFilter('');
-              setFilterInput('');
-            }}
-            title="Clear filter"
-          >
-            <CloseIcon className="app-icon" />
+        {live ? (
+          <button className="tw-btn tw-btn-danger" onClick={stop} title="Stop capture">
+            <StopIcon className="app-icon" /> Stop
+          </button>
+        ) : (
+          <button className="tw-btn" onClick={start} title="Start or resume the capture">
+            <PlayIcon className="app-icon" /> Start
           </button>
         )}
+        <div className="cap-save-wrap" ref={saveWrapRef}>
+          <button
+            className="tw-btn"
+            onClick={() => container && setSaveMenuOpen((o) => !o)}
+            disabled={!container}
+            title="Export capture (.pcap)"
+          >
+            <DownloadIcon className="app-icon" /> Save
+            <ChevronDownIcon className="app-icon cap-save-caret" />
+          </button>
+          {saveMenuOpen && (
+            <div className="cap-save-menu">
+              <button
+                className="cap-save-item"
+                onClick={() => {
+                  setSaveMenuOpen(false);
+                  downloadPcap(false);
+                }}
+              >
+                Whole capture
+              </button>
+              <button
+                className="cap-save-item"
+                disabled={!displayFilter}
+                onClick={() => {
+                  if (!displayFilter) return;
+                  setSaveMenuOpen(false);
+                  downloadPcap(true);
+                }}
+                title={
+                  displayFilter
+                    ? 'Export only the filtered packets'
+                    : 'Apply a display filter first'
+                }
+              >
+                Filtered only
+              </button>
+            </div>
+          )}
+        </div>
+        <button className="tw-btn" onClick={handleClear} title="Clear packet list">
+          Clear
+        </button>
       </div>
 
       <div className="cap-body">
@@ -638,7 +648,9 @@ const CapturePanel = ({
                   <td>{Number.isFinite(Number(p.time)) ? Number(p.time).toFixed(6) : p.time}</td>
                   <td>{p.src}</td>
                   <td>{p.dst}</td>
-                  <td className="cap-c-proto">{p.proto}</td>
+                  <td className="cap-c-proto">
+                    <span className="cap-proto">{p.proto}</span>
+                  </td>
                   <td className="cap-c-num">{p.len}</td>
                   <td className="cap-c-info">{p.info}</td>
                 </tr>
