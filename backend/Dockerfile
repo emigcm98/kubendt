@@ -21,8 +21,7 @@ FROM alpine:${ALPINE_VERSION}
 # su-exec lets the entrypoint drop from root to the unprivileged user.
 RUN apk add --no-cache ca-certificates sqlite-libs su-exec && apk upgrade --no-cache
 
-# Non-root user the server actually runs as. Its home is /data (a volume), so
-# any kubeconfig it writes there persists.
+# Non-root user the server actually runs as. Its home is /data (a volume).
 RUN addgroup -S kubendt && adduser -S -G kubendt -h /data kubendt
 
 WORKDIR /app
@@ -42,8 +41,8 @@ ENV KUBENDT_VERSION=${KUBENDT_VERSION} \
 
 ENV PORT=8080
 ENV KUBENDT_DB_PATH=/data/kubendt.db
-# Kubeconfig lives on the /data volume (user-owned, persistent). The entrypoint
-# seeds it from a mounted /kube/config on first run.
+# The server reads its kubeconfig from /data, user-owned. The entrypoint copies
+# it there from a mounted /kube/config at every start.
 ENV HOME=/data
 ENV KUBECONFIG=/data/.kube/config
 

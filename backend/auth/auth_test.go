@@ -136,25 +136,35 @@ func TestBindKeepsTheOwnerAndTheKeyInTheCluster(t *testing.T) {
 		t.Error("the other backend's cookie was rejected")
 	}
 
-	// The password changes in the environment: the store follows and every
-	// session of the owner issued before is out.
-	time.Sleep(1100 * time.Millisecond)
+	// Another password in the environment leaves the owner's alone, it only
+	// sets the first one, and the owner's own change survives a restart.
 	bound = false
 	t.Setenv("KUBENDT_ADMIN_PASSWORD", "pw2")
 	if err := Init(); err != nil {
 		t.Fatal(err)
 	}
-	if !CheckPassword("pw2") || CheckPassword("pw1") {
-		t.Error("the new password did not take")
+	if !CheckPassword("pw1") || CheckPassword("pw2") {
+		t.Error("the variable reset an owner who had a password")
 	}
-	if _, _, ok := ValidateSession(cookie); ok {
-		t.Error("a session from before the password change validated")
+	if _, _, ok := ValidateSession(cookie); !ok {
+		t.Error("a restart ended the owner's session")
+	}
+	const chosen = "chosen-in-the-ui"
+	if err := ChangePassword(OwnerAccount, "pw1", chosen); err != nil {
+		t.Fatal(err)
+	}
+	bound = false
+	if err := Init(); err != nil {
+		t.Fatal(err)
+	}
+	if !CheckPassword(chosen) {
+		t.Error("a restart undid the owner's own change")
 	}
 
 	// A backend that did not restart reads the change from the store.
 	users[OwnerAccount] = &userRecord{Name: OwnerAccount, Role: RoleOwner, Hash: "stale"}
 	storeLoadedAt = time.Now().Add(-time.Minute)
-	if !CheckPassword("pw2") {
+	if !CheckPassword(chosen) {
 		t.Error("the running backend did not pick the new password up")
 	}
 
@@ -172,12 +182,57 @@ func TestBindKeepsTheOwnerAndTheKeyInTheCluster(t *testing.T) {
 	if err := Init(); err != nil {
 		t.Fatal(err)
 	}
-	if !CheckPassword("pw2") {
+	if !CheckPassword(chosen) {
 		t.Error("the stored password was not read")
 	}
 	admin, _ = cs.CoreV1().Secrets("kubendt-system").Get(context.TODO(), "kubendt-user-admin", metav1.GetOptions{})
 	if string(admin.Data["role"]) != RoleOwner || string(admin.Data["source"]) != SourceLocal {
 		t.Errorf("the owner's role was not written back: %v", admin.Data)
+	}
+}
+
+// Deleting the owner's Secret and restarting is the reset: the variable sets
+// the password again, or one is generated, no earlier session counts and the
+// API tokens stay.
+func TestDeletingTheOwnerResetsIt(t *testing.T) {
+	cs := fakeCluster(t, true)
+	secrets := cs.CoreV1().Secrets("kubendt-system")
+	t.Setenv("KUBENDT_ADMIN_PASSWORD", "first-pw")
+	if err := Init(); err != nil {
+		t.Fatal(err)
+	}
+	cookie, _ := CreateSession(OwnerAccount)
+	token, err := CreateAPIToken(OwnerAccount, "ci", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	restartWithout := func(pw string) {
+		t.Helper()
+		if err := secrets.Delete(context.TODO(), userSecretName(OwnerAccount), metav1.DeleteOptions{}); err != nil {
+			t.Fatal(err)
+		}
+		bound = false
+		t.Setenv("KUBENDT_ADMIN_PASSWORD", pw)
+		if err := Init(); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	time.Sleep(1100 * time.Millisecond)
+	restartWithout("reset-pw")
+	if !CheckPassword("reset-pw") || CheckPassword("first-pw") {
+		t.Error("the reset did not take the variable's password")
+	}
+	if _, _, ok := ValidateSession(cookie); ok {
+		t.Error("a session from before the reset validated")
+	}
+	if _, ok := ValidateAPIToken(token); !ok {
+		t.Error("the owner's API token did not survive the reset")
+	}
+
+	restartWithout("")
+	if CheckPassword("reset-pw") || users[OwnerAccount].Hash == "" {
+		t.Error("without the variable the reset generates a password")
 	}
 }
 

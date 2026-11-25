@@ -747,7 +747,10 @@ type VersionResponse struct {
 
 // KubeConfigInfo is returned by GET /kube/config and POST /kube/config.
 type KubeConfigInfo struct {
-	Configured     bool     `json:"configured" example:"true"`
+	Configured bool `json:"configured" example:"true"`
+	// Mode is "kubeconfig", whose contexts the owner may switch between, or
+	// "in-cluster", a backend on its cluster's ServiceAccount, fixed.
+	Mode           string   `json:"mode" example:"kubeconfig" enums:"kubeconfig,in-cluster"`
 	Path           string   `json:"path" example:"/home/user/.kube/config"`
 	CurrentContext string   `json:"current_context" example:"my-cluster"`
 	Contexts       []string `json:"contexts" example:"[\"my-cluster\",\"staging\"]"`
@@ -755,6 +758,8 @@ type KubeConfigInfo struct {
 	// (the kube-system namespace UID). Contexts whose cluster is currently
 	// unreachable are omitted.
 	ContextClusterIDs map[string]string `json:"context_cluster_ids"`
+	// ClusterID is the active cluster's, empty while it cannot be reached.
+	ClusterID string `json:"cluster_id" example:"123cf645-4b94-488d-be6c-1ba407365fe3"`
 }
 
 // NamespaceOperationLockInfo describes an in-progress operation on a namespace.
@@ -773,11 +778,18 @@ type NamespaceOperationResponse struct {
 // SetContextRequest is the body for POST /kube/context.
 type SetContextRequest struct {
 	Context string `json:"context" example:"my-cluster"`
+	// Password is the owner's of the cluster switched to, needed when the
+	// context is on another cluster than the active one.
+	Password string `json:"password,omitempty" example:"its-admin-password"`
 }
 
 // SetKubeContextResponse is returned by POST /kube/context.
 type SetKubeContextResponse struct {
 	CurrentContext string `json:"current_context" example:"my-cluster"`
+	ClusterID      string `json:"cluster_id" example:"123cf645-4b94-488d-be6c-1ba407365fe3"`
+	// ClusterChanged is true when the context is on another cluster: the
+	// accounts and settings are that cluster's, and the owner is signed in there.
+	ClusterChanged bool `json:"cluster_changed" example:"false"`
 }
 
 // NamespaceOperationConflictResponse is returned when an operation lock already exists.
@@ -785,11 +797,6 @@ type NamespaceOperationConflictResponse struct {
 	Error            string `json:"error" example:"Namespace 'prueba' already has an operation in progress"`
 	CurrentOperation string `json:"current_operation,omitempty" example:"modify-network"`
 	StartedAt        string `json:"started_at,omitempty" example:"2026-03-17T16:40:12Z"`
-}
-
-// LoadKubeConfigRequest is a legacy docs helper type.
-type LoadKubeConfigRequest struct {
-	File string `json:"file" example:"<kubeconfig YAML content>"`
 }
 
 // ─── Namespace / simple requests ─────────────────────────────────────────────

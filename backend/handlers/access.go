@@ -54,7 +54,6 @@ var routePermissions = []routeRule{
 	{"GET", "/cluster/nodes/:name", auth.PermAdmin},
 	{"GET", "/kube/config", auth.PermAdmin},
 	{"POST", "/kube/context", auth.PermAdmin},
-	{"POST", "/kube/config", auth.PermAdmin},
 	{"GET", "/state", auth.PermAdmin},
 
 	// Seeing a namespace.

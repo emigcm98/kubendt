@@ -274,7 +274,11 @@ func Save(changes map[string]*string) error {
 	return fmt.Errorf("the settings kept changing while they were saved")
 }
 
-// forget drops the reading, for the tests.
+// Reread drops the reading, so after a switch to another cluster its
+// settings apply at once.
+func Reread() { forget() }
+
+// forget drops the reading.
 func forget() {
 	mu.Lock()
 	snapshot, readAt = nil, time.Time{}

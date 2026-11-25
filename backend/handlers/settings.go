@@ -12,7 +12,11 @@ import (
 
 // The owner may change some of the environment's settings from the portal;
 // any admin may read them.
-func mayEditSettings(c *gin.Context) bool {
+func mayEditSettings(c *gin.Context) bool { return callerIsOwner(c) }
+
+// callerIsOwner tells whether the request comes from the owner, or anyone
+// when authentication is off.
+func callerIsOwner(c *gin.Context) bool {
 	if !auth.Enabled() {
 		return true
 	}

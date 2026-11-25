@@ -4,20 +4,20 @@ set -e
 # This script starts as root so it can prepare root-owned mounts, then drops to
 # the unprivileged "kubendt" user to run the actual server.
 
-# Where the kubeconfig is read from and written to. Mirrors the app: KUBECONFIG
-# is the source of truth (falls back to the default when unset).
+# Where the server reads the kubeconfig. Mirrors the app: KUBECONFIG is the
+# source of truth (falls back to the default when unset).
 KUBECONFIG_PATH="${KUBECONFIG:-/data/.kube/config}"
 KUBE_DIR="$(dirname "$KUBECONFIG_PATH")"
 
 # Named volumes mount as root-owned; create and make them writable by the user.
 mkdir -p /data /app/files "$KUBE_DIR"
 
-# Seed the persistent kubeconfig from a mounted one on first run only, so that
-# kubeconfigs uploaded later through the API survive restarts. The mounted file
-# is often 0600 and root-owned, which only root (this entrypoint) can read.
-if [ ! -f "$KUBECONFIG_PATH" ] && [ -f /kube/config ]; then
+# Copy the mounted kubeconfig at every start, so a context added to it on the
+# host shows after a restart. The mounted file is often 0600 and owned by
+# someone else, which only root (this entrypoint) can read.
+if [ -f /kube/config ]; then
     cp /kube/config "$KUBECONFIG_PATH"
-    echo "entrypoint: seeded kubeconfig from /kube/config -> $KUBECONFIG_PATH"
+    echo "entrypoint: kubeconfig copied from /kube/config -> $KUBECONFIG_PATH"
 fi
 
 chown -R kubendt:kubendt /data /app/files "$KUBE_DIR"

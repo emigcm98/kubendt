@@ -8,7 +8,7 @@
    <a href="https://doi.org/10.5281/zenodo.21276320"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.21276320.svg" alt="DOI" /></a>
 </p>
 
-> Last reviewed: 24 Nov 2026
+> Last reviewed: 26 Nov 2026
 
 **KubeNDT** is a platform for deploying and operating virtual network topologies on Kubernetes.
 
@@ -86,8 +86,7 @@ KubeNDT bundles a small set of third-party SVG icons in its frontend. See [ATTRI
 ### Requirements
 
 - **Kubernetes 1.25+** with **Meshnet CNI** plugin installed (the toolbox is an ephemeral container, GA since 1.25; everything else the backend asks of the API, StatefulSets, CRDs, Leases for the operation lock, pod affinity and sysctls, is older, see [doc/DEPLOYMENT.md](doc/DEPLOYMENT.md)). **1.30 or newer is recommended**: pod execs go over WebSocket there, as kubectl does, and an older API server falls back to SPDY, about a third slower per exec. The kubelet of every worker must allow the `net.ipv4.ip_forward` and `net.ipv6.conf.all.forwarding` sysctls, which router and switch pods set. You can follow the [Kubernetes Installation Guide](doc/How-to-deploy-a-K8s-cluster.md) for more information.
-- A valid kubeconfig with cluster context
-- Docker & Docker Compose (for production deployment)
+- To run KubeNDT outside the cluster, a kubeconfig with a context on it, and Docker with Docker Compose
 - Optional: QEMU support for VM-based node types (requires `/dev/kvm`)
 
 **Node images.** Any container image can be a node: with no `commands` it runs its entrypoint with a tty, so a plain alpine or ubuntu stays up as it is, and `commands` replaces the entrypoint and has to keep running. What the platform needs in the node's network namespace (`ip`, `tc`, `iptables`, capture) comes from the pod's toolbox when the image lacks it, `ghcr.io/emigcm98/kubendt-toolbox` unless `KUBENDT_TOOLBOX_IMAGE` says otherwise. A node whose startup installs or starts what the lab uses can declare a `readiness` command. The detail is in [doc/DRIVERS.md](doc/DRIVERS.md).
@@ -99,9 +98,29 @@ KubeNDT bundles a small set of third-party SVG icons in its frontend. See [ATTRI
 
 For troubleshooting steps, see [doc/TROUBLESHOOTING.md](doc/TROUBLESHOOTING.md).
 
+### In the cluster or outside it
+
+KubeNDT runs inside the cluster it manages or outside it, and that decides what it serves:
+
+- **In the cluster**, installed with `kubectl apply -k`, the backend uses its own ServiceAccount and serves that cluster only. This is the install a group shares.
+- **Outside it**, with Docker Compose or from source, the backend uses your kubeconfig and starts on its current context. The owner may switch to the kubeconfig's other contexts from the cluster page. It suits one person's lab, such as kind or minikube on a laptop.
+
+Accounts, labs and settings live in the cluster either way, so a context on another cluster is another KubeNDT with its own admin. The comparison is in [doc/DEPLOYMENT.md](doc/DEPLOYMENT.md#in-the-cluster-or-outside-it).
+
+### Run in the cluster
+
+```bash
+kubectl create namespace kubendt-system
+kubectl -n kubendt-system create secret generic kubendt-backend-env --from-literal=KUBENDT_ADMIN_PASSWORD='change-me'
+kubectl apply -k "https://github.com/emigcm98/kubendt/deploy/k8s?ref=v1.13.0"
+kubectl -n kubendt-system port-forward svc/kubendt-frontend 8080:80
+```
+
+Then open http://localhost:8080. A NodePort, an Ingress and the backend's settings are in [doc/DEPLOYMENT.md](doc/DEPLOYMENT.md#deployment-in-the-cluster).
+
 ### Run with Docker Compose
 
-This is how you deploy and use KubeNDT. It runs as two containers: the `backend` (Go API) and the `frontend` (the React dashboard served by nginx, which also reverse-proxies `/api` to the backend). Make sure your kubeconfig is at `~/.kube/config`; it is mounted read-only into the backend.
+This runs KubeNDT outside the cluster, as two containers: the `backend` (Go API) and the `frontend` (the React dashboard served by nginx, which also reverse-proxies `/api` to the backend). Make sure your kubeconfig is at `~/.kube/config`; it is mounted read-only into the backend.
 
 **Published images** (nothing to compile). Grab the compose file and run:
 
@@ -122,11 +141,11 @@ docker compose up --build
 
 Either way, open http://localhost in your browser.
 
-**Authentication:** the dashboard and API require login. The provided compose files ship a default password **`admin123`**, change it via `KUBENDT_ADMIN_PASSWORD` before any real use. If you unset it entirely, a random password is generated and printed once in the backend logs. For programmatic access, create an API token in the dashboard and send it as `Authorization: Bearer <token>`. That password is the `admin` account's, which creates the others: see [doc/USERS.md](doc/USERS.md) for accounts, sharing and quotas, and [doc/DEPLOYMENT.md](doc/DEPLOYMENT.md#authentication) for all auth variables.
+**Authentication:** the dashboard and API require login. The provided compose files ship a default password **`admin123`**, which the owner gets at the first start on a cluster. Change `KUBENDT_ADMIN_PASSWORD` before that for any real use, or the password on the profile page after. If you unset it entirely, a random password is generated and printed once in the backend logs. For programmatic access, create an API token in the dashboard and send it as `Authorization: Bearer <token>`. That password is the `admin` account's, which creates the others: see [doc/USERS.md](doc/USERS.md) for accounts, sharing and quotas, and [doc/DEPLOYMENT.md](doc/DEPLOYMENT.md#authentication) for all auth variables.
 
 **Common settings** (in the compose file's `environment:`, or via your shell):
 
-- `KUBENDT_ADMIN_PASSWORD`: admin login password (default `admin123`).
+- `KUBENDT_ADMIN_PASSWORD`: the admin's password at the first start on a cluster (default `admin123`).
 - `KUBENDT_TAG`: published image tag to run, e.g. `1.0.0` (default `latest`).
 - `KUBENDT_AUTH_DISABLED=true`: run without authentication (trusted networks only).
 - `KUBENDT_COOKIE_SECURE=true`: set when serving over HTTPS.

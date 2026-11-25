@@ -29,7 +29,7 @@ var (
 	clusterIDMu     sync.RWMutex
 	cachedClusterID string
 
-	// ctxIDMu guards ctxIDCache, a context-name -> cluster-id memo used to
+	// ctxIDMu guards ctxIDCache, a "context|server" -> cluster-id memo used to
 	// annotate the context list in the UI. Cluster IDs are immutable, so a
 	// successful lookup is cached forever; failures are not cached (the cluster
 	// may just be transiently unreachable).
@@ -52,6 +52,9 @@ func SetClusterIDForTest(id string) {
 	cachedClusterID = id
 	clusterIDMu.Unlock()
 }
+
+// SetModeForTest fixes how the client was built, for tests with none.
+func SetModeForTest(m string) { mode = m }
 
 // CurrentClusterID returns the canonical ID of the currently active cluster,
 // resolving it from the live cluster on first use and caching it until the
@@ -80,41 +83,47 @@ func CurrentClusterID() (string, error) {
 }
 
 // ClusterIDForContext resolves the canonical ID of an arbitrary context without
-// disturbing the active client. Best-effort and memoized: used only to label
-// the context picker. Returns an error (and caches nothing) when the context is
-// unreachable.
+// disturbing the active client, to label the context picker. It is memoized
+// by the context and its server, so a context the kubeconfig repoints gets
+// looked up again; nothing is cached while the context is unreachable.
 func ClusterIDForContext(contextName string) (string, error) {
+	path := resolveKubeconfigPath()
+	if path == "" {
+		return "", errors.New("kubeconfig not found")
+	}
+	cfg, err := loadConfig(path, contextName)
+	if err != nil {
+		return "", err
+	}
+	key := contextName + "|" + cfg.Host
+
 	ctxIDMu.Lock()
-	if id, ok := ctxIDCache[contextName]; ok {
+	if id, ok := ctxIDCache[key]; ok {
 		ctxIDMu.Unlock()
 		return id, nil
 	}
 	ctxIDMu.Unlock()
 
-	path := resolveKubeconfigPath()
-	if path == "" {
-		return "", errors.New("kubeconfig not found")
-	}
-
-	cfg, err := loadConfig(path, contextName)
-	if err != nil {
-		return "", err
-	}
 	cfg.Timeout = contextIDResolveTimeout
 	cs, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
 		return "", err
 	}
-
 	id, err := fetchKubeSystemUIDWithTimeout(cs, contextIDResolveTimeout)
 	if err != nil {
 		return "", err
 	}
 
 	ctxIDMu.Lock()
-	ctxIDCache[contextName] = id
+	ctxIDCache[key] = id
 	ctxIDMu.Unlock()
 	return id, nil
+}
+
+// ClusterIDOf reads the canonical ID of the cluster a client reaches, fresh,
+// for decisions that must not rest on a memo.
+func ClusterIDOf(cs kubernetes.Interface) (string, error) {
+	return fetchKubeSystemUIDWithTimeout(cs, clusterIDResolveTimeout)
 }
 
 // ClusterIDsForContexts resolves the canonical ID of every named context

@@ -9,6 +9,7 @@ metadata:
   name: kubendt-backend-env
 type: Opaque
 stringData:
+  # The owner's first password, ignored once the cluster has an owner.
   KUBENDT_ADMIN_PASSWORD: change-me
 ---
 apiVersion: v1

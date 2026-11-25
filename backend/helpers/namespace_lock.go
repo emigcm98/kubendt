@@ -155,6 +155,23 @@ func ReleaseNamespaceOperationLock(namespace string) error {
 	return nil
 }
 
+// HeldOperationLock is a lock in force in any namespace of the cluster, nil
+// when none is, so a switch to another cluster waits for every operation.
+func HeldOperationLock() (*NamespaceOperationLock, error) {
+	list, err := leases(metav1.NamespaceAll).List(context.TODO(), metav1.ListOptions{FieldSelector: "metadata.name=" + LockLeaseName})
+	if err != nil {
+		return nil, fmt.Errorf("could not read the operation locks: %w", err)
+	}
+	now := lockNow().UTC()
+	for i := range list.Items {
+		l := &list.Items[i]
+		if l.Name == LockLeaseName && !leaseExpired(l, now) {
+			return lockOf(l), nil
+		}
+	}
+	return nil, nil
+}
+
 // GetNamespaceOperationLock is the lock in force, nil when there is none or
 // the one there expired.
 func GetNamespaceOperationLock(namespace string) (*NamespaceOperationLock, error) {

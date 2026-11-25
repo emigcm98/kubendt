@@ -504,15 +504,11 @@ const Home = () => {
           <WarningIcon className="app-icon" aria-hidden="true" />
           {auth.isAdmin ? (
             <span>
-              <strong>No kubeconfig loaded.</strong> Load one on the{' '}
-              <button type="button" onClick={() => navigate('/cluster')}>
-                cluster page
-              </button>{' '}
-              to start.
+              <strong>No kubeconfig loaded.</strong> Mount one and restart the backend to start.
             </span>
           ) : (
             <span>
-              <strong>KubeNDT has no cluster yet.</strong> An admin has to load a kubeconfig.
+              <strong>KubeNDT has no cluster yet.</strong> An admin has to give it a kubeconfig.
             </span>
           )}
         </div>

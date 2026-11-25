@@ -136,9 +136,8 @@ func Init() error {
 	return nil
 }
 
-// Bind takes the store of the configured cluster, once: the first cluster is
-// the home cluster, and a context switch later does not move the users or
-// the tokens. It is what the kubeconfig endpoints call after a load.
+// Bind takes the store of the cluster the backend starts on, once. A context
+// switch moves to another cluster's store with Rebind.
 func Bind() error {
 	if !enabled || IsBound() {
 		return nil
@@ -176,11 +175,10 @@ func IsBound() bool {
 	return bound
 }
 
-// resolveOwnerPassword sets the owner account from KUBENDT_ADMIN_PASSWORD
-// (the source of truth when set, written to the store when it changed, which
-// also ends the owner's sessions), from the stored record, or from a
-// password generated and printed once. stored is nil when no cluster holds
-// one. An owner stored by a backend older than the roles gets its role.
+// resolveOwnerPassword sets the owner account from the stored record, and
+// only where there is none from KUBENDT_ADMIN_PASSWORD or a password
+// generated and printed once. stored is nil when no cluster holds one. An
+// owner stored by a backend older than the roles gets its role.
 func resolveOwnerPassword(stored *userRecord) error {
 	owner := &userRecord{Name: OwnerAccount, Role: RoleOwner, Source: SourceLocal, CreatedAt: nowUnix()}
 	if stored != nil {
@@ -203,16 +201,28 @@ func resolveOwnerPassword(stored *userRecord) error {
 		mu.Unlock()
 	}
 
-	if pw := os.Getenv("KUBENDT_ADMIN_PASSWORD"); pw != "" {
-		if owner.Hash != "" && bcrypt.CompareHashAndPassword([]byte(owner.Hash), []byte(pw)) == nil {
-			if needsRole {
-				if err := persist(); err != nil {
-					return err
-				}
-			}
-			keep()
-			return nil
+	// The cluster's owner stands. The variable only sets the first password,
+	// so a compose pointed at another KubeNDT or a pod restart after the owner
+	// changed theirs does not reset it.
+	if owner.Hash != "" {
+		if pw := os.Getenv("KUBENDT_ADMIN_PASSWORD"); pw != "" && bcrypt.CompareHashAndPassword([]byte(owner.Hash), []byte(pw)) != nil {
+			log.Printf("ℹ️ KUBENDT_ADMIN_PASSWORD is not the owner's password, which stays: the variable only sets the first one. To reset it, delete the Secret %s and restart", userSecretName(OwnerAccount))
 		}
+		if needsRole {
+			if err := persist(); err != nil {
+				return err
+			}
+		}
+		keep()
+		return nil
+	}
+
+	// A new owner in the cluster, also after its Secret was deleted to reset
+	// it: the session key stayed, so no session from before counts.
+	if homeSecrets != nil {
+		owner.SessionsValidAfter = nowUnix()
+	}
+	if pw := os.Getenv("KUBENDT_ADMIN_PASSWORD"); pw != "" {
 		h, err := hashPassword(pw)
 		if err != nil {
 			return err
@@ -220,23 +230,9 @@ func resolveOwnerPassword(stored *userRecord) error {
 		if checkPassword(OwnerAccount, pw) != nil {
 			log.Printf("⚠️ KUBENDT_ADMIN_PASSWORD does not meet the password policy")
 		}
-		if owner.Hash != "" {
-			owner.SessionsValidAfter = nowUnix()
-			log.Printf("🔒 Admin password changed, every session of the owner must sign in again")
-		}
 		owner.Hash = h
 		if err := persist(); err != nil {
 			return err
-		}
-		keep()
-		return nil
-	}
-
-	if owner.Hash != "" {
-		if needsRole {
-			if err := persist(); err != nil {
-				return err
-			}
 		}
 		keep()
 		return nil
@@ -266,7 +262,7 @@ func resolveOwnerPassword(stored *userRecord) error {
 		return err
 	}
 	keep()
-	log.Printf("🔑 Generated admin password (shown once; set KUBENDT_ADMIN_PASSWORD to override):")
+	log.Printf("🔑 Generated admin password (shown once, change it from the account menu):")
 	log.Printf("      user: admin   password: %s", pw)
 	return nil
 }

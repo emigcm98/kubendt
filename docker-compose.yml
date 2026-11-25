@@ -11,7 +11,8 @@ services:
       - KUBENDT_DB_PATH=/data/kubendt.db
       - CORS_ALLOWED_ORIGINS=http://localhost
       - SWAGGER_BASE_PATH=/api/
-      # Admin password for login. CHANGE THIS for anything but local use.
+      # The admin's password at the first start on a cluster, ignored after
+      # that. CHANGE THIS for anything but local use.
       - KUBENDT_ADMIN_PASSWORD=admin123
     volumes:
       - kubendt-files:/app/files

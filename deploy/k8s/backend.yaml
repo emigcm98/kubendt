@@ -39,7 +39,8 @@ spec:
           # doc/DEPLOYMENT.md): the admin password and anything secret in the
           # Secret, the plain settings in the ConfigMap. Both optional; without
           # the password a generated one is printed once in the log. A change
-          # takes effect on the next rollout restart.
+          # takes effect on the next rollout restart, the password only on a
+          # cluster with no owner yet.
           envFrom:
             - secretRef:
                 name: kubendt-backend-env
