@@ -51,7 +51,7 @@
 }
 
 .external-link-row {
-  font-family: Consolas, 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 0.8rem;
   color: var(--text-body);
   margin: 0.15rem 0;

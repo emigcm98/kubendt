@@ -6,7 +6,7 @@
   height: 100vh;
   overflow: hidden;
   background: var(--surface);
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: var(--font-sans);
   color: var(--text-body);
 }
 
@@ -417,7 +417,7 @@
   border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--text-heading);
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 0.9rem;
   word-break: break-all;
 }

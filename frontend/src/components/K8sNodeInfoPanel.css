@@ -1,9 +1,12 @@
-/* === Backdrop + drawer === */
+/* The node panel, a drawer from the right, opened from the Home's cluster
+   card and from /cluster. Its chips and meters are the Home tile's
+   (K8sBits.css); here the frame, the header and the sections. It sets its
+   own font and alignment, since it mounts on more than one page. */
 .kni-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 30, 60, 0.35);
   z-index: 1000;
+  background: color-mix(in srgb, var(--scrim-color) 35%, transparent);
   animation: kni-fade-in 0.18s ease-out;
 }
 
@@ -12,15 +15,21 @@
   top: 0;
   right: 0;
   bottom: 0;
-  width: 520px;
-  max-width: 100vw;
-  background: var(--surface);
-  box-shadow: -8px 0 24px rgba(15, 30, 60, 0.18);
   z-index: 1001;
   display: flex;
   flex-direction: column;
+  width: 520px;
+  max-width: 100vw;
+  box-sizing: border-box;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: left;
+  color: var(--text-body);
+  background: var(--panel-from);
+  border-left: 1px solid var(--panel-border);
+  box-shadow: -12px 0 32px color-mix(in srgb, var(--shadow-color) 18%, transparent);
   animation: kni-slide-in 0.22s ease-out;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 @keyframes kni-fade-in {
@@ -34,194 +43,115 @@
 
 @keyframes kni-slide-in {
   from {
-    transform: translateX(20px);
     opacity: 0;
+    transform: translateX(20px);
   }
   to {
-    transform: translateX(0);
     opacity: 1;
+    transform: translateX(0);
   }
 }
 
-/* === Header === */
-.kni-header {
-  flex-shrink: 0;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
-  color: var(--text-on-brand);
-  padding: 18px 22px;
+.kni-head {
   display: flex;
   align-items: flex-start;
   gap: 12px;
+  flex: none;
+  padding: 18px 16px 14px 20px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-light);
 }
 
-.kni-header-main {
+.kni-head-icon {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin-top: 18px;
+  color: var(--primary);
+}
+
+.kni-head-main {
   flex: 1;
   min-width: 0;
 }
 
-.kni-header-eyebrow {
-  font-size: 0.72rem;
+.kni-eyebrow {
+  font-size: 11px;
   font-weight: 700;
+  letter-spacing: 0.4px;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  color: color-mix(in srgb, var(--text-on-brand) 75%, transparent);
-  margin-bottom: 4px;
+  color: var(--text-subtle);
 }
 
-.kni-header-title {
-  margin: 0;
-  font-size: 1.35rem;
-  font-weight: 800;
-  letter-spacing: 0.2px;
-  color: var(--text-on-brand);
-  word-break: break-all;
+.kni-title {
+  margin: 2px 0 8px;
+  overflow: hidden;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-heading);
 }
 
-.kni-header-meta {
+.kni-chips {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
-  margin-top: 10px;
-  align-items: center;
 }
 
-.kni-chip {
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  background: color-mix(in srgb, var(--text-on-brand) 18%, transparent);
-  color: var(--text-on-brand);
-  padding: 3px 9px;
-  border-radius: var(--radius-pill);
-  border: 1px solid color-mix(in srgb, var(--text-on-brand) 28%, transparent);
-}
-
-.kni-status {
+.kni-mesh {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 3px 9px;
-  border-radius: var(--radius-pill);
-}
-
-.kni-status-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: currentColor;
-}
-
-.kni-status-ready {
-  background: var(--success-accent);
-  color: var(--text-on-brand);
-}
-
-.kni-status-notready {
-  background: var(--danger-bg);
-  color: var(--danger-strong);
-}
-
-.kni-status-unknown {
-  background: var(--border-light);
-  color: var(--text-muted);
-}
-
-.kni-meshnet {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 3px 9px;
-  border-radius: var(--radius-pill);
-  cursor: default;
-}
-
-.kni-meshnet-ok {
-  background: var(--success-bg);
-  color: var(--success);
-}
-
-.kni-meshnet-down {
-  background: var(--danger-bg);
-  color: var(--danger-strong);
-}
-
-.kni-meshnet-unknown {
-  background: var(--border-light);
+  font-size: 12px;
   color: var(--text-muted);
 }
 
 .kni-close {
-  background: color-mix(in srgb, var(--text-on-brand) 12%, transparent);
-  color: var(--text-on-brand);
-  border: 1px solid color-mix(in srgb, var(--text-on-brand) 28%, transparent);
+  display: grid;
+  place-items: center;
+  flex: none;
   width: 32px;
   height: 32px;
-  border-radius: var(--radius-md);
+  padding: 0;
+  font-size: 16px;
+  color: var(--text-subtle);
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.85rem;
-  transition: background 0.15s ease;
-  flex-shrink: 0;
 }
 
 .kni-close:hover {
-  background: color-mix(in srgb, var(--text-on-brand) 24%, transparent);
+  color: var(--text-heading);
+  background: var(--panel-from);
 }
 
-/* === Body === */
 .kni-body {
+  display: flex;
   flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  padding: 16px;
   overflow-y: auto;
-  padding: 14px 18px 24px 18px;
 }
 
-.kni-body::-webkit-scrollbar {
-  width: 8px;
-}
-
-.kni-body::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: var(--radius-sm);
-}
-
-.kni-body::-webkit-scrollbar-thumb:hover {
-  background: #95a9c0;
-}
-
-.kni-loading,
-.kni-error {
+.kni-loading {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  padding: 32px 14px;
+  padding: 40px 0;
   color: var(--text-muted);
-  font-size: 0.92rem;
-}
-
-.kni-error {
-  color: var(--danger-strong);
-  background: var(--danger-bg);
-  border: 1px solid #f0bcb4;
-  border-radius: var(--radius-md);
-  padding: 14px 16px;
 }
 
 .kni-spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid #cfd8dc;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border);
   border-top-color: var(--primary);
   border-radius: 50%;
   animation: kni-spin 0.8s linear infinite;
@@ -233,54 +163,86 @@
   }
 }
 
-/* === Sections === */
-.kni-section {
-  margin-top: 12px;
-  padding: 12px 14px;
-  background: linear-gradient(180deg, #f7faff 0%, #eef3fa 100%);
-  border: 1px solid var(--border-light);
+.kni-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  color: var(--danger-strong);
+  background: var(--danger-bg);
+  border: 1px solid color-mix(in srgb, var(--danger) 25%, transparent);
   border-radius: var(--radius-md);
 }
 
-.kni-section:first-child {
-  margin-top: 4px;
+/* A section: a card with a small heading. */
+.kni-section {
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-lg);
 }
 
 .kni-section-title {
-  margin: 0 0 8px 0;
-  font-size: 0.78rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--text-heading);
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--text-muted);
 }
 
 .kni-section-count {
-  font-size: 0.65rem;
-  background: var(--primary);
-  color: var(--text-on-brand);
-  padding: 2px 7px;
+  padding: 0 7px;
+  font-size: 11px;
+  letter-spacing: 0;
+  color: var(--text-muted);
+  background: var(--panel-from);
+  border: 1px solid var(--border-light);
   border-radius: var(--radius-pill);
-  letter-spacing: 0.3px;
 }
 
-.kni-section-body {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.kni-note {
+  margin: 0;
+  color: var(--text-muted);
 }
 
-/* === Key/value row === */
+/* CPU and RAM as the Home tile shows them. */
+.kni-usage {
+  display: grid;
+  grid-template-columns: 36px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-muted);
+}
+
+.kni-usage + .kni-usage {
+  margin-top: 8px;
+}
+
+.kni-usage > span:last-child {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.kni-usage b {
+  display: inline-block;
+  min-width: 48px;
+  margin-left: 8px;
+  text-align: right;
+  color: var(--text-heading);
+}
+
+/* A key and its value, one row each. */
 .kni-kv {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 10px;
-  padding: 4px 0;
-  border-bottom: 1px dashed rgba(149, 169, 192, 0.25);
+  gap: 16px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border-light);
 }
 
 .kni-kv:last-child {
@@ -288,20 +250,26 @@
 }
 
 .kni-kv-key {
+  flex: none;
   color: var(--text-muted);
-  font-size: 0.82rem;
-  font-weight: 600;
-  flex-shrink: 0;
 }
 
 .kni-kv-value {
-  color: #1f2a37;
-  font-size: 0.85rem;
-  text-align: right;
+  min-width: 0;
   overflow: hidden;
+  text-align: right;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 70%;
+  color: var(--text-heading);
+}
+
+.kni-mono {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.kni-na {
+  color: var(--text-subtle);
 }
 
 .kni-kv-multiline {
@@ -310,74 +278,22 @@
   gap: 2px;
 }
 
-.kni-kv-multiline .kni-kv-value {
-  text-align: left;
-  white-space: pre-wrap;
-  word-break: break-word;
-  max-width: 100%;
+.kni-kv-multiline .kni-kv-key {
+  color: var(--text-heading);
 }
 
-.kni-mono {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 0.78rem;
+.kni-kv-multiline .kni-kv-value {
+  text-align: left;
+  white-space: normal;
 }
 
 .kni-pre {
-  white-space: pre-wrap;
-  word-break: break-word;
+  white-space: pre-wrap !important;
+  word-break: break-all;
+  color: var(--text-muted) !important;
 }
 
-.kni-na {
-  color: #b0b9c4;
-  font-style: italic;
-}
-
-/* === Live usage bars === */
-.kni-usage-row {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.kni-usage-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.kni-usage-label {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  font-weight: 600;
-}
-
-.kni-usage-bar {
-  height: 12px;
-  background: #e0e8f1;
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-}
-
-.kni-usage-bar-fill {
-  height: 100%;
-  /* Width is fed by the JS-set --kni-fill custom property so we don't have
-       to inline `style={{ width: ... }}` in the JSX. */
-  width: var(--kni-fill, 0%);
-  border-radius: var(--radius-sm);
-  transition: width 0.3s ease;
-}
-
-.kni-bar-cpu {
-  background: linear-gradient(90deg, #42a5f5 0%, var(--primary) 100%);
-}
-
-.kni-bar-mem {
-  background: linear-gradient(90deg, #66bb6a 0%, var(--success-accent) 100%);
-}
-
-/* === Capacity grid === */
+/* Capacity against what is allocatable, as the Home's figures. */
 .kni-cap-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -388,21 +304,24 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  background: color-mix(in srgb, var(--surface) 60%, transparent);
-  border: 1px solid rgba(149, 169, 192, 0.25);
-  border-radius: var(--radius-sm);
-  padding: 6px 9px;
+  padding: 8px 10px;
+  background: var(--panel-from);
+  border-radius: var(--radius-md);
 }
 
 .kni-cap-label {
-  font-size: 0.66rem;
+  font-size: 10px;
   font-weight: 700;
+  letter-spacing: 0.4px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-muted);
+  color: var(--text-subtle);
 }
 
-/* === Conditions === */
+.kni-cap-cell .kni-mono {
+  color: var(--text-heading);
+}
+
+/* Conditions, each a chip, green when it is as it should be. */
 .kni-conditions {
   display: flex;
   flex-wrap: wrap;
@@ -413,100 +332,90 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.78rem;
-  padding: 4px 10px;
-  border-radius: var(--radius-pill);
-  border: 1px solid transparent;
-  cursor: default;
-}
-
-.kni-condition-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: currentColor;
-}
-
-.kni-condition-type {
+  padding: 2px 10px;
+  font-size: 12px;
   font-weight: 600;
-}
-
-.kni-condition-status {
-  font-family: 'Monaco', 'Menlo', monospace;
-  font-size: 0.72rem;
-  opacity: 0.85;
+  border-radius: var(--radius-pill);
 }
 
 .kni-condition-good {
-  background: var(--success-bg);
   color: var(--success);
-  border-color: color-mix(in srgb, var(--success) 25%, transparent);
+  background: var(--success-bg);
 }
 
 .kni-condition-bad {
+  color: var(--danger);
   background: var(--danger-bg);
-  color: var(--danger-strong);
-  border-color: color-mix(in srgb, var(--danger-strong) 25%, transparent);
 }
 
-/* === Taints === */
+.kni-condition-dot {
+  width: 6px;
+  height: 6px;
+  background: currentColor;
+  border-radius: 50%;
+}
+
+.kni-condition-status {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 400;
+  opacity: 0.8;
+}
+
 .kni-taint {
-  background: var(--warning-bg);
-  border: 1px solid var(--warning-border);
-  color: #5a3a00;
   padding: 4px 8px;
+  margin-bottom: 4px;
+  color: var(--warning-text);
+  background: var(--warning-bg);
   border-radius: var(--radius-sm);
-  word-break: break-all;
-}
-
-.kni-taint-eq {
-  color: #8a6300;
 }
 
 .kni-taint-effect {
-  color: var(--danger-strong);
   font-weight: 700;
 }
 
-/* === Tags (labels / annotations) === */
+/* Labels as small mono chips. */
 .kni-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 6px;
 }
 
 .kni-tag {
-  display: inline-flex;
-  background: var(--surface);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-sm);
-  padding: 2px 7px;
-  font-size: 0.72rem;
   max-width: 100%;
+  padding: 2px 8px;
   overflow: hidden;
+  font-size: 11px;
   text-overflow: ellipsis;
   white-space: nowrap;
+  background: var(--panel-from);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
 }
 
 .kni-tag-key {
-  color: var(--primary-hover);
-  font-weight: 600;
+  color: var(--primary);
 }
 
 .kni-tag-value {
-  color: #1f2a37;
-  margin-left: 1px;
+  color: var(--text-heading);
 }
 
-.kni-collapse > summary {
-  cursor: pointer;
+.kni-collapse summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
   color: var(--primary);
-  font-size: 0.82rem;
-  font-weight: 600;
-  user-select: none;
-  margin-bottom: 6px;
+  cursor: pointer;
 }
 
-.kni-collapse > summary:hover {
-  color: var(--primary-hover);
+.kni-collapse[open] summary {
+  margin-bottom: 8px;
+}
+
+.kni-collapse .kni-tags {
+  flex-direction: column;
+  flex-wrap: nowrap;
 }

@@ -10,6 +10,8 @@ import { ReactComponent as ErrorIcon } from '../assets/images/icons/error.svg';
 import { ReactComponent as FolderIcon } from '../assets/images/icons/folder.svg';
 import { ReactComponent as RefreshIcon } from '../assets/images/icons/refresh.svg';
 import { ReactComponent as ClusterIcon } from '../assets/images/icons/cluster.svg';
+import { ReactComponent as ChevronIcon } from '../assets/images/icons/chevron-right.svg';
+import { Meter, meshnetDot, vcpu, gib, fixed } from '../components/K8sBits';
 import './ClusterPage.css';
 
 // The admins' page for the cluster under KubeNDT: its nodes and their use,
@@ -230,7 +232,7 @@ const ClusterPage = () => {
   if (auth.enabled && !auth.isAdmin) return <Navigate to="/" replace />;
 
   return (
-    <div className="cluster-page">
+    <div className="cl-page">
       <AppHeader
         title={{
           icon: ClusterIcon,
@@ -239,227 +241,202 @@ const ClusterPage = () => {
         }}
       />
       {kubeConfigured === false && (
-        <div className="kubeconfig-gate-banner" role="alert">
-          <WarningIcon className="kubeconfig-gate-icon" aria-hidden="true" />
-          <div className="kubeconfig-gate-text">
-            <strong>No kubeconfig loaded.</strong> KubeNDT needs one to talk to a cluster. Load it
-            in the <em>Kubectl context</em> panel.
-          </div>
+        <div className="cl-gate" role="alert">
+          <WarningIcon className="app-icon" aria-hidden="true" />
+          <span>
+            <strong>No kubeconfig loaded.</strong> KubeNDT needs one to talk to a cluster, load it
+            in the context card.
+          </span>
         </div>
       )}
-      <div className="cluster-page-body">
-        {/* Cluster Status Panel */}
-        <div className="cluster-status-card">
-          <div className="cluster-card-header">
-            <h2 className="cluster-card-title">
-              Cluster status{' '}
-              {clusterStatus && (
-                <span className="cluster-status-badge">
-                  Ready {clusterStatus.ready}/{clusterStatus.total}
-                </span>
-              )}
-              {meshnetBadge && (
-                <span
-                  className={`meshnet-badge meshnet-${meshnetBadge.cls}`}
-                  title={meshnetBadge.title}
-                >
-                  <span className="meshnet-dot" aria-hidden="true" />
-                  {meshnetBadge.label}
-                </span>
-              )}
-            </h2>
-            <div className="cluster-refresh-controls">
-              <button
-                className="refresh-btn"
-                onClick={fetchClusterStatus}
-                disabled={clusterLoading || kubeConfigured === false}
-                title="Refresh cluster status"
+      <div className="cl-main">
+        <section className="cl-card cl-nodes">
+          <div className="cl-card-head">
+            <h2 className="cl-card-title">Nodes</h2>
+            {clusterStatus?.nodes && (
+              <span
+                className={`k8s-pill k8s-pill-${clusterStatus.ready === clusterStatus.total ? 'ok' : 'warn'}`}
               >
-                <RefreshIcon style={{ width: 15, height: 15 }} />
-              </button>
-            </div>
+                Ready {clusterStatus.ready}/{clusterStatus.total}
+              </span>
+            )}
+            {meshnetBadge && (
+              <span
+                className={`k8s-pill k8s-pill-${meshnetBadge.cls === 'ok' ? 'ok' : meshnetBadge.cls === 'unknown' ? 'warn' : 'bad'}`}
+                title={meshnetBadge.title}
+              >
+                {meshnetBadge.label}
+              </span>
+            )}
+            <span className="cl-space" />
+            <button
+              type="button"
+              className="cl-icon-btn"
+              onClick={fetchClusterStatus}
+              disabled={clusterLoading || kubeConfigured === false}
+              title="Refresh the nodes"
+            >
+              <RefreshIcon className="app-icon" />
+            </button>
           </div>
+
           {initialClusterLoading ? (
-            <div className="cluster-loading">
-              <LoadingIcon className="app-icon" aria-hidden="true" /> Loading cluster information...
+            <div className="cl-empty">
+              <LoadingIcon className="app-icon" aria-hidden="true" /> Loading the cluster…
             </div>
           ) : clusterStatus && clusterStatus.nodes && clusterStatus.nodes.length > 0 ? (
             <>
               {clusterAggregates && (
-                <div className="cluster-summary-strip">
-                  <div className="cluster-summary-item">
-                    <span className="cluster-summary-label">Ready</span>
-                    <span className="cluster-summary-value">
-                      {clusterAggregates.ready}/{clusterAggregates.total}
-                    </span>
+                <div className="cl-stats">
+                  <div>
+                    <small>Nodes</small>
+                    <b>{clusterAggregates.total}</b>
                   </div>
-                  {clusterAggregates.metricsAvailable ? (
-                    <>
-                      <div className="cluster-summary-divider" />
-                      <div className="cluster-summary-item">
-                        <span className="cluster-summary-label">Avg CPU</span>
-                        <span className="cluster-summary-value">
-                          {clusterAggregates.cpuAvg !== null
-                            ? `${clusterAggregates.cpuAvg.toFixed(1)}%`
-                            : '—'}
-                        </span>
-                      </div>
-                      <div className="cluster-summary-divider" />
-                      <div className="cluster-summary-item">
-                        <span className="cluster-summary-label">Avg RAM</span>
-                        <span className="cluster-summary-value">
-                          {clusterAggregates.memAvg !== null
-                            ? `${clusterAggregates.memAvg.toFixed(1)}%`
-                            : '—'}
-                        </span>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="cluster-summary-divider" />
-                      <div
-                        className="cluster-summary-warning"
-                        title="metrics-server is not reachable or no node is reporting metrics. Install metrics-server in the cluster to see live CPU and RAM."
-                      >
-                        <WarningIcon className="app-icon" aria-hidden="true" /> metrics-server
-                        unavailable. CPU / RAM not reported
-                      </div>
-                    </>
-                  )}
+                  <div>
+                    <small>Avg CPU</small>
+                    <b>
+                      {clusterAggregates.metricsAvailable && clusterAggregates.cpuAvg !== null
+                        ? `${clusterAggregates.cpuAvg.toFixed(1)}%`
+                        : '?'}
+                    </b>
+                  </div>
+                  <div>
+                    <small>Avg RAM</small>
+                    <b>
+                      {clusterAggregates.metricsAvailable && clusterAggregates.memAvg !== null
+                        ? `${clusterAggregates.memAvg.toFixed(1)}%`
+                        : '?'}
+                    </b>
+                  </div>
                 </div>
               )}
-              <div className="nodes-grid">
-                {clusterStatus.nodes.map((node) => (
-                  <div
-                    key={node.name}
-                    className={`node-card ${node.status.toLowerCase()}`}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => setSelectedNodeName(node.name)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        setSelectedNodeName(node.name);
-                      }
-                    }}
-                    title={`Open details for ${node.name}`}
-                  >
-                    <div className="node-header">
-                      <div className="node-name" title={node.name}>
-                        {node.name}
-                      </div>
-                    </div>
-                    {/* Meta strip: role, status and meshnet on one row, so
-                    the name gets the full width above it. */}
-                    <div className="node-meta">
-                      {node.roles.map((role) => (
-                        <span key={role} className="role-badge">
-                          {role}
+              {clusterAggregates && !clusterAggregates.metricsAvailable && (
+                <p
+                  className="cl-note"
+                  title="metrics-server is not reachable or no node reports metrics. Install it in the cluster to see live CPU and RAM."
+                >
+                  No metrics-server, so no usage figures.
+                </p>
+              )}
+              <div className="cl-scroll">
+                <div className="cl-grid">
+                  {clusterStatus.nodes.map((node) => {
+                    const mesh = nodeMeshnetChip(node.meshnet);
+                    const metrics = node.cpu_usage !== 'N/A' || node.memory_usage !== 'N/A';
+                    return (
+                      <button
+                        type="button"
+                        key={node.name}
+                        className="cl-node"
+                        onClick={() => setSelectedNodeName(node.name)}
+                        title={`${node.name}, ${node.status}`}
+                      >
+                        <span className="cl-node-top">
+                          <b>{node.name}</b>
+                          {node.roles.slice(0, 1).map((role) => (
+                            <span key={role} className="k8s-role">
+                              {role}
+                            </span>
+                          ))}
+                          {node.status !== 'Ready' && (
+                            <span className="k8s-pill k8s-pill-bad">{node.status}</span>
+                          )}
+                          <span className="cl-space" />
+                          {mesh && (
+                            <span className="cl-node-mesh" title={mesh.title}>
+                              <span className={`k8s-dot k8s-dot-${meshnetDot(node.meshnet)}`} />
+                              Meshnet
+                            </span>
+                          )}
+                          <ChevronIcon className="app-icon cl-node-go" aria-hidden="true" />
                         </span>
-                      ))}
-                      <div className={`node-status-indicator ${node.status.toLowerCase()}`}>
-                        {node.status}
-                      </div>
-                      {(() => {
-                        const chip = nodeMeshnetChip(node.meshnet);
-                        return chip ? (
-                          <span
-                            className={`node-meshnet node-meshnet-${chip.cls}`}
-                            title={chip.title}
-                          >
-                            <span className="node-meshnet-dot" aria-hidden="true" />
-                            meshnet
+                        {metrics ? (
+                          <>
+                            <span className="cl-node-row">
+                              <span>CPU</span>
+                              <Meter value={node.cpu_percentage} />
+                              <span>
+                                {fixed(vcpu(node.cpu_usage), 2)} /{' '}
+                                {fixed(vcpu(node.cpu_capacity), 0)} vCPU
+                              </span>
+                            </span>
+                            <span className="cl-node-row">
+                              <span>RAM</span>
+                              <Meter value={node.memory_percentage} kind="ram" />
+                              <span>
+                                {fixed(gib(node.memory_usage), 1)} /{' '}
+                                {fixed(gib(node.memory_capacity), 1)} GiB
+                              </span>
+                            </span>
+                          </>
+                        ) : (
+                          <span className="cl-node-row cl-node-plain">
+                            {node.cpu_capacity} CPU, {node.memory_capacity} RAM
                           </span>
-                        ) : null;
-                      })()}
-                    </div>
-                    <div className="node-metrics">
-                      <div className="metric-row">
-                        <span className="metric-label">CPU:</span>
-                        <div className="metric-bar-container">
-                          <div
-                            className="metric-bar cpu"
-                            style={{ width: `${Math.min(node.cpu_percentage, 100)}%` }}
-                          ></div>
-                          <span className="metric-value">
-                            {node.cpu_usage !== 'N/A'
-                              ? `${node.cpu_percentage.toFixed(1)}%`
-                              : 'N/A'}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="metric-row">
-                        <span className="metric-label">RAM:</span>
-                        <div className="metric-bar-container">
-                          <div
-                            className="metric-bar memory"
-                            style={{ width: `${Math.min(node.memory_percentage, 100)}%` }}
-                          ></div>
-                          <span className="metric-value">
-                            {node.memory_usage !== 'N/A'
-                              ? `${node.memory_percentage.toFixed(1)}%`
-                              : 'N/A'}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="node-capacity">
-                        Resources: {node.cpu_capacity} CPU, {node.memory_capacity} RAM
-                      </div>
-                    </div>
-                    <div className="node-version">{formatKubeletVersion(node.kubelet_version)}</div>
-                  </div>
-                ))}
+                        )}
+                        <span className="cl-node-foot">
+                          kubelet {formatKubeletVersion(node.kubelet_version)}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </>
           ) : kubeConfigured === false ? (
-            <div className="cluster-error">Load a kubeconfig to see cluster status</div>
+            <div className="cl-empty">Load a kubeconfig to see the nodes.</div>
           ) : (
-            <div className="cluster-error">
-              <ErrorIcon className="app-icon" aria-hidden="true" /> Failed to fetch cluster
-              information
+            <div className="cl-empty cl-empty-bad">
+              <ErrorIcon className="app-icon" aria-hidden="true" /> Could not read the cluster.
             </div>
           )}
-        </div>
+        </section>
 
-        {/* Kubeconfig Panel, lives in the left column under the cluster status */}
-        <div className="kubeconfig-card">
-          <div className="kubeconfig-header">
-            <h2 className="kubeconfig-title">Kubectl context</h2>
+        <section className="cl-card cl-context">
+          <div className="cl-card-head">
+            <h2 className="cl-card-title">Kubectl context</h2>
+            <span className="cl-space" />
             <button
-              className="kubeconfig-refresh"
+              type="button"
+              className="cl-icon-btn"
               onClick={fetchKubeConfigInfo}
               disabled={kubeInfoLoading}
-              title="Refresh kubeconfig info"
+              title="Refresh the kubeconfig"
             >
-              <RefreshIcon style={{ width: 14, height: 14 }} />
+              <RefreshIcon className="app-icon" />
             </button>
           </div>
           {kubeInfoLoading ? (
-            <div className="kubeconfig-loading">Loading kubeconfig info...</div>
+            <div className="cl-empty">Reading the kubeconfig…</div>
           ) : (
             <>
-              <div className="kubeconfig-row">
-                <span className="kubeconfig-label">Config path</span>
-                <span className="kubeconfig-value" title={kubeconfigPath}>
+              <div className="cl-kv">
+                <span>Config path</span>
+                <b className="cl-mono" title={kubeconfigPath}>
                   {kubeconfigPath || 'Not available'}
-                </span>
+                </b>
               </div>
-              <div className="kubeconfig-row">
-                <span className="kubeconfig-label">Current context</span>
-                <span className="kubeconfig-value">{currentContext || 'Not set'}</span>
+              <div className="cl-kv">
+                <span>Current context</span>
+                <b>{currentContext || 'Not set'}</b>
               </div>
-              <div className="kubeconfig-row">
-                <span className="kubeconfig-label">Cluster ID</span>
-                <span
-                  className="kubeconfig-value"
+              <div className="cl-kv">
+                <span>Cluster ID</span>
+                <b
+                  className="cl-mono"
                   title={contextClusterIds[currentContext] || 'Cluster unreachable or not resolved'}
                 >
                   {contextClusterIds[currentContext] || 'n/a'}
-                </span>
+                </b>
               </div>
-              <div className="kubeconfig-controls">
+
+              <label className="cl-label" htmlFor="cl-context">
+                Switch context
+              </label>
+              <div className="cl-inline">
                 <select
-                  className="kubeconfig-select"
+                  id="cl-context"
+                  className="cl-input"
                   value={selectedContext}
                   onChange={(e) => setSelectedContext(e.target.value)}
                 >
@@ -469,22 +446,24 @@ const ClusterPage = () => {
                     const shortId = cid ? cid.slice(0, 8) : 'unreachable';
                     return (
                       <option key={ctx} value={ctx}>
-                        {`${ctx} — ${shortId}`}
+                        {`${ctx} · ${shortId}`}
                       </option>
                     );
                   })}
                 </select>
                 <button
-                  className="kubeconfig-apply"
+                  type="button"
+                  className="cl-btn"
                   onClick={handleSwitchContext}
                   disabled={
                     switchingContext || !selectedContext || selectedContext === currentContext
                   }
                 >
-                  {switchingContext ? 'Switching...' : 'Apply'}
+                  {switchingContext ? 'Switching…' : 'Apply'}
                 </button>
               </div>
 
+              <div className="cl-label">Load a kubeconfig</div>
               <input
                 ref={kubeconfigFileInputRef}
                 type="file"
@@ -496,7 +475,7 @@ const ClusterPage = () => {
               <div
                 role="button"
                 tabIndex={0}
-                className={`kubeconfig-drop-zone${kubeconfigDragging ? ' is-dragging' : ''}${loadingKubeConfig ? ' is-busy' : ''}`}
+                className={`cl-drop${kubeconfigDragging ? ' cl-drop-on' : ''}${loadingKubeConfig ? ' cl-drop-busy' : ''}`}
                 onClick={() => !loadingKubeConfig && kubeconfigFileInputRef.current?.click()}
                 onKeyDown={(e) => {
                   if ((e.key === 'Enter' || e.key === ' ') && !loadingKubeConfig) {
@@ -525,18 +504,15 @@ const ClusterPage = () => {
                 }}
                 aria-busy={loadingKubeConfig || undefined}
               >
-                <FolderIcon className="kubeconfig-drop-icon" aria-hidden="true" />
-                <span className="kubeconfig-drop-text">
-                  {loadingKubeConfig
-                    ? 'Loading kubeconfig…'
-                    : 'Drop kubeconfig here or click to select'}
-                </span>
+                <FolderIcon className="app-icon" aria-hidden="true" />
+                <b>{loadingKubeConfig ? 'Loading the kubeconfig…' : 'Drop a kubeconfig here'}</b>
+                <span>or click to choose one. It replaces the one in use.</span>
               </div>
 
-              {kubeInfoError && <div className="kubeconfig-error">{kubeInfoError}</div>}
+              {kubeInfoError && <div className="cl-error">{kubeInfoError}</div>}
             </>
           )}
-        </div>
+        </section>
       </div>
       {selectedNodeName && (
         <K8sNodeInfoPanel nodeName={selectedNodeName} onClose={() => setSelectedNodeName(null)} />

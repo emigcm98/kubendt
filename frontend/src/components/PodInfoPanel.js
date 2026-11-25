@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
+import './Dialog.css';
 import './PodInfoPanel.css';
 import AlertModal from './AlertModal';
 import InterfaceContextMenu from './InterfaceContextMenu';
@@ -21,6 +22,7 @@ import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
 import { ReactComponent as LogsIcon } from '../assets/images/icons/logs.svg';
 import { ReactComponent as CopyIcon } from '../assets/images/icons/copy.svg';
 import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
+import { ReactComponent as EyeIcon } from '../assets/images/icons/eye.svg';
 
 const POD_INFO_TAB_KEY_PREFIX = 'kubendt.podInfoPanel.activeTab.';
 const TABS = [
@@ -559,13 +561,16 @@ const PodInfoPanel = ({
     }
   };
 
+  // Esc closes the operation dialog when it is open, the panel otherwise.
   useEffect(() => {
     const onKey = (e) => {
-      if (e.key === 'Escape') requestClose();
+      if (e.key !== 'Escape') return;
+      if (selectedHistoryEntry) setSelectedHistoryEntry(null);
+      else requestClose();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [requestClose]);
+  }, [requestClose, selectedHistoryEntry]);
 
   // Refresh the shaping state when the pod changes or an interface is picked,
   // so the status is current after an apply in the traffic control panel.
@@ -706,41 +711,43 @@ const PodInfoPanel = ({
 
         {selectedHistoryEntry &&
           createPortal(
-            <div className="history-popup-overlay" onClick={() => setSelectedHistoryEntry(null)}>
-              <div className="history-popup" onClick={(e) => e.stopPropagation()}>
-                <div className="history-popup-header">
-                  <strong>Driver action details</strong>
+            <div
+              className="dlg-overlay dlg-overlay-top history-popup-overlay"
+              onClick={() => setSelectedHistoryEntry(null)}
+            >
+              <div
+                className="dlg dlg-mid history-popup"
+                role="dialog"
+                aria-label="Operation"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="dlg-head">
+                  <EyeIcon className="app-icon" aria-hidden="true" />
+                  <h2 className="dlg-title">
+                    {selectedHistoryEntry.action_type ||
+                      selectedHistoryEntry?.action?.type ||
+                      'unknown'}
+                  </h2>
                   <button
-                    className="history-popup-close"
+                    className="dlg-close"
+                    title="Close"
                     onClick={() => setSelectedHistoryEntry(null)}
                   >
                     <CloseIcon className="app-icon" />
                   </button>
                 </div>
 
-                <div className="history-popup-body">
-                  <div className="history-popup-line">
-                    <span>ID:</span>
-                    <b>{selectedHistoryEntry.id ?? '—'}</b>
-                  </div>
-                  <div className="history-popup-line">
-                    <span>Action:</span>
-                    <b>
-                      {selectedHistoryEntry.action_type ||
-                        selectedHistoryEntry?.action?.type ||
-                        'unknown'}
-                    </b>
-                  </div>
-                  <div className="history-popup-line">
-                    <span>Date:</span>
-                    <b>{formatHistoryDate(selectedHistoryEntry.executed_at)}</b>
-                  </div>
-                  <div className="history-popup-line">
-                    <span>Pod:</span>
+                <div className="dlg-body">
+                  <div className="history-popup-meta">
+                    <span>Pod</span>
                     <b>{selectedHistoryEntry.pod_name || pod.name}</b>
+                    <span>Applied</span>
+                    <b>{formatHistoryDate(selectedHistoryEntry.executed_at)}</b>
+                    <span>Operation</span>
+                    <b className="history-popup-mono">{selectedHistoryEntry.id ?? '?'}</b>
                   </div>
 
-                  <div className="history-popup-fields-title">Parameters</div>
+                  <div className="dlg-label">Parameters</div>
                   {extractActionDetails(selectedHistoryEntry.action).length === 0 ? (
                     <p className="history-popup-empty">No parameters</p>
                   ) : (
@@ -754,7 +761,7 @@ const PodInfoPanel = ({
                     </div>
                   )}
 
-                  <div className="history-popup-fields-title">Equivalent commands</div>
+                  <div className="dlg-label">Equivalent commands</div>
                   {Array.isArray(selectedHistoryEntry.commands) &&
                   selectedHistoryEntry.commands.length > 0 ? (
                     <div className="history-popup-commands">
@@ -777,6 +784,15 @@ const PodInfoPanel = ({
                   ) : (
                     <p className="history-popup-empty">No equivalent command available</p>
                   )}
+                </div>
+
+                <div className="dlg-foot">
+                  <button
+                    className="dlg-btn dlg-btn-primary"
+                    onClick={() => setSelectedHistoryEntry(null)}
+                  >
+                    Close
+                  </button>
                 </div>
               </div>
             </div>,

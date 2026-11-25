@@ -627,28 +627,6 @@
   cursor: pointer;
 }
 
-.home-pill {
-  font-size: 11px;
-  font-weight: 700;
-  padding: 1px 8px;
-  border-radius: var(--radius-pill);
-}
-
-.home-pill-ok {
-  color: var(--success);
-  background: var(--success-bg);
-}
-
-.home-pill-warn {
-  color: var(--warning-text);
-  background: var(--warning-bg);
-}
-
-.home-pill-bad {
-  color: var(--danger);
-  background: var(--danger-bg);
-}
-
 .home-stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -727,35 +705,6 @@
   color: var(--text-muted);
 }
 
-.home-role {
-  flex: none;
-  padding: 1px 6px;
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--primary);
-  background: var(--info-bg);
-  border-radius: var(--radius-pill);
-}
-
-.home-dot {
-  flex: none;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-
-.home-dot-ok {
-  background: var(--success-accent);
-}
-
-.home-dot-bad {
-  background: var(--danger);
-}
-
-.home-dot-off {
-  background: var(--text-subtle);
-}
-
 .home-node-row {
   display: grid;
   grid-template-columns: 30px 1fr 96px;
@@ -768,23 +717,6 @@
 .home-node-row > span:last-child {
   text-align: right;
   white-space: nowrap;
-}
-
-.home-meter {
-  height: 6px;
-  overflow: hidden;
-  background: var(--border-light);
-  border-radius: var(--radius-pill);
-}
-
-.home-meter i {
-  display: block;
-  height: 100%;
-  background: var(--primary);
-}
-
-.home-meter-ram i {
-  background: var(--success-accent);
 }
 
 .home-line {

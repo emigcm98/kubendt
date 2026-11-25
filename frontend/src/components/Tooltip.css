@@ -18,7 +18,7 @@
   box-shadow: 0 3px 12px color-mix(in srgb, var(--primary) 35%, transparent);
   z-index: 10000;
   transform: translateX(-50%);
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: var(--font-sans);
   animation: kbn-tooltip-fade 0.12s ease-out;
 }
 

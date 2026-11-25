@@ -24,11 +24,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - The file manager is redone as two cards as tall as the window, the files and the open file, with its actions named and its dialogs in the same look.
 - Every dialog shares the file manager's look, and the browser's own confirm boxes are gone.
 - The tool windows take the dialogs' light frame and share one header. Only the terminal and the log stay dark.
+- The node panel and the `/cluster` page take the Home's node tiles and chips, and a pod's history opens in the shared dialog.
+- Every page uses the interface's font, and code one monospace, from the design tokens.
 
 ### Fixed
 
 - A wrong current password when changing it no longer signs the account out.
 - A tool window opened on a short screen no longer starts with its foot off screen.
+- Esc on a pod's operation details closes them, not the whole pod panel.
 
 ## [1.13.0] - 2026-11-24
 

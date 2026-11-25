@@ -135,7 +135,7 @@
 
 .intf-info-val {
   color: var(--text-body);
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
   word-break: break-all;
 }

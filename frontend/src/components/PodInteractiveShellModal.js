@@ -240,7 +240,7 @@ const PodInteractiveShellModal = ({
         foreground: token('--console-fg', '#d6dde6'),
         cursor: token('--console-accent'),
       },
-      fontFamily: "'Menlo', 'Monaco', 'Courier New', monospace",
+      fontFamily: token('--font-mono', "'Menlo', 'Monaco', 'Courier New', monospace"),
       scrollback: 1000,
     });
 

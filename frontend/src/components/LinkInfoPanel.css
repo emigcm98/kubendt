@@ -93,7 +93,7 @@
 }
 
 .link-endpoint-iface-name {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: var(--font-mono);
   color: var(--primary);
   font-weight: 600;
 }
@@ -141,7 +141,7 @@
 }
 
 .link-detail-mono {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: var(--font-mono);
 }
 
 .link-detail-italic {
