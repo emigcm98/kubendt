@@ -4,7 +4,7 @@ import path from 'path';
 // Colors belong to the tokens. The pages still waiting for their redesign
 // keep some literals and the ceiling goes down as they are redone. The
 // fallbacks graphPicture.js and the shell keep for tests without CSS stay.
-const CEILING = 199;
+const CEILING = 152;
 
 const CSS_COLOR = /#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(|(?<![-\w])(white|black)(?![-\w])/g;
 const JS_COLOR = /['"`]#[0-9a-fA-F]{3,8}['"`]|\brgba?\(|\bhsla?\(/g;

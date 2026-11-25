@@ -201,6 +201,13 @@
   /* Fill the wrapper, let .cm-scroller handle overflow. */
   height: 100%;
   min-height: 120px;
+  /* What the file manager's global CodeMirror rule gave it until that rule
+     was scoped to the file manager. */
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  overflow: auto;
 }
 
 .tinput-editor-wrapper .cm-editor.cm-focused {
@@ -214,6 +221,8 @@
 
 /* Internal scroll: this is where ALL editor overflow goes (vertical and horizontal). */
 .tinput-editor-wrapper .cm-scroller {
+  flex-grow: 1;
+  height: 100%;
   overflow: auto;
 }
 .tinput-editor-wrapper .cm-scroller::-webkit-scrollbar {

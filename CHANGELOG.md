@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - The sign-in shows a bigger logo, what KubeNDT is in one line, and links to its site and to GitHub.
 - Every page's blue bar has the same height and the same brand, which leads to the main page, in place of the Home buttons. The pages outside a namespace share the Home's bar, with their title beside the brand.
 - The error page keeps the bar and says what happened, with a way back.
+- The file manager is redone as two cards as tall as the window, the files and the open file, with its actions named and its dialogs in the same look.
 
 ### Fixed
 

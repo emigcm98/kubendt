@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Tooltip from './Tooltip';
+import HoverCard from './HoverCard';
 import { ReactComponent as FolderIcon } from '../assets/images/icons/folder.svg';
 import { ReactComponent as FileIcon } from '../assets/images/icons/file.svg';
 import { ReactComponent as LockIcon } from '../assets/images/icons/lock.svg';
@@ -11,6 +12,11 @@ import { ReactComponent as RefreshIcon } from '../assets/images/icons/refresh.sv
 import { ReactComponent as SearchIcon } from '../assets/images/icons/search.svg';
 import { ReactComponent as EditIcon } from '../assets/images/icons/edit.svg';
 import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
+import { ReactComponent as UploadIcon } from '../assets/images/icons/upload.svg';
+import { ReactComponent as DownloadIcon } from '../assets/images/icons/download.svg';
+import { ReactComponent as MoreIcon } from '../assets/images/icons/more.svg';
+import { ReactComponent as ChevronRightIcon } from '../assets/images/icons/chevron-right.svg';
+import { ReactComponent as ChevronDownIcon } from '../assets/images/icons/chevron-down.svg';
 import './FileSidebar.css';
 
 // Walk the tree and collect every folder path that contains at least one node
@@ -355,7 +361,7 @@ function FileSidebar({
             else rowRefs.current.delete(node.path);
           }}
           className={`${isHighlighted ? 'selected' : ''} ${node.isDir ? 'folder' : 'file'} ${isDraggedOver ? 'drag-over' : ''}`}
-          style={{ marginLeft: `${depth * 16}px` }}
+          style={{ paddingLeft: `${8 + depth * 18}px` }}
           title={node.path}
           onClick={(e) => handleRowClick(e, node)}
           onContextMenu={(e) => {
@@ -382,16 +388,21 @@ function FileSidebar({
                 }}
                 aria-label={isExpanded ? 'Collapse' : 'Expand'}
               >
-                {isExpanded ? '▼' : '▶'}
+                {isExpanded ? (
+                  <ChevronDownIcon className="app-icon" />
+                ) : (
+                  <ChevronRightIcon className="app-icon" />
+                )}
               </button>
               <FolderIcon className="folder-icon" />
               <span className="folder-name">{renderHighlightedName(node.name)}</span>
             </>
           ) : (
             <>
+              <span className="expand-gap" aria-hidden="true" />
               <FileIcon className="file-icon" />
-              <span className="file-name">
-                {renderHighlightedName(node.name)}
+              <span className="file-name">{renderHighlightedName(node.name)}</span>
+              <span className="file-marks">
                 {node.sensitive && (
                   <span
                     className="sensitive-lock"
@@ -402,9 +413,11 @@ function FileSidebar({
                   </span>
                 )}
                 {unsavedFiles?.has?.(node.path) && (
-                  <span className="dirty-dot" aria-label="Unsaved changes">
-                    •
-                  </span>
+                  <span
+                    className="file-dirty"
+                    title="Unsaved changes"
+                    aria-label="Unsaved changes"
+                  />
                 )}
               </span>
             </>
@@ -433,55 +446,69 @@ function FileSidebar({
       <div className="sidebar-header">
         <span className="sidebar-title">
           Files
-          {fileCount > 0 && <span className="sidebar-file-count">{fileCount}</span>}
+          <span className="sidebar-file-count">{fileCount}</span>
         </span>
-        <div className="actions">
-          <Tooltip text="Import archive">
-            <button aria-label="Import: upload a ZIP or tar.gz archive" onClick={onImport}>
-              <BoxIcon className="app-icon icon-import" />
-            </button>
-          </Tooltip>
-          <Tooltip text="Export">
-            <button
-              className={hasFiles ? '' : 'is-disabled'}
-              aria-label="Export: download all files as an archive"
-              aria-disabled={!hasFiles}
-              onClick={() => hasFiles && onExport()}
-            >
-              <SaveIcon className="app-icon icon-save" />
-            </button>
-          </Tooltip>
-          {onDeleteAllFiles && (
-            <Tooltip text="Delete all">
-              <button
-                className={`action-btn-danger${hasFiles ? '' : ' is-disabled'}`}
-                aria-label="Delete all files: permanently removes every file and folder"
-                aria-disabled={!hasFiles}
-                onClick={() => hasFiles && onDeleteAllFiles()}
-              >
-                <TrashIcon className="app-icon icon-danger" />
-              </button>
-            </Tooltip>
-          )}
-        </div>
-      </div>
-
-      <div className="actions actions-quick">
-        <Tooltip text={createFileTooltip}>
-          <button aria-label={createFileTooltip} onClick={handleCreateFileClick}>
-            <FileIcon className="app-icon" />
-          </button>
-        </Tooltip>
-        <Tooltip text={createFolderTooltip}>
-          <button aria-label={createFolderTooltip} onClick={handleCreateFolderClick}>
-            <FolderIcon className="app-icon icon-folder" />
-          </button>
-        </Tooltip>
+        <span className="sidebar-space" />
         <Tooltip text="Refresh">
-          <button aria-label="Refresh file list" onClick={onRefresh}>
+          <button
+            type="button"
+            className="sidebar-icon-btn"
+            aria-label="Refresh"
+            onClick={onRefresh}
+          >
             <RefreshIcon className="app-icon" />
           </button>
         </Tooltip>
+        <HoverCard
+          openOn="click"
+          align="end"
+          label="More on the files"
+          trigger={
+            <span className="sidebar-icon-btn">
+              <MoreIcon className="app-icon" />
+            </span>
+          }
+        >
+          {(close) => (
+            <div className="sidebar-menu">
+              <button
+                type="button"
+                disabled={!hasFiles}
+                onClick={() => {
+                  close();
+                  onExport();
+                }}
+              >
+                <DownloadIcon className="app-icon" /> Export all
+              </button>
+              {onDeleteAllFiles && (
+                <button
+                  type="button"
+                  className="sidebar-menu-danger"
+                  disabled={!hasFiles}
+                  onClick={() => {
+                    close();
+                    onDeleteAllFiles();
+                  }}
+                >
+                  <TrashIcon className="app-icon" /> Delete all
+                </button>
+              )}
+            </div>
+          )}
+        </HoverCard>
+      </div>
+
+      <div className="sidebar-actions">
+        <button type="button" onClick={handleCreateFileClick} title={createFileTooltip}>
+          <FileIcon className="app-icon" /> File
+        </button>
+        <button type="button" onClick={handleCreateFolderClick} title={createFolderTooltip}>
+          <FolderIcon className="app-icon" /> Folder
+        </button>
+        <button type="button" onClick={onImport} title="Import a .zip or .tar.gz archive">
+          <UploadIcon className="app-icon" /> Import
+        </button>
       </div>
 
       <div className="sidebar-search">
@@ -506,8 +533,6 @@ function FileSidebar({
           </Tooltip>
         )}
       </div>
-
-      <div className="sidebar-divider" aria-hidden="true"></div>
 
       <ul
         className={`file-list${osDragOverList ? ' os-drag-over' : ''}`}
@@ -538,7 +563,31 @@ function FileSidebar({
         {normalizedQuery && visibleRoots.length === 0 && (
           <li className="file-search-empty">No files match “{searchQuery}”</li>
         )}
+        {!normalizedQuery && visibleRoots.length === 0 && (
+          <li className="file-search-empty">No files yet.</li>
+        )}
       </ul>
+
+      <div
+        className={`sidebar-drop${osDragOverList ? ' sidebar-drop-on' : ''}`}
+        onDragOver={(e) => {
+          if (dragHasFiles(e)) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+            if (!osDragOverList) setOsDragOverList(true);
+          }
+        }}
+        onDragLeave={() => setOsDragOverList(false)}
+        onDrop={(e) => {
+          setOsDragOverList(false);
+          if (dragHasFiles(e)) {
+            e.preventDefault();
+            onDropFiles?.(e.dataTransfer, '');
+          }
+        }}
+      >
+        Drop files or a .zip here to add them
+      </div>
 
       {contextMenu && (
         <div
@@ -548,10 +597,10 @@ function FileSidebar({
           {contextMenu.type === 'root' && (
             <>
               <button className="context-menu-item" onClick={() => onCreateFileRoot?.()}>
-                <FileIcon className="app-icon" /> New File
+                <FileIcon className="app-icon" /> New file
               </button>
               <button className="context-menu-item" onClick={() => onCreateFolderRoot?.()}>
-                <FolderIcon className="app-icon icon-folder" /> New Folder
+                <FolderIcon className="app-icon icon-folder" /> New folder
               </button>
               {!hasFiles && (
                 <>
@@ -574,13 +623,13 @@ function FileSidebar({
                 className="context-menu-item"
                 onClick={() => onCreateFileInFolder?.(contextMenu.path)}
               >
-                <FileIcon className="app-icon" /> New File
+                <FileIcon className="app-icon" /> New file
               </button>
               <button
                 className="context-menu-item"
                 onClick={() => onCreateFolderInFolder?.(contextMenu.path)}
               >
-                <FolderIcon className="app-icon icon-folder" /> New Folder
+                <FolderIcon className="app-icon icon-folder" /> New folder
               </button>
               <div className="context-menu-divider"></div>
               <button
