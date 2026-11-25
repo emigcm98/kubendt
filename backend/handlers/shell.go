@@ -79,6 +79,7 @@ func InteractiveShellWebSocket(c *gin.Context) {
 	}
 
 	defer ws.Close()
+	defer trackStream()()
 
 	// A declared shell has its command; the pod shell probes for bash.
 	shellToUse := "sh"

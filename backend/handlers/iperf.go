@@ -182,6 +182,7 @@ func IperfWebSocket(c *gin.Context) {
 		return
 	}
 	defer ws.Close()
+	defer trackStream()()
 
 	var writeMu sync.Mutex
 	sendCtl := func(v any) {

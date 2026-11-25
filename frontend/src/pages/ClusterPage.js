@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import AppHeader from '../components/AppHeader';
 import K8sNodeInfoPanel from '../components/K8sNodeInfoPanel';
@@ -7,11 +7,11 @@ import { API_BASE_URL } from '../config';
 import { ReactComponent as WarningIcon } from '../assets/images/icons/warning.svg';
 import { ReactComponent as LoadingIcon } from '../assets/images/icons/loading.svg';
 import { ReactComponent as ErrorIcon } from '../assets/images/icons/error.svg';
-import { ReactComponent as FolderIcon } from '../assets/images/icons/folder.svg';
 import { ReactComponent as RefreshIcon } from '../assets/images/icons/refresh.svg';
 import { ReactComponent as ClusterIcon } from '../assets/images/icons/cluster.svg';
 import { ReactComponent as ChevronIcon } from '../assets/images/icons/chevron-right.svg';
 import { Meter, meshnetDot, vcpu, gib, fixed } from '../components/K8sBits';
+import '../components/Dialog.css';
 import './ClusterPage.css';
 
 // The admins' page for the cluster under KubeNDT: its nodes and their use,
@@ -30,10 +30,14 @@ const ClusterPage = () => {
   const [selectedContext, setSelectedContext] = useState('');
   const [switchingContext, setSwitchingContext] = useState(false);
   const [kubeConfigured, setKubeConfigured] = useState(null);
-  const [loadingKubeConfig, setLoadingKubeConfig] = useState(false);
-  const [kubeconfigDragging, setKubeconfigDragging] = useState(false);
+  const [kubeMode, setKubeMode] = useState('');
+  const [clusterId, setClusterId] = useState('');
+  // The context waiting for its cluster's admin password, '' when none.
+  const [askingFor, setAskingFor] = useState('');
+  const [password, setPassword] = useState('');
+  const [switchError, setSwitchError] = useState('');
   const [selectedNodeName, setSelectedNodeName] = useState(null);
-  const kubeconfigFileInputRef = useRef(null);
+  const isOwner = !auth.enabled || auth.role === 'owner';
 
   const fetchClusterStatus = async () => {
     try {
@@ -68,6 +72,8 @@ const ClusterPage = () => {
       }
       const data = await res.json();
       setKubeConfigured(!!data.configured);
+      setKubeMode(data.mode || '');
+      setClusterId(data.cluster_id || '');
       setKubeconfigPath(data.path || '');
       setKubeContexts(Array.isArray(data.contexts) ? data.contexts : []);
       setContextClusterIds(data.context_cluster_ids || {});
@@ -80,62 +86,64 @@ const ClusterPage = () => {
     }
   };
 
-  const handleSwitchContext = async () => {
-    if (!selectedContext || selectedContext === currentContext) return;
+  // A context on the same cluster only changes the credentials. One on
+  // another cluster is another KubeNDT, so it takes its admin's password and
+  // the page starts over there, with nothing kept from this one.
+  const switchContext = async (context, pw) => {
     setSwitchingContext(true);
     setKubeInfoError('');
+    setSwitchError('');
     try {
       const res = await fetch(`${API_BASE_URL}/kube/context`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ context: selectedContext }),
+        body: JSON.stringify(pw ? { context, password: pw } : { context }),
       });
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || 'Failed to switch context');
+      const data = await res.json().catch(() => ({}));
+      // The label said the same cluster, the server found another one.
+      if (!pw && data.code === 'PASSWORD_REQUIRED') {
+        setPassword('');
+        setAskingFor(context);
+        return;
       }
-      setCurrentContext(selectedContext);
-      // The new context is a different cluster, so its status is read again.
+      if (!res.ok) throw new Error(data.error || `The switch failed (${res.status})`);
+      if (data.cluster_changed) {
+        Object.keys(sessionStorage)
+          .filter((k) => k.startsWith('kubendt.'))
+          .forEach((k) => sessionStorage.removeItem(k));
+        window.location.assign('/');
+        return;
+      }
+      await fetchKubeConfigInfo();
       await fetchClusterStatus();
     } catch (err) {
-      setKubeInfoError(err.message || 'Failed to switch context');
+      if (pw) setSwitchError(err.message);
+      else setKubeInfoError(err.message);
     } finally {
       setSwitchingContext(false);
     }
   };
 
-  const handleLoadKubeConfigFile = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Esc closes the password dialog, unless a switch is under way.
+  useEffect(() => {
+    if (!askingFor) return undefined;
+    const onKey = (e) => {
+      if (e.key === 'Escape' && !switchingContext) setAskingFor('');
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [askingFor, switchingContext]);
 
-    setLoadingKubeConfig(true);
-    setKubeInfoError('');
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const res = await fetch(`${API_BASE_URL}/kube/config`, {
-        method: 'POST',
-        body: formData,
-      });
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ error: 'Failed to load kubeconfig' }));
-        throw new Error(errorData.error || 'Failed to load kubeconfig');
-      }
-      const data = await res.json();
-      setKubeConfigured(!!data.configured);
-      setKubeconfigPath(data.path || '');
-      setKubeContexts(Array.isArray(data.contexts) ? data.contexts : []);
-      setContextClusterIds(data.context_cluster_ids || {});
-      setCurrentContext(data.current_context || '');
-      setSelectedContext(data.current_context || '');
-      await fetchClusterStatus();
-      e.target.value = ''; // Reset file input
-    } catch (err) {
-      setKubeInfoError(err.message || 'Failed to load kubeconfig');
-    } finally {
-      setLoadingKubeConfig(false);
+  const handleSwitchContext = () => {
+    if (!selectedContext || selectedContext === currentContext) return;
+    const target = contextClusterIds[selectedContext];
+    if (target && target === clusterId) {
+      switchContext(selectedContext);
+      return;
     }
+    setPassword('');
+    setSwitchError('');
+    setAskingFor(selectedContext);
   };
 
   useEffect(() => {
@@ -244,8 +252,8 @@ const ClusterPage = () => {
         <div className="cl-gate" role="alert">
           <WarningIcon className="app-icon" aria-hidden="true" />
           <span>
-            <strong>No kubeconfig loaded.</strong> KubeNDT needs one to talk to a cluster, load it
-            in the context card.
+            <strong>No kubeconfig loaded.</strong> KubeNDT needs one to talk to a cluster, mount it
+            and restart.
           </span>
         </div>
       )}
@@ -384,7 +392,7 @@ const ClusterPage = () => {
               </div>
             </>
           ) : kubeConfigured === false ? (
-            <div className="cl-empty">Load a kubeconfig to see the nodes.</div>
+            <div className="cl-empty">Mount a kubeconfig and restart to see the nodes.</div>
           ) : (
             <div className="cl-empty cl-empty-bad">
               <ErrorIcon className="app-icon" aria-hidden="true" /> Could not read the cluster.
@@ -408,112 +416,157 @@ const ClusterPage = () => {
           </div>
           {kubeInfoLoading ? (
             <div className="cl-empty">Reading the kubeconfig…</div>
+          ) : kubeConfigured === false ? (
+            <p className="cl-hint">
+              No kubeconfig. Mount one, at <code>KUBECONFIG</code> or <code>~/.kube/config</code>,
+              and restart.
+            </p>
           ) : (
             <>
               <div className="cl-kv">
-                <span>Config path</span>
-                <b className="cl-mono" title={kubeconfigPath}>
-                  {kubeconfigPath || 'Not available'}
-                </b>
+                <span>Reached with</span>
+                <b>{kubeMode === 'in-cluster' ? 'Its ServiceAccount' : 'A kubeconfig'}</b>
               </div>
-              <div className="cl-kv">
-                <span>Current context</span>
-                <b>{currentContext || 'Not set'}</b>
-              </div>
+              {kubeMode !== 'in-cluster' && (
+                <>
+                  <div className="cl-kv">
+                    <span>Kubeconfig</span>
+                    <b className="cl-mono" title={kubeconfigPath}>
+                      {kubeconfigPath || 'Not available'}
+                    </b>
+                  </div>
+                  <div className="cl-kv">
+                    <span>Context</span>
+                    <b>{currentContext || 'Not set'}</b>
+                  </div>
+                </>
+              )}
               <div className="cl-kv">
                 <span>Cluster ID</span>
-                <b
-                  className="cl-mono"
-                  title={contextClusterIds[currentContext] || 'Cluster unreachable or not resolved'}
-                >
-                  {contextClusterIds[currentContext] || 'n/a'}
+                <b className="cl-mono" title={clusterId || 'Cluster unreachable or not resolved'}>
+                  {clusterId || 'n/a'}
                 </b>
               </div>
 
-              <label className="cl-label" htmlFor="cl-context">
-                Switch context
-              </label>
-              <div className="cl-inline">
-                <select
-                  id="cl-context"
-                  className="cl-input"
-                  value={selectedContext}
-                  onChange={(e) => setSelectedContext(e.target.value)}
-                >
-                  {kubeContexts.length === 0 && <option value="">No contexts found</option>}
-                  {kubeContexts.map((ctx) => {
-                    const cid = contextClusterIds[ctx];
-                    const shortId = cid ? cid.slice(0, 8) : 'unreachable';
-                    return (
-                      <option key={ctx} value={ctx}>
-                        {`${ctx} · ${shortId}`}
-                      </option>
-                    );
-                  })}
-                </select>
-                <button
-                  type="button"
-                  className="cl-btn"
-                  onClick={handleSwitchContext}
-                  disabled={
-                    switchingContext || !selectedContext || selectedContext === currentContext
-                  }
-                >
-                  {switchingContext ? 'Switching…' : 'Apply'}
-                </button>
-              </div>
-
-              <div className="cl-label">Load a kubeconfig</div>
-              <input
-                ref={kubeconfigFileInputRef}
-                type="file"
-                onChange={handleLoadKubeConfigFile}
-                disabled={loadingKubeConfig}
-                style={{ display: 'none' }}
-                accept=".config,.yaml,*"
-              />
-              <div
-                role="button"
-                tabIndex={0}
-                className={`cl-drop${kubeconfigDragging ? ' cl-drop-on' : ''}${loadingKubeConfig ? ' cl-drop-busy' : ''}`}
-                onClick={() => !loadingKubeConfig && kubeconfigFileInputRef.current?.click()}
-                onKeyDown={(e) => {
-                  if ((e.key === 'Enter' || e.key === ' ') && !loadingKubeConfig) {
-                    e.preventDefault();
-                    kubeconfigFileInputRef.current?.click();
-                  }
-                }}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  if (!loadingKubeConfig) setKubeconfigDragging(true);
-                }}
-                onDragLeave={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setKubeconfigDragging(false);
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setKubeconfigDragging(false);
-                  if (loadingKubeConfig) return;
-                  const file = e.dataTransfer.files?.[0];
-                  if (!file) return;
-                  handleLoadKubeConfigFile({ target: { files: [file], value: '' } });
-                }}
-                aria-busy={loadingKubeConfig || undefined}
-              >
-                <FolderIcon className="app-icon" aria-hidden="true" />
-                <b>{loadingKubeConfig ? 'Loading the kubeconfig…' : 'Drop a kubeconfig here'}</b>
-                <span>or click to choose one. It replaces the one in use.</span>
-              </div>
+              {kubeMode === 'in-cluster' ? (
+                <p className="cl-hint">
+                  This KubeNDT runs in its cluster and serves that cluster only.
+                </p>
+              ) : (
+                <>
+                  <label className="cl-label" htmlFor="cl-context">
+                    Switch context
+                  </label>
+                  <div className="cl-inline">
+                    <select
+                      id="cl-context"
+                      className="cl-input"
+                      value={selectedContext}
+                      onChange={(e) => setSelectedContext(e.target.value)}
+                      disabled={!isOwner}
+                    >
+                      {kubeContexts.length === 0 && <option value="">No contexts found</option>}
+                      {kubeContexts.map((ctx) => {
+                        const cid = contextClusterIds[ctx];
+                        const where = !cid
+                          ? 'unreachable'
+                          : cid === clusterId
+                            ? 'this cluster'
+                            : `another cluster, ${cid.slice(0, 8)}`;
+                        return (
+                          <option key={ctx} value={ctx}>
+                            {`${ctx} · ${where}`}
+                          </option>
+                        );
+                      })}
+                    </select>
+                    <button
+                      type="button"
+                      className="cl-btn"
+                      onClick={handleSwitchContext}
+                      disabled={
+                        !isOwner ||
+                        switchingContext ||
+                        !selectedContext ||
+                        selectedContext === currentContext ||
+                        !contextClusterIds[selectedContext]
+                      }
+                      title={isOwner ? undefined : 'Only the owner switches the cluster'}
+                    >
+                      {switchingContext && !askingFor ? 'Switching…' : 'Switch'}
+                    </button>
+                  </div>
+                  <p className="cl-hint">
+                    Another cluster is another KubeNDT, with its own accounts and labs. To add a
+                    context, edit the kubeconfig and refresh, or restart a compose install.
+                  </p>
+                </>
+              )}
 
               {kubeInfoError && <div className="cl-error">{kubeInfoError}</div>}
             </>
           )}
         </section>
       </div>
+      {askingFor && (
+        <div className="dlg-overlay" onClick={() => !switchingContext && setAskingFor('')}>
+          <form
+            className="dlg"
+            role="dialog"
+            aria-label="Switch to another cluster"
+            onClick={(e) => e.stopPropagation()}
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (password) switchContext(askingFor, password);
+            }}
+          >
+            <div className="dlg-head">
+              <ClusterIcon className="app-icon" aria-hidden="true" />
+              <h2 className="dlg-title">Switch to another cluster</h2>
+            </div>
+            <div className="dlg-body">
+              <p className="dlg-text">
+                <strong>{askingFor}</strong> is another cluster, so another KubeNDT with its own
+                accounts, settings and labs. Everyone signed in here is signed out.
+              </p>
+              <label className="dlg-label" htmlFor="cl-switch-password">
+                Its admin password
+              </label>
+              <input
+                id="cl-switch-password"
+                className="dlg-input"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={switchingContext}
+                autoFocus
+              />
+              <p className="dlg-hint">
+                Where KubeNDT has never run, type yours, it becomes its admin.
+              </p>
+              {switchError && <p className="cl-error">{switchError}</p>}
+            </div>
+            <div className="dlg-foot">
+              <button
+                type="button"
+                className="dlg-btn dlg-btn-quiet"
+                onClick={() => setAskingFor('')}
+                disabled={switchingContext}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="dlg-btn dlg-btn-primary"
+                disabled={switchingContext || !password}
+              >
+                {switchingContext ? 'Switching…' : 'Switch and sign in'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
       {selectedNodeName && (
         <K8sNodeInfoPanel nodeName={selectedNodeName} onClose={() => setSelectedNodeName(null)} />
       )}

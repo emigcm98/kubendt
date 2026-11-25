@@ -15,7 +15,7 @@ What KubeNDT survives, what it loses, and what you have to fix by hand. The shor
 | `sensitive` flag of files | the kind of the file's object, a Secret | yes | yes |
 | Link uids | read from the Topology objects of every namespace when a deploy needs one | nothing kept | nothing to lose |
 | Operation locks | a `kubendt-internal-lock` Lease in the namespace, renewed while the operation runs | yes | taken over by the next operation once it expires, a minute at most |
-| Admin password, API tokens | Secrets in the system namespace of the home cluster (`kubendt-user-admin`, `kubendt-token-<id>`), what an older backend kept in SQLite moved there on the first bind | yes | yes, they are in the cluster |
+| Admin password, API tokens | Secrets in the system namespace of the cluster in use (`kubendt-user-admin`, `kubendt-token-<id>`), what an older backend kept in SQLite moved there on the first bind | yes | yes, they are in the cluster |
 | Browser sessions | a signed cookie, the key a Secret in the system namespace (`kubendt-internal-session-key`) | yes, every backend of the cluster accepts them | yes, the key is in the cluster |
 
 SQLite is optional. When `KUBENDT_DB_PATH` names a file (`/data/kubendt.db` on the `backend-db` volume in compose) or a `kubendt.db` sits in the working directory, it is opened and what an older backend kept in it moves to the cluster as it is touched; a new install needs none.

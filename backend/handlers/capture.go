@@ -71,6 +71,7 @@ func CaptureWebSocket(c *gin.Context) {
 		return
 	}
 	defer ws.Close()
+	defer trackStream()()
 
 	// gorilla forbids concurrent writers; the packet pump, control frames and
 	// keepalive pings all funnel through this mutex.

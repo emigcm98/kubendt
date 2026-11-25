@@ -80,6 +80,10 @@ The node's image is not one its driver was tried with (`GET /drivers` lists them
 go run github.com/swaggo/swag/cmd/swag@v1.16.6 init -g main.go
 ```
 
+## The admin password from the environment is refused
+
+`KUBENDT_ADMIN_PASSWORD` only sets the owner's password on a cluster with no owner yet, so on one where KubeNDT has run the owner's own password stands, and the backend's log says the variable was ignored. Sign in with that password, or reset it: delete the Secret `kubendt-user-admin` of the system namespace and restart the backend, which then takes the variable.
+
 ## CORS issues from frontend
 
 - Check `CORS_ALLOWED_ORIGINS` matches frontend origin.

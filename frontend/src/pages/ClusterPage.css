@@ -335,46 +335,17 @@
   cursor: not-allowed;
 }
 
-.cl-drop {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 18px 14px;
-  text-align: center;
-  background: var(--panel-from);
-  border: 2px dashed var(--border);
-  border-radius: var(--radius-lg);
-  cursor: pointer;
-}
-
-.cl-drop .app-icon {
-  width: 20px;
-  height: 20px;
-  color: var(--primary);
-}
-
-.cl-drop b {
-  font-size: 14px;
-  color: var(--text-heading);
-}
-
-.cl-drop span {
+.cl-hint {
+  margin: 10px 0 0;
   font-size: 12px;
+  line-height: 1.5;
   color: var(--text-muted);
 }
 
-.cl-drop:hover,
-.cl-drop:focus-visible,
-.cl-drop-on {
-  background: var(--info-bg);
-  border-color: var(--primary);
-  outline: none;
-}
-
-.cl-drop-busy {
-  opacity: 0.6;
-  cursor: progress;
+.cl-hint code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-heading);
 }
 
 .cl-error {

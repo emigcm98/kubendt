@@ -1483,7 +1483,7 @@ const docTemplate = `{
         },
         "/kube/config": {
             "get": {
-                "description": "Returns information about the currently loaded kubeconfig (contexts, current context, server URLs).",
+                "description": "How the backend reaches its cluster (mode \"kubeconfig\" or \"in-cluster\"), the active cluster's ID, and the kubeconfig's contexts with the cluster ID of each one that answers.",
                 "produces": [
                     "application/json"
                 ],
@@ -1505,53 +1505,11 @@ const docTemplate = `{
                         }
                     }
                 }
-            },
-            "post": {
-                "description": "Loads kubeconfig from an uploaded file.",
-                "consumes": [
-                    "multipart/form-data"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "kubeconfig"
-                ],
-                "summary": "Load kubeconfig file",
-                "parameters": [
-                    {
-                        "type": "file",
-                        "description": "Kubeconfig file",
-                        "name": "file",
-                        "in": "formData",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/types.KubeConfigInfo"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/types.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/types.ErrorResponse"
-                        }
-                    }
-                }
             }
         },
         "/kube/context": {
             "post": {
-                "description": "Switches the active Kubernetes context.",
+                "description": "The owner's alone, and only with a kubeconfig: a backend running in its cluster answers 409 IN_CLUSTER. A context on the same cluster only changes the credentials. One on another cluster is that cluster's KubeNDT: it takes its owner's password (PASSWORD_REQUIRED, INVALID_CREDENTIALS, 429 under the login's limits), waits for no running operation (OPERATION_RUNNING) and no open shell, logs, capture, trace or throughput socket on this backend (STREAMS_OPEN), then takes that cluster's accounts, tokens, sessions and settings and signs the owner in there with a new session cookie. Where KubeNDT never ran, the owner's own password is checked and carried over. The kubeconfig is never written, so a restart comes back to the configured context.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1561,10 +1519,10 @@ const docTemplate = `{
                 "tags": [
                     "kubeconfig"
                 ],
-                "summary": "Set kubeconfig context",
+                "summary": "Switch to another context of the kubeconfig",
                 "parameters": [
                     {
-                        "description": "Context name to activate",
+                        "description": "The context, and the owner password of its cluster when it is another one",
                         "name": "body",
                         "in": "body",
                         "required": true,
@@ -1586,8 +1544,38 @@ const docTemplate = `{
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
@@ -5233,6 +5221,11 @@ const docTemplate = `{
         "types.KubeConfigInfo": {
             "type": "object",
             "properties": {
+                "cluster_id": {
+                    "description": "ClusterID is the active cluster's, empty while it cannot be reached.",
+                    "type": "string",
+                    "example": "123cf645-4b94-488d-be6c-1ba407365fe3"
+                },
                 "configured": {
                     "type": "boolean",
                     "example": true
@@ -5257,6 +5250,15 @@ const docTemplate = `{
                 "current_context": {
                     "type": "string",
                     "example": "my-cluster"
+                },
+                "mode": {
+                    "description": "Mode is \"kubeconfig\", whose contexts the owner may switch between, or\n\"in-cluster\", a backend on its cluster's ServiceAccount, fixed.",
+                    "type": "string",
+                    "enum": [
+                        "kubeconfig",
+                        "in-cluster"
+                    ],
+                    "example": "kubeconfig"
                 },
                 "path": {
                     "type": "string",
@@ -7401,12 +7403,26 @@ const docTemplate = `{
                 "context": {
                     "type": "string",
                     "example": "my-cluster"
+                },
+                "password": {
+                    "description": "Password is the owner's of the cluster switched to, needed when the\ncontext is on another cluster than the active one.",
+                    "type": "string",
+                    "example": "its-admin-password"
                 }
             }
         },
         "types.SetKubeContextResponse": {
             "type": "object",
             "properties": {
+                "cluster_changed": {
+                    "description": "ClusterChanged is true when the context is on another cluster: the\naccounts and settings are that cluster's, and the owner is signed in there.",
+                    "type": "boolean",
+                    "example": false
+                },
+                "cluster_id": {
+                    "type": "string",
+                    "example": "123cf645-4b94-488d-be6c-1ba407365fe3"
+                },
                 "current_context": {
                     "type": "string",
                     "example": "my-cluster"

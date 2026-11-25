@@ -24,7 +24,7 @@ Every command a node runs goes through a pod exec, a round trip to the API serve
 Two middlewares run before any handler:
 
 - `RequireAuth`: needs a valid session cookie or API token, else 401. Allowlist: `/healthz`, `/readyz`, `/version`, `/auth/*`.
-- `RequireKubeconfig`: cluster operations return 503 until a kubeconfig is loaded.
+- `RequireKubeconfig`: cluster operations return 503 while the backend has no cluster, neither a kubeconfig nor a ServiceAccount.
 
 Login checks the admin password (bcrypt) and issues an HttpOnly session cookie. Sessions are opaque tokens in SQLite, expire by idle/absolute timeout, and are cleared on restart. API tokens are long-lived bearer tokens for scripts, revocable and optionally expiring. Token management (create/revoke) needs a session or the password, not a token. Credential checks go through an `Authenticator` interface, so another backend such as LDAP can be added later.
 
@@ -96,7 +96,7 @@ What a node carries falls into three kinds. The topology's own: the first addres
 
 ### Cluster scoping
 
-KubeNDT can manage more than one cluster (context switching via `/kube/context` and `/kube/config`), and different clusters routinely reuse the same namespace names (e.g. `prueba` in two clusters). To keep that data from colliding, all per-namespace state is scoped by a **canonical cluster ID**: the `metadata.uid` of the cluster's `kube-system` namespace. That UID is created at cluster bootstrap, never changes, and is unique per cluster — the same convention used by OpenTelemetry (`k8s.cluster.uid`) and kube-state-metrics. It is resolved and cached per active context (`kubeclient.CurrentClusterID`) and re-resolved whenever the active client changes.
+A backend on a kubeconfig can switch between the clusters of its contexts (`POST /kube/context`, the owner's, each cluster being its own KubeNDT with its own accounts, see [DEPLOYMENT.md](DEPLOYMENT.md#in-the-cluster-or-outside-it)), and different clusters routinely reuse the same namespace names (e.g. `prueba` in two clusters). To keep that data from colliding, all per-namespace state is scoped by a **canonical cluster ID**: the `metadata.uid` of the cluster's `kube-system` namespace. That UID is created at cluster bootstrap, never changes, and is unique per cluster — the same convention used by OpenTelemetry (`k8s.cluster.uid`) and kube-state-metrics. It is resolved and cached per active context (`kubeclient.CurrentClusterID`) and re-resolved whenever the active client changes.
 
 Concretely:
 

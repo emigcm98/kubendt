@@ -43,7 +43,7 @@ npm start
 
 > Use `npm ci` to reproduce the environment (fresh clone, or after a pull that changed `package-lock.json`). Use `npm install <package>` only when adding or changing dependencies: it updates `package-lock.json`, which you must commit.
 
-The API is authenticated by default. For local development you can either set `KUBENDT_ADMIN_PASSWORD` (and log in), or run the backend with `KUBENDT_AUTH_DISABLED=true` to skip auth entirely.
+The API is authenticated by default. For local development you can either set `KUBENDT_ADMIN_PASSWORD` (and log in, though a cluster that already has an owner keeps that owner's password), or run the backend with `KUBENDT_AUTH_DISABLED=true` to skip auth entirely.
 
 **Production build** (from the repo root):
 

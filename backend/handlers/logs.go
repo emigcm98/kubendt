@@ -155,6 +155,7 @@ func PodLogsWebSocket(c *gin.Context) {
 		return
 	}
 	defer ws.Close()
+	defer trackStream()()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

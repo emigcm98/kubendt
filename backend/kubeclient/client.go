@@ -2,13 +2,11 @@ package kubeclient
 
 import (
 	"errors"
-	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -22,6 +20,19 @@ var (
 	DynamicClient dynamic.Interface
 	Config        *rest.Config
 )
+
+// What built the client: a kubeconfig, which may hold other contexts to
+// switch to, or the ServiceAccount of a backend running in its cluster,
+// which is that cluster for good.
+const (
+	ModeKubeconfig = "kubeconfig"
+	ModeInCluster  = "in-cluster"
+)
+
+var mode string
+
+// Mode is ModeKubeconfig or ModeInCluster, empty with no client.
+func Mode() string { return mode }
 
 type KubeConfigInfo struct {
 	Path           string
@@ -113,32 +124,35 @@ func applyConfig(cfg *rest.Config) error {
 	return nil
 }
 
-// IsConfigured reports whether a usable Kubernetes client is currently loaded.
-// It is false when the server started without a kubeconfig (or in-cluster
-// config) and none has been loaded yet through the API.
+// IsConfigured reports whether a usable Kubernetes client is loaded. It is
+// false when the server started with neither a kubeconfig nor a
+// ServiceAccount, until it restarts with one.
 func IsConfigured() bool {
 	return Clientset != nil
 }
 
 // InitClient (re)initializes the Kubernetes connection. It is intentionally
-// non-fatal: when no usable kubeconfig is available it clears the clients and
-// returns the error, so the server can still start and expose the endpoints
-// needed to load a kubeconfig. The error is returned for callers that want it.
+// non-fatal: with no usable kubeconfig it clears the clients and returns the
+// error, so the server still starts and tells the UI to mount one.
 func InitClient() error {
 	kubeconfigPath := resolveKubeconfigPath()
 	kubeContext := os.Getenv("KUBE_CONTEXT")
 
 	cfg, err := loadConfig(kubeconfigPath, kubeContext)
 	if err != nil {
-		Config, Clientset, DynamicClient = nil, nil, nil
-		log.Printf("⚠️ No usable kubeconfig yet: %v (load one via the API/UI to begin)", err)
+		Config, Clientset, DynamicClient, mode = nil, nil, nil, ""
+		log.Printf("⚠️ No usable kubeconfig: %v (mount one and restart to begin)", err)
 		return err
 	}
 
 	if err := applyConfig(cfg); err != nil {
-		Config, Clientset, DynamicClient = nil, nil, nil
+		Config, Clientset, DynamicClient, mode = nil, nil, nil, ""
 		log.Printf("⚠️ Could not initialize Kubernetes client: %v", err)
 		return err
+	}
+	mode = ModeInCluster
+	if kubeconfigPath != "" {
+		mode = ModeKubeconfig
 	}
 
 	log.Println("✅ Kubernetes client initialized successfully")
@@ -219,6 +233,37 @@ func ActiveClusterMeta() (id, contextName, server string, err error) {
 	return id, ActiveContextName(), server, nil
 }
 
+// ClientForContext is a client for one context of the kubeconfig that leaves
+// the active one alone, to look at another cluster before switching to it.
+func ClientForContext(contextName string) (*kubernetes.Clientset, error) {
+	path := resolveKubeconfigPath()
+	if path == "" {
+		return nil, errors.New("kubeconfig not found")
+	}
+	cfg, err := loadConfig(path, contextName)
+	if err != nil {
+		return nil, err
+	}
+	cfg.Timeout = clusterIDResolveTimeout
+	return kubernetes.NewForConfig(cfg)
+}
+
+// ContextOverride is the context set over the kubeconfig's own, empty when
+// there is none, to come back to after a failed switch.
+func ContextOverride() string { return os.Getenv("KUBE_CONTEXT") }
+
+// RestoreContext goes back to the context a switch started from.
+func RestoreContext(previous string) error {
+	if previous == "" {
+		os.Unsetenv("KUBE_CONTEXT")
+		return InitClient()
+	}
+	return SetKubeContext(previous)
+}
+
+// SetKubeContext moves the client to another context of the kubeconfig. It
+// lives in this process only, the file is never written, so a restart comes
+// back to the configured context.
 func SetKubeContext(contextName string) error {
 	path := resolveKubeconfigPath()
 	if path == "" {
@@ -235,104 +280,4 @@ func SetKubeContext(contextName string) error {
 	}
 
 	return os.Setenv("KUBE_CONTEXT", contextName)
-}
-
-// resolveWritableKubeconfigPath returns where an uploaded kubeconfig is saved:
-// the KUBECONFIG path when set, otherwise ~/.kube/config. This is the same
-// location InitClient reads from, so a load takes effect immediately and
-// persists (in the container KUBECONFIG points at a volume).
-func resolveWritableKubeconfigPath() (string, error) {
-	if p := os.Getenv("KUBECONFIG"); p != "" {
-		return p, nil
-	}
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", errors.New("cannot determine home directory: " + err.Error())
-	}
-	return filepath.Join(home, ".kube", "config"), nil
-}
-
-func copyFile(src, dst string) error {
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer in.Close()
-
-	out, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	if _, err := io.Copy(out, in); err != nil {
-		out.Close()
-		return err
-	}
-	return out.Close()
-}
-
-// LoadKubeConfigFromPath validates an uploaded kubeconfig and, only if it is
-// genuinely usable, persists it to the configured location and reloads the
-// client. Validation is three-fold: it must parse, describe at least one
-// context/cluster, and actually reach the cluster.
-func LoadKubeConfigFromPath(kubeconfigPath string) error {
-	if _, err := os.Stat(kubeconfigPath); err != nil {
-		return errors.New("kubeconfig file not found at " + kubeconfigPath)
-	}
-
-	// 1. Must parse as a kubeconfig.
-	parsed, err := clientcmd.LoadFromFile(kubeconfigPath)
-	if err != nil {
-		return errors.New("invalid kubeconfig: " + err.Error())
-	}
-
-	// 2. Must describe a cluster (rejects unrelated YAML/random files).
-	if len(parsed.Contexts) == 0 || len(parsed.Clusters) == 0 {
-		return errors.New("invalid kubeconfig: no contexts or clusters defined")
-	}
-
-	// 3. Must be reachable (rejects stale/unreachable/misconfigured files).
-	probeCfg, err := loadConfig(kubeconfigPath, "")
-	if err != nil {
-		return errors.New("invalid kubeconfig: " + err.Error())
-	}
-	probeCfg.Timeout = 8 * time.Second
-	probeClient, err := kubernetes.NewForConfig(probeCfg)
-	if err != nil {
-		return errors.New("invalid kubeconfig: " + err.Error())
-	}
-	if _, err := probeClient.Discovery().ServerVersion(); err != nil {
-		return errors.New("could not reach the cluster with this kubeconfig: " + err.Error())
-	}
-
-	// Persist to the configured location (KUBECONFIG, or ~/.kube/config).
-	target, err := resolveWritableKubeconfigPath()
-	if err != nil {
-		return err
-	}
-	if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
-		return errors.New("could not create kubeconfig directory: " + err.Error())
-	}
-	if err := copyFile(kubeconfigPath, target); err != nil {
-		return errors.New("could not save kubeconfig: " + err.Error())
-	}
-	// Kubeconfig holds credentials: keep it owner-only.
-	if err := os.Chmod(target, 0600); err != nil {
-		log.Printf("⚠️ Could not restrict permissions on %s: %v", target, err)
-	}
-	log.Printf("✅ Kubeconfig saved to %s", target)
-
-	// Drop any stale context override and reload from the persisted location.
-	// KUBECONFIG is intentionally left untouched: that path is the source of
-	// truth for both reads and writes.
-	os.Unsetenv("KUBE_CONTEXT")
-	return InitClient()
-}
-
-func ResetKubeConfig() error {
-	// Clear the environment variable
-	os.Unsetenv("KUBECONFIG")
-	os.Unsetenv("KUBE_CONTEXT")
-
-	// Reload with default path
-	return InitClient()
 }

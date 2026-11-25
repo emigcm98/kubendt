@@ -1,5 +1,78 @@
 # Deployment and Configuration
 
+## In the cluster or outside it
+
+The backend runs either inside the cluster it manages or outside it, and that decides how it reaches the cluster and what it serves. The cluster page says which, and so does `GET /kube/config` in its `mode`.
+
+| | In the cluster (`in-cluster`) | Outside it (`kubeconfig`) |
+| --- | --- | --- |
+| Installed with | `kubectl apply -k deploy/k8s` | Docker Compose, or `go run .` from source |
+| Reaches the cluster with | its ServiceAccount, the verbs of `deploy/k8s/rbac.yaml` | a kubeconfig, with the rights of its user |
+| Serves | that cluster, fixed | the context it starts on, and the owner may switch to the kubeconfig's other contexts |
+| The owner's first password | the Secret `kubendt-backend-env` | `KUBENDT_ADMIN_PASSWORD` in the compose file or the shell |
+| The UI at | a port-forward, a NodePort or an Ingress | `http://localhost` with the compose, `:3000` from source |
+| Meant for | the install a group shares | one person's lab, such as kind or minikube on a laptop, or a development cluster |
+
+Each cluster is its own KubeNDT either way. Its accounts, API tokens, sessions, settings and labs live in it, in the system namespace (`kubendt-system`) and the lab namespaces, and nothing is kept with the backend. So two backends on one cluster, one inside and one outside, are the same KubeNDT, and a context on another cluster is another one.
+
+### Switching contexts outside the cluster
+
+The owner may switch between the kubeconfig's contexts, on the cluster page or with `POST /kube/context`. A context on the same cluster only changes the credentials. A context on another cluster is another KubeNDT: the switch asks for its owner's password, then everyone is signed out and the owner is signed in there. Where KubeNDT has never run, the owner types their own password, which that cluster takes. A switch waits until no namespace has an operation in progress and this backend has no shell, logs, capture, trace or throughput test open.
+
+The kubeconfig is never written. A switch lasts until the backend restarts, which comes back to the configured context (`KUBE_CONTEXT`, or the kubeconfig's own). To add a context, edit the kubeconfig: run from source, the backend reads it on every call and the new context shows on a refresh; under the compose, restart the service. Without a kubeconfig at all, mount one and restart.
+
+## Deployment in the cluster
+
+KubeNDT can run inside the cluster it manages, on a ServiceAccount, with no kubeconfig: `deploy/k8s` holds the manifests, a kustomization that installs the `kubendt-system` namespace, the ServiceAccount with its ClusterRole, the backend and the UI.
+
+```bash
+# The owner's first password. Without this Secret one is generated and printed once in the backend's log.
+kubectl create namespace kubendt-system
+kubectl -n kubendt-system create secret generic kubendt-backend-env --from-literal=KUBENDT_ADMIN_PASSWORD='change-me'
+
+kubectl apply -k "https://github.com/emigcm98/kubendt/deploy/k8s?ref=v1.13.0"   # a release: its kustomization pins its images
+kubectl apply -k deploy/k8s                      # a checkout: the images of the release it was cut at
+
+kubectl -n kubendt-system port-forward svc/kubendt-frontend 8080:80   # then http://localhost:8080
+```
+
+The UI's nginx proxies `/api` to the backend's Service, so one host serves both; `deploy/k8s/optional/ingress.yaml` is an Ingress to adapt. The backend keeps the platform's objects in the namespace it runs in and needs nothing else: no volume, no database. One replica: the state is in the cluster, but a capture, a shell or a trace lives in the backend that opened it, so a second replica would need the Service to keep each client on one pod; when a lab is heavy, give the one replica more memory in `backend.yaml` (its limit is 1 GiB, its CPU unlimited) rather than a second one. The heavy traffic of a lab, the exec streams of shells, captures and actions, goes through the API server and the kubelets whichever way the backend runs; in the cluster it only loses a hop. `deploy/k8s/rbac.yaml` is the exact list of what the ServiceAccount may do, verb by verb, the same the state browser shows in use.
+
+The backend's variables (the reference below) come from two objects the manifests name and the install provides, `deploy/k8s/optional/config.example.yaml` being both filled in as an example: the Secret `kubendt-backend-env` for the password and anything secret, and a ConfigMap `kubendt-backend-config` for plain settings, every key of both an environment variable. The manifests set `KUBENDT_SYSTEM_NAMESPACE` to the backend's own namespace and leave `KUBENDT_DB_PATH` empty, nothing else. A change is read at start, so it takes `kubectl -n kubendt-system rollout restart deploy/kubendt-backend`. The password is the exception, it only counts on a cluster with no owner yet (see `KUBENDT_ADMIN_PASSWORD` below):
+
+```bash
+kubectl -n kubendt-system create configmap kubendt-backend-config \
+  --from-literal=KUBENDT_PLACEMENT=spread --from-literal=KUBENDT_CAPTURE_MAX_MB=200
+kubectl -n kubendt-system rollout restart deploy/kubendt-backend
+```
+
+The UI's only variable is `BACKEND_HOST`, set in `frontend.yaml` to the backend's Service.
+
+Meshnet and, for VM nodes, `/dev/kvm` on the workers are the cluster's side, as for any install; metrics-server is optional.
+
+A compose install of 1.11 or older moving to this version keeps its `backend-db` and `kubendt-files` volumes for one more start: the backend moves what they hold (the admin password, the API tokens, and every lab's layout, history, link attributes and files) into the cluster as it starts and says so in its log, after which the volumes can go. To carry such an install into its cluster, start it once on this version where it is, then install the manifests and point the proxy at them; users keep their URL, their password and their tokens.
+
+For a reverse proxy outside the cluster, `deploy/k8s/optional/nodeport.yaml` puts the UI on port 30080 of every node, so the proxy's upstream can be the workers; behind HTTPS set `KUBENDT_COOKIE_SECURE=true` in the ConfigMap. The proxy must pass WebSockets (`proxy_http_version 1.1`, the `Upgrade` and `Connection` headers) with long read and send timeouts, as the shells and captures are open connections.
+
+## Deployment with Docker Compose
+
+The compose runs KubeNDT outside the cluster, on your kubeconfig. Two compose files are provided, both running the backend plus a combined nginx+frontend image:
+
+- `docker-compose.prod.yml`: pulls the published images from GHCR (nothing to build). The "just use it" path.
+  ```bash
+  docker compose -f docker-compose.prod.yml up -d
+  ```
+- `docker-compose.yml`: builds both images from source (for local changes).
+  ```bash
+  docker compose up --build
+  ```
+
+Configuration lives **inline** in each compose file's `environment:` block. The defaults expect your kubeconfig at `~/.kube/config` (mounted read-only) and set a placeholder admin password (`admin123`), which the owner gets at the first start on a cluster KubeNDT has not run on. Change it in the file before that, or on the profile page after. See the reference below for every variable.
+
+The backend container copies the mounted kubeconfig at every start, so a context added to `~/.kube/config` shows once the service restarts (`docker compose restart backend`). It starts on the kubeconfig's current context unless `KUBE_CONTEXT` names one. A cluster another KubeNDT already serves keeps its owner's password, as the variable only sets the first one.
+
+The compose files keep the `kubendt-files` and `backend-db` volumes an older backend wrote its files and database to; a backend of 1.12 reads them once to move that into the cluster, after which they can go.
+
 ## Running Locally (Development)
 
 Install the required tools listed in [CONTRIBUTING.md](../CONTRIBUTING.md), then run each component in a separate terminal.
@@ -45,56 +118,6 @@ FILES_BASE_PATH=./files
 set -a && source backend/.env.local && set +a
 ```
 
-## Deployment with Docker Compose
-
-Two compose files are provided, both running the backend plus a combined nginx+frontend image:
-
-- `docker-compose.prod.yml`: pulls the published images from GHCR (nothing to build). The "just use it" path.
-  ```bash
-  docker compose -f docker-compose.prod.yml up -d
-  ```
-- `docker-compose.yml`: builds both images from source (for local changes).
-  ```bash
-  docker compose up --build
-  ```
-
-Configuration lives **inline** in each compose file's `environment:` block. The defaults expect your kubeconfig at `~/.kube/config` (mounted read-only) and set a placeholder admin password (`admin123`) that you should change. See the reference below for every variable.
-
-The compose files keep the `kubendt-files` and `backend-db` volumes an older backend wrote its files and database to; a backend of 1.12 reads them once to move that into the cluster, after which they can go.
-
-## Deployment in the cluster
-
-KubeNDT can run inside the cluster it manages, on a ServiceAccount, with no kubeconfig: `deploy/k8s` holds the manifests, a kustomization that installs the `kubendt-system` namespace, the ServiceAccount with its ClusterRole, the backend and the UI.
-
-```bash
-# The admin password; without this Secret one is generated and printed once in the backend's log.
-kubectl create namespace kubendt-system
-kubectl -n kubendt-system create secret generic kubendt-backend-env --from-literal=KUBENDT_ADMIN_PASSWORD='change-me'
-
-kubectl apply -k "https://github.com/emigcm98/kubendt/deploy/k8s?ref=v1.13.0"   # a release: its kustomization pins its images
-kubectl apply -k deploy/k8s                      # a checkout: the images of the release it was cut at
-
-kubectl -n kubendt-system port-forward svc/kubendt-frontend 8080:80   # then http://localhost:8080
-```
-
-The UI's nginx proxies `/api` to the backend's Service, so one host serves both; `deploy/k8s/optional/ingress.yaml` is an Ingress to adapt. The backend keeps the platform's objects in the namespace it runs in and needs nothing else: no volume, no database. One replica: the state is in the cluster, but a capture, a shell or a trace lives in the backend that opened it, so a second replica would need the Service to keep each client on one pod; when a lab is heavy, give the one replica more memory in `backend.yaml` (its limit is 1 GiB, its CPU unlimited) rather than a second one. The heavy traffic of a lab, the exec streams of shells, captures and actions, goes through the API server and the kubelets whichever way the backend runs; in the cluster it only loses a hop. `deploy/k8s/rbac.yaml` is the exact list of what the ServiceAccount may do, verb by verb, the same the state browser shows in use.
-
-The backend's variables (the reference below) come from two objects the manifests name and the install provides, `deploy/k8s/optional/config.example.yaml` being both filled in as an example: the Secret `kubendt-backend-env` for the password and anything secret, and a ConfigMap `kubendt-backend-config` for plain settings, every key of both an environment variable. The manifests set `KUBENDT_SYSTEM_NAMESPACE` to the backend's own namespace and leave `KUBENDT_DB_PATH` empty, nothing else. A change is read at start, so it takes `kubectl -n kubendt-system rollout restart deploy/kubendt-backend`:
-
-```bash
-kubectl -n kubendt-system create configmap kubendt-backend-config \
-  --from-literal=KUBENDT_PLACEMENT=spread --from-literal=KUBENDT_CAPTURE_MAX_MB=200
-kubectl -n kubendt-system rollout restart deploy/kubendt-backend
-```
-
-The UI's only variable is `BACKEND_HOST`, set in `frontend.yaml` to the backend's Service.
-
-Meshnet and, for VM nodes, `/dev/kvm` on the workers are the cluster's side, as for any install; metrics-server is optional.
-
-A compose install of 1.11 or older moving to this version keeps its `backend-db` and `kubendt-files` volumes for one more start: the backend moves what they hold (the admin password, the API tokens, and every lab's layout, history, link attributes and files) into the cluster as it starts and says so in its log, after which the volumes can go. To carry such an install into its cluster, start it once on this version where it is, then install the manifests and point the proxy at them; users keep their URL, their password and their tokens.
-
-For a reverse proxy outside the cluster, `deploy/k8s/optional/nodeport.yaml` puts the UI on port 30080 of every node, so the proxy's upstream can be the workers; behind HTTPS set `KUBENDT_COOKIE_SECURE=true` in the ConfigMap. The proxy must pass WebSockets (`proxy_http_version 1.1`, the `Upgrade` and `Connection` headers) with long read and send timeouts, as the shells and captures are open connections.
-
 ## What the backend asks of the cluster
 
 Kubernetes 1.25 or newer, 1.30 recommended. What sets the floor, by API, with the version it has been stable since:
@@ -119,13 +142,13 @@ The owner may override some of these from the portal's settings: the password's 
 
 ### Backend
 
-- `KUBECONFIG`: kubeconfig path.
-- `KUBE_CONTEXT`: optional kube context override.
+- `KUBECONFIG`: kubeconfig path, read and never written.
+- `KUBE_CONTEXT`: optional kube context override, the context a restart comes back to.
 - `PORT`: API port (default `8080`).
 - `CORS_ALLOWED_ORIGINS`: comma-separated list of allowed frontend origins (default: `http://localhost:3000`).
 - `FILES_BASE_PATH`: the folder an older backend kept the namespace files in (default: `files` relative to cwd). The files live in the cluster now, as ConfigMaps and Secrets of the namespace; what is on disk moves there the first time a namespace is touched and stays behind a marker, so the variable and its volume are only needed to migrate.
 - `KUBENDT_DB_PATH`: SQLite database path. Optional: the backend runs without one, the state lives in the cluster, and a file is only read to move what an older backend kept in it (its layouts, history, link attributes, file flags, admin password and API tokens). Unset, a `kubendt.db` in the working directory is still opened when there is one.
-- `KUBENDT_SYSTEM_NAMESPACE`: the namespace the platform keeps its own objects in, created at start (default `kubendt-system`): the admin password hash, the API tokens, the key the sessions are signed with, and the layouts of deleted namespaces waiting for a namespace of the same name. The first cluster the backend connects to is its home cluster and holds them; a context switch later does not move them.
+- `KUBENDT_SYSTEM_NAMESPACE`: the namespace the platform keeps its own objects in, created at start (default `kubendt-system`): the admin password hash, the API tokens, the key the sessions are signed with, and the layouts of deleted namespaces waiting for a namespace of the same name. The cluster in use holds them, and a switch to another cluster takes that cluster's.
 - `KUBECTL_EXEC_TIMEOUT_SECONDS`: max wall-clock seconds for any single in-pod exec (kubectl exec, `ssh_qemu` into a QEMU guest, batched VyOS commits, the one script that runs a pod's consecutive Linux actions in a configure or a replay). Default `30`. Bump it if you run against a slow cluster or busy guests and start seeing "exec timeout" errors from network-configure or modify operations. The SSH layer detects dead sessions independently within ~11s, so this deadline only bounds genuinely-long commands.
 - `KUBENDT_K8S_QPS` / `KUBENDT_K8S_BURST`: client-side rate limit for requests to the Kubernetes API (default `100` requests per second, burst `200`). client-go's own default is 5/10, which queues per-pod operations for tens of seconds on large topologies. Lower them only on a shared API server under pressure; it applies its own priority and fairness on top.
 - `SWAGGER_BASE_PATH`: base path prefix for Swagger UI (e.g. `/api/` when served behind a proxy).
@@ -140,7 +163,7 @@ The owner may override some of these from the portal's settings: the password's 
 
 #### Authentication
 
-- `KUBENDT_ADMIN_PASSWORD`: admin password for login, the source of truth when set (a change ends every session). If unset, the hash stored in the cluster is used, or a random password is generated, printed to the logs once and its hash stored, so it stays stable across restarts and backends.
+- `KUBENDT_ADMIN_PASSWORD`: the owner's password on a cluster that has no owner yet, so at the first start. After that it is ignored and the owner changes theirs on the profile page. Unset, a random one is generated, printed once in the log and its hash stored. To reset a lost one, delete the Secret `kubendt-user-admin` of the system namespace and restart the backend: it takes the variable again or generates one, the owner's sessions end and their API tokens stay.
 - `KUBENDT_AUTH_DISABLED`: set to `true` to run the API **unauthenticated** (dev / trusted network only). A loud warning is logged at startup.
 - `KUBENDT_COOKIE_SECURE`: set to `true` when serving over HTTPS so the session cookie is only sent over TLS (default `false`, since the stock compose serves plain HTTP behind nginx).
 - `KUBENDT_QUOTA_NAMESPACES`, `KUBENDT_QUOTA_PODS`, `KUBENDT_QUOTA_PODS_PER_NAMESPACE`: the quota of an account that has none of its own, namespaces owned, pods across them and pods in any one of them; `0` or unset is no limit. Admins are never counted; a lab counts against its owner whoever deploys into it.

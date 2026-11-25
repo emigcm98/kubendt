@@ -6,8 +6,8 @@ KubeNDT has accounts. Each one has a role on the platform and a level in every n
 
 | Role | What it is |
 |---|---|
-| `owner` | The account `admin`, created at first start with `KUBENDT_ADMIN_PASSWORD`. It names and demotes admins and saves the platform's settings, and cannot be disabled, deleted or demoted. |
-| `admin` | Has the owner level in every namespace, loads the kubeconfig, sees the cluster and manages the plain users. It never changes the owner or another admin. |
+| `owner` | The account `admin`, created at the first start on a cluster with `KUBENDT_ADMIN_PASSWORD`, which is ignored after that. It names and demotes admins, saves the platform's settings and switches the cluster, and cannot be disabled, deleted or demoted. |
+| `admin` | Has the owner level in every namespace, sees the cluster and its kubeconfig and manages the plain users. It never changes the owner or another admin. |
 | `user` | Sees only the namespaces it owns or was invited to. It creates namespaces only when its account says so. |
 
 An admin creates accounts from the **Accounts** page or with `POST /users`. A password left empty is generated and shown once. Either way the account must set its own at the first sign-in, and nothing else answers until it does.
@@ -42,6 +42,7 @@ With `KUBENDT_POD_CPU_REQUEST`, `KUBENDT_POD_MEMORY_REQUEST`, `KUBENDT_POD_CPU_L
 - A chosen password has at least eight characters (`KUBENDT_PASSWORD_MIN_LENGTH`), is not the account's name and, on a change, is not the current one. A refusal is `400` with the code `WEAK_PASSWORD`.
 - Failed sign-ins are counted per client address and per account. After 8 from one address or 12 on one account within 15 minutes, further attempts get `429` with `Retry-After`. One address alone never locks an account out. API tokens are not sign-ins and keep working.
 - Changing or resetting a password ends the account's sessions. So does disabling it, which also stops its tokens.
+- The owner's lost password is reset from the cluster: delete the Secret `kubendt-user-admin` of the system namespace and restart the backend, which sets it from `KUBENDT_ADMIN_PASSWORD` or generates one.
 - A session is a signed cookie that holds for the idle and absolute lifetimes of [DEPLOYMENT.md](DEPLOYMENT.md#authentication). The role is read from the account at every request, so a change applies within seconds.
 
 ## API tokens
@@ -50,7 +51,7 @@ Each account mints and revokes its tokens and changes its password on its profil
 
 ## Where it is kept
 
-Everything is an object of the cluster, readable with `kubectl` and shown by the state browser.
+Everything is an object of the cluster, readable with `kubectl` and shown by the state browser. So each cluster has its own accounts: a backend switched to another cluster serves that cluster's, and nothing moves from one to the other ([DEPLOYMENT.md](DEPLOYMENT.md#in-the-cluster-or-outside-it)).
 
 | What | Object |
 |---|---|

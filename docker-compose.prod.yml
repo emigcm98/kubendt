@@ -21,7 +21,8 @@ services:
       - KUBECONFIG=/data/.kube/config
       - FILES_BASE_PATH=/app/files
       - KUBENDT_DB_PATH=/data/kubendt.db
-      # Admin password for login. CHANGE THIS before any real deployment.
+      # The admin's password at the first start on a cluster, ignored after
+      # that. CHANGE THIS before any real deployment.
       - KUBENDT_ADMIN_PASSWORD=admin123
     volumes:
       - kubendt-files:/app/files

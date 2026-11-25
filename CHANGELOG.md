@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - A profile page with one's account, password, API tokens, quota and namespaces, in place of the password and tokens dialogs.
 - `GET` and `PUT /settings`, for the owner to override some of the environment's settings from the portal, applied at once. Admins read them.
 - A settings page for those values, saved by the owner and read by the admins.
+- `GET /kube/config` says how the backend reaches its cluster (`mode`) and gives the active cluster's ID.
 
 ### Changed
 
@@ -26,6 +27,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - The tool windows take the dialogs' light frame and share one header. Only the terminal and the log stay dark.
 - The node panel and the `/cluster` page take the Home's node tiles and chips, and a pod's history opens in the shared dialog.
 - Every page uses the interface's font, and code one monospace, from the design tokens.
+- Only the owner switches the kubectl context. A context on another cluster asks for that cluster's owner password and signs in to its KubeNDT, and a backend running in its cluster has no switch.
+- The compose backend copies the mounted kubeconfig at every start, so a context added to it shows after a restart.
+- `KUBENDT_ADMIN_PASSWORD` only sets the owner's password on a cluster that has no owner yet, so a restart no longer undoes the owner's change. A lost one is reset by deleting the owner's Secret and restarting.
+
+### Removed
+
+- `POST /kube/config` and the kubeconfig upload on the cluster page. The kubeconfig is mounted and read, never written.
 
 ### Fixed
 

@@ -698,7 +698,7 @@ func swaggerGetClusterNodeDetail() {}
 // swaggerGetKubeConfigInfo godoc
 //
 //	@Summary      Get kubeconfig info
-//	@Description  Returns information about the currently loaded kubeconfig (contexts, current context, server URLs).
+//	@Description  How the backend reaches its cluster (mode "kubeconfig" or "in-cluster"), the active cluster's ID, and the kubeconfig's contexts with the cluster ID of each one that answers.
 //	@Tags         kubeconfig
 //	@Produce      json
 //	@Success      200  {object}  types.KubeConfigInfo
@@ -708,31 +708,22 @@ func swaggerGetKubeConfigInfo() {}
 
 // swaggerSetKubeContext godoc
 //
-//	@Summary      Set kubeconfig context
-//	@Description  Switches the active Kubernetes context.
+//	@Summary      Switch to another context of the kubeconfig
+//	@Description  The owner's alone, and only with a kubeconfig: a backend running in its cluster answers 409 IN_CLUSTER. A context on the same cluster only changes the credentials. One on another cluster is that cluster's KubeNDT: it takes its owner's password (PASSWORD_REQUIRED, INVALID_CREDENTIALS, 429 under the login's limits), waits for no running operation (OPERATION_RUNNING) and no open shell, logs, capture, trace or throughput socket on this backend (STREAMS_OPEN), then takes that cluster's accounts, tokens, sessions and settings and signs the owner in there with a new session cookie. Where KubeNDT never ran, the owner's own password is checked and carried over. The kubeconfig is never written, so a restart comes back to the configured context.
 //	@Tags         kubeconfig
 //	@Accept       json
 //	@Produce      json
-//	@Param        body  body      types.SetContextRequest  true  "Context name to activate"
+//	@Param        body  body      types.SetContextRequest  true  "The context, and the owner password of its cluster when it is another one"
 //	@Success      200   {object}  types.SetKubeContextResponse
 //	@Failure      400   {object}  types.ErrorResponse
+//	@Failure      401   {object}  types.ErrorResponse
+//	@Failure      403   {object}  types.ErrorResponse
+//	@Failure      409   {object}  types.ErrorResponse
+//	@Failure      429   {object}  types.ErrorResponse
 //	@Failure      500   {object}  types.ErrorResponse
+//	@Failure      502   {object}  types.ErrorResponse
 //	@Router       /kube/context [post]
 func swaggerSetKubeContext() {}
-
-// swaggerLoadKubeConfig godoc
-//
-//	@Summary      Load kubeconfig file
-//	@Description  Loads kubeconfig from an uploaded file.
-//	@Tags         kubeconfig
-//	@Accept       multipart/form-data
-//	@Produce      json
-//	@Param        file  formData  file  true  "Kubeconfig file"
-//	@Success      200   {object}  types.KubeConfigInfo
-//	@Failure      400   {object}  types.ErrorResponse
-//	@Failure      500   {object}  types.ErrorResponse
-//	@Router       /kube/config [post]
-func swaggerLoadKubeConfig() {}
 
 // ─── Shell (WebSocket) ────────────────────────────────────────────────────────
 
@@ -1145,7 +1136,6 @@ var _ = types.KubeConfigInfo{}
 var _ = types.SetContextRequest{}
 var _ = types.SetKubeContextResponse{}
 var _ = types.NamespaceOperationConflictResponse{}
-var _ = types.LoadKubeConfigRequest{}
 var _ = types.CreateNamespaceRequest{}
 var _ = types.CreateFolderRequest{}
 var _ = types.RenameFileRequest{}

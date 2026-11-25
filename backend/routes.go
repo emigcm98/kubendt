@@ -219,7 +219,6 @@ func SetupRoutes(router *gin.Engine) {
 	{
 		kubeGroup.GET("/config", handlers.GetKubeConfigInfo)
 		kubeGroup.POST("/context", handlers.SetKubeContext)
-		kubeGroup.POST("/config", handlers.LoadKubeConfig)
 	}
 
 	// Swagger UI at /swagger. Custom index (filter on, no Explore topbar); spec
