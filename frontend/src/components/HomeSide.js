@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config';
+import { Meter, meshnetDot, vcpu, gib, fixed } from './K8sBits';
 import { ReactComponent as ChevronIcon } from '../assets/images/icons/chevron-right.svg';
 
 const EXAMPLES_URL = 'https://github.com/emigcm98/kubendt/tree/main/deploy/examples';
@@ -29,30 +30,6 @@ export const usePolled = (path, every) => {
   return state;
 };
 
-const Meter = ({ value, kind }) => (
-  <div className={`home-meter${kind ? ` home-meter-${kind}` : ''}`}>
-    <i style={{ width: `${Math.max(0, Math.min(100, value || 0))}%` }} />
-  </div>
-);
-
-const vcpu = (q) => {
-  if (!q || q === 'N/A') return null;
-  if (q.endsWith('m')) return parseFloat(q) / 1000;
-  if (q.endsWith('n')) return parseFloat(q) / 1e9;
-  return parseFloat(q);
-};
-
-const gib = (q) => {
-  if (!q || q === 'N/A') return null;
-  const n = parseFloat(q);
-  if (q.endsWith('Gi')) return n;
-  if (q.endsWith('Mi')) return n / 1024;
-  if (q.endsWith('Ki')) return n / (1024 * 1024);
-  return n / 1024 ** 3;
-};
-
-const fixed = (n, digits) => (n === null || Number.isNaN(n) ? '?' : n.toFixed(digits));
-
 const meshnetPill = (m) => {
   if (!m || !m.state) return null;
   if (m.state === 'ok') return { cls: 'ok', text: `Meshnet ${m.ready}/${m.desired}` };
@@ -72,11 +49,11 @@ const ClusterCard = ({ onOpenNode }) => {
       <h3 className="home-card-title">
         Cluster
         {data && (
-          <span className={`home-pill home-pill-${data.ready === data.total ? 'ok' : 'warn'}`}>
+          <span className={`k8s-pill k8s-pill-${data.ready === data.total ? 'ok' : 'warn'}`}>
             Ready {data.ready}/{data.total}
           </span>
         )}
-        {mesh && <span className={`home-pill home-pill-${mesh.cls}`}>{mesh.text}</span>}
+        {mesh && <span className={`k8s-pill k8s-pill-${mesh.cls}`}>{mesh.text}</span>}
       </h3>
       {status === 503 && <p className="home-card-note">No kubeconfig loaded yet.</p>}
       {!data && status !== 503 && <p className="home-card-note">Reading the cluster…</p>}
@@ -109,17 +86,15 @@ const ClusterCard = ({ onOpenNode }) => {
                 <span className="home-node-top">
                   <b>{n.name}</b>
                   {(n.roles || []).slice(0, 1).map((r) => (
-                    <span key={r} className="home-role">
+                    <span key={r} className="k8s-role">
                       {r}
                     </span>
                   ))}
                   {n.status !== 'Ready' && (
-                    <span className="home-pill home-pill-bad">{n.status}</span>
+                    <span className="k8s-pill k8s-pill-bad">{n.status}</span>
                   )}
                   <span className="home-node-space" />
-                  <span
-                    className={`home-dot home-dot-${n.meshnet === 'running' ? 'ok' : n.meshnet === 'not-running' ? 'bad' : 'off'}`}
-                  />
+                  <span className={`k8s-dot k8s-dot-${meshnetDot(n.meshnet)}`} />
                   <span className="home-node-mesh">Meshnet</span>
                   <ChevronIcon className="app-icon home-node-go" aria-hidden="true" />
                 </span>

@@ -6,7 +6,7 @@
   height: 100vh;
   overflow: hidden;
   background: var(--surface);
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: var(--font-sans);
   color: var(--text-body);
 }
 
@@ -189,7 +189,7 @@
 }
 
 .state-name {
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 0.8rem;
   color: var(--text-heading);
   white-space: nowrap;
@@ -248,7 +248,7 @@
 }
 
 .state-detail-title strong {
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 0.86rem;
   color: var(--text-heading);
   word-break: break-all;
@@ -297,7 +297,7 @@
   border: 1px solid var(--border-light);
   border-radius: var(--radius-sm);
   background: var(--surface);
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 0.72rem;
   color: var(--text-muted);
 }
@@ -310,7 +310,7 @@
   overflow: auto;
   border-top: 1px solid var(--border-light);
   background: var(--surface);
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 0.78rem;
   line-height: 1.45;
   color: var(--text-body);

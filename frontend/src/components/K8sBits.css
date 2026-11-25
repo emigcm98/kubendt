@@ -1,0 +1,70 @@
+/* The small pieces that say how a Kubernetes node is, shared by the Home's
+   cluster card, the /cluster page and the node panel: a role chip, a state
+   pill, the Meshnet dot and a usage meter. */
+.k8s-role {
+  flex: none;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--primary);
+  background: var(--info-bg);
+  border-radius: var(--radius-pill);
+}
+
+.k8s-pill {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+}
+
+.k8s-pill-ok {
+  color: var(--success);
+  background: var(--success-bg);
+}
+
+.k8s-pill-warn {
+  color: var(--warning-text);
+  background: var(--warning-bg);
+}
+
+.k8s-pill-bad {
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+
+.k8s-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.k8s-dot-ok {
+  background: var(--success-accent);
+}
+
+.k8s-dot-bad {
+  background: var(--danger);
+}
+
+.k8s-dot-off {
+  background: var(--text-subtle);
+}
+
+.k8s-meter {
+  height: 6px;
+  overflow: hidden;
+  background: var(--border-light);
+  border-radius: var(--radius-pill);
+}
+
+.k8s-meter i {
+  display: block;
+  height: 100%;
+  background: var(--primary);
+}
+
+.k8s-meter-ram i {
+  background: var(--success-accent);
+}

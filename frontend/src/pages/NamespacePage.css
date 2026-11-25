@@ -1,6 +1,6 @@
 .namespace-page {
   padding: 1rem;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: var(--font-sans);
 }
 
 .namespace-page h2 {

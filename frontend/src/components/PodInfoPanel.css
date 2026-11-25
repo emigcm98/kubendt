@@ -6,26 +6,12 @@
   --pod-type-host: #7f8c8d;
   --pod-type-switch: #9b59b6;
   --pod-overlay-bg: #f0f0f0;
-  /* shaping on, and the history buttons */
+  /* shaping on and off */
   --pod-on-text: #1e7e34;
   --pod-on-border: #b7e1c2;
   --pod-off-bg: #eef1f5;
   --pod-off-border: #d4dce5;
   --pod-error-text: #c0392b;
-  --pod-btn-border: #b8c7db;
-  --pod-btn-bg: #f7f9fc;
-  --pod-btn-bg-hover: #eef3f9;
-  --pod-btn-bg-active: #e3edf8;
-  --pod-delete-border: #e2b9b9;
-  --pod-delete-bg: #fff6f6;
-  --pod-delete-bg-hover: #fde8e8;
-  --pod-delete-text: #8a2d2d;
-  --pod-popup-border: #cfd8e3;
-  --pod-popup-empty: #777777;
-  --pod-field-border: #e7ecf2;
-  --pod-command-border: #dbe4ef;
-  --pod-command-bg: #f8fbff;
-  --pod-command-text: #1f3b57;
 }
 
 /* === PANEL PRINCIPAL === */
@@ -50,7 +36,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--panel-shadow);
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: var(--font-sans);
   color: var(--text-body);
 
   display: flex;
@@ -127,9 +113,9 @@
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 15px;
   font-weight: 700;
   color: var(--text-heading);
 }
@@ -739,7 +725,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: var(--font-mono);
   user-select: text;
 }
 
@@ -765,20 +751,20 @@
   text-align: center;
 }
 
-/* Lista de métodos bonica */
+/* The Config tab's header: reload, the driver, clear the pod's history. */
 .driver-header {
   position: sticky;
   top: 0;
   z-index: 1;
-  background: var(--panel-from);
   padding: 0.6rem;
-  border-bottom: 1px solid var(--border);
   text-align: center;
+  background: var(--panel-from);
+  border-bottom: 1px solid var(--border);
 }
 
 .driver-title {
-  font-weight: 700;
   font-size: 0.95rem;
+  font-weight: 700;
   color: var(--text-heading);
 }
 
@@ -789,68 +775,55 @@
   gap: 0.5rem;
 }
 
-/* The toolbars' icon buttons, the same quiet squares as the header's. */
+/* The quiet square icon buttons of the tab and of each operation. */
 .driver-nav-btn,
-.driver-history-clear-pod-btn {
+.driver-history-clear-pod-btn,
+.driver-history-info-btn,
+.driver-history-delete-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 28px;
   height: 28px;
   padding: 0;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--text-muted);
   font-size: 0.82rem;
   line-height: 1;
+  color: var(--text-muted);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
   cursor: pointer;
 }
 
-.driver-nav-btn:hover:not(:disabled) {
-  background: var(--panel-header-from);
-  color: var(--text-heading);
+.driver-nav-btn:hover:not(:disabled),
+.driver-history-info-btn:hover {
+  color: var(--primary);
+  background: var(--info-bg);
 }
 
-.driver-nav-btn:disabled {
-  color: var(--text-subtle);
-  cursor: default;
-}
-
-.driver-history-panel {
-  height: 100%;
-  min-height: 0;
-  overflow: hidden;
-  padding: 0.6rem 0.8rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.driver-history-clear-pod-btn:hover:not(:disabled) {
-  background: var(--danger-bg);
+.driver-history-clear-pod-btn:hover:not(:disabled),
+.driver-history-delete-btn:hover:not(:disabled) {
   color: var(--danger);
+  background: var(--danger-bg);
 }
 
-.driver-history-clear-pod-btn:disabled {
+.driver-nav-btn:disabled,
+.driver-history-clear-pod-btn:disabled,
+.driver-history-delete-btn:disabled {
   color: var(--text-subtle);
   cursor: default;
 }
 
-.driver-history-list {
-  height: 100%;
-  min-height: 0;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-}
-
+/* An operation: its action, when it ran, and its two buttons. */
 .driver-history-item {
+  padding: 6px 6px 6px 10px;
+  background: var(--surface);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
-  background: var(--surface);
-  padding: 0.5rem 0.65rem;
+}
+
+.driver-history-item:hover {
+  border-color: var(--border);
 }
 
 .driver-history-row {
@@ -862,192 +835,142 @@
 
 .driver-history-actions {
   display: inline-flex;
+  flex: none;
   align-items: center;
-  gap: 0.35rem;
-}
-
-.driver-history-info-btn {
-  border: 1px solid var(--pod-btn-border);
-  background: var(--pod-btn-bg);
-  color: var(--text-heading);
-  border-radius: var(--radius-sm);
-  width: 24px;
-  height: 24px;
-  font-size: 0.9rem;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.driver-history-info-btn:hover {
-  background: var(--pod-btn-bg-hover);
-}
-
-.driver-history-delete-btn {
-  border: 1px solid var(--pod-delete-border);
-  background: var(--pod-delete-bg);
-  color: var(--pod-delete-text);
-  border-radius: var(--radius-sm);
-  width: 24px;
-  height: 24px;
-  font-size: 0.75rem;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.driver-history-delete-btn:hover:not(:disabled) {
-  background: var(--pod-delete-bg-hover);
-}
-
-.driver-history-delete-btn:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
+  gap: 2px;
 }
 
 .driver-history-action {
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
   font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--text-heading);
-  font-size: 0.88rem;
 }
 
 .driver-history-date {
-  margin-top: 0.2rem;
+  margin-top: 1px;
+  font-size: 0.76rem;
   color: var(--text-muted);
-  font-size: 0.78rem;
 }
 
-.history-popup-overlay {
-  position: fixed;
-  inset: 0;
-  background: color-mix(in srgb, var(--scrim-color) 35%, transparent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* The operation dialog, in the shared dialog look (Dialog.css), over the
+   tool windows as it was. */
+.dlg-overlay.history-popup-overlay {
   z-index: 5200;
 }
 
-.history-popup {
-  width: min(520px, 92vw);
-  max-height: 80vh;
-  background: var(--surface);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--pod-popup-border);
-  overflow: hidden;
-  box-shadow: 0 10px 24px color-mix(in srgb, var(--shadow-color) 25%, transparent);
-}
-
-.history-popup-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.65rem 0.8rem;
+.history-popup-meta {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 16px;
+  padding: 10px 12px;
+  font-size: 13px;
   background: var(--panel-from);
-  border-bottom: 1px solid var(--border);
+  border-radius: var(--radius-md);
 }
 
-.history-popup-close {
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font-size: 0.85rem;
-}
-
-.history-popup-body {
-  padding: 0.7rem 0.8rem;
-  max-height: calc(80vh - 52px);
-  overflow-y: auto;
-}
-
-.history-popup-line {
-  display: flex;
-  gap: 0.4rem;
-  align-items: baseline;
-  margin-bottom: 0.35rem;
-  font-size: 0.86rem;
-}
-
-.history-popup-line span {
+.history-popup-meta span {
   color: var(--text-muted);
 }
 
-.history-popup-fields-title {
-  margin-top: 0.45rem;
-  margin-bottom: 0.45rem;
-  font-weight: 700;
-  font-size: 0.86rem;
+.history-popup-meta b {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+  color: var(--text-heading);
+}
+
+.history-popup-meta .history-popup-mono {
+  font-family: var(--font-mono);
+  font-size: 12px;
 }
 
 .history-popup-empty {
   margin: 0;
-  color: var(--pod-popup-empty);
-  font-size: 0.82rem;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--text-muted);
 }
 
 .history-popup-fields {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
+  overflow: hidden;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
 }
 
 .history-popup-field-row {
   display: grid;
-  grid-template-columns: 120px 1fr;
-  gap: 0.5rem;
-  font-size: 0.82rem;
-  border: 1px solid var(--pod-field-border);
-  border-radius: var(--radius-sm);
-  padding: 0.35rem 0.45rem;
+  grid-template-columns: minmax(90px, 30%) 1fr;
+  gap: 12px;
+  padding: 6px 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.history-popup-field-row + .history-popup-field-row {
+  border-top: 1px solid var(--border-light);
 }
 
 .history-popup-field-key {
-  color: var(--primary);
   font-weight: 600;
-  word-break: break-word;
+  color: var(--primary);
 }
 
 .history-popup-field-value {
-  color: var(--text-body);
-  word-break: break-word;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--text-heading);
 }
 
 .history-popup-commands {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 6px;
+}
+
+.history-popup-command-row {
+  position: relative;
 }
 
 .history-popup-command {
   display: block;
-  border: 1px solid var(--pod-command-border);
-  border-radius: var(--radius-sm);
-  background: var(--pod-command-bg);
-  color: var(--pod-command-text);
-  padding: 0.35rem 0.45rem;
-  font-size: 0.78rem;
+  max-height: 180px;
+  padding: 8px 40px 8px 10px;
+  overflow: auto;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
-  flex: 1;
-}
-
-/* Command row: code + copy button */
-.history-popup-command-row {
-  display: flex;
-  align-items: stretch;
-  gap: 0.3rem;
+  color: var(--text-heading);
+  background: var(--panel-from);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
 }
 
 .history-popup-copy-btn {
-  border: 1px solid var(--pod-btn-border);
-  background: var(--pod-btn-bg);
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 0 6px;
-  font-size: 0.8rem;
   cursor: pointer;
-  flex-shrink: 0;
-  align-self: center;
 }
 
 .history-popup-copy-btn:hover {
-  background: var(--pod-btn-bg-active);
+  color: var(--primary);
+  border-color: var(--primary);
 }
 
 /* The usage line of the summary, the values with their unit muted. */
@@ -1084,7 +1007,7 @@
   font-size: 0.75rem;
   font-weight: 700;
   color: var(--warning-strong);
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 .restart-btn:disabled {
@@ -1223,7 +1146,7 @@
   border-bottom: none;
 }
 .state-row-head {
-  font-family: 'Consolas', 'Monaco', monospace;
+  font-family: var(--font-mono);
   font-size: 0.82rem;
   font-weight: 600;
   color: var(--text-heading);

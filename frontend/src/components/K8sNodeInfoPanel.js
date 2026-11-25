@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { ReactComponent as WarningIcon } from '../assets/images/icons/warning.svg';
 import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
+import { ReactComponent as ClusterIcon } from '../assets/images/icons/cluster.svg';
 import { API_BASE_URL } from '../config';
+import { Meter } from './K8sBits';
 import './K8sNodeInfoPanel.css';
 
 // Format byte counts into a compact human-readable string ("4.32 GiB").
@@ -31,16 +33,16 @@ const sortEntries = (obj) => Object.entries(obj || {}).sort(([a], [b]) => a.loca
 const meshnetChip = (state) => {
   switch (state) {
     case 'running':
-      return { cls: 'ok', label: 'Meshnet', title: 'A ready meshnet pod is running on this node.' };
+      return { dot: 'ok', label: 'Meshnet', title: 'A ready meshnet pod is running on this node.' };
     case 'not-running':
       return {
-        cls: 'down',
+        dot: 'bad',
         label: 'Meshnet down',
         title: 'No ready meshnet pod on this node. Links landing here will not be wired.',
       };
     case 'unknown':
       return {
-        cls: 'unknown',
+        dot: 'off',
         label: 'Meshnet ?',
         title: 'Could not check meshnet on this node (no permission to list pods).',
       };
@@ -115,35 +117,31 @@ const K8sNodeInfoPanel = ({ nodeName, onClose }) => {
   if (!nodeName) return null;
 
   const status = data?.status || 'Unknown';
-  const statusClass = status === 'Ready' ? 'ready' : status === 'NotReady' ? 'notready' : 'unknown';
+  const statusPill = status === 'Ready' ? 'ok' : status === 'NotReady' ? 'bad' : 'warn';
+  const mesh = meshnetChip(data?.meshnet);
 
   return (
     <>
       <div className="kni-backdrop" onClick={onClose} />
       <aside className="kni-drawer" role="dialog" aria-label={`Node info: ${nodeName}`}>
-        <header className="kni-header">
-          <div className="kni-header-main">
-            <div className="kni-header-eyebrow">Kubernetes node</div>
-            <h2 className="kni-header-title">{nodeName}</h2>
-            <div className="kni-header-meta">
+        <header className="kni-head">
+          <ClusterIcon className="app-icon kni-head-icon" aria-hidden="true" />
+          <div className="kni-head-main">
+            <div className="kni-eyebrow">Kubernetes node</div>
+            <h2 className="kni-title">{nodeName}</h2>
+            <div className="kni-chips">
               {data?.roles?.map((r) => (
-                <span key={r} className="kni-chip">
+                <span key={r} className="k8s-role">
                   {r}
                 </span>
               ))}
-              <span className={`kni-status kni-status-${statusClass}`}>
-                <span className="kni-status-dot" />
-                {status}
-              </span>
-              {(() => {
-                const chip = meshnetChip(data?.meshnet);
-                return chip ? (
-                  <span className={`kni-meshnet kni-meshnet-${chip.cls}`} title={chip.title}>
-                    <span className="kni-status-dot" />
-                    {chip.label}
-                  </span>
-                ) : null;
-              })()}
+              {data && <span className={`k8s-pill k8s-pill-${statusPill}`}>{status}</span>}
+              {mesh && (
+                <span className="kni-mesh" title={mesh.title}>
+                  <span className={`k8s-dot k8s-dot-${mesh.dot}`} />
+                  {mesh.label}
+                </span>
+              )}
             </div>
           </div>
           <button className="kni-close" onClick={onClose} title="Close (Esc)">
@@ -167,42 +165,30 @@ const K8sNodeInfoPanel = ({ nodeName, onClose }) => {
 
           {!loading && !error && data && (
             <>
-              {/* Live usage on top, single line of two bars */}
-              <Section title="Live usage">
-                <div className="kni-usage-row">
-                  <div className="kni-usage-cell">
-                    <div className="kni-usage-label">
+              <Section title="Usage">
+                {data.cpu_milli_usage > 0 || data.memory_bytes_usage > 0 ? (
+                  <>
+                    <div className="kni-usage">
                       <span>CPU</span>
-                      <span className="kni-mono">
-                        {data.cpu_milli_usage > 0
-                          ? `${formatCpu(data.cpu_milli_usage)} / ${formatCpu(data.capacity?.cpu_milli)} (${data.cpu_percentage.toFixed(1)}%)`
-                          : 'metrics unavailable'}
+                      <Meter value={data.cpu_percentage} />
+                      <span>
+                        {formatCpu(data.cpu_milli_usage)} / {formatCpu(data.capacity?.cpu_milli)}
+                        <b>{data.cpu_percentage.toFixed(1)}%</b>
                       </span>
                     </div>
-                    <div className="kni-usage-bar">
-                      <div
-                        className="kni-usage-bar-fill kni-bar-cpu"
-                        style={{ '--kni-fill': `${Math.min(data.cpu_percentage || 0, 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                  <div className="kni-usage-cell">
-                    <div className="kni-usage-label">
+                    <div className="kni-usage">
                       <span>RAM</span>
-                      <span className="kni-mono">
-                        {data.memory_bytes_usage > 0
-                          ? `${formatBytes(data.memory_bytes_usage)} / ${formatBytes(data.capacity?.memory_bytes)} (${data.memory_percentage.toFixed(1)}%)`
-                          : 'metrics unavailable'}
+                      <Meter value={data.memory_percentage} kind="ram" />
+                      <span>
+                        {formatBytes(data.memory_bytes_usage)} /{' '}
+                        {formatBytes(data.capacity?.memory_bytes)}
+                        <b>{data.memory_percentage.toFixed(1)}%</b>
                       </span>
                     </div>
-                    <div className="kni-usage-bar">
-                      <div
-                        className="kni-usage-bar-fill kni-bar-mem"
-                        style={{ '--kni-fill': `${Math.min(data.memory_percentage || 0, 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
+                  </>
+                ) : (
+                  <p className="kni-note">No metrics-server, so no usage figures.</p>
+                )}
               </Section>
 
               <Section title="Network">

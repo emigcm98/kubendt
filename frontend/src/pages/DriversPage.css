@@ -5,7 +5,7 @@
   height: 100vh;
   overflow: hidden;
   background: var(--surface);
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: var(--font-sans);
   color: var(--text-body);
 }
 
@@ -152,7 +152,7 @@
   border: 1px solid var(--border-light);
   border-radius: var(--radius-sm);
   background: var(--surface);
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 0.82em;
 }
 
@@ -256,7 +256,7 @@
   border: 0;
   background: transparent;
   color: var(--text-heading);
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 0.8rem;
   white-space: pre-wrap;
   word-break: break-all;

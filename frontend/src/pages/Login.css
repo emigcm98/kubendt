@@ -9,7 +9,7 @@
   min-height: 100vh;
   padding: 24px 16px;
   background: var(--panel-from);
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: var(--font-sans);
   color: var(--text-body);
 }
 
