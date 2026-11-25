@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import Modal from 'react-modal';
+import './Dialog.css';
 import './ErrorModal.css';
 import { ReactComponent as ErrorIcon } from '../assets/images/icons/error.svg';
 import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
+import { ReactComponent as CopyIcon } from '../assets/images/icons/copy.svg';
 
 Modal.setAppElement('#root');
 
@@ -26,39 +28,38 @@ const ErrorModal = ({ isOpen, message, details, note, onClose, title = 'Error' }
     <Modal
       isOpen={isOpen}
       onRequestClose={onClose}
-      className="error-modal"
-      overlayClassName="error-modal-overlay"
+      className="dlg dlg-mid error-modal"
+      overlayClassName="dlg-overlay dlg-overlay-top"
+      contentLabel={title}
     >
-      <div className="error-modal-header">
-        <ErrorIcon className="error-modal-icon" />
-        <h2>{title}</h2>
-        <button className="error-modal-close-btn" onClick={onClose}>
+      <div className="dlg-head dlg-head-danger">
+        <ErrorIcon className="app-icon" aria-hidden="true" />
+        <h2 className="dlg-title">{title}</h2>
+        <button className="dlg-close" onClick={onClose} title="Close">
           <CloseIcon className="app-icon" />
         </button>
       </div>
 
-      <div className="error-modal-body">
-        {message && <p>{message}</p>}
+      <div className="dlg-body">
+        {message && <p className="dlg-text">{message}</p>}
         {details && (
           <div className="error-modal-details">
-            <div className="error-modal-details-bar">
-              <button
-                className="error-modal-copy-btn"
-                onClick={handleCopy}
-                title="Copy error to clipboard"
-              >
-                {copied ? '✓ Copied' : 'Copy'}
-              </button>
-            </div>
             <pre className="error-modal-details-text">{details}</pre>
+            <button
+              className="error-modal-copy"
+              onClick={handleCopy}
+              title="Copy the error to the clipboard"
+            >
+              <CopyIcon className="app-icon" aria-hidden="true" /> {copied ? 'Copied' : 'Copy'}
+            </button>
           </div>
         )}
-        {note && <p className="error-modal-note">{note}</p>}
+        {note && <p className="dlg-text dlg-muted error-modal-note">{note}</p>}
       </div>
 
-      <div className="error-modal-footer">
-        <button className="error-modal-btn" onClick={onClose}>
-          ✓ Entendido
+      <div className="dlg-foot">
+        <button className="dlg-btn dlg-btn-primary" onClick={onClose}>
+          Close
         </button>
       </div>
     </Modal>

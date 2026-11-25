@@ -8,7 +8,13 @@ import { ReactComponent as SuccessIcon } from '../assets/images/icons/success.sv
 import { ReactComponent as ErrorIcon } from '../assets/images/icons/error.svg';
 import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
 import { API_BASE_URL } from '../config';
+import '../components/Dialog.css';
 import './NamespacePage.css';
+
+const RESULT_TITLES = {
+  namespace_delete: ['Namespace deleted', 'Delete failed'],
+  namespace_history_delete: ['History deleted', 'Delete failed'],
+};
 
 Modal.setAppElement('#root');
 
@@ -117,6 +123,10 @@ function NamespacePage() {
     };
   }, [namespace]);
 
+  const resultTitle = (RESULT_TITLES[deleteResult.action] || ['Done', 'Failed'])[
+    deleteResult.success ? 0 : 1
+  ];
+
   if (fetchError) {
     return <ErrorPage statusCode={fetchError.status || 500} rawMessage={fetchError.message} />;
   }
@@ -148,35 +158,28 @@ function NamespacePage() {
       <Modal
         isOpen={showDeleteModal}
         onRequestClose={handleCloseDeleteModal}
-        className="delete-result-modal"
-        overlayClassName="delete-result-overlay"
+        className="dlg"
+        overlayClassName="dlg-overlay dlg-overlay-top"
+        contentLabel={resultTitle}
       >
-        <div className="modal-header">
-          <h2>
-            {deleteResult.success ? (
-              <>
-                <SuccessIcon className="app-icon" /> Operation completed
-              </>
-            ) : (
-              <>
-                <ErrorIcon className="app-icon" /> Operation failed
-              </>
-            )}
-          </h2>
-          <button className="modal-close-btn" onClick={handleCloseDeleteModal}>
+        <div className={`dlg-head dlg-head-${deleteResult.success ? 'success' : 'danger'}`}>
+          {deleteResult.success ? (
+            <SuccessIcon className="app-icon" aria-hidden="true" />
+          ) : (
+            <ErrorIcon className="app-icon" aria-hidden="true" />
+          )}
+          <h2 className="dlg-title">{resultTitle}</h2>
+          <button className="dlg-close" title="Close" onClick={handleCloseDeleteModal}>
             <CloseIcon className="app-icon" />
           </button>
         </div>
 
-        <div className="modal-body">
-          <p>{deleteResult.message}</p>
+        <div className="dlg-body">
+          <p className="dlg-text">{deleteResult.message}</p>
         </div>
 
-        <div className="modal-footer">
-          <button
-            className={`modal-btn modal-btn-confirm ${deleteResult.success ? 'success' : 'error'}`}
-            onClick={handleCloseDeleteModal}
-          >
+        <div className="dlg-foot">
+          <button className="dlg-btn dlg-btn-primary" onClick={handleCloseDeleteModal}>
             OK
           </button>
         </div>

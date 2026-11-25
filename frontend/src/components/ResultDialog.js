@@ -1,6 +1,8 @@
-// src/components/ResultDialog.jsx
 import React, { useEffect, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
+import { ReactComponent as SlidersIcon } from '../assets/images/icons/sliders.svg';
+import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
+import './Dialog.css';
 import './ResultDialog.css';
 
 export default function ResultDialog({ open, onClose, result }) {
@@ -44,7 +46,7 @@ export default function ResultDialog({ open, onClose, result }) {
 
   const handleHeaderMouseDown = (e) => {
     if (e.button !== 0) return;
-    if (e.target.closest && e.target.closest('.rd-close')) return;
+    if (e.target.closest && e.target.closest('.dlg-close')) return;
     dragRef.current = {
       dragging: true,
       startX: e.clientX,
@@ -91,71 +93,64 @@ export default function ResultDialog({ open, onClose, result }) {
   }
 
   const modal = (
-    <div className="rd-backdrop">
+    <div className="dlg-overlay dlg-overlay-pass rd-backdrop">
       <div
-        className="rd-card"
+        className="dlg dlg-mid rd-card"
+        role="dialog"
+        aria-label="Network configuration"
         ref={cardRef}
         style={{ transform: `translate(${pos.x}px, ${pos.y}px)` }}
       >
-        <div
-          className="rd-header rd-drag-handle"
-          onMouseDown={handleHeaderMouseDown}
-          title="Drag to move"
-        >
-          <span className="rd-title">Apply config</span>
-          <button className="rd-close" onClick={onClose} aria-label="Close">
-            ✕
+        <div className="dlg-head dlg-drag" onMouseDown={handleHeaderMouseDown} title="Drag to move">
+          <SlidersIcon className="app-icon" aria-hidden="true" />
+          <h2 className="dlg-title">Network configuration</h2>
+          <span className={`rd-chip rd-chip-${status === 'success' ? 'ok' : 'warn'}`}>
+            {status || 'unknown'}
+          </span>
+          <button className="dlg-close" onClick={onClose} title="Close">
+            <CloseIcon className="app-icon" />
           </button>
         </div>
 
-        <div className="rd-body">
-          <div className="rd-row">
-            <span className={`rd-chip ${status === 'success' ? 'ok' : 'warn'}`}>
-              {status || 'unknown'}
-            </span>
-          </div>
-
+        <div className="dlg-body rd-body">
           <div className="rd-counters">
-            <div className="rd-counter ok">
+            <div className="rd-counter rd-counter-ok">
               <span className="rd-label">Successes</span>
               <span className="rd-value">{successes}</span>
             </div>
-            <div className="rd-counter skip">
+            <div className="rd-counter rd-counter-skip">
               <span className="rd-label">Skipped</span>
               <span className="rd-value">{skipped}</span>
             </div>
-            <div className="rd-counter err">
+            <div className="rd-counter rd-counter-err">
               <span className="rd-label">Failures</span>
               <span className="rd-value">{failures}</span>
             </div>
           </div>
 
           {totalTime && (
-            <div className="rd-row rd-timing">
+            <div className="rd-timing">
               <span>
-                Total time: <b>{totalTime}</b>
+                Total time <b>{totalTime}</b>
               </span>
               {seqEquiv && (
-                <span className="rd-timing-seq">
-                  Sequential equivalent: <b>{seqEquiv}</b>
+                <span>
+                  Sequential equivalent <b>{seqEquiv}</b>
                   {speedup != null && (
-                    <span className="rd-speedup"> ×{speedup.toFixed(1)} speedup</span>
+                    <span className="rd-speedup">×{speedup.toFixed(1)} speedup</span>
                   )}
                 </span>
               )}
             </div>
           )}
 
-          <div className="rd-errors-title">{errors.length > 0 ? 'Errors' : 'No errors found'}</div>
-
           {errors.length > 0 && (
             <div className="rd-errors">
+              <div className="dlg-label">Errors</div>
               <ul>
                 {errors.map((e, i) => (
                   <li key={i}>
-                    <code>
-                      pod=<b>{e.pod}</b> · driver=<b>{e.driver}</b> · error={e.error}
-                    </code>
+                    pod=<b>{e.pod}</b> · driver=<b>{e.driver}</b> · error={e.error}
                   </li>
                 ))}
               </ul>
@@ -164,7 +159,7 @@ export default function ResultDialog({ open, onClose, result }) {
 
           <details className="rd-actions" open>
             <summary>
-              Action execution summary ({action_results.length})
+              Actions ({action_results.length})
               {action_results.length > 0 && (
                 <span className="rd-actions-meta">
                   {actionSuccesses} ok · {actionSkipped} skipped · {actionFailures} failed
@@ -235,9 +230,9 @@ export default function ResultDialog({ open, onClose, result }) {
           </details>
         </div>
 
-        <div className="rd-footer">
-          <button className="rd-primary" onClick={onClose}>
-            Accept
+        <div className="dlg-foot">
+          <button className="dlg-btn dlg-btn-primary" onClick={onClose}>
+            Close
           </button>
         </div>
       </div>

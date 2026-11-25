@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import NamespaceFilesNavbar from '../components/NamespaceFilesNavbar';
 import FileSidebar from '../components/FileSidebar';
 import AlertModal from '../components/AlertModal';
+import '../components/Dialog.css';
 import './NamespaceFilesPage.css';
 import ErrorPage from './ErrorPage';
 import { API_BASE_URL } from '../config';
@@ -1175,20 +1176,23 @@ function NamespaceFilesPage() {
 
       {/* Modal to create folder */}
       {showCreateFolderModal && (
-        <div className="create-file-modal-overlay" onClick={() => setShowCreateFolderModal(false)}>
-          <div className="create-file-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="create-file-modal-header">
+        <div className="dlg-overlay" onClick={() => setShowCreateFolderModal(false)}>
+          <div className="dlg" onClick={(e) => e.stopPropagation()}>
+            <div className="dlg-head">
               <FolderIcon className="app-icon" /> New folder
             </div>
-            <div className="create-file-modal-body">
+            <div className="dlg-body">
               {targetFolder && (
                 <div className="folder-location">
                   In <strong>{targetFolder}</strong>
                 </div>
               )}
-              <label htmlFor="foldername-input">Folder name</label>
+              <label className="dlg-label" htmlFor="foldername-input">
+                Folder name
+              </label>
               <input
                 id="foldername-input"
+                className="dlg-input"
                 type="text"
                 placeholder="my-folder"
                 value={newFolderName}
@@ -1201,11 +1205,14 @@ function NamespaceFilesPage() {
                 autoFocus
               />
             </div>
-            <div className="create-file-modal-footer">
-              <button className="btn-cancel" onClick={() => setShowCreateFolderModal(false)}>
+            <div className="dlg-foot">
+              <button
+                className="dlg-btn dlg-btn-quiet"
+                onClick={() => setShowCreateFolderModal(false)}
+              >
                 Cancel
               </button>
-              <button className="btn-create" onClick={handleCreateFolder}>
+              <button className="dlg-btn dlg-btn-primary" onClick={handleCreateFolder}>
                 Create folder
               </button>
             </div>
@@ -1215,20 +1222,23 @@ function NamespaceFilesPage() {
 
       {/* Modal to create file */}
       {showCreateFileModal && (
-        <div className="create-file-modal-overlay" onClick={() => setShowCreateFileModal(false)}>
-          <div className="create-file-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="create-file-modal-header">
+        <div className="dlg-overlay" onClick={() => setShowCreateFileModal(false)}>
+          <div className="dlg" onClick={(e) => e.stopPropagation()}>
+            <div className="dlg-head">
               <FileIcon className="app-icon" /> New file
             </div>
-            <div className="create-file-modal-body">
+            <div className="dlg-body">
               {targetFolder && (
                 <div className="folder-location">
                   In <strong>{targetFolder}</strong>
                 </div>
               )}
-              <label htmlFor="filename-input">Filename</label>
+              <label className="dlg-label" htmlFor="filename-input">
+                Filename
+              </label>
               <input
                 id="filename-input"
+                className="dlg-input"
                 type="text"
                 placeholder="example.json"
                 value={newFileName}
@@ -1241,11 +1251,14 @@ function NamespaceFilesPage() {
                 autoFocus
               />
             </div>
-            <div className="create-file-modal-footer">
-              <button className="btn-cancel" onClick={() => setShowCreateFileModal(false)}>
+            <div className="dlg-foot">
+              <button
+                className="dlg-btn dlg-btn-quiet"
+                onClick={() => setShowCreateFileModal(false)}
+              >
                 Cancel
               </button>
-              <button className="btn-create" onClick={handleConfirmCreateFile}>
+              <button className="dlg-btn dlg-btn-primary" onClick={handleConfirmCreateFile}>
                 Create file
               </button>
             </div>
@@ -1298,18 +1311,21 @@ function NamespaceFilesPage() {
 
       {/* Modal to rename file/folder */}
       {showRenameModal && (
-        <div className="create-file-modal-overlay" onClick={() => setShowRenameModal(false)}>
-          <div className="create-file-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="create-file-modal-header">
+        <div className="dlg-overlay" onClick={() => setShowRenameModal(false)}>
+          <div className="dlg" onClick={(e) => e.stopPropagation()}>
+            <div className="dlg-head">
               <EditIcon className="app-icon" /> Rename
             </div>
-            <div className="create-file-modal-body">
+            <div className="dlg-body">
               <div className="folder-location">
                 Renaming <strong>{renameSourcePath}</strong>
               </div>
-              <label htmlFor="rename-input">New name</label>
+              <label className="dlg-label" htmlFor="rename-input">
+                New name
+              </label>
               <input
                 id="rename-input"
+                className="dlg-input"
                 type="text"
                 value={renameValue}
                 onChange={(e) => setRenameValue(e.target.value)}
@@ -1321,11 +1337,11 @@ function NamespaceFilesPage() {
                 autoFocus
               />
             </div>
-            <div className="create-file-modal-footer">
-              <button className="btn-cancel" onClick={() => setShowRenameModal(false)}>
+            <div className="dlg-foot">
+              <button className="dlg-btn dlg-btn-quiet" onClick={() => setShowRenameModal(false)}>
                 Cancel
               </button>
-              <button className="btn-create" onClick={confirmRename}>
+              <button className="dlg-btn dlg-btn-primary" onClick={confirmRename}>
                 Rename
               </button>
             </div>
@@ -1335,12 +1351,12 @@ function NamespaceFilesPage() {
 
       {/* Modal to import archive */}
       {showImportModal && (
-        <div className="import-modal-overlay" onClick={() => setShowImportModal(false)}>
-          <div className="import-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="import-modal-header">
+        <div className="dlg-overlay" onClick={() => setShowImportModal(false)}>
+          <div className="dlg" onClick={(e) => e.stopPropagation()}>
+            <div className="dlg-head">
               <UploadIcon className="app-icon" /> Import an archive
             </div>
-            <div className="import-modal-body">
+            <div className="dlg-body">
               <input
                 ref={importFileInputRef}
                 type="file"
@@ -1390,8 +1406,8 @@ function NamespaceFilesPage() {
                 .zip, .tar.gz or .tgz, unpacked into the namespace's files.
               </p>
             </div>
-            <div className="import-modal-footer">
-              <button className="btn-cancel" onClick={() => setShowImportModal(false)}>
+            <div className="dlg-foot">
+              <button className="dlg-btn dlg-btn-quiet" onClick={() => setShowImportModal(false)}>
                 Cancel
               </button>
             </div>
@@ -1401,16 +1417,18 @@ function NamespaceFilesPage() {
 
       {/* Modal to export as an archive */}
       {showExportModal && (
-        <div className="create-file-modal-overlay" onClick={() => setShowExportModal(false)}>
-          <div className="create-file-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="create-file-modal-header">
+        <div className="dlg-overlay" onClick={() => setShowExportModal(false)}>
+          <div className="dlg" onClick={(e) => e.stopPropagation()}>
+            <div className="dlg-head">
               <DownloadIcon className="app-icon" /> Export the files
             </div>
-            <div className="create-file-modal-body">
-              <label htmlFor="export-format">Format</label>
+            <div className="dlg-body">
+              <label className="dlg-label" htmlFor="export-format">
+                Format
+              </label>
               <select
                 id="export-format"
-                className="export-format-select"
+                className="dlg-input"
                 title="Choose the archive format"
                 value={exportFormat}
                 onChange={(e) => setExportFormat(e.target.value)}
@@ -1426,11 +1444,11 @@ function NamespaceFilesPage() {
                 </p>
               )}
             </div>
-            <div className="create-file-modal-footer">
-              <button className="btn-cancel" onClick={() => setShowExportModal(false)}>
+            <div className="dlg-foot">
+              <button className="dlg-btn dlg-btn-quiet" onClick={() => setShowExportModal(false)}>
                 Cancel
               </button>
-              <button className="btn-create" onClick={confirmExport}>
+              <button className="dlg-btn dlg-btn-primary" onClick={confirmExport}>
                 <DownloadIcon className="app-icon" /> Export
               </button>
             </div>

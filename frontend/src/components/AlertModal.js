@@ -5,7 +5,16 @@ import { ReactComponent as WarningIcon } from '../assets/images/icons/warning.sv
 import { ReactComponent as QuestionIcon } from '../assets/images/icons/question.svg';
 import { ReactComponent as LoadingIcon } from '../assets/images/icons/loading.svg';
 import { ReactComponent as InfoIcon } from '../assets/images/icons/info.svg';
+import './Dialog.css';
 import './AlertModal.css';
+
+const ICONS = {
+  success: [SuccessIcon, 'success'],
+  error: [ErrorIcon, 'danger'],
+  warning: [WarningIcon, 'warning'],
+  confirm: [QuestionIcon, ''],
+  info: [InfoIcon, ''],
+};
 
 const AlertModal = ({
   isOpen,
@@ -44,47 +53,35 @@ const AlertModal = ({
           .filter(Boolean)
       : [];
 
-  const getIcon = () => {
-    switch (type) {
-      case 'success':
-        return <SuccessIcon className="alert-modal-icon-svg" />;
-      case 'error':
-        return <ErrorIcon className="alert-modal-icon-svg" />;
-      case 'warning':
-        return <WarningIcon className="alert-modal-icon-svg" />;
-      case 'confirm':
-        return <QuestionIcon className="alert-modal-icon-svg" />;
-      case 'loading':
-        return <LoadingIcon className="alert-modal-icon-svg" />;
-      default:
-        return <InfoIcon className="alert-modal-icon-svg" />;
-    }
-  };
+  const [Icon, tone] = ICONS[type] || ICONS.info;
 
   return (
-    <div className="alert-modal-overlay" onClick={loading ? undefined : onCancel}>
-      <div className="alert-modal-container" onClick={(e) => e.stopPropagation()}>
-        <div className="alert-modal-header">
-          <div className={`alert-modal-icon alert-modal-icon-${type}`}>
-            {type === 'loading' ? <div className="spinner"></div> : <span>{getIcon()}</span>}
-          </div>
-          <div className="alert-modal-content">
-            <h2 className="alert-modal-title">{title}</h2>
-          </div>
+    <div className="dlg-overlay dlg-overlay-top" onClick={loading ? undefined : onCancel}>
+      <div
+        className="dlg alert-modal"
+        role="alertdialog"
+        aria-modal="true"
+        aria-label={typeof title === 'string' ? title : undefined}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className={`dlg-head${tone ? ` dlg-head-${tone}` : ''}`}>
+          {type === 'loading' ? (
+            <LoadingIcon className="app-icon dlg-spin" aria-hidden="true" />
+          ) : (
+            <Icon className="app-icon" aria-hidden="true" />
+          )}
+          <h2 className="dlg-title">{title}</h2>
         </div>
 
         {(message || danger || extraContent) && (
-          <div className="alert-modal-body">
+          <div className="dlg-body">
             {messageLines.length <= 1
-              ? message && <p className="alert-modal-message">{message}</p>
+              ? message && <p className="dlg-text">{message}</p>
               : (() => (
                   <>
-                    <p className="alert-modal-message">{messageLines[0]}</p>
+                    <p className="dlg-text">{messageLines[0]}</p>
                     {messageLines.slice(1).map((line, idx) => (
-                      <p
-                        key={`${line}-${idx}`}
-                        className="alert-modal-message alert-modal-message-secondary"
-                      >
+                      <p key={`${line}-${idx}`} className="dlg-text alert-modal-line">
                         {line}
                       </p>
                     ))}
@@ -96,27 +93,21 @@ const AlertModal = ({
         )}
 
         {type !== 'loading' && (
-          <div className="alert-modal-actions">
+          <div className="dlg-foot">
             {onCancel && (type === 'confirm' || danger) && (
-              <button
-                className="alert-modal-btn alert-modal-btn-cancel"
-                onClick={onCancel}
-                disabled={loading}
-              >
+              <button className="dlg-btn dlg-btn-quiet" onClick={onCancel} disabled={loading}>
                 {cancelText}
               </button>
             )}
             <button
-              className={`alert-modal-btn alert-modal-btn-${
-                danger ? 'danger' : type === 'confirm' ? 'confirm' : 'primary'
-              }`}
+              className={`dlg-btn ${danger ? 'dlg-btn-danger' : 'dlg-btn-primary'}`}
               onClick={onConfirm}
               disabled={loading}
             >
               {loading ? (
-                <span className="alert-modal-btn-loading">
-                  <LoadingIcon className="alert-modal-btn-spinner" /> {loadingText}
-                </span>
+                <>
+                  <LoadingIcon className="app-icon dlg-spin" aria-hidden="true" /> {loadingText}
+                </>
               ) : (
                 confirmText
               )}

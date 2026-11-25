@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Every page's blue bar has the same height and the same brand, which leads to the main page, in place of the Home buttons. The pages outside a namespace share the Home's bar, with their title beside the brand.
 - The error page keeps the bar and says what happened, with a way back.
 - The file manager is redone as two cards as tall as the window, the files and the open file, with its actions named and its dialogs in the same look.
+- Every dialog shares the file manager's look, and the browser's own confirm boxes are gone.
 
 ### Fixed
 

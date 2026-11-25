@@ -1596,7 +1596,7 @@ const NetworkGraph = ({
     setAlertModal({
       isOpen: true,
       type: 'confirm',
-      title: 'Restart Pod',
+      title: 'Restart pod',
       message: `Are you sure you want to restart pod ${podName}?`,
       onConfirm: () => {
         setAlertModal((prev) => ({ ...prev, isOpen: false }));
@@ -2622,14 +2622,14 @@ const NetworkGraph = ({
           fetchTopology(true);
         }, 1200);
         showError(
-          'Deployment Error',
+          'Deployment failed',
           payload?.error || 'Backend returned an error during deployment.',
           payload?.rolledBack ? 'The partially created topology was rolled back.' : ''
         );
         return;
       }
     } catch (err) {
-      showError('Deployment Error', err.message || 'Deployment failed.');
+      showError('Deployment failed', err.message || 'Deployment failed.');
     } finally {
       // The deploy is over either way: let the refreshes run again, a node
       // that is still restarting shows as such on the graph.
@@ -2695,7 +2695,7 @@ const NetworkGraph = ({
       setAlertModal({
         isOpen: true,
         type: 'warning',
-        title: 'No Topology Loaded',
+        title: 'No topology loaded',
         message: 'Import a topology before applying a network configuration.',
         onConfirm: () => setAlertModal((prev) => ({ ...prev, isOpen: false })),
         onCancel: () => setAlertModal((prev) => ({ ...prev, isOpen: false })),
@@ -2902,7 +2902,7 @@ const NetworkGraph = ({
       setAlertModal({
         isOpen: true,
         type: 'warning',
-        title: 'No Topology Loaded',
+        title: 'No topology loaded',
         message: 'Import a topology before applying a modify payload.',
         onConfirm: () => setAlertModal((prev) => ({ ...prev, isOpen: false })),
         onCancel: () => setAlertModal((prev) => ({ ...prev, isOpen: false })),
@@ -2969,7 +2969,7 @@ const NetworkGraph = ({
       // Rollback the deleting visuals so the user can see/retry the topology.
       targetPodNames.forEach(removeDeletingPod);
       targetEdgeIds.forEach(removeDeletingLink);
-      showError('Clear Topology Error', err.message || 'Could not clear topology resources.');
+      showError('Clear failed', err.message || 'Could not clear topology resources.');
     } finally {
       setClearingTopology(false);
     }
@@ -2980,7 +2980,7 @@ const NetworkGraph = ({
       setAlertModal({
         isOpen: true,
         type: 'warning',
-        title: 'No Topology Loaded',
+        title: 'No topology loaded',
         message: 'There is no topology to clear in this namespace.',
         confirmText: 'OK',
         cancelText: 'Cancel',
@@ -3002,7 +3002,7 @@ const NetworkGraph = ({
       isOpen: true,
       type: 'warning',
       danger: true,
-      title: 'Clear Topology',
+      title: 'Clear topology',
       message: `Delete all KubeNDT topology resources in namespace '${namespace}'? ${inventory} The namespace will be kept.`,
       confirmText: 'Clear topology',
       cancelText: 'Cancel',
@@ -3510,10 +3510,7 @@ const NetworkGraph = ({
         payload?.warnings
       );
     } catch (err) {
-      showError(
-        'Modify Topology Error',
-        err.message || 'Invalid modify payload or error applying.'
-      );
+      showError('Modify failed', err.message || 'Invalid modify payload or error applying.');
     } finally {
       setModifyingTopology(false);
     }
@@ -3559,10 +3556,10 @@ const NetworkGraph = ({
       });
       setResultOpen(true);
 
-      // refresco visual tras aplicar
+      // Redraw with what the configuration changed.
       fetchTopology(true);
     } catch (err) {
-      showError('Network Config Error', err.message || 'Invalid config or error applying.');
+      showError('Network configuration failed', err.message || 'Invalid config or error applying.');
     } finally {
       setLoadingConfig(false);
     }
@@ -3965,7 +3962,7 @@ const NetworkGraph = ({
                   setAlertModal({
                     isOpen: true,
                     type: 'warning',
-                    title: 'Namespace Required',
+                    title: 'Namespace required',
                     message: 'Select a namespace first.',
                     onConfirm: () => setAlertModal((prev) => ({ ...prev, isOpen: false })),
                     onCancel: () => setAlertModal((prev) => ({ ...prev, isOpen: false })),
@@ -3976,7 +3973,7 @@ const NetworkGraph = ({
                   setAlertModal({
                     isOpen: true,
                     type: 'warning',
-                    title: 'Namespace Not Empty',
+                    title: 'Namespace not empty',
                     message: 'This namespace already has a topology loaded.',
                     onConfirm: () => setAlertModal((prev) => ({ ...prev, isOpen: false })),
                     onCancel: () => setAlertModal((prev) => ({ ...prev, isOpen: false })),
@@ -4479,11 +4476,11 @@ const NetworkGraph = ({
       <TopologyInputModal
         isOpen={topologyInputKind === 'import'}
         onClose={() => setTopologyInputKind(null)}
-        title="Import Topology"
+        title="Import topology"
+        icon={UploadIcon}
         description="Paste a topology JSON (or load it from a file). It will deploy the described nodes and links in this namespace."
         warningText="This will deploy all pods and links in the current namespace."
         confirmLabel="Import topology"
-        confirmVariant="warning"
         placeholder={'{\n  "nodes": [ ... ],\n  "links": [ ... ]\n}'}
         sampleSnippet={JSON.stringify(
           {
@@ -4539,10 +4536,10 @@ const NetworkGraph = ({
       <TopologyInputModal
         isOpen={topologyInputKind === 'modify'}
         onClose={() => setTopologyInputKind(null)}
-        title="Modify Topology"
+        title="Modify topology"
+        icon={EditIcon}
         description="Paste a JSON with 'add' and/or 'delete' sections (nodes and/or links) to modify the current topology."
         confirmLabel="Apply changes"
-        confirmVariant="primary"
         placeholder={
           '{\n  "scale": [ ... ],\n  "add": { "nodes": [ ... ], "links": [ ... ] },\n  "delete": { "nodes": [ ... ], "links": [ ... ] }\n}'
         }
@@ -4597,10 +4594,10 @@ const NetworkGraph = ({
       <TopologyInputModal
         isOpen={topologyInputKind === 'config'}
         onClose={() => setTopologyInputKind(null)}
-        title="Load Network Configuration"
+        title="Load network configuration"
+        icon={SlidersIcon}
         description="Paste a network configuration JSON (targets + actions) to apply driver operations on pods."
         confirmLabel="Apply configuration"
-        confirmVariant="primary"
         placeholder={'{\n  "targets": [ { "pod": "...", "actions": [ ... ] } ]\n}'}
         sampleSnippet={JSON.stringify(
           {

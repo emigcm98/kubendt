@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import AppHeader from '../components/AppHeader';
+import AlertModal from '../components/AlertModal';
 import { API_BASE_URL } from '../config';
 import { useAuth } from '../auth/AuthContext';
 import '../components/NamespaceNavbar.css';
@@ -405,6 +406,7 @@ const AccountDetail = ({ user, isOwner, self, others, onChanged, onClose, onPass
     quota_pods_per_namespace: user.quota_pods_per_namespace,
   });
   const [reassign, setReassign] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
@@ -451,7 +453,7 @@ const AccountDetail = ({ user, isOwner, self, others, onChanged, onClose, onPass
   };
 
   const remove = async () => {
-    if (!window.confirm(`Delete the account ${user.username}?`)) return;
+    setConfirmDelete(false);
     const q = reassign ? `?reassign_to=${encodeURIComponent(reassign)}` : '';
     if (await call('DELETE', `/users/${encodeURIComponent(user.username)}${q}`)) {
       onClose();
@@ -559,7 +561,7 @@ const AccountDetail = ({ user, isOwner, self, others, onChanged, onClose, onPass
               <button
                 type="button"
                 className="users-btn users-btn-danger"
-                onClick={remove}
+                onClick={() => setConfirmDelete(true)}
                 disabled={busy}
               >
                 Delete account
@@ -569,6 +571,21 @@ const AccountDetail = ({ user, isOwner, self, others, onChanged, onClose, onPass
         </>
       )}
       {error && <div className="users-error-box">{error}</div>}
+      <AlertModal
+        isOpen={confirmDelete}
+        type="warning"
+        danger
+        title="Delete account"
+        message={
+          <>
+            Delete the account <strong>{user.username}</strong>? Its namespaces go to{' '}
+            {reassign ? <strong>{reassign}</strong> : 'the admins'}.
+          </>
+        }
+        confirmText="Delete account"
+        onConfirm={remove}
+        onCancel={() => setConfirmDelete(false)}
+      />
     </section>
   );
 };
