@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import AppHeader from '../components/AppHeader';
+import BrandMark from '../components/BrandMark';
 import { API_BASE_URL } from '../config';
 import { useAuth } from '../auth/AuthContext';
 import '../components/NamespaceNavbar.css';
 import './StatePage.css';
-import kubendtLogo from '../assets/images/kubendt-logo.svg';
-import { ReactComponent as HomeIcon } from '../assets/images/icons/home.svg';
 import { ReactComponent as ClusterIcon } from '../assets/images/icons/cluster.svg';
 import { ReactComponent as TopologyIcon } from '../assets/images/icons/topology.svg';
 import { ReactComponent as RefreshIcon } from '../assets/images/icons/refresh.svg';
@@ -176,61 +176,68 @@ const StatePage = () => {
 
   return (
     <div className="state-root">
-      <div className="navbar-container">
-        <div className="navbar-left">
-          <button
-            type="button"
-            className="navbar-brand"
-            onClick={() => navigate('/')}
-            title="KubeNDT"
+      {namespace ? (
+        <div className="navbar-container">
+          <div className="navbar-left">
+            <BrandMark />
+            {namespace && (
+              <button
+                className="navbar-button"
+                onClick={() => navigate(`/${namespace}`)}
+                title="Back to the topology of this namespace"
+              >
+                <TopologyIcon className="app-icon" aria-hidden="true" />
+                Topology
+              </button>
+            )}
+          </div>
+          <div
+            className="navbar-center navbar-center-static"
+            title="Every Kubernetes object KubeNDT creates or uses"
           >
-            <img src={kubendtLogo} alt="KubeNDT" className="navbar-brand-logo" />
-          </button>
-          <button
-            className="navbar-button"
-            onClick={() => navigate('/')}
-            title="Back to the namespace list"
-          >
-            <HomeIcon className="app-icon" aria-hidden="true" />
-            Home
-          </button>
-          {namespace && (
-            <button
-              className="navbar-button"
-              onClick={() => navigate(`/${namespace}`)}
-              title="Back to the topology of this namespace"
-            >
-              <TopologyIcon className="app-icon" aria-hidden="true" />
-              Topology
+            <ClusterIcon className="navbar-ns-icon" aria-hidden="true" />
+            <div className="navbar-center-text">
+              <span className="navbar-namespace">{title}</span>
+            </div>
+          </div>
+          <div className="navbar-right">
+            {namespace && auth.isAdmin && (
+              <button
+                className="navbar-button"
+                onClick={() => navigate('/state')}
+                title="The same view over every namespace"
+              >
+                <ClusterIcon className="app-icon" aria-hidden="true" />
+                Whole cluster
+              </button>
+            )}
+            <button className="navbar-button" onClick={load} title="Read the cluster again">
+              <RefreshIcon className="app-icon" aria-hidden="true" />
+              Refresh
             </button>
-          )}
-        </div>
-        <div
-          className="navbar-center navbar-center-static"
-          title="Every Kubernetes object KubeNDT creates or uses"
-        >
-          <ClusterIcon className="navbar-ns-icon" aria-hidden="true" />
-          <div className="navbar-center-text">
-            <span className="navbar-namespace">{title}</span>
           </div>
         </div>
-        <div className="navbar-right">
-          {namespace && auth.isAdmin && (
+      ) : (
+        <AppHeader
+          title={{
+            icon: ClusterIcon,
+            label: title,
+            hint: 'Every Kubernetes object KubeNDT creates or uses',
+          }}
+          current="state"
+          actions={
             <button
-              className="navbar-button"
-              onClick={() => navigate('/state')}
-              title="The same view over every namespace"
+              type="button"
+              className="app-header-btn"
+              onClick={load}
+              title="Read the cluster again"
             >
-              <ClusterIcon className="app-icon" aria-hidden="true" />
-              Whole cluster
+              <RefreshIcon className="app-icon" aria-hidden="true" />
+              Refresh
             </button>
-          )}
-          <button className="navbar-button" onClick={load} title="Read the cluster again">
-            <RefreshIcon className="app-icon" aria-hidden="true" />
-            Refresh
-          </button>
-        </div>
-      </div>
+          }
+        />
+      )}
 
       <div className="state-page">
         <aside className="state-list">

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { API_BASE_URL } from '../config';
 import { useNavigate } from 'react-router-dom';
+import BrandMark from './BrandMark';
 import './NamespaceNavbar.css';
 import AlertModal from './AlertModal';
 import DeleteExtrasCheckboxes from './DeleteExtrasCheckboxes';
@@ -8,14 +9,12 @@ import ShareNamespaceModal from './ShareNamespaceModal';
 import { ReactComponent as RefreshIcon } from '../assets/images/icons/refresh.svg';
 import { ReactComponent as FolderIcon } from '../assets/images/icons/folder.svg';
 import { ReactComponent as ClusterIcon } from '../assets/images/icons/cluster.svg';
-import { ReactComponent as HomeIcon } from '../assets/images/icons/home.svg';
 import { ReactComponent as TopologyIcon } from '../assets/images/icons/topology.svg';
 import { ReactComponent as TrashIcon } from '../assets/images/icons/trash.svg';
 import { ReactComponent as ClockIcon } from '../assets/images/icons/clock.svg';
 import { ReactComponent as ChevronDownIcon } from '../assets/images/icons/chevron-down.svg';
 import { ReactComponent as UsersIcon } from '../assets/images/icons/users.svg';
 import { ReactComponent as EyeIcon } from '../assets/images/icons/eye.svg';
-import kubendtLogo from '../assets/images/kubendt-logo.svg';
 
 const plural = (type) => (type === 'switch' ? 'switches' : `${type}s`);
 
@@ -140,22 +139,7 @@ function NamespaceNavbar({
     <>
       <div className="navbar-container">
         <div className="navbar-left">
-          <button
-            type="button"
-            className="navbar-brand"
-            onClick={() => navigate('/')}
-            title="KubeNDT"
-          >
-            <img src={kubendtLogo} alt="KubeNDT" className="navbar-brand-logo" />
-          </button>
-          <button
-            className="navbar-button"
-            onClick={() => navigate('/')}
-            title="Back to the namespace list"
-          >
-            <HomeIcon className="app-icon" aria-hidden="true" />
-            Home
-          </button>
+          <BrandMark />
         </div>
 
         <div className="navbar-center-group">

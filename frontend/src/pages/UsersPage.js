@@ -1,11 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import AppHeader from '../components/AppHeader';
 import { API_BASE_URL } from '../config';
 import { useAuth } from '../auth/AuthContext';
 import '../components/NamespaceNavbar.css';
 import './UsersPage.css';
-import kubendtLogo from '../assets/images/kubendt-logo.svg';
-import { ReactComponent as HomeIcon } from '../assets/images/icons/home.svg';
 import { ReactComponent as RefreshIcon } from '../assets/images/icons/refresh.svg';
 import { ReactComponent as CopyIcon } from '../assets/images/icons/copy.svg';
 import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
@@ -58,7 +56,6 @@ const cellValue = (u, key) => {
 // right. Admins and the owner only, and what each may do to whom is the
 // API's rule, told here.
 const UsersPage = () => {
-  const navigate = useNavigate();
   const auth = useAuth();
   const [users, setUsers] = useState(null);
   const [error, setError] = useState('');
@@ -118,38 +115,20 @@ const UsersPage = () => {
 
   return (
     <div className="users-root">
-      <div className="navbar-container">
-        <div className="navbar-left">
+      <AppHeader
+        title={{ icon: UsersIcon, label: 'Accounts', hint: 'The accounts of this KubeNDT' }}
+        actions={
           <button
             type="button"
-            className="navbar-brand"
-            onClick={() => navigate('/')}
-            title="KubeNDT"
+            className="app-header-btn"
+            onClick={load}
+            title="Read the accounts again"
           >
-            <img src={kubendtLogo} alt="KubeNDT" className="navbar-brand-logo" />
-          </button>
-          <button
-            className="navbar-button"
-            onClick={() => navigate('/')}
-            title="Back to the namespace list"
-          >
-            <HomeIcon className="app-icon" aria-hidden="true" />
-            Home
-          </button>
-        </div>
-        <div className="navbar-center navbar-center-static" title="The accounts of this KubeNDT">
-          <UsersIcon className="navbar-ns-icon" aria-hidden="true" />
-          <div className="navbar-center-text">
-            <span className="navbar-namespace">Accounts</span>
-          </div>
-        </div>
-        <div className="navbar-right">
-          <button className="navbar-button" onClick={load} title="Read the accounts again">
             <RefreshIcon className="app-icon" aria-hidden="true" />
             Refresh
           </button>
-        </div>
-      </div>
+        }
+      />
 
       <div className="users-page">
         <aside className="users-side">

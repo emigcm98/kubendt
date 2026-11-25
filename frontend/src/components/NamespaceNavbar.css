@@ -9,9 +9,11 @@
   align-items: center;
   background: var(--brand-bar);
   border-bottom: 2px solid var(--brand-edge);
-  padding: 0.4rem 1rem;
+  /* the Home's bar's height and padding, so the brand never moves */
+  height: 68px;
+  box-sizing: border-box;
+  padding: 0 22px;
   box-shadow: 0 2px 8px color-mix(in srgb, var(--brand-edge) 25%, transparent);
-  min-height: 48px;
 }
 
 .navbar-left,
@@ -29,39 +31,6 @@
 .navbar-right {
   flex: 0 0 auto;
   margin-left: auto;
-}
-
-/* The mark on a white chip, so the blue stays crisp on the blue bar. It is
-   the way home, as a brand is. */
-.navbar-brand {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 3px 8px;
-  border: 0;
-  background: var(--surface);
-  border-radius: var(--radius-md);
-  box-shadow: 0 1px 3px color-mix(in srgb, var(--shadow-color) 18%, transparent);
-  cursor: pointer;
-  transition: box-shadow 0.15s ease;
-}
-
-.navbar-brand-logo {
-  height: 34px;
-  width: auto;
-  display: block;
-  /* The logo SVG uses light-dark() strokes; force the light (dark-ink) variant
-     so it stays visible on the white chip even when the OS is in dark mode. */
-  color-scheme: light;
-}
-
-.navbar-brand:hover {
-  box-shadow: 0 3px 8px color-mix(in srgb, var(--shadow-color) 25%, transparent);
-}
-
-.navbar-brand:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--text-on-brand) 70%, transparent);
-  outline-offset: 2px;
 }
 
 /* Namespace: a topology glyph on the left, the "NAMESPACE" kicker over the name

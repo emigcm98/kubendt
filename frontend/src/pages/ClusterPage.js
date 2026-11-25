@@ -9,6 +9,7 @@ import { ReactComponent as LoadingIcon } from '../assets/images/icons/loading.sv
 import { ReactComponent as ErrorIcon } from '../assets/images/icons/error.svg';
 import { ReactComponent as FolderIcon } from '../assets/images/icons/folder.svg';
 import { ReactComponent as RefreshIcon } from '../assets/images/icons/refresh.svg';
+import { ReactComponent as ClusterIcon } from '../assets/images/icons/cluster.svg';
 import './ClusterPage.css';
 
 // The admins' page for the cluster under KubeNDT: its nodes and their use,
@@ -230,7 +231,13 @@ const ClusterPage = () => {
 
   return (
     <div className="cluster-page">
-      <AppHeader />
+      <AppHeader
+        title={{
+          icon: ClusterIcon,
+          label: 'Cluster',
+          hint: 'The nodes, the kubeconfig and the context',
+        }}
+      />
       {kubeConfigured === false && (
         <div className="kubeconfig-gate-banner" role="alert">
           <WarningIcon className="kubeconfig-gate-icon" aria-hidden="true" />

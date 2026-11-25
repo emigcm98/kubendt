@@ -1,15 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { API_BASE_URL, SWAGGER_UI_URL } from '../config';
+import AppHeader from '../components/AppHeader';
+import { API_BASE_URL } from '../config';
 import '../components/NamespaceNavbar.css';
 import './DriversPage.css';
-import kubendtLogo from '../assets/images/kubendt-logo.svg';
 import hostIcon from '../assets/images/nodes/host.svg';
 import routerIcon from '../assets/images/nodes/router.svg';
 import switchIcon from '../assets/images/nodes/switch.svg';
-import { ReactComponent as HomeIcon } from '../assets/images/icons/home.svg';
 import { ReactComponent as BoxIcon } from '../assets/images/icons/box.svg';
-import { ReactComponent as BookIcon } from '../assets/images/icons/book.svg';
 
 const TYPE_ORDER = ['router', 'switch', 'host', 'controller'];
 const TYPE_ICONS = { router: routerIcon, switch: switchIcon, host: hostIcon, controller: hostIcon };
@@ -76,45 +74,10 @@ const DriversPage = () => {
 
   return (
     <div className="drivers-root">
-      <div className="navbar-container">
-        <div className="navbar-left">
-          <button
-            type="button"
-            className="navbar-brand"
-            onClick={() => navigate('/')}
-            title="KubeNDT"
-          >
-            <img src={kubendtLogo} alt="KubeNDT" className="navbar-brand-logo" />
-          </button>
-          <button
-            className="navbar-button"
-            onClick={() => navigate('/')}
-            title="Back to the namespace list"
-          >
-            <HomeIcon className="app-icon" aria-hidden="true" />
-            Home
-          </button>
-        </div>
-        <div
-          className="navbar-center navbar-center-static"
-          title="Every driver and what its nodes can do"
-        >
-          <BoxIcon className="navbar-ns-icon" aria-hidden="true" />
-          <div className="navbar-center-text">
-            <span className="navbar-namespace">Drivers</span>
-          </div>
-        </div>
-        <div className="navbar-right">
-          <button
-            className="navbar-button"
-            onClick={() => window.open(SWAGGER_UI_URL, '_blank', 'noopener,noreferrer')}
-            title="The REST API, in Swagger UI"
-          >
-            <BookIcon className="app-icon" aria-hidden="true" />
-            Open API
-          </button>
-        </div>
-      </div>
+      <AppHeader
+        title={{ icon: BoxIcon, label: 'Drivers', hint: 'Every driver and what its nodes can do' }}
+        current="drivers"
+      />
 
       <div className="drivers-page">
         <aside className="drivers-list">
