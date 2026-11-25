@@ -2,15 +2,15 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import './ProfileMenu.css';
-import { ReactComponent as KeyIcon } from '../assets/images/icons/key.svg';
-import { ReactComponent as LockIcon } from '../assets/images/icons/lock.svg';
+import { ReactComponent as UserIcon } from '../assets/images/icons/user.svg';
 import { ReactComponent as PowerIcon } from '../assets/images/icons/power.svg';
 import { ReactComponent as UsersIcon } from '../assets/images/icons/users.svg';
+import { ReactComponent as ClusterIcon } from '../assets/images/icons/cluster.svg';
 
 // Header account menu: click the account chip to see who is signed in and
-// their role, change the password, manage API tokens, the accounts for
-// admins, and sign out.
-export default function ProfileMenu({ onOpenTokens, onChangePassword }) {
+// their role, then one's profile, the accounts and the cluster for admins,
+// and sign out.
+export default function ProfileMenu() {
   const auth = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -77,9 +77,9 @@ export default function ProfileMenu({ onOpenTokens, onChangePassword }) {
             </div>
           </div>
           <div className="profile-sep" />
-          {item('Change password', LockIcon, onChangePassword)}
-          {item('API tokens', KeyIcon, onOpenTokens)}
+          {item('Profile', UserIcon, () => navigate('/profile'))}
           {auth.isAdmin && item('Accounts', UsersIcon, () => navigate('/users'), '', 'admin')}
+          {auth.isAdmin && item('Cluster', ClusterIcon, () => navigate('/cluster'), '', 'admin')}
           <div className="profile-sep" />
           {item('Sign out', PowerIcon, () => auth.logout(), ' profile-item-danger')}
         </div>

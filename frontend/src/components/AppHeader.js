@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProfileMenu from './ProfileMenu';
-import ApiTokensModal from './ApiTokensModal';
-import ChangePasswordModal from './ChangePasswordModal';
 import { useAuth } from '../auth/AuthContext';
 import { API_BASE_URL, SWAGGER_UI_URL } from '../config';
 import kubendtLogo from '../assets/images/kubendt-logo.svg';
@@ -31,8 +29,6 @@ const AppHeader = () => {
   const navigate = useNavigate();
   const auth = useAuth();
   const [version, setVersion] = useState(null);
-  const [tokensOpen, setTokensOpen] = useState(false);
-  const [passwordOpen, setPasswordOpen] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -120,15 +116,8 @@ const AppHeader = () => {
           <BookIcon className="app-icon" aria-hidden="true" />
           API
         </button>
-        {auth.enabled && (
-          <ProfileMenu
-            onOpenTokens={() => setTokensOpen(true)}
-            onChangePassword={() => setPasswordOpen(true)}
-          />
-        )}
+        {auth.enabled && <ProfileMenu />}
       </nav>
-      {tokensOpen && <ApiTokensModal onClose={() => setTokensOpen(false)} />}
-      {passwordOpen && <ChangePasswordModal onClose={() => setPasswordOpen(false)} />}
     </header>
   );
 };

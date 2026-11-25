@@ -87,7 +87,7 @@ func ListNamespaces(c *gin.Context) {
 
 // Names the frontend routes as pages of its own: a namespace called like
 // one could never be opened. The list grows with the pages.
-var reservedNamespaceNames = map[string]bool{"drivers": true, "users": true, "state": true, "cluster": true}
+var reservedNamespaceNames = map[string]bool{"drivers": true, "users": true, "state": true, "cluster": true, "profile": true}
 
 func CreateNamespace(c *gin.Context) {
 	var request struct {
