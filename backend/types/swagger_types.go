@@ -1101,3 +1101,32 @@ type StateObjectResponseDoc struct {
 	Object    map[string]interface{} `json:"object"`
 	YAML      string                 `json:"yaml" example:"apiVersion: v1\nkind: ConfigMap\n..."`
 }
+
+// SettingDoc is one setting the portal may change.
+type SettingDoc struct {
+	Key     string   `json:"key" example:"KUBENDT_LINK_MTU"`
+	Group   string   `json:"group" example:"labs" enums:"passwords,quotas,resources,labs"`
+	Label   string   `json:"label" example:"Link MTU"`
+	Hint    string   `json:"hint,omitempty" example:"Every link of a lab deployed from now on."`
+	Unit    string   `json:"unit,omitempty" example:"bytes"`
+	Default string   `json:"default" example:"1450"`
+	Options []string `json:"options,omitempty"`
+	// Env is the environment's value, Saved the portal's when there is one.
+	Env    string  `json:"env" example:""`
+	Saved  *string `json:"saved" example:"1400"`
+	Value  string  `json:"value" example:"1400"`
+	Source string  `json:"source" example:"saved" enums:"saved,environment,default"`
+}
+
+// SettingsResponse is returned by GET and PUT /settings.
+type SettingsResponse struct {
+	Settings []SettingDoc `json:"settings"`
+	// Editable says whether the asking account may save, the owner alone.
+	Editable bool `json:"editable" example:"true"`
+}
+
+// SaveSettingsRequest is the body of PUT /settings: a value saves it, null
+// drops it so the environment rules again.
+type SaveSettingsRequest struct {
+	Values map[string]*string `json:"values" swaggertype:"object,string" example:"KUBENDT_LINK_MTU:1400"`
+}

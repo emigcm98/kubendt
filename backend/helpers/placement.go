@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 
 	"kubendt/kubeclient"
+	"kubendt/settings"
 	"kubendt/types"
 
 	v1 "k8s.io/api/core/v1"
@@ -38,12 +38,26 @@ func ResolvePlacement(requested string) (string, error) {
 	} else if p != "" {
 		return p, nil
 	}
-	env := os.Getenv(PlacementEnv)
+	env := settings.Value(PlacementEnv)
 	p, ok := placementWord(env)
 	if !ok {
-		return "", fmt.Errorf("%s=%q is not one of %s or %s", PlacementEnv, env, PlacementPack, PlacementSpread)
+		return "", fmt.Errorf("%s=%q is not one of %s or %s", settings.Named(PlacementEnv), env, PlacementPack, PlacementSpread)
 	}
 	return p, nil
+}
+
+func init() {
+	settings.Register(settings.Setting{
+		Key: PlacementEnv, Group: settings.GroupLabs, Label: "Placement",
+		Options: []string{"", PlacementPack, PlacementSpread},
+		Hint:    "Where a topology that names none puts its pods. Pack fills a worker first, spread shares them out, empty leaves it to the scheduler.",
+		Check: func(v string) error {
+			if _, ok := placementWord(v); !ok {
+				return fmt.Errorf("one of %s or %s, or empty", PlacementPack, PlacementSpread)
+			}
+			return nil
+		},
+	})
 }
 
 func placementWord(raw string) (string, bool) {

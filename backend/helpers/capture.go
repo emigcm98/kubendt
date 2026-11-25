@@ -4,11 +4,12 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"kubendt/settings"
 )
 
 const (
@@ -23,7 +24,19 @@ const (
 // error, as with the MTU: it is a cluster setting and a silent default would
 // hide the typo.
 func CaptureMaxMB() (int, error) {
-	return parseCaptureMaxMB(os.Getenv(CaptureMaxMBEnv))
+	return parseCaptureMaxMB(settings.Value(CaptureMaxMBEnv))
+}
+
+func init() {
+	settings.Register(settings.Setting{
+		Key: CaptureMaxMBEnv, Group: settings.GroupLabs, Label: "Largest capture", Unit: "MB",
+		Default: strconv.Itoa(DefaultCaptureMaxMB),
+		Hint:    "A capture stops when its file reaches it, so it cannot fill a worker's disk.",
+		Check: func(v string) error {
+			_, err := parseCaptureMaxMB(v)
+			return err
+		},
+	})
 }
 
 func parseCaptureMaxMB(raw string) (int, error) {
@@ -33,7 +46,7 @@ func parseCaptureMaxMB(raw string) (int, error) {
 	}
 	n, err := strconv.Atoi(raw)
 	if err != nil || n < 1 || n > 100000 {
-		return 0, fmt.Errorf("%s=%q is not a size in MB between 1 and 100000", CaptureMaxMBEnv, raw)
+		return 0, fmt.Errorf("%s=%q is not a size in MB between 1 and 100000", settings.Named(CaptureMaxMBEnv), raw)
 	}
 	return n, nil
 }

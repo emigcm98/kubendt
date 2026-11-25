@@ -52,6 +52,14 @@ func SetupRoutes(router *gin.Engine) {
 		usersGroup.GET("/:name/namespaces", handlers.UserNamespaces)
 	}
 
+	// The settings the portal may change: admins read, the owner saves.
+	settingsGroup := router.Group("/settings")
+	settingsGroup.Use(handlers.RequireSessionOrPassword(), handlers.RequireAdmin())
+	{
+		settingsGroup.GET("", handlers.ListSettings)
+		settingsGroup.PUT("", handlers.SaveSettings)
+	}
+
 	shellGroup := router.Group("/shell")
 	{
 		shellGroup.GET("/ws/:namespace/:podName", handlers.InteractiveShellWebSocket)

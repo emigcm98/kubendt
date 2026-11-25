@@ -3039,6 +3039,76 @@
                 }
             }
         },
+        "/settings": {
+            "get": {
+                "description": "The environment's settings the portal may change, each with its value and where it comes from: saved from the portal, the environment or the default. Admins read them; editable says whether the asking account may save.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "settings"
+                ],
+                "summary": "List the settings",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.SettingsResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "The owner's alone (403 OWNER_ONLY for an admin). A value is saved and wins over the environment; null drops it so the environment rules again. Every value is checked first and nothing is saved when one is refused (400 INVALID_SETTING with its key).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "settings"
+                ],
+                "summary": "Save settings",
+                "parameters": [
+                    {
+                        "description": "Settings to change",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.SaveSettingsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.SettingsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/shell/ws/{namespace}/{podName}": {
             "get": {
                 "description": "Opens a WebSocket connection providing an interactive shell inside a pod. Query parameter `mode` picks the shell: `auto` (default, the serial console when the node has one, else the pod shell), `sh`, `serial`, or a mode the node's driver declares (`vtysh` on FRR, `vyos` on VyOS); the pod listing's `shells` field says which a node offers.",
@@ -7291,6 +7361,20 @@
                 }
             }
         },
+        "types.SaveSettingsRequest": {
+            "type": "object",
+            "properties": {
+                "values": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    },
+                    "example": {
+                        "KUBENDT_LINK_MTU": "1400"
+                    }
+                }
+            }
+        },
         "types.ScaleSpec": {
             "type": "object",
             "properties": {
@@ -7319,6 +7403,85 @@
                 "current_context": {
                     "type": "string",
                     "example": "my-cluster"
+                }
+            }
+        },
+        "types.SettingDoc": {
+            "type": "object",
+            "properties": {
+                "default": {
+                    "type": "string",
+                    "example": "1450"
+                },
+                "env": {
+                    "description": "Env is the environment's value, Saved the portal's when there is one.",
+                    "type": "string",
+                    "example": ""
+                },
+                "group": {
+                    "type": "string",
+                    "enum": [
+                        "passwords",
+                        "quotas",
+                        "resources",
+                        "labs"
+                    ],
+                    "example": "labs"
+                },
+                "hint": {
+                    "type": "string",
+                    "example": "Every link of a lab deployed from now on."
+                },
+                "key": {
+                    "type": "string",
+                    "example": "KUBENDT_LINK_MTU"
+                },
+                "label": {
+                    "type": "string",
+                    "example": "Link MTU"
+                },
+                "options": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "saved": {
+                    "type": "string",
+                    "example": "1400"
+                },
+                "source": {
+                    "type": "string",
+                    "enum": [
+                        "saved",
+                        "environment",
+                        "default"
+                    ],
+                    "example": "saved"
+                },
+                "unit": {
+                    "type": "string",
+                    "example": "bytes"
+                },
+                "value": {
+                    "type": "string",
+                    "example": "1400"
+                }
+            }
+        },
+        "types.SettingsResponse": {
+            "type": "object",
+            "properties": {
+                "editable": {
+                    "description": "Editable says whether the asking account may save, the owner alone.",
+                    "type": "boolean",
+                    "example": true
+                },
+                "settings": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.SettingDoc"
+                    }
                 }
             }
         },

@@ -52,7 +52,8 @@ func TestOwnerPasswordAndSessions(t *testing.T) {
 	if err := Init(); err != nil {
 		t.Fatal(err)
 	}
-	idleTimeout, maxLifetime = time.Hour, 2*time.Hour
+	t.Setenv("KUBENDT_SESSION_IDLE_HOURS", "1")
+	t.Setenv("KUBENDT_SESSION_MAX_HOURS", "2")
 	if !CheckPassword("pw") || CheckPassword("wrong") {
 		t.Fatal("the owner's password")
 	}

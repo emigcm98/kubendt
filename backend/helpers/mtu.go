@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -16,6 +15,7 @@ import (
 	drivers_meta "kubendt/drivers/meta"
 	"kubendt/executor"
 	"kubendt/kubeclient"
+	"kubendt/settings"
 	"kubendt/types"
 
 	v1 "k8s.io/api/core/v1"
@@ -39,7 +39,19 @@ const (
 // set it. An unusable value is an error, not a fallback: it is a cluster
 // setting and a silent default would hide the typo.
 func PlatformLinkMTU() (mtu int, explicit bool, err error) {
-	return parsePlatformLinkMTU(os.Getenv(LinkMTUEnv))
+	return parsePlatformLinkMTU(settings.Value(LinkMTUEnv))
+}
+
+func init() {
+	settings.Register(settings.Setting{
+		Key: LinkMTUEnv, Group: settings.GroupLabs, Label: "Link MTU", Unit: "bytes",
+		Default: strconv.Itoa(DefaultLinkMTU),
+		Hint:    "Every link of a lab deployed from now on.",
+		Check: func(v string) error {
+			_, _, err := parsePlatformLinkMTU(v)
+			return err
+		},
+	})
 }
 
 func parsePlatformLinkMTU(raw string) (int, bool, error) {
@@ -49,7 +61,7 @@ func parsePlatformLinkMTU(raw string) (int, bool, error) {
 	}
 	n, err := strconv.Atoi(raw)
 	if err != nil || n < MinLinkMTU || n > MaxLinkMTU {
-		return 0, true, fmt.Errorf("%s=%q is not an MTU between %d and %d", LinkMTUEnv, raw, MinLinkMTU, MaxLinkMTU)
+		return 0, true, fmt.Errorf("%s=%q is not an MTU between %d and %d", settings.Named(LinkMTUEnv), raw, MinLinkMTU, MaxLinkMTU)
 	}
 	return n, true, nil
 }

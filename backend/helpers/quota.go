@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 
 	"kubendt/auth"
 	"kubendt/kubeclient"
+	"kubendt/settings"
 	"kubendt/types"
 
 	corev1 "k8s.io/api/core/v1"
@@ -38,6 +38,49 @@ const (
 	LimitRangeName = "kubendt-internal-limits"
 )
 
+func checkQuota(v string) error {
+	if v == "" {
+		return nil
+	}
+	if n, err := strconv.Atoi(v); err != nil || n < 0 || n > 100000 {
+		return fmt.Errorf("a whole number from 0, which is no limit, to 100000")
+	}
+	return nil
+}
+
+func checkQuantity(v string) error {
+	if v == "" {
+		return nil
+	}
+	q, err := resource.ParseQuantity(v)
+	if err != nil {
+		return fmt.Errorf("not a quantity, like 250m or 1 for CPU and 256Mi for memory")
+	}
+	if q.Sign() < 0 {
+		return fmt.Errorf("a quantity cannot be negative")
+	}
+	return nil
+}
+
+func init() {
+	quota := func(key, label, hint string) {
+		settings.Register(settings.Setting{Key: key, Group: settings.GroupQuotas, Label: label,
+			Default: "0", Hint: hint, Check: checkQuota})
+	}
+	quota(EnvQuotaNamespaces, "Namespaces an account owns", "For accounts with no figure of their own. 0 is no limit.")
+	quota(EnvQuotaPods, "Pods across them", "Counted as the topologies declare them. 0 is no limit.")
+	quota(EnvQuotaPodsPerNamespace, "Pods in one namespace", "0 is no limit.")
+	resources := func(key, label, unit string) {
+		settings.Register(settings.Setting{Key: key, Group: settings.GroupResources, Label: label, Unit: unit,
+			Hint:  "For containers without their own, in namespaces made from now on. Empty is none.",
+			Check: checkQuantity})
+	}
+	resources(EnvPodCPURequest, "CPU request", "cores")
+	resources(EnvPodMemoryRequest, "Memory request", "bytes")
+	resources(EnvPodCPULimit, "CPU limit", "cores")
+	resources(EnvPodMemoryLimit, "Memory limit", "bytes")
+}
+
 // ErrQuotaExceeded is what a check answers when the account is at its limit.
 var ErrQuotaExceeded = errors.New("quota exceeded")
 
@@ -55,7 +98,7 @@ type QuotaUsage struct {
 }
 
 func envInt(key string) int {
-	n, _ := strconv.Atoi(strings.TrimSpace(os.Getenv(key)))
+	n, _ := strconv.Atoi(strings.TrimSpace(settings.Value(key)))
 	if n < 0 {
 		return 0
 	}
@@ -231,13 +274,13 @@ func LimitRangeFromEnv() (*corev1.LimitRange, error) {
 		{EnvPodCPULimit, item.Default, corev1.ResourceCPU},
 		{EnvPodMemoryLimit, item.Default, corev1.ResourceMemory},
 	} {
-		v := strings.TrimSpace(os.Getenv(f.env))
+		v := strings.TrimSpace(settings.Value(f.env))
 		if v == "" {
 			continue
 		}
 		q, err := resource.ParseQuantity(v)
 		if err != nil {
-			return nil, fmt.Errorf("%s=%q is not a quantity: %w", f.env, v, err)
+			return nil, fmt.Errorf("%s=%q is not a quantity: %w", settings.Named(f.env), v, err)
 		}
 		f.into[f.res] = q
 		set = true
