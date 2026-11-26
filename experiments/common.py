@@ -229,6 +229,40 @@ def kubectl_json(args, timeout=120):
     return json.loads(out)
 
 
+def meshnet_info():
+    """Which Meshnet the cluster runs, so a run says what it measured: the
+    DaemonSet's image, the image digest on each node, and whether the installed
+    Topology CRD is the fork's (shaping on the links, links in the status)."""
+    info = {}
+    try:
+        for ds in kubectl_json(["get", "daemonsets", "-A"]).get("items", []):
+            if ds["metadata"]["name"] == "meshnet":
+                ns = ds["metadata"]["namespace"]
+                info["image"] = ds["spec"]["template"]["spec"]["containers"][0]["image"]
+                pods = kubectl_json(["-n", ns, "get", "pods"]).get("items", [])
+                info["digests"] = sorted({
+                    f'{p["spec"].get("nodeName")} {s.get("imageID", "")}'
+                    for p in pods if p["metadata"]["name"].startswith("meshnet")
+                    for s in p.get("status", {}).get("containerStatuses", [])
+                })
+        schema = kubectl_json(["get", "crd", "topologies.networkop.co.uk"])["spec"]["versions"][0]["schema"]["openAPIV3Schema"]["properties"]
+        link = schema["spec"]["properties"]["links"]["items"]["properties"]
+        status = schema.get("status", {}).get("properties", {})
+        info["crd_link_fields"] = sorted(link)
+        info["crd_status_fields"] = sorted(status)
+        fork_schema = "shaping" in link and "links" in status
+        image = info.get("image", "")
+        if fork_schema and "emigcm98/meshnet" in image:
+            info["flavour"] = "fork"
+        elif not fork_schema and "networkop/meshnet" in image:
+            info["flavour"] = "stock"
+        else:
+            info["flavour"] = "not recognised"
+    except (RuntimeError, OSError, KeyError, IndexError) as e:
+        info["error"] = str(e)
+    return info
+
+
 def kexec(ns, pod, cmd, timeout=60, container=None):
     """Run a shell command inside a pod. Returns (rc, combined output)."""
     args = ["-n", ns, "exec", pod] + (["-c", container] if container else []) + ["--", "sh", "-c", cmd]
@@ -572,6 +606,7 @@ class Recorder:
             } for n in nodes]
         except (RuntimeError, OSError, KeyError) as e:
             meta["cluster_nodes"] = f"unavailable: {e}"
+        meta["meshnet"] = meshnet_info()
         self.meta = meta
         self.save("meta.json", meta)
         log(f"results in {self.dir}")
