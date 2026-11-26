@@ -45,11 +45,14 @@ npm start
 
 The API is authenticated by default. For local development you can either set `KUBENDT_ADMIN_PASSWORD` (and log in, though a cluster that already has an owner keeps that owner's password), or run the backend with `KUBENDT_AUTH_DISABLED=true` to skip auth entirely.
 
-**Production build** (from the repo root):
+**The images from your tree** (from the repo root), to try them in the compose or in a cluster:
 
 ```bash
-docker compose up --build
+docker build -t localhost/kubendt-backend:dev backend
+docker build -t localhost/kubendt-frontend:dev --build-arg REACT_APP_API_BASE_URL=/api frontend
 ```
+
+Built without `KUBENDT_VERSION`, the backend says `dev` and takes the toolbox tagged `latest`. With a version of your own, set `KUBENDT_TOOLBOX_IMAGE` too, as the toolbox is published only under the releases' versions.
 
 ## Development Philosophy
 

@@ -1,0 +1,7 @@
+# The UI image is built from this directory; its dependencies are installed
+# fresh inside the image.
+node_modules
+build
+coverage
+Dockerfile
+.dockerignore

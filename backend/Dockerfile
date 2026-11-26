@@ -40,6 +40,9 @@ ENV KUBENDT_VERSION=${KUBENDT_VERSION} \
     KUBENDT_BUILD_DATE=${KUBENDT_BUILD_DATE}
 
 ENV PORT=8080
+# Behind the bundled nginx the API is under /api, both in the compose and in
+# the cluster, so Swagger UI sends its requests there.
+ENV SWAGGER_BASE_PATH=/api/
 ENV KUBENDT_DB_PATH=/data/kubendt.db
 # The server reads its kubeconfig from /data, user-owned. The entrypoint copies
 # it there from a mounted /kube/config at every start.

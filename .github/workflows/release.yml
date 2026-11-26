@@ -66,8 +66,7 @@ jobs:
       - name: Build & push frontend (React + nginx)
         uses: docker/build-push-action@v6
         with:
-          context: .
-          file: nginx/Dockerfile
+          context: ./frontend
           push: true
           tags: |
             ghcr.io/emigcm98/kubendt-frontend:${{ steps.meta.outputs.version }}

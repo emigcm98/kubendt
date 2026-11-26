@@ -1,23 +1,28 @@
-# Production deployment: pulls the published images from GHCR instead of
-# building from source. Nothing to compile.
+# KubeNDT outside the cluster, on your kubeconfig: the published backend and
+# UI images, nothing to compile. The install inside the cluster is deploy/k8s.
 #
-# Usage:
+# Usage, from the directory of this file:
 #   1. Make sure your kubeconfig is at ~/.kube/config (it is mounted read-only).
-#   2. docker compose -f docker-compose.prod.yml up -d
+#   2. docker compose up -d
 #   3. Open http://localhost
 #
-# Pin a specific release with KUBENDT_TAG (defaults to the latest published).
-# Image tags are plain semver without the leading "v" (the git tag v1.0.0
-# publishes images tagged 1.0.0):
-#   KUBENDT_TAG=1.0.0 docker compose -f docker-compose.prod.yml up -d
+# Pin a release with KUBENDT_TAG (defaults to the latest published). Image tags
+# are plain semver without the leading "v":
+#   KUBENDT_TAG=1.13.0 docker compose up -d
 #
-# Images are published starting from the first tagged release (v1.0.0).
+# The reference of every variable is doc/DEPLOYMENT.md.
+
+# A fixed project name, so the containers and volumes are named the same
+# whatever directory this file sits in.
+name: kubendt
+
 services:
   backend:
     image: ghcr.io/emigcm98/kubendt-backend:${KUBENDT_TAG:-latest}
     environment:
       - GIN_MODE=release
-      # Persistent kubeconfig; entrypoint seeds it from the mount on first run.
+      # Where the server reads the kubeconfig, a copy the entrypoint makes of
+      # the mount at every start.
       - KUBECONFIG=/data/.kube/config
       - FILES_BASE_PATH=/app/files
       - KUBENDT_DB_PATH=/data/kubendt.db

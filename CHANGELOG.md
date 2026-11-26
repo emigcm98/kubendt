@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `GET` and `PUT /settings`, for the owner to override some of the environment's settings from the portal, applied at once. Admins read them.
 - A settings page for those values, saved by the owner and read by the admins.
 - `GET /kube/config` says how the backend reaches its cluster (`mode`) and gives the active cluster's ID.
+- A k3s option in the cluster guide, with the patch Meshnet needs there, and what each cluster needs for KubeNDT in it or outside it.
 
 ### Changed
 
@@ -30,16 +31,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Only the owner switches the kubectl context. A context on another cluster asks for that cluster's owner password and signs in to its KubeNDT, and a backend running in its cluster has no switch.
 - The compose backend copies the mounted kubeconfig at every start, so a context added to it shows after a restart.
 - `KUBENDT_ADMIN_PASSWORD` only sets the owner's password on a cluster that has no owner yet, so a restart no longer undoes the owner's change. A lost one is reset by deleting the owner's Secret and restarting.
+- The compose moves to `deploy/compose/compose.yaml`, next to the cluster manifests, under the fixed project name `kubendt`.
+- The UI image is built from `frontend/` with its own Dockerfile, as the backend's is from `backend/`.
 
 ### Removed
 
 - `POST /kube/config` and the kubeconfig upload on the cluster page. The kubeconfig is mounted and read, never written.
+- `docker-compose.yml`, the compose that built the images from source.
 
 ### Fixed
 
 - A wrong current password when changing it no longer signs the account out.
 - A tool window opened on a short screen no longer starts with its foot off screen.
 - Esc on a pod's operation details closes them, not the whole pod panel.
+- Swagger UI's requests in the published images go through `/api`.
+- Signing in through a port-forward or a NodePort no longer answers 403, as nginx passes the port in `Host`.
 
 ## [1.13.0] - 2026-11-24
 

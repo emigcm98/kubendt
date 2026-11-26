@@ -1,11 +1,14 @@
+# The UI image: the React build served by an unprivileged nginx that proxies
+# /api to the backend. Built from this directory, as the backend's is from
+# backend/.
 FROM node:24.13-alpine AS build
 
 WORKDIR /app
 
-COPY frontend/package.json frontend/package-lock.json ./
+COPY package.json package-lock.json ./
 RUN npm install -g npm@11.8.0 && npm ci
 
-COPY frontend/ .
+COPY . .
 
 ARG REACT_APP_API_BASE_URL
 ENV REACT_APP_API_BASE_URL=${REACT_APP_API_BASE_URL}
@@ -20,7 +23,7 @@ COPY --from=build /app/build /usr/share/nginx/html
 # The image's entrypoint renders the template with the environment at start,
 # so the backend's host is the compose service by default and whatever the
 # cluster names it when set.
-COPY nginx/kubendt.conf.template /etc/nginx/templates/default.conf.template
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 ENV BACKEND_HOST=backend
 
 EXPOSE 8080
