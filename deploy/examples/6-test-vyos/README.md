@@ -97,6 +97,7 @@ Go to the Namespace File Manager for that namespace.
 
 - Go back to the namespace graph view.
 - Click **Import topology**.
+- Before importing, set the `peerIntf` of the **External Network** link (`ens18` in the file) to your workers' interface on the external network, where the uplink's macvlan is created. The name `eth0` is refused there, as KubeNDT keeps it for the pods' own interface, so a worker whose external interface has that name cannot give it.
 - Select `topology-network-test-vyos.json`.
 - Wait until all nodes are running and visible. QEMU-based nodes (`router-0`, `router-1`) take longer to become Ready than regular pods: the guest has to boot and its SSH and HTTP API have to answer.
 - Nodes can be moved to the preferred position and saved by clicking **Save layout**.
@@ -209,3 +210,5 @@ Go to the Namespace File Manager for that namespace.
 - If internet access does not work, verify `router-0` has `SNAT` enabled on `eth0` and that pods in the cluster can reach the internet at all (the routers leave through the cluster network, not through the external uplink).
 - If DNAT does not forward traffic, verify the rule appears in `show nat destination rules` on `router-0`, that the external IP on `eth4` is reachable from the physical network, and that `router-0` has a static route to `10.0.4.0/24` via `router-1` so it can reach `web-server` after translating.
 - If `wget` to `web-server` returns a default nginx page instead of your content, verify the `web-server/index.html` file was created in the namespace file manager before importing the topology.
+
+> Last reviewed: 26 Nov 2026

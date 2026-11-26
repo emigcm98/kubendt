@@ -120,28 +120,16 @@ Then open http://localhost:8080. A NodePort, an Ingress and the backend's settin
 
 ### Run with Docker Compose
 
-This runs KubeNDT outside the cluster, as two containers: the `backend` (Go API) and the `frontend` (the React dashboard served by nginx, which also reverse-proxies `/api` to the backend). Make sure your kubeconfig is at `~/.kube/config`; it is mounted read-only into the backend.
-
-**Published images** (nothing to compile). Grab the compose file and run:
+This runs KubeNDT outside the cluster, as two containers of the published images: the `backend` (Go API) and the `frontend` (the React dashboard served by nginx, which also reverse-proxies `/api` to the backend). Make sure your kubeconfig is at `~/.kube/config`; it is mounted read-only into the backend. Grab the compose file and run:
 
 ```bash
-curl -O https://raw.githubusercontent.com/emigcm98/kubendt/main/docker-compose.prod.yml
-docker compose -f docker-compose.prod.yml up -d
+curl -O https://raw.githubusercontent.com/emigcm98/kubendt/main/deploy/compose/compose.yaml
+docker compose up -d
 ```
 
-Pin a release with `KUBENDT_TAG=1.0.0` (defaults to `latest`). Image tags are plain semver without the leading `v`. Published images are available from the first release onward.
+Then open http://localhost in your browser. Pin a release with `KUBENDT_TAG=1.13.0` (defaults to `latest`); image tags are plain semver without the leading `v`. The backend's container has to reach your cluster's API server at the address the kubeconfig names, which the [cluster guide](doc/How-to-deploy-a-K8s-cluster.md) sets up for kind, minikube and k3s.
 
-**Build from source** instead:
-
-```bash
-git clone https://github.com/emigcm98/kubendt.git
-cd kubendt
-docker compose up --build
-```
-
-Either way, open http://localhost in your browser.
-
-**Authentication:** the dashboard and API require login. The provided compose files ship a default password **`admin123`**, which the owner gets at the first start on a cluster. Change `KUBENDT_ADMIN_PASSWORD` before that for any real use, or the password on the profile page after. If you unset it entirely, a random password is generated and printed once in the backend logs. For programmatic access, create an API token in the dashboard and send it as `Authorization: Bearer <token>`. That password is the `admin` account's, which creates the others: see [doc/USERS.md](doc/USERS.md) for accounts, sharing and quotas, and [doc/DEPLOYMENT.md](doc/DEPLOYMENT.md#authentication) for all auth variables.
+**Authentication:** the dashboard and API require login. The compose file ships a default password **`admin123`**, which the owner gets at the first start on a cluster. Change `KUBENDT_ADMIN_PASSWORD` before that for any real use, or the password on the profile page after. If you unset it entirely, a random password is generated and printed once in the backend logs. For programmatic access, create an API token in the dashboard and send it as `Authorization: Bearer <token>`. That password is the `admin` account's, which creates the others: see [doc/USERS.md](doc/USERS.md) for accounts, sharing and quotas, and [doc/DEPLOYMENT.md](doc/DEPLOYMENT.md#authentication) for all auth variables.
 
 **Common settings** (in the compose file's `environment:`, or via your shell):
 

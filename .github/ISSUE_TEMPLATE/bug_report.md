@@ -27,7 +27,7 @@ What actually happened (include error messages, logs, screenshots).
 
 - KubeNDT version (`GET /version` or image tag):
 - Kubernetes version:
-- Deployment mode (compose from source / published images):
+- Deployment mode (in the cluster / compose / from source):
 - Browser (for UI issues):
 
 ## Additional context

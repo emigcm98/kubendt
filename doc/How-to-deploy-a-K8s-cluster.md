@@ -1,12 +1,13 @@
 # Cluster Bootstrap Guide for KubeNDT
 
-This document provides a practical and formal procedure to prepare a Kubernetes cluster for KubeNDT in three scenarios:
+This document provides a practical and formal procedure to prepare a Kubernetes cluster for KubeNDT in four scenarios:
 
 1. Single-node lab with Minikube
 2. Multi-node local cluster with kind (one control-plane, two workers)
 3. Two-node production-style cluster with kubeadm
+4. Single-node k3s
 
-The same Meshnet installation method is used in all scenarios. Each option below tells you when to install it, always after the cluster is created (see §4.2, §5.3 and §6.5). For reference, the method is always:
+The same Meshnet installation method is used in all scenarios. Each option below tells you when to install it, always after the cluster is created (see §4.2, §5.3, §6.5 and §7.2), and on k3s with one patch. For reference, the method is always:
 
 ```bash
 git clone https://github.com/networkop/meshnet-cni.git
@@ -18,20 +19,21 @@ kubectl apply -k manifests/base
 
 This guide focuses on cluster preparation. KubeNDT application startup is included at the end.
 
-KubeNDT backend reads the kubeconfig mounted from the host, so the active kubectl context on your machine is the cluster that KubeNDT will manage.
+KubeNDT runs inside the cluster it manages or outside it, with the compose. Outside, the backend reads the kubeconfig mounted from the host and starts on its current context, so the active kubectl context on your machine is the cluster that KubeNDT will manage.
 
 ## 2. Common Requirements
 
 - Linux host (or Linux VMs for kubeadm)
 - Kubernetes 1.25+ (ephemeral containers, which the toolbox needs; the rest of what the backend uses is older, the table in `doc/DEPLOYMENT.md` says what and since when); 1.30 or newer recommended, since pod execs go over WebSocket there and an older API server falls back to SPDY, about a third slower per exec
 - kubectl configured and working
-- Docker and Docker Compose (for running KubeNDT services)
+- Docker and Docker Compose, to run KubeNDT outside the cluster
 - Git (to clone meshnet-cni)
 - Minimum recommended lab resources: 4 vCPU, 8 GB RAM
 - One of the following, depending on the option you pick:
   - [Minikube](https://minikube.sigs.k8s.io/docs/start/) (Option 1)
   - [kind](https://kind.sigs.k8s.io/docs/user/quick-start/#installation) (Option 2)
   - [kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/) (Option 3)
+  - [k3s](https://docs.k3s.io/quick-start) (Option 4)
 
 ## 3. Mandatory Validation Checks (All Options)
 
@@ -86,9 +88,17 @@ kubectl get crd | grep -i topologies.networkop.co.uk
 
 ### 4.3 Ready state
 
-When the checks pass, the cluster is ready for KubeNDT.
+When the checks pass, the cluster is ready for KubeNDT, installed in it or run outside it (§9).
 
-> Optional: to see per-pod CPU and RAM in the UI, install metrics-server (see §10).
+For KubeNDT outside the cluster, the compose's backend has to reach the API server, which listens on minikube's own Docker network. Add `--embed-certs --apiserver-ips=<host IP> --listen-address=0.0.0.0` to the `minikube start` of §4.1, then point the kubeconfig at the port Docker publishes on the host. Run it after each `minikube start`, which writes minikube's entry in the kubeconfig again.
+
+```bash
+kubectl config set-cluster minikube --server=https://<host IP>:$(docker port minikube 8443 | cut -d: -f2)
+```
+
+`--embed-certs` puts the credentials in the kubeconfig the compose mounts, which otherwise names files under `~/.minikube`.
+
+> Optional: to see per-pod CPU and RAM in the UI, install metrics-server (see §11).
 
 ## 5. Option 2: Multi-node cluster with kind
 
@@ -167,9 +177,9 @@ kubectl get crd | grep -i topologies.networkop.co.uk
 
 ### 5.4 Ready state
 
-When all nodes (control-plane and both workers) are Ready and Meshnet is healthy, the cluster is ready for KubeNDT.
+When all nodes (control-plane and both workers) are Ready and Meshnet is healthy, the cluster is ready for KubeNDT, installed in it or run outside it (§9). The `apiServerAddress` of §5.1 is only needed outside it, for the compose.
 
-> Optional: to see per-pod CPU and RAM in the UI, install metrics-server (see §10).
+> Optional: to see per-pod CPU and RAM in the UI, install metrics-server (see §11).
 
 ## 6. Option 3: Two Nodes with kubeadm
 
@@ -324,9 +334,42 @@ kubectl get crd | grep -E 'topologies.networkop.co.uk|network-attachment-definit
 
 When both nodes are Ready and Meshnet resources are healthy, the cluster is ready for KubeNDT.
 
-> Optional: to see per-pod CPU and RAM in the UI, install metrics-server (see §10).
+> Optional: to see per-pod CPU and RAM in the UI, install metrics-server (see §11).
 
-## 7. Operational Troubleshooting
+## 7. Option 4: Single node with k3s
+
+A one-node cluster on the host itself, with k3s's own containerd and flannel.
+
+### 7.1 Create cluster
+
+```bash
+curl -sfL https://get.k3s.io | sudo INSTALL_K3S_EXEC="server --disable=traefik --write-kubeconfig-mode=644 \
+  --kubelet-arg=allowed-unsafe-sysctls=net.ipv4.ip_forward,net.ipv6.conf.all.forwarding" sh -
+mkdir -p ~/.kube && cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
+kubectl config set-cluster default --server=https://<host IP>:6443
+kubectl get nodes -o wide
+```
+
+> `allowed-unsafe-sysctls` is the same allowance as in the other options. `--disable=traefik` keeps ports 80 and 443 of the host free, since k3s's bundled Traefik takes them and the compose serves the UI on 80. The kubeconfig k3s writes names `127.0.0.1`, which a container cannot reach, and the host's address is already in the API server's certificate, so `set-cluster` points it there for the compose.
+
+### 7.2 Install Meshnet (required)
+
+k3s keeps its CNI configuration and plugins under `/var/lib/rancher/k3s`, while Meshnet's DaemonSet mounts `/etc/cni/net.d` and `/opt/cni/bin`. Without the patch below the DaemonSet rolls out, but its configuration never reaches k3s's CNI directory, so Meshnet is not in the chain.
+
+```bash
+git clone https://github.com/networkop/meshnet-cni.git
+cd meshnet-cni/
+kubectl apply -k manifests/base
+kubectl -n meshnet patch ds meshnet -p '{"spec":{"template":{"spec":{"volumes":[{"name":"cni-bin","hostPath":{"path":"/var/lib/rancher/k3s/data/cni"}},{"name":"cni-cfg","hostPath":{"path":"/var/lib/rancher/k3s/agent/etc/cni/net.d"}}]}}}}'
+kubectl -n meshnet rollout status ds/meshnet
+sudo ls /var/lib/rancher/k3s/agent/etc/cni/net.d   # 00-meshnet.conflist, then 10-flannel.conflist
+```
+
+### 7.3 Ready state
+
+When the node is Ready and `00-meshnet.conflist` is in k3s's CNI directory, the cluster is ready for KubeNDT, installed in it or run outside it (§9). An image built locally, such as the VyOS one, goes into k3s's containerd with `sudo k3s ctr images import <file>.tar`.
+
+## 8. Operational Troubleshooting
 
 ```bash
 kubectl config current-context
@@ -342,6 +385,7 @@ Most common root causes:
 - Wrong kubeconfig context selected
 - Nodes `NotReady` on a kubeadm cluster, no pod network installed (§6.4)
 - Meshnet not running on all nodes
+- On k3s, Meshnet running but out of the CNI chain, its DaemonSet not patched (§7.2)
 - Missing CRDs required by networking components
 - Insufficient CPU/RAM in local environments
 - **`SysctlForbidden` on switch/router pods**, the kubelet does not allow setting unsafe sysctls. See below.
@@ -395,32 +439,25 @@ Then delete the failing pods so they are recreated with the updated policy:
 kubectl delete pod -n <namespace> ovs-0 sw-0
 ```
 
-For new clusters, see the `allowedUnsafeSysctls` steps in each option above (§4.1, §5.1, §6.1b).
+For new clusters, see the `allowedUnsafeSysctls` steps in each option above (§4.1, §5.1, §6.1b, §7.1).
 
-## 8. Start KubeNDT after cluster bootstrap
+## 9. Start KubeNDT after cluster bootstrap
 
-Once your cluster passes the validation checks above:
+KubeNDT runs inside the cluster or outside it, and [DEPLOYMENT.md](DEPLOYMENT.md#in-the-cluster-or-outside-it) compares the two.
 
-1. Ensure your `kubectl` context points to the target cluster.
-2. Start KubeNDT from the repository root.
+- **In the cluster**, follow [Deployment in the cluster](DEPLOYMENT.md#deployment-in-the-cluster): a Secret with the admin password and `kubectl apply -k`. The UI is then at http://localhost:8080 through `kubectl -n kubendt-system port-forward svc/kubendt-frontend 8080:80`, or on port 30080 of any node with `deploy/k8s/optional/nodeport.yaml`.
+- **Outside it**, run `docker compose up -d` from `deploy/compose` and open http://localhost. The backend reads `~/.kube/config` and starts on its current context, so its container has to reach the API server at the address that kubeconfig names: kind with the `apiServerAddress` of §5.1, minikube as in §4.3, k3s as in §7.1.
 
-```bash
-docker compose up --build
-```
-
-3. Open the UI at `http://localhost:3000` (or through your reverse proxy in production mode).
-4. Verify backend health and API docs:
+Verify the backend through the UI's proxy:
 
 ```bash
-curl http://localhost:8080/healthz
-curl http://localhost:8080/readyz
+curl http://localhost:8080/api/readyz   # in the cluster, through the port-forward
+curl http://localhost/api/readyz        # with the compose
 ```
 
-Swagger UI:
+The API docs are at `/api/swagger/index.html` once signed in.
 
-`http://localhost:8080/swagger/index.html`
-
-## 9. Recommended minimal smoke check
+## 10. Recommended minimal smoke check
 
 After startup, validate end-to-end control-plane connectivity:
 
@@ -435,11 +472,11 @@ ip a
 
 If these steps pass, the cluster bootstrap is considered successful for KubeNDT lab usage.
 
-## 10. Optional: Install metrics-server (pod CPU/RAM monitoring)
+## 11. Optional: Install metrics-server (pod CPU/RAM monitoring)
 
 KubeNDT can display real-time CPU and RAM usage per pod in the node info panel. This feature requires **metrics-server** to be running in the cluster. If it is not installed, the UI will show `n/a` with a tooltip indicating the missing component.
 
-### 10.1 Standard installation (kubeadm / kind / most clusters)
+### 11.1 Standard installation (kubeadm / kind / most clusters)
 
 ```bash
 kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
@@ -452,7 +489,7 @@ kubectl get deployment metrics-server -n kube-system
 kubectl top nodes
 ```
 
-### 10.2 Minikube
+### 11.2 Minikube
 
 Minikube ships metrics-server as an addon. Enable it with:
 
@@ -467,7 +504,7 @@ minikube addons list | grep metrics-server
 kubectl top pods -A
 ```
 
-### 10.3 Insecure TLS (self-signed certificates)
+### 11.3 Insecure TLS (self-signed certificates)
 
 If metrics-server fails to start due to TLS certificate errors (common in kubeadm clusters with self-signed certs), patch the deployment to skip TLS verification:
 
@@ -483,7 +520,7 @@ Check that the pods are ready after patching:
 kubectl rollout status deployment/metrics-server -n kube-system
 ```
 
-### 10.4 Validation
+### 11.4 Validation
 
 Once metrics-server is running, wait 60 seconds for the first scrape cycle, then verify:
 
@@ -493,7 +530,7 @@ kubectl top pod -n <your-kubendt-namespace>
 
 The CPU and RAM values should now appear in the KubeNDT pod info panel (Summary tab) and update every 5 seconds automatically while the panel is open.
 
-## 11. Link MTU and jumbo frames
+## 12. Link MTU and jumbo frames
 
 KubeNDT sets the same MTU on every link of a namespace once it is wired, 1450 by default. The reason is the dataplane Meshnet builds: a link whose two pods share a worker is a veth pair (1500 by default), a link across workers is a VXLAN tunnel whose MTU is the worker NIC's minus 50 (1450 on a 1500 underlay), and the kernel refuses to raise a VXLAN above that. Mixed values hurt silently: a Linux bridge drops frames larger than its egress port without ICMP, so TCP stalls on full-size segments and OSPF neighbours with different MTUs stay in ExStart. One value for the whole namespace keeps a lab independent of where its pods landed, and 1450 is the largest value that works on every placement of a 1500 underlay.
 
