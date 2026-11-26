@@ -48,10 +48,14 @@ rules:
   - apiGroups: [""]
     resources: [limitranges]
     verbs: [get, list, create, delete]
-  # Meshnet's links.
+  # Meshnet's links, and the skip entries written to a peer's status so the
+  # stock daemon wires a pod added next to a running one.
   - apiGroups: [networkop.co.uk]
     resources: [topologies]
     verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [networkop.co.uk]
+    resources: [topologies/status]
+    verbs: [get, update, patch]
   # Meshnet is looked for among the DaemonSets.
   - apiGroups: [apps]
     resources: [daemonsets, deployments]
