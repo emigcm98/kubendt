@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.14.0] - 2026-11-26
+
 ### Added
 
 - The namespace list gives each namespace's guests, the size of its lab in pods and links, and its creation time in RFC 3339.
@@ -46,7 +48,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - A tool window opened on a short screen no longer starts with its foot off screen.
 - Esc on a pod's operation details closes them, not the whole pod panel.
 - Swagger UI's requests in the published images go through `/api`.
-- Signing in through a port-forward or a NodePort no longer answers 403, as nginx passes the port in `Host`.
+- Signing in and the shells through a port-forward or a NodePort no longer get 403, as nginx passes the port in `Host`.
 - The namespace and file manager bars keep their buttons as icons on narrower desktop windows, so the namespace's name no longer runs into them.
 - A long file in the file manager scrolls, as its editor now takes the card's height.
 - An external link may hang from a worker's `eth0`, often its only NIC. A pod's `eth0` stays reserved.
@@ -438,7 +440,8 @@ Initial public release. KubeNDT deploys and operates virtual network topologies 
 - Health, readiness and version endpoints, and Swagger docs at `/swagger`.
 - Container images published to GHCR and a Docker Compose deployment.
 
-[Unreleased]: https://github.com/emigcm98/kubendt/compare/v1.13.0...HEAD
+[Unreleased]: https://github.com/emigcm98/kubendt/compare/v1.14.0...HEAD
+[1.14.0]: https://github.com/emigcm98/kubendt/compare/v1.13.0...v1.14.0
 [1.13.0]: https://github.com/emigcm98/kubendt/compare/v1.12.0...v1.13.0
 [1.12.0]: https://github.com/emigcm98/kubendt/compare/v1.11.0...v1.12.0
 [1.11.0]: https://github.com/emigcm98/kubendt/compare/v1.10.0...v1.11.0

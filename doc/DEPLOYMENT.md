@@ -30,7 +30,7 @@ KubeNDT can run inside the cluster it manages, on a ServiceAccount, with no kube
 kubectl create namespace kubendt-system
 kubectl -n kubendt-system create secret generic kubendt-backend-env --from-literal=KUBENDT_ADMIN_PASSWORD='change-me'
 
-kubectl apply -k "https://github.com/emigcm98/kubendt/deploy/k8s?ref=v1.13.0"   # a release: its kustomization pins its images
+kubectl apply -k "https://github.com/emigcm98/kubendt/deploy/k8s?ref=v1.14.0"   # a release: its kustomization pins its images
 kubectl apply -k deploy/k8s                      # a checkout: the images of the release it was cut at
 
 kubectl -n kubendt-system port-forward svc/kubendt-frontend 8080:80   # then http://localhost:8080
@@ -61,7 +61,7 @@ The compose runs KubeNDT outside the cluster, on your kubeconfig: `deploy/compos
 ```bash
 curl -O https://raw.githubusercontent.com/emigcm98/kubendt/main/deploy/compose/compose.yaml
 docker compose up -d                       # then http://localhost
-KUBENDT_TAG=1.13.0 docker compose up -d    # a release instead of latest
+KUBENDT_TAG=1.14.0 docker compose up -d    # a release instead of latest
 ```
 
 The project is named `kubendt` in the file, so its containers and volumes keep their names whatever directory it sits in. An install started with the `docker-compose.prod.yml` of 1.13 or older moves by stopping that one first (`docker compose -f docker-compose.prod.yml down`) and then starting this one. One of 1.11 or older first starts once on 1.13 with its old file, so what its volumes hold is moved into the cluster before they are left behind. Started while the old one still holds port 80, the new UI container is left without its network, so `docker compose down` it before the next `up`.
@@ -110,7 +110,7 @@ Or create a local file and source it (not committed to git):
 ```bash
 # backend/.env.local , not committed
 CORS_ALLOWED_ORIGINS=http://localhost:3000
-FILES_BASE_PATH=./files
+KUBENDT_ADMIN_PASSWORD=admin123
 ```
 
 ```bash

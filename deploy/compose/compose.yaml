@@ -8,7 +8,7 @@
 #
 # Pin a release with KUBENDT_TAG (defaults to the latest published). Image tags
 # are plain semver without the leading "v":
-#   KUBENDT_TAG=1.13.0 docker compose up -d
+#   KUBENDT_TAG=1.14.0 docker compose up -d
 #
 # The reference of every variable is doc/DEPLOYMENT.md.
 
