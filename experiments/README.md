@@ -15,7 +15,7 @@ Every script takes `--runs`, `--out`, `--keep` and `--help`. Namespaces are name
 
 | Script | What it measures | Main knobs |
 | --- | --- | --- |
-| `regression.py` | The `deploy/examples/` end to end, as their READMEs describe, with a restart per example to exercise replay, then two accounts on one lab (password policy, quota, sharing by level). Release gate. | example numbers or `users`, `KEEP`, `SKIP_RAW` |
+| `regression.py` | The `deploy/examples/` end to end, as their READMEs describe, with a restart per example to exercise replay, then two accounts on one lab (password policy, quota, sharing by level). An example with a failed check keeps its pods' placement and logs, its events and its Topologies' status in its result file. Release gate. | example numbers or `users`, `KEEP`, `SKIP_RAW` |
 | `deploy_scaling.py` | Deploy time by topology size, with the per-pod timeline: creation and readiness spread, critical path, platform overhead over the Kubernetes path, affine fit. Also times a fixed topology (`--topology`, `--configure`). | `--sizes`, `--shape`, `--image` |
 | `configure_throughput.py` | One action to every pod at once: wall time, sequential-equivalent time, speedup, per-pod exec time. | `--sizes` |
 | `modify_vs_redeploy.py` | Each in-place operation (add/delete node, add/delete link, scale up/down, restart) against clear + deploy: time, pods recreated, unavailability per pod, loss on a link nobody touched. | `--nodes`, `--grace` |
@@ -45,7 +45,7 @@ node pictures.js 2-test-frr-ospf-rip 3-test-modify-ospf                         
 
 ## Output
 
-Each run writes `results/<script>/<timestamp>/` with `meta.json` (backend version, repository commit, cluster nodes, arguments with any password or token redacted), `rows.jsonl` appended as the run goes, `rows.csv` and `summary.json` at the end, `notes.log`, and the raw API responses the run relied on. `results/` is ignored by git. The data behind the paper lives in its artifacts repository, not here.
+Each run writes `results/<script>/<timestamp>/` with `meta.json` (backend version, repository commit, cluster nodes, the Meshnet it ran on with its image digest per node and whether its CRD is the fork's, arguments with any password or token redacted), `rows.jsonl` appended as the run goes, `rows.csv` and `summary.json` at the end, `notes.log`, and the raw API responses the run relied on. `results/` is ignored by git. The data behind the paper lives in its artifacts repository, not here.
 
 ## Reading the numbers
 

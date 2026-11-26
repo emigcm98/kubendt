@@ -170,8 +170,15 @@ def restart(ex, pod):
     return ok
 
 def setup(ex):
-    st, r = api("GET", "/namespaces/")
-    existing = {n["name"] for n in (r.get("namespaces") or [])} if st == 200 and isinstance(r, dict) else set()
+    # A namespace still terminating from a run just before cannot be reused or
+    # made anew until Kubernetes has finished deleting it.
+    for _ in range(90):
+        st, r = api("GET", "/namespaces/")
+        listed = r.get("namespaces") or [] if st == 200 and isinstance(r, dict) else []
+        if not any(n.get("name") == ex.ns and n.get("status") == "Terminating" for n in listed):
+            break
+        time.sleep(2)
+    existing = {n["name"] for n in listed if n.get("status") != "Terminating"}
     if ex.ns in existing:
         st, r = api("DELETE", f"/network/clear-topology/{ex.ns}")
         ex.check(f"namespace {ex.ns} already exists, topology cleared", st == 200, r if st != 200 else "")
@@ -179,7 +186,29 @@ def setup(ex):
     st, r = api("POST", "/namespaces/", body={"namespace": ex.ns})
     ex.check("create namespace", st == 200, r if st != 200 else "")
 
+def failure_evidence(ex, tail=60):
+    """What any failed check leaves before the teardown: where every pod ran, the
+    end of each pod's logs, the namespace's events and its Topologies' status
+    (with the forked Meshnet, the state of each link)."""
+    if all(c["ok"] for c in ex.checks):
+        return
+    rc, out, _ = C.kubectl(["-n", ex.ns, "get", "pods", "-o", "wide", "--no-headers"], 30)
+    ex.evidence["pods"] = out.splitlines()
+    rc, out, _ = C.kubectl(["-n", ex.ns, "get", "pods", "-o", "name"], 30)
+    for p in [l.split("/", 1)[1] for l in out.split()]:
+        rc, log_out, _ = C.kubectl(["-n", ex.ns, "logs", p, "--all-containers", f"--tail={tail}"], 30)
+        ex.evidence[f"log:{p}"] = log_out.splitlines()
+    rc, out, _ = C.kubectl(["-n", ex.ns, "get", "events", "--sort-by=.lastTimestamp", "--no-headers"], 30)
+    ex.evidence["events"] = out.splitlines()[-80:]
+    try:
+        ex.evidence["topology_status"] = {t["metadata"]["name"]: t.get("status", {})
+                                          for t in C.kubectl_json(["-n", ex.ns, "get", "topologies"]).get("items", [])}
+    except (RuntimeError, OSError) as e:
+        ex.evidence["topology_status"] = f"unavailable: {e}"
+    ex.note("a check failed: pods, logs, events and the Topologies' status kept in the example's result file")
+
 def teardown(ex):
+    failure_evidence(ex)
     if ex.name.split("-")[0] in os.environ.get("KEEP", "").split(","):
         ex.note(f"namespace {ex.ns} left deployed on request"); ex.timing("total_s", round(time.time() - ex.t0, 1)); return
     st, r = api("DELETE", f"/network/clear-topology/{ex.ns}")
