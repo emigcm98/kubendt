@@ -73,19 +73,11 @@ func p4read(lines ...string) []string {
 	return []string{"sh", "-c", "printf '%s\\n' " + shellSingleQuote(strings.Join(lines, "\n")) + " | " + p4CLI + " 2>&1"}
 }
 
-// portAdd gives the switch an interface as the port its name numbers. The
-// offloads go off first, since the switch reads raw frames and a GSO frame
-// never crosses it, and a port already there is removed first, which is what
-// a neighbour's restart needs: Meshnet recreates the interface and the port
-// kept the dead one.
-//
-// A port on a VXLAN link reads through a veth pair of its own instead. The
-// worker NIC's receive offload merges the TCP segments of a flow arriving
-// through the tunnel into one frame of several segments, which the switch
-// would read whole and could not send on; with TSO off on the veth, the
-// kernel splits that frame again on its way in. Two tc redirects carry the
-// frames between the link and the veth, as the QEMU images do with their
-// taps. A veth link needs none, Meshnet's ends come with TSO off.
+// portAdd gives the switch an interface as the port its name numbers, read
+// through a veth pair with the offloads off and two tc redirects, so the
+// kernel finishes the partial checksums and splits the merged frames that a
+// neighbour or the worker's GRO leave and the raw-reading switch cannot send
+// on. A port already there is removed first, as a neighbour's restart needs.
 func portAdd(iface string) [][]string {
 	n := portNumberFromName(iface)
 	if n == "" {
@@ -94,7 +86,7 @@ func portAdd(iface string) [][]string {
 	tc, p4 := iface+"-tc", iface+"-p4"
 	offloads := " tso off gso off gro off tx off rx off sg off >/dev/null 2>&1"
 	wrap := "ethtool -K " + iface + offloads + "; " + portUnwrap(iface) + "; " +
-		"ip -d link show " + iface + " | grep -qw vxlan || exit 0; set -e; " +
+		"set -e; " +
 		"mtu=$(cat /sys/class/net/" + iface + "/mtu); " +
 		"ip link add " + tc + " type veth peer name " + p4 + "; " +
 		"for d in " + tc + " " + p4 + "; do ethtool -K $d" + offloads + " || true; ip link set $d mtu $mtu promisc on up; done; " +
@@ -126,7 +118,7 @@ func (P4SwitchDriver) SetupBridge(bridge string, ifaces []string) [][]string {
 }
 
 // TeardownBridge removes every port the switch has, whatever added them, and
-// the veth pairs of the ports on VXLAN links.
+// their veth pairs.
 func (P4SwitchDriver) TeardownBridge(bridge string) [][]string {
 	return [][]string{
 		{"sh", "-c", "for p in $(printf 'show_ports\\n' | " + p4CLI + " 2>/dev/null | awk '/^ +[0-9]+ +/{print $1}'); do printf 'port_remove %s\\n' \"$p\"; done | " + p4CLI + " >/dev/null 2>&1; true"},
@@ -242,7 +234,7 @@ func parseP4Ports(text string) capabilities.Rows {
 	rows := capabilities.Rows{}
 	for _, line := range strings.Split(text, "\n") {
 		if m := p4PortRe.FindStringSubmatch(line); m != nil {
-			// A port on a VXLAN link reads its veth, named after the interface.
+			// A port reads its veth, named after the interface.
 			rows = append(rows, map[string]string{"port": m[1], "iface": strings.TrimSuffix(m[2], "-p4"), "status": strings.ToLower(m[3])})
 		}
 	}

@@ -101,12 +101,15 @@ func TestP4PortAdd(t *testing.T) {
 		t.Fatalf("want wrap, remove and add, got %d commands: %v", len(cmds), cmds)
 	}
 	wrap := cmds[0][2]
-	// The veth pair and its redirects only for a VXLAN link, the pair of a
-	// previous wiring gone first either way.
-	for _, want := range []string{"ethtool -K eth3 ", "ip link del eth3-tc", "grep -qw vxlan || exit 0", "type veth peer name eth3-p4", "redirect dev eth3-tc", "dev eth3-tc ingress", "redirect dev eth3"} {
+	// Every port gets the veth pair and its redirects, whatever the link, the
+	// pair of a previous wiring gone first.
+	for _, want := range []string{"ethtool -K eth3 ", "ip link del eth3-tc", "type veth peer name eth3-p4", "redirect dev eth3-tc", "dev eth3-tc ingress", "redirect dev eth3"} {
 		if !strings.Contains(wrap, want) {
 			t.Errorf("wrap lacks %q: %s", want, wrap)
 		}
+	}
+	if strings.Contains(wrap, "vxlan") {
+		t.Errorf("the wrap must not depend on the link's kind: %s", wrap)
 	}
 	if !strings.Contains(cmds[1][2], "port_remove 3") {
 		t.Errorf("unexpected remove: %v", cmds[1])
