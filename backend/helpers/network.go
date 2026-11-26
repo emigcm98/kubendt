@@ -341,7 +341,8 @@ func resolveDriverForEndpoint(endpoint string, driverByNode map[string]string) s
 
 // ValidateLinkInterfaceNamesForDrivers checks each link's localIntf against
 // the driver of `node`, and peerIntf against the driver of `peerNode`. The
-// "external" endpoint is exempt from driver-specific rules.
+// "external" endpoint names a worker's interface, not a pod's, so it takes
+// ValidateHostInterfaceName instead.
 // Nodes must already have their Driver field resolved.
 func ValidateLinkInterfaceNamesForDrivers(links []types.LinkSpec, nodes []types.NodeSpec) error {
 	driverByNode := make(map[string]string, len(nodes))
@@ -350,15 +351,32 @@ func ValidateLinkInterfaceNamesForDrivers(links []types.LinkSpec, nodes []types.
 	}
 
 	for i, link := range links {
-		localDrv := resolveDriverForEndpoint(link.Node, driverByNode)
-		if err := ValidateInterfaceNameForDriver(link.LocalIntf, localDrv); err != nil {
+		if err := validateEndpointInterface(link.Node, link.LocalIntf, driverByNode); err != nil {
 			return fmt.Errorf("link[%d].localIntf on node %q: %s", i, link.Node, err)
 		}
-
-		peerDrv := resolveDriverForEndpoint(link.PeerNode, driverByNode)
-		if err := ValidateInterfaceNameForDriver(link.PeerIntf, peerDrv); err != nil {
+		if err := validateEndpointInterface(link.PeerNode, link.PeerIntf, driverByNode); err != nil {
 			return fmt.Errorf("link[%d].peerIntf on node %q: %s", i, link.PeerNode, err)
 		}
+	}
+	return nil
+}
+
+func validateEndpointInterface(endpoint, name string, driverByNode map[string]string) error {
+	if endpoint == externalNodeName {
+		return ValidateHostInterfaceName(name)
+	}
+	return ValidateInterfaceNameForDriver(name, resolveDriverForEndpoint(endpoint, driverByNode))
+}
+
+// ValidateHostInterfaceName checks the worker's interface an external link
+// hangs its macvlan from. eth0 is allowed: it is the host's NIC here, often
+// its only one, and the pod's end gets a name of its own.
+func ValidateHostInterfaceName(name string) error {
+	if err := types.ValidateLinuxInterfaceName(name); err != nil {
+		return err
+	}
+	if name == "lo" {
+		return fmt.Errorf("name %q is the loopback, an uplink cannot hang from it", name)
 	}
 	return nil
 }

@@ -97,7 +97,7 @@ Go to the Namespace File Manager for that namespace.
 
 - Go back to the namespace graph view.
 - Click **Import topology**.
-- Before importing, set the `peerIntf` of the **External Network** link (`ens18` in the file) to your workers' interface on the external network, where the uplink's macvlan is created. The name `eth0` is refused there, as KubeNDT keeps it for the pods' own interface, so a worker whose external interface has that name cannot give it.
+- Before importing, set the `peerIntf` of the **External Network** link (`ens18` in the file) to your workers' interface on the external network, where the uplink's macvlan is created. A worker with a single NIC gives that one, `eth0` included. The network has to let the macvlan's own MAC through, which many clouds and some hypervisors filter, and the worker itself does not reach the router through it.
 - Select `topology-network-test-vyos.json`.
 - Wait until all nodes are running and visible. QEMU-based nodes (`router-0`, `router-1`) take longer to become Ready than regular pods: the guest has to boot and its SSH and HTTP API have to answer.
 - Nodes can be moved to the preferred position and saved by clicking **Save layout**.

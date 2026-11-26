@@ -48,6 +48,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Swagger UI's requests in the published images go through `/api`.
 - Signing in through a port-forward or a NodePort no longer answers 403, as nginx passes the port in `Host`.
 - The namespace and file manager bars keep their buttons as icons on narrower desktop windows, so the namespace's name no longer runs into them.
+- A long file in the file manager scrolls, as its editor now takes the card's height.
+- An external link may hang from a worker's `eth0`, often its only NIC. A pod's `eth0` stays reserved.
 
 ## [1.13.0] - 2026-11-24
 

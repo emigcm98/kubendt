@@ -297,7 +297,11 @@ const expandNodesIntoPods = (nodes) => {
 // Interfaces reserved platform-wide: eth0 is the primary CNI/management
 // interface on every pod and lo is loopback. Neither can be a topology link
 // interface (the backend rejects them too; this gives instant feedback).
+// The external end names a worker's NIC instead, often eth0 itself, so
+// there only lo is refused.
 const RESERVED_IFACE_NAMES = new Set(['eth0', 'lo']);
+const reservedOn = (endpoint, name) =>
+  endpoint === 'external' ? name === 'lo' : RESERVED_IFACE_NAMES.has(name);
 
 const resolvePodName = (name, nodes) => {
   const matchingNode = nodes.find((n) => n.name === name);
@@ -2350,9 +2354,9 @@ const NetworkGraph = ({
         if (replicas === 1) return `${input}-0`;
         return null;
       };
-      const ifaceCheck = (name, field) => {
+      const ifaceCheck = (name, field, endpoint) => {
         if (!name) return;
-        if (RESERVED_IFACE_NAMES.has(name)) {
+        if (reservedOn(endpoint, name)) {
           throw new Error(
             `link.${field} "${name}": reserved interface (primary CNI/management or loopback). Use eth1+ or another name.`
           );
@@ -2372,8 +2376,8 @@ const NetworkGraph = ({
       for (let i = 0; i < json.links.length; i++) {
         const link = json.links[i];
         validateLinkSpecFields(link, `links[${i}]`);
-        ifaceCheck(link.localIntf, 'localIntf');
-        ifaceCheck(link.peerIntf, 'peerIntf');
+        ifaceCheck(link.localIntf, 'localIntf', link.node);
+        ifaceCheck(link.peerIntf, 'peerIntf', link.peerNode);
         const nodeIsExternal = link.node === 'external';
         const peerIsExternal = link.peerNode === 'external';
         if (nodeIsExternal && peerIsExternal) {
@@ -2773,8 +2777,11 @@ const NetworkGraph = ({
       if (Array.isArray(addObj.links)) {
         addObj.links.forEach((l, i) => {
           validateLinkSpecFields(l, `add.links[${i}]`);
-          for (const f of ['localIntf', 'peerIntf']) {
-            if (RESERVED_IFACE_NAMES.has(l[f])) {
+          for (const [f, endpoint] of [
+            ['localIntf', l.node],
+            ['peerIntf', l.peerNode],
+          ]) {
+            if (reservedOn(endpoint, l[f])) {
               throw new Error(
                 `add.links[${i}].${f} "${l[f]}": reserved interface (primary CNI/management or loopback). Use eth1+ or another name.`
               );
