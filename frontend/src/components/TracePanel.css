@@ -3,6 +3,10 @@
   --trace-internet: #00838f;
 }
 
+:root[data-theme='dark'] {
+  --trace-internet: #4dd0e1;
+}
+
 /* The traceroute window. Its frame and header are the shared tool window's
    (ToolWindow.css); here its size, its form, the hops and the player. */
 .tw.trace-panel {
@@ -256,7 +260,7 @@
 
 .trace-hop-num.trace-hop-clickable:hover .trace-hop-ttl {
   color: var(--text-on-brand);
-  background: var(--success);
+  background: var(--success-fill);
   border-color: var(--success);
 }
 
@@ -474,13 +478,13 @@
   padding: 0 14px;
   font-weight: 700;
   color: var(--text-on-brand);
-  background: var(--primary);
+  background: var(--primary-fill);
   border-color: var(--primary);
 }
 
 .trace-btn-play:hover:not(:disabled) {
   color: var(--text-on-brand);
-  background: var(--primary-hover);
+  background: var(--primary-fill-hover);
   border-color: var(--primary-hover);
 }
 

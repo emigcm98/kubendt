@@ -5,6 +5,11 @@
   --link-badge-down-border: #f0bcb4;
 }
 
+:root[data-theme='dark'] {
+  --link-badge-up-border: #2f5c3c;
+  --link-badge-down-border: #6b2e2a;
+}
+
 .link-info-title-icon {
   width: 20px;
   height: 20px;

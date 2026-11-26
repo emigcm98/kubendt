@@ -6,7 +6,7 @@
 
 .kbn-tooltip {
   position: fixed;
-  background-color: var(--primary);
+  background-color: var(--primary-fill);
   color: var(--text-on-brand);
   padding: 5px 9px;
   border-radius: var(--radius-sm);

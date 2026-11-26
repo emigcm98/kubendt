@@ -14,6 +14,20 @@
   --pod-error-text: #c0392b;
 }
 
+:root[data-theme='dark'] {
+  --pod-scrollbar-thumb: #3a4a5e;
+  --pod-status-pending: #ffa040;
+  --pod-type-router: #5dade2;
+  --pod-type-host: #a3b1b2;
+  --pod-type-switch: #c08ed6;
+  --pod-overlay-bg: #1a2533;
+  --pod-on-text: #6fd08a;
+  --pod-on-border: #2f5c3c;
+  --pod-off-bg: #222e3e;
+  --pod-off-border: #34465c;
+  --pod-error-text: #f08575;
+}
+
 /* === PANEL PRINCIPAL === */
 
 .pod-info-panel {

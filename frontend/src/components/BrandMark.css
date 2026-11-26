@@ -29,7 +29,7 @@
   flex: none;
   width: 50px;
   height: 50px;
-  background: var(--surface);
+  background: var(--brand-tile);
   border-radius: var(--radius-md);
   box-shadow: 0 1px 3px color-mix(in srgb, var(--shadow-color) 18%, transparent);
 }

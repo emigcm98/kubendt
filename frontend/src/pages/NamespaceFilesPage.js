@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useTheme } from '../theme';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import NamespaceFilesNavbar from '../components/NamespaceFilesNavbar';
 import FileSidebar from '../components/FileSidebar';
@@ -26,6 +27,7 @@ import { json } from '@codemirror/lang-json';
 import { yaml } from '@codemirror/lang-yaml';
 
 function NamespaceFilesPage() {
+  const { theme } = useTheme();
   const { namespace } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -1066,6 +1068,7 @@ function NamespaceFilesPage() {
               ) : (
                 <div className="editor-container">
                   <CodeMirror
+                    theme={theme}
                     value={fileContent}
                     extensions={
                       selectedFile?.endsWith('.json')

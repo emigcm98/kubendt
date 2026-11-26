@@ -5,6 +5,13 @@
   --profile-danger-hover: #fff5f5;
 }
 
+:root[data-theme='dark'] {
+  --profile-sep: #2a394b;
+  --profile-item-hover: #223044;
+  --profile-danger-text: #f07070;
+  --profile-danger-hover: #3a1c1f;
+}
+
 .profile-menu {
   position: relative;
 }
@@ -35,7 +42,7 @@
   height: 24px;
   font-size: 0.78rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--primary-fill);
   background: var(--text-on-brand);
   border-radius: 50%;
 }
@@ -79,7 +86,7 @@
 /* The white disc is for the blue bar; on the white menu it turns blue. */
 .profile-dropdown .profile-avatar {
   color: var(--text-on-brand);
-  background: var(--primary);
+  background: var(--primary-fill);
 }
 
 .profile-info-text {

@@ -5,6 +5,12 @@
   --node-restarting-text: #92400e;
 }
 
+:root[data-theme='dark'] {
+  --node-glow: #8aa2c4;
+  --node-selected-bg: #1e4a73;
+  --node-restarting-text: #fbbf6a;
+}
+
 .custom-node {
   position: relative;
   display: flex;

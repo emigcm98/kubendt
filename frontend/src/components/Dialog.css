@@ -248,23 +248,23 @@
 
 .dlg-btn-primary {
   color: var(--text-on-brand);
-  background: var(--primary);
+  background: var(--primary-fill);
   border: 1px solid var(--primary);
 }
 
 .dlg-btn-primary:hover:not(:disabled) {
-  background: var(--primary-hover);
+  background: var(--primary-fill-hover);
   border-color: var(--primary-hover);
 }
 
 .dlg-btn-danger {
   color: var(--text-on-brand);
-  background: var(--danger);
+  background: var(--danger-fill);
   border: 1px solid var(--danger);
 }
 
 .dlg-btn-danger:hover:not(:disabled) {
-  background: var(--danger-strong);
+  background: var(--danger-fill-hover);
   border-color: var(--danger-strong);
 }
 

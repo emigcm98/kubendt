@@ -319,14 +319,14 @@
   font-size: 13px;
   font-weight: 700;
   color: var(--text-on-brand);
-  background: var(--primary);
+  background: var(--primary-fill);
   border: 1px solid var(--primary);
   border-radius: var(--radius-md);
   cursor: pointer;
 }
 
 .cl-btn:hover:not(:disabled) {
-  background: var(--primary-hover);
+  background: var(--primary-fill-hover);
   border-color: var(--primary-hover);
 }
 

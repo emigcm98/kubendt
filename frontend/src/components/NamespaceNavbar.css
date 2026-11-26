@@ -255,7 +255,19 @@
   color: var(--text-subtle);
 }
 
-@media (max-width: 900px) {
+/* Narrower desktops keep the buttons as icons, their titles still say what
+   they do, so the centred pill never runs into them. */
+@media (max-width: 1180px) {
+  .navbar-button-label {
+    display: none;
+  }
+
+  .navbar-button {
+    padding: 0 9px;
+  }
+}
+
+@media (max-width: 760px) {
   .navbar-container {
     flex-wrap: wrap;
     gap: 0.8rem;
