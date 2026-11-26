@@ -112,7 +112,7 @@ Accounts, labs and settings live in the cluster either way, so a context on anot
 ```bash
 kubectl create namespace kubendt-system
 kubectl -n kubendt-system create secret generic kubendt-backend-env --from-literal=KUBENDT_ADMIN_PASSWORD='change-me'
-kubectl apply -k "https://github.com/emigcm98/kubendt/deploy/k8s?ref=v1.13.0"
+kubectl apply -k "https://github.com/emigcm98/kubendt/deploy/k8s?ref=v1.14.0"
 kubectl -n kubendt-system port-forward svc/kubendt-frontend 8080:80
 ```
 
@@ -127,7 +127,7 @@ curl -O https://raw.githubusercontent.com/emigcm98/kubendt/main/deploy/compose/c
 docker compose up -d
 ```
 
-Then open http://localhost in your browser. Pin a release with `KUBENDT_TAG=1.13.0` (defaults to `latest`); image tags are plain semver without the leading `v`. The backend's container has to reach your cluster's API server at the address the kubeconfig names, which the [cluster guide](doc/How-to-deploy-a-K8s-cluster.md) sets up for kind, minikube and k3s.
+Then open http://localhost in your browser. Pin a release with `KUBENDT_TAG=1.14.0` (defaults to `latest`); image tags are plain semver without the leading `v`. The backend's container has to reach your cluster's API server at the address the kubeconfig names, which the [cluster guide](doc/How-to-deploy-a-K8s-cluster.md) sets up for kind, minikube and k3s.
 
 **Authentication:** the dashboard and API require login. The compose file ships a default password **`admin123`**, which the owner gets at the first start on a cluster. Change `KUBENDT_ADMIN_PASSWORD` before that for any real use, or the password on the profile page after. If you unset it entirely, a random password is generated and printed once in the backend logs. For programmatic access, create an API token in the dashboard and send it as `Authorization: Bearer <token>`. That password is the `admin` account's, which creates the others: see [doc/USERS.md](doc/USERS.md) for accounts, sharing and quotas, and [doc/DEPLOYMENT.md](doc/DEPLOYMENT.md#authentication) for all auth variables.
 

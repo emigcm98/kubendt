@@ -1,7 +1,5 @@
-# KubeNDT file storage
+# Files of a backend older than 1.12
 
-Files uploaded through the file manager (later mounted into pods) are stored here, organized per cluster and namespace:
+Since 1.12 the files of a namespace live in the cluster, as ConfigMaps and Secrets in the namespace. A backend older than that kept them here, under `<cluster-id>/<namespace>/`, and a newer one reads this folder once per namespace to move them, leaving a `.kubendt-migrated` marker. While a database from such a backend is open, `clusters.json` maps each cluster ID to its last context and API server.
 
-    <cluster-id>/<namespace>/<files...>
-
-`<cluster-id>` is the UID of the cluster's `kube-system` namespace, so the same namespace name in two different clusters does not collide. `clusters.json` maps each cluster-id to its last-seen context name and API server for readability.
+Once everything is moved, this folder and the old `kubendt.db` can go.

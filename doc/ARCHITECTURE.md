@@ -101,10 +101,10 @@ A backend on a kubeconfig can switch between the clusters of its contexts (`POST
 Concretely:
 
 - Every per-namespace table above carries a `cluster_id` column and is keyed by `(cluster_id, namespace, …)`; queries filter by the active cluster's ID.
-- Namespace files live under `FILES_BASE_PATH/<cluster_id>/<namespace>/…`.
+- Namespace files live in the namespace itself, as ConfigMaps and Secrets. A backend older than 1.12 kept them under `FILES_BASE_PATH/<cluster_id>/<namespace>/…`, which is read once to move them.
 - Within a cluster, the namespace **name** remains the identity (KubeNDT cleans up a namespace's data when it is deleted through the UI).
 
-Cluster IDs are opaque UUIDs, so a registry maps them back to something readable for operators: the `clusters` table and a mirrored `FILES_BASE_PATH/clusters.json` map each `cluster_id` to its last-seen context name, API server URL, and timestamp. This is written on startup and on every context switch/load (`helpers.RecordActiveCluster`). It is purely for operability — the cluster ID stays the canonical key everywhere else.
+Cluster IDs are opaque UUIDs, so a registry maps them back to something readable for operators: the `clusters` table and a mirrored `FILES_BASE_PATH/clusters.json` map each `cluster_id` to its last-seen context name, API server URL, and timestamp. This is written on startup and on every context switch (`helpers.RecordActiveCluster`), only while a database from an older backend is open. It is purely for operability — the cluster ID stays the canonical key everywhere else.
 
 ### Schema versioning
 
