@@ -116,12 +116,12 @@
 
 .users-btn-primary {
   border-color: var(--primary);
-  background: var(--primary);
+  background: var(--primary-fill);
   color: var(--text-on-brand);
 }
 
 .users-btn-primary:hover:not(:disabled) {
-  background: var(--primary-hover);
+  background: var(--primary-fill-hover);
   color: var(--text-on-brand);
 }
 

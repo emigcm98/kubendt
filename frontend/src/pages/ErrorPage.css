@@ -31,7 +31,7 @@
 
 /* A refusal or a miss speaks the brand's blue; a failure is red. */
 .error-card-refused {
-  --error-tone: var(--brand-edge);
+  --error-tone: var(--brand-ink);
 }
 
 .error-card-fail {
@@ -93,12 +93,12 @@
 
 .error-btn {
   color: var(--text-on-brand);
-  background: var(--primary);
+  background: var(--primary-fill);
   border: none;
 }
 
 .error-btn:hover {
-  background: var(--primary-hover);
+  background: var(--primary-fill-hover);
 }
 
 .error-btn-quiet {

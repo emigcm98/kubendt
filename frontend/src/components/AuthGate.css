@@ -4,6 +4,12 @@
   --authgate-spinner: #2b6cb0;
 }
 
+:root[data-theme='dark'] {
+  --authgate-text: #a9b6c6;
+  --authgate-spinner-track: #2c3b4e;
+  --authgate-spinner: #5aa9ec;
+}
+
 .authgate-loading {
   display: flex;
   flex-direction: column;

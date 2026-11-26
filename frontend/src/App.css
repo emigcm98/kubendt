@@ -4,6 +4,10 @@
   --app-bg: #f8f9fa;
 }
 
+:root[data-theme='dark'] {
+  --app-bg: #0f1620;
+}
+
 .App {
   display: flex;
   flex-direction: column;

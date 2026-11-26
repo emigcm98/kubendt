@@ -1,0 +1,6 @@
+/* Square, icon only, on whichever bar button style it takes. */
+.theme-toggle {
+  justify-content: center;
+  width: 32px;
+  padding: 0;
+}

@@ -52,8 +52,13 @@ const TOKEN_NAMES = [
   'graph-label-border',
 ];
 
-// The tokens as the page resolves them, with the hex of index.css as the
-// fallback when there is no document (tests).
+// The theme a picture is drawn in, whichever the page shows: light, as a
+// picture mostly ends up on a white page or slide.
+const PICTURE_THEME = 'light';
+
+// The tokens as index.css resolves them in PICTURE_THEME, read on a probe
+// element that carries that theme, with the hex of index.css as the fallback
+// when there is no document (tests).
 export const readTokens = () => {
   const fallback = {
     surface: '#ffffff',
@@ -73,13 +78,18 @@ export const readTokens = () => {
     'graph-label-bg': 'rgba(184, 208, 223, 0.8)',
     'graph-label-border': '#4695c9',
   };
-  if (typeof document === 'undefined') return fallback;
-  const style = getComputedStyle(document.documentElement);
+  if (typeof document === 'undefined' || !document.body) return fallback;
+  const probe = document.createElement('div');
+  probe.setAttribute('data-theme', PICTURE_THEME);
+  probe.style.display = 'none';
+  document.body.appendChild(probe);
+  const style = getComputedStyle(probe);
   const tokens = { ...fallback };
   TOKEN_NAMES.forEach((name) => {
     const v = style.getPropertyValue(`--${name}`).trim();
     if (v) tokens[name] = v;
   });
+  probe.remove();
   return tokens;
 };
 

@@ -183,7 +183,7 @@
   font-size: 13px;
   font-weight: 700;
   color: var(--text-on-brand);
-  background: var(--primary);
+  background: var(--primary-fill);
   border: none;
   border-radius: var(--radius-md);
   cursor: pointer;
@@ -191,7 +191,7 @@
 }
 
 .home-new:hover:not(:disabled) {
-  background: var(--primary-hover);
+  background: var(--primary-fill-hover);
 }
 
 .home-scope {
@@ -349,7 +349,7 @@
 
 .ns-person-you i {
   color: var(--text-on-brand);
-  background: var(--primary);
+  background: var(--primary-fill);
 }
 
 .ns-person-none {

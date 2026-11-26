@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - A settings page for those values, saved by the owner and read by the admins.
 - `GET /kube/config` says how the backend reaches its cluster (`mode`) and gives the active cluster's ID.
 - A k3s option in the cluster guide, with the patch Meshnet needs there, and what each cluster needs for KubeNDT in it or outside it.
+- A dark theme, following the system or chosen per browser with the button on the bars. Pictures of the graph stay light.
 
 ### Changed
 
@@ -46,6 +47,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Esc on a pod's operation details closes them, not the whole pod panel.
 - Swagger UI's requests in the published images go through `/api`.
 - Signing in through a port-forward or a NodePort no longer answers 403, as nginx passes the port in `Host`.
+- The namespace and file manager bars keep their buttons as icons on narrower desktop windows, so the namespace's name no longer runs into them.
 
 ## [1.13.0] - 2026-11-24
 

@@ -418,12 +418,12 @@
 .tc-form-btn.primary {
   flex: 1 1 auto;
   color: var(--text-on-brand);
-  background: var(--primary);
+  background: var(--primary-fill);
   border-color: var(--primary);
 }
 
 .tc-form-btn.primary:hover {
-  background: var(--primary-hover);
+  background: var(--primary-fill-hover);
   border-color: var(--primary-hover);
 }
 

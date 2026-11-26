@@ -213,12 +213,12 @@
 
 .set-btn {
   color: var(--text-on-brand);
-  background: var(--primary);
+  background: var(--primary-fill);
   border: none;
 }
 
 .set-btn:hover:not(:disabled) {
-  background: var(--primary-hover);
+  background: var(--primary-fill-hover);
 }
 
 .set-btn-quiet {

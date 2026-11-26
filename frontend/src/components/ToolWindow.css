@@ -225,7 +225,7 @@ select.tw-input {
 
 .tw-btn-primary {
   color: var(--text-on-brand);
-  background: var(--primary);
+  background: var(--primary-fill);
   border-color: var(--primary);
 }
 
@@ -235,7 +235,7 @@ select.tw-input {
 
 .tw-btn-primary:hover:not(:disabled) {
   color: var(--text-on-brand);
-  background: var(--primary-hover);
+  background: var(--primary-fill-hover);
   border-color: var(--primary-hover);
 }
 

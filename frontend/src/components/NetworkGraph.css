@@ -3,6 +3,11 @@
   --graph-loading-text: #666666;
 }
 
+:root[data-theme='dark'] {
+  --empty-topology-text: #8b9bb0;
+  --graph-loading-text: #9aa8b8;
+}
+
 /* ── The top bar: three quiet groups floating on the canvas ─────────────────
    The topology actions on the left, the search and the external switch in
    the middle, the layout and the export on the right. One language for
@@ -91,12 +96,12 @@
 }
 
 .topbar-btn-primary {
-  background: var(--primary);
+  background: var(--primary-fill);
   color: var(--text-on-brand);
 }
 
 .topbar-btn-primary:hover:not(:disabled) {
-  background: var(--primary-hover);
+  background: var(--primary-fill-hover);
   color: var(--text-on-brand);
 }
 

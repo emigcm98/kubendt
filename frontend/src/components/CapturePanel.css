@@ -3,6 +3,10 @@
   --cap-dns: #00838f;
 }
 
+:root[data-theme='dark'] {
+  --cap-dns: #4dd0e1;
+}
+
 /* The capture window. Its frame, header and bar are the shared tool
    window's (ToolWindow.css); here the packet list and the layers. */
 .cap-panel {

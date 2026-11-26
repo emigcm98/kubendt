@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import BrandMark from './BrandMark';
 import './NamespaceNavbar.css'; // reuse styles
 import { ReactComponent as TopologyIcon } from '../assets/images/icons/topology.svg';
+import ThemeToggle from './ThemeToggle';
 
 function NamespaceFilesNavbar({ namespace }) {
   const navigate = useNavigate();
@@ -22,6 +23,7 @@ function NamespaceFilesNavbar({ namespace }) {
       </div>
 
       <div className="navbar-right">
+        <ThemeToggle className="navbar-button" />
         <button
           className="navbar-button"
           onClick={() => {
@@ -31,7 +33,7 @@ function NamespaceFilesNavbar({ namespace }) {
           title="Back to the graph of this namespace"
         >
           <TopologyIcon className="app-icon" aria-hidden="true" />
-          Graph
+          <span className="navbar-button-label">Graph</span>
         </button>
       </div>
     </div>

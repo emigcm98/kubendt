@@ -12,6 +12,21 @@
   --minimap-fill-external: #8b5cf6;
   --minimap-fill-other: #facc15;
   --minimap-stroke: #111111;
+  /* the veil over what lies outside the view, React Flow's own default */
+  --minimap-mask: rgba(240, 240, 240, 0.6);
+}
+
+:root[data-theme='dark'] {
+  --minimap-host: #6fae80;
+  --minimap-router: #5dade2;
+  --minimap-switch: #c08ed6;
+  --minimap-external: #a78bfa;
+  --minimap-fill-router: #60a5fa;
+  --minimap-fill-switch: #9ca3af;
+  --minimap-fill-host: #34d399;
+  --minimap-fill-external: #a78bfa;
+  --minimap-stroke: #0b1118;
+  --minimap-mask: rgba(8, 12, 18, 0.55);
 }
 
 .minimap-container {
@@ -92,6 +107,11 @@
 .react-flow__minimap {
   background: var(--surface);
   margin: 0;
+}
+
+/* React Flow paints the veil with a fill attribute, which a rule overrides. */
+.react-flow__minimap-mask {
+  fill: var(--minimap-mask);
 }
 
 /* SVG fills the container symmetrically (the old translate/scale nudge made the

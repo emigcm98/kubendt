@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useTheme } from '../theme';
 import Modal from 'react-modal';
 import CodeMirror from '@uiw/react-codemirror';
 import { json } from '@codemirror/lang-json';
@@ -24,6 +25,7 @@ const TopologyInputModal = ({
   onClose,
   onSubmit,
 }) => {
+  const { theme } = useTheme();
   const [text, setText] = useState('');
   const [parsed, setParsed] = useState(null);
   const [parseError, setParseError] = useState(null);
@@ -305,6 +307,7 @@ const TopologyInputModal = ({
           onDrop={handleDrop}
         >
           <CodeMirror
+            theme={theme}
             value={text}
             placeholder={placeholder || ''}
             extensions={[json()]}

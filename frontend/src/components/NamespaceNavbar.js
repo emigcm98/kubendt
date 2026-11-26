@@ -15,6 +15,7 @@ import { ReactComponent as ClockIcon } from '../assets/images/icons/clock.svg';
 import { ReactComponent as ChevronDownIcon } from '../assets/images/icons/chevron-down.svg';
 import { ReactComponent as UsersIcon } from '../assets/images/icons/users.svg';
 import { ReactComponent as EyeIcon } from '../assets/images/icons/eye.svg';
+import ThemeToggle from './ThemeToggle';
 
 const plural = (type) => (type === 'switch' ? 'switches' : `${type}s`);
 
@@ -187,6 +188,7 @@ function NamespaceNavbar({
         </div>
 
         <div className="navbar-right">
+          <ThemeToggle className="navbar-button" />
           <button
             className="navbar-button"
             onClick={() => {
@@ -196,7 +198,7 @@ function NamespaceNavbar({
             title="The files of this namespace, to mount into its pods"
           >
             <FolderIcon className="app-icon" aria-hidden="true" />
-            File Manager
+            <span className="navbar-button-label">File Manager</span>
           </button>
           {isOwner && (
             <button
@@ -208,7 +210,7 @@ function NamespaceNavbar({
               title="Every Kubernetes object of this namespace and what it is for KubeNDT"
             >
               <ClusterIcon className="app-icon" aria-hidden="true" />
-              State
+              <span className="navbar-button-label">State</span>
             </button>
           )}
           <div className="navbar-menu-anchor" ref={menuRef}>
@@ -220,7 +222,7 @@ function NamespaceNavbar({
               title="Owner, guests and actions"
             >
               <TopologyIcon className="app-icon" aria-hidden="true" />
-              Namespace
+              <span className="navbar-button-label">Namespace</span>
               <ChevronDownIcon className="app-icon navbar-caret" aria-hidden="true" />
             </button>
             {menuOpen && (

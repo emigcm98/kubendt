@@ -47,7 +47,7 @@
   font-size: 24px;
   font-weight: 700;
   color: var(--text-on-brand);
-  background: var(--primary);
+  background: var(--primary-fill);
   border-radius: 50%;
 }
 
@@ -219,7 +219,7 @@
   font-size: 13px;
   font-weight: 700;
   color: var(--text-on-brand);
-  background: var(--primary);
+  background: var(--primary-fill);
   border: none;
   border-radius: var(--radius-md);
   cursor: pointer;
@@ -227,7 +227,7 @@
 }
 
 .me-btn:hover:not(:disabled) {
-  background: var(--primary-hover);
+  background: var(--primary-fill-hover);
 }
 
 .me-btn:disabled {
@@ -271,7 +271,7 @@
 
 .me-btn-danger:hover {
   color: var(--text-on-brand);
-  background: var(--danger);
+  background: var(--danger-fill);
   border-color: var(--danger);
 }
 

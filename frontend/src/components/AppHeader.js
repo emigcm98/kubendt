@@ -8,6 +8,7 @@ import { ReactComponent as BoxIcon } from '../assets/images/icons/box.svg';
 import { ReactComponent as ClusterIcon } from '../assets/images/icons/cluster.svg';
 import { ReactComponent as GlobeIcon } from '../assets/images/icons/globe.svg';
 import BrandMark from './BrandMark';
+import ThemeToggle from './ThemeToggle';
 import GithubMark from './GithubMark';
 import './AppHeader.css';
 
@@ -87,6 +88,7 @@ const AppHeader = ({ links = false, title = null, actions = null, current = '' }
           <BookIcon className="app-icon" aria-hidden="true" />
           <span className="app-header-btn-label">API</span>
         </button>
+        <ThemeToggle className="app-header-btn" />
         {auth.enabled && <ProfileMenu />}
       </nav>
     </header>

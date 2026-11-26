@@ -3,17 +3,33 @@
    canonical ones distilled from the existing UI; each token collapses several
    near-duplicate hex values that were scattered across the stylesheets.
    A color only one stylesheet uses is a token in a :root block at its top,
-   so portals and a dark theme reach it too. */
-:root {
+   so portals and a dark theme reach it too.
+   The light set is also [data-theme='light'], so an element can go back to
+   it (the graph's export does); the dark set below takes :root by
+   specificity, whichever stylesheet loads last. */
+:root,
+[data-theme='light'] {
+  color-scheme: light;
+  /* Behind every page. */
+  --page-bg: #ffffff;
+
   /* Brand (header banner) */
   --brand: #2b8fd4;
   --brand-edge: #1c74c0;
   /* The bars on top of every page. */
   --brand-bar: linear-gradient(to bottom, var(--brand), var(--brand-edge));
+  /* The tile the logo sits on, white in both themes. */
+  --brand-tile: #ffffff;
+  /* The brand's blue as text on a surface. */
+  --brand-ink: #1c74c0;
 
   /* Primary / interactive */
   --primary: #1976d2;
   --primary-hover: #1565c0;
+  /* A filled control under --text-on-brand. The same as --primary in light,
+     darker than it in dark, where --primary is lighter to read as text. */
+  --primary-fill: #1976d2;
+  --primary-fill-hover: #1565c0;
 
   /* Surfaces */
   --panel-from: #f3f7fc;
@@ -43,16 +59,20 @@
   --graph-label-bg: rgba(184, 208, 223, 0.8); /* node names under the icons */
   --graph-label-border: #4695c9;
   --status-pending: #ffeb3b;
+  --graph-dot: #91919a; /* the canvas's dotted background */
 
   /* Status */
   --success: #2e7d32;
   --success-accent: #4caf50;
   --success-strong: #1b5e20;
   --success-bg: #e6f4ea;
+  --success-fill: #2e7d32;
   --danger: #d32f2f;
   --danger-strong: #c62828;
   --danger-accent: #f44336;
   --danger-bg: #fdecea;
+  --danger-fill: #d32f2f;
+  --danger-fill-hover: #c62828;
   --warning: #f0a020;
   --warning-strong: #f57c00;
   --warning-accent: #f59e0b;
@@ -84,6 +104,19 @@
   --shadow-color-cool: #193c64; /* the blue-gray shadow of cards on light panels */
   --scrim-color: #000000;
 
+  /* The file manager's icons. */
+  --icon-folder: #d99a2b;
+  --icon-save: #2563eb;
+  --icon-import: #0d9488;
+  --icon-danger: #dc2626;
+
+  /* CodeMirror's search panel. */
+  --cm-search-bg: #f5f7fa;
+  --cm-search-border: #d0dae8;
+  --cm-field-border: #c8d3e0;
+  --cm-button-hover-border: #95a9c0;
+  --cm-close: #777777;
+
   /* Radii */
   --radius-sm: 6px;
   --radius-md: 8px;
@@ -93,6 +126,90 @@
     'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   --radius-lg: 12px;
   --radius-pill: 999px;
+}
+
+/* The dark set: the same roles, inks lightened to read on dark surfaces and
+   tints darkened under them. The console wells stay as they are. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --page-bg: #0f1620;
+
+  --brand: #1d5486;
+  --brand-edge: #163f66;
+  --brand-bar: linear-gradient(to bottom, var(--brand), var(--brand-edge));
+  --brand-ink: #5aa9ec;
+
+  --primary: #5aa9ec;
+  --primary-hover: #7cbcf2;
+  --primary-fill: #1f6fc2;
+  --primary-fill-hover: #2a7ed6;
+
+  --panel-from: #131c27;
+  --panel-to: #101822;
+  --panel-border: #2a394b;
+  --panel-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  --surface: #1a2533;
+  --surface-muted: #222e3e;
+  --panel-header-from: #1f2b3a;
+  --panel-header-to: #1b2635;
+
+  --text-heading: #e3eaf2;
+  --text-body: #c5d0dc;
+  --text-muted: #8b9bb0;
+  --text-subtle: #64758b;
+
+  --border: #2c3b4e;
+  --border-light: #243244;
+
+  --graph-edge: #aebccc;
+  --graph-edge-selected: var(--primary);
+  --graph-label-bg: rgba(42, 60, 82, 0.85);
+  --graph-dot: #3a4757;
+
+  --success: #5ec26a;
+  --success-accent: #4caf50;
+  --success-strong: #86d891;
+  --success-bg: #14301c;
+  --success-fill: #2e7d32;
+  --danger: #f07070;
+  --danger-strong: #ff8f8f;
+  --danger-accent: #f44336;
+  --danger-bg: #3a1c1f;
+  --danger-fill: #c62828;
+  --danger-fill-hover: #d84343;
+  --warning-strong: #ffb74d;
+  --warning-border: #7a5a1f;
+  --warning-bg: #33280f;
+  --warning-text: #f2c46a;
+  --info: #5aa9ec;
+  --info-bg: #132a42;
+
+  --role-owner: #b69cfb;
+  --role-owner-bg: #2b2048;
+  --role-admin: var(--danger);
+  --role-admin-bg: var(--danger-bg);
+  --role-user: var(--primary);
+  --role-user-bg: var(--info-bg);
+
+  /* An edge, so the dark wells stand out of a dark surface. */
+  --console-border: #2c3b4e;
+
+  --shadow-color-cool: #000000;
+
+  --icon-folder: #e0a83f;
+  --icon-save: #6b9cf5;
+  --icon-import: #2bb3a5;
+  --icon-danger: #f06464;
+
+  --cm-search-bg: #1f2b3a;
+  --cm-search-border: #2c3b4e;
+  --cm-field-border: #34465c;
+  --cm-button-hover-border: #4d6480;
+  --cm-close: #8b9bb0;
+}
+
+html {
+  background: var(--page-bg);
 }
 
 body {
@@ -130,19 +247,37 @@ code {
 /* Semantic icon colors (applied alongside .app-icon where a colored icon aids
    scanning, e.g. the file manager). Icons use currentColor. */
 .icon-folder {
-  color: #d99a2b;
+  color: var(--icon-folder);
 }
 .icon-save {
-  color: #2563eb;
+  color: var(--icon-save);
 }
 .icon-import {
-  color: #0d9488;
+  color: var(--icon-import);
 }
 .icon-danger {
-  color: #dc2626;
+  color: var(--icon-danger);
 }
 .icon-warning {
   color: var(--warning);
+}
+
+/* CodeMirror in the dark theme keeps its own syntax colors but sits on the
+   card's surface, with the gutter the light theme has; its theme's rules are
+   one class deep, these are deeper. */
+[data-theme='dark'] .cm-theme-dark .cm-editor {
+  background-color: var(--surface);
+}
+
+[data-theme='dark'] .cm-theme-dark .cm-gutters {
+  color: var(--text-subtle);
+  background-color: var(--panel-from);
+  border-right: 1px solid var(--border-light);
+}
+
+[data-theme='dark'] .cm-theme-dark .cm-activeLine,
+[data-theme='dark'] .cm-theme-dark .cm-activeLineGutter {
+  background-color: color-mix(in srgb, var(--primary) 8%, transparent);
 }
 
 /* ---------------------------------------------------------------------------
@@ -158,20 +293,20 @@ code {
   align-items: center;
   gap: 6px;
   padding: 8px 36px 8px 10px; /* room on the right for the close button */
-  background: #f5f7fa;
-  border-top: 1px solid #d0dae8;
+  background: var(--cm-search-bg);
+  border-top: 1px solid var(--cm-search-border);
   font-size: 0.85rem;
-  color: #1a3a5c;
+  color: var(--text-heading);
   position: relative;
 }
 
 .cm-panels .cm-panel.cm-search input.cm-textfield {
   padding: 4px 8px;
-  border: 1px solid #c8d3e0;
+  border: 1px solid var(--cm-field-border);
   border-radius: 4px;
   font-size: 0.85rem;
-  background: #ffffff;
-  color: #1a3a5c;
+  background: var(--surface);
+  color: var(--text-heading);
   min-width: 160px;
   outline: none;
   transition:
@@ -180,16 +315,16 @@ code {
 }
 
 .cm-panels .cm-panel.cm-search input.cm-textfield:focus {
-  border-color: #1976d2;
-  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.15);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 15%, transparent);
 }
 
 .cm-panels .cm-panel.cm-search button.cm-button {
   padding: 4px 10px;
-  border: 1px solid #c8d3e0;
+  border: 1px solid var(--cm-field-border);
   border-radius: 4px;
-  background: #ffffff;
-  color: #1a3a5c;
+  background: var(--surface);
+  color: var(--text-heading);
   font-size: 0.82rem;
   cursor: pointer;
   transition:
@@ -198,8 +333,8 @@ code {
 }
 
 .cm-panels .cm-panel.cm-search button.cm-button:hover {
-  background-color: #e3eaf3;
-  border-color: #95a9c0;
+  background-color: var(--panel-header-from);
+  border-color: var(--cm-button-hover-border);
 }
 
 .cm-panels .cm-panel.cm-search label {
@@ -208,7 +343,7 @@ code {
   gap: 4px;
   white-space: nowrap;
   font-size: 0.82rem;
-  color: #1a3a5c;
+  color: var(--text-heading);
   cursor: pointer;
 }
 
@@ -233,13 +368,13 @@ code {
   border: none;
   font-size: 1.15rem;
   line-height: 1;
-  color: #777;
+  color: var(--cm-close);
   cursor: pointer;
   padding: 2px 6px;
   border-radius: 3px;
 }
 
 .cm-panels .cm-panel.cm-search button[name='close']:hover {
-  background-color: rgba(0, 0, 0, 0.06);
-  color: #1a3a5c;
+  background-color: color-mix(in srgb, var(--shadow-color) 6%, transparent);
+  color: var(--text-heading);
 }

@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useTheme } from '../theme';
 import { MiniMap } from 'reactflow';
 import { ReactComponent as MinimizeIcon } from '../assets/images/icons/minimize.svg';
 import { ReactComponent as MaximizeIcon } from '../assets/images/icons/maximize.svg';
@@ -31,7 +32,9 @@ const MiniMapOverlay = ({ selectedNodeId }) => {
     });
   };
 
-  // SVG fill attributes take no var(), so the tokens are read once here.
+  // SVG fill attributes take no var(), so the tokens are read here, again
+  // whenever the theme changes.
+  const { theme } = useTheme();
   const colors = useMemo(() => {
     const style = getComputedStyle(document.documentElement);
     const read = (name) => style.getPropertyValue(`--minimap-${name}`).trim() || undefined;
@@ -43,7 +46,8 @@ const MiniMapOverlay = ({ selectedNodeId }) => {
       other: read('fill-other'),
       stroke: read('stroke'),
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [theme]);
 
   const getColor = (node) => {
     const type = node.data?.type || node.type;
