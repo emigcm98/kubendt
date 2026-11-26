@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Changed
 
 - Every experiment run names the Meshnet it measured, and the regression keeps the pods, logs, events and links of an example whose check fails.
+- A P4 switch reads every port through a veth pair of its own, not only those on VXLAN links, so it forwards TCP whatever offloads its neighbours keep.
 
 ### Fixed
 
