@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Every experiment run names the Meshnet it measured, and the regression keeps the pods, logs, events and links of an example whose check fails.
 
+### Fixed
+
+- The in-cluster backend may write a Topology's status, so a pod added next to a running one gets its links with the stock Meshnet.
+
 ## [1.14.0] - 2026-11-26
 
 ### Added
