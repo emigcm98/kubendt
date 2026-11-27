@@ -209,6 +209,11 @@
   color: var(--text-muted);
 }
 
+.kni-note-warn {
+  margin-top: 6px;
+  color: var(--warning-text);
+}
+
 /* CPU and RAM as the Home tile shows them. */
 .kni-usage {
   display: grid;

@@ -3,8 +3,11 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"kubendt/helpers"
 	"kubendt/kubeclient"
+	"kubendt/types"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -27,6 +30,9 @@ type NodeInfo struct {
 	KubeletVersion   string   `json:"kubelet_version"`
 	// Meshnet is "running", "not-running" or "unknown" for this node.
 	Meshnet string `json:"meshnet"`
+	// Schedulable is false for a node the scheduler keeps lab pods off:
+	// cordoned, or with a taint they do not tolerate, as a control plane has.
+	Schedulable bool `json:"schedulable"`
 }
 
 // MeshnetStatus reports whether the Meshnet CNI dataplane is running. The
@@ -44,6 +50,29 @@ type MeshnetStatus struct {
 	Namespace string `json:"namespace,omitempty"`
 	// Message carries a short reason for degraded/missing/unknown states.
 	Message string `json:"message,omitempty"`
+	// Flavour is "stock", "fork" (KubeNDT Meshnet) or "not recognised", from
+	// the DaemonSet's image, with the fork's release in Version or the commit
+	// of one of its development builds in Commit.
+	Flavour string `json:"flavour,omitempty"`
+	Image   string `json:"image,omitempty"`
+	Version string `json:"version,omitempty"`
+	Commit  string `json:"commit,omitempty"`
+	// Support is "supported", "development", "too-old", "untested" or
+	// "unsupported" against the versions this KubeNDT works with.
+	Support string `json:"support,omitempty"`
+	URL     string `json:"url,omitempty"`
+	// CRD is whose Topology CRD is installed: "fork", "stock", "missing" or
+	// "unreadable". Only in the cluster status.
+	CRD string `json:"crd,omitempty"`
+	// Images are the images the Meshnet pods run and on how many nodes each,
+	// more than one during an upgrade. Only in the cluster status.
+	Images   []MeshnetImage `json:"images,omitempty"`
+	Warnings []string       `json:"warnings,omitempty"`
+}
+
+type MeshnetImage struct {
+	Image string `json:"image"`
+	Nodes int    `json:"nodes"`
 }
 
 type ClusterStatusResponse struct {
@@ -137,75 +166,214 @@ func detectMeshnet(ctx context.Context) MeshnetStatus {
 			status.State = "degraded"
 			status.Message = "dataplane not ready on every node"
 		}
+		if image := meshnetImage(ds.Spec.Template.Spec.Containers); image != "" {
+			id := helpers.IdentifyMeshnet(image)
+			status.Flavour, status.Image, status.Version, status.Commit = id.Flavour, id.Image, id.Version, id.Commit
+			status.Support, status.URL = id.Support, id.URL
+		}
 		return status
 	}
 
 	return MeshnetStatus{State: "missing", Message: "no meshnet daemonset found in any namespace"}
 }
 
+// meshnetImage is the image of the container that runs the daemon.
+func meshnetImage(containers []v1.Container) string {
+	for _, c := range containers {
+		if c.Name == "meshnet" {
+			return c.Image
+		}
+	}
+	if len(containers) > 0 {
+		return containers[0].Image
+	}
+	return ""
+}
+
+// meshnetSupportWarning is what a deploy or a modify says of a Meshnet this
+// KubeNDT was not made for. Nothing for a supported one or a development build.
+func meshnetSupportWarning(m MeshnetStatus) *types.Warning {
+	var detail string
+	switch m.Support {
+	case helpers.MeshnetTooOld:
+		detail = "The cluster runs " + helpers.MeshnetForkName + " " + m.Version + ", older than this KubeNDT works with"
+	case helpers.MeshnetUntested:
+		detail = "The cluster runs " + helpers.MeshnetForkName + " " + m.Version + ", newer than this KubeNDT was tried with"
+	case helpers.MeshnetUnsupported:
+		detail = "The cluster runs a Meshnet this KubeNDT does not recognise (" + m.Image + ")"
+	default:
+		return nil
+	}
+	return &types.Warning{Kind: "meshnet_unsupported", Detail: detail + ": " + helpers.MeshnetSupportRange() + ". Links may not behave as expected."}
+}
+
 // meshnetNodeStates maps node name -> "running"/"not-running" by listing the
 // meshnet pods in the DaemonSet's namespace (cheap, one small namespace). Lets
 // the cluster status show meshnet health on each node card without a per-node
-// round trip. Returns an empty map on any error or when the namespace is empty.
-func meshnetNodeStates(ctx context.Context, namespace string) map[string]string {
+// round trip, and says which image runs on how many nodes. Empty on any error
+// or when the namespace is empty.
+func meshnetNodeStates(ctx context.Context, namespace string) (map[string]string, []MeshnetImage) {
 	states := map[string]string{}
 	if namespace == "" {
-		return states
+		return states, nil
 	}
 	pods, err := kubeclient.Clientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return states
+		return states, nil
 	}
+	perImage := map[string]int{}
 	for _, p := range pods.Items {
-		isMeshnet := strings.Contains(strings.ToLower(p.Name), "meshnet") ||
-			p.Labels["app"] == "meshnet" || p.Labels["name"] == "meshnet"
-		if !isMeshnet || p.Spec.NodeName == "" {
+		if !isMeshnetPod(&p) || p.Spec.NodeName == "" {
 			continue
 		}
-		ready := false
-		for _, cond := range p.Status.Conditions {
-			if cond.Type == v1.PodReady {
-				ready = cond.Status == v1.ConditionTrue
-				break
-			}
-		}
-		if ready {
+		if podReady(&p) {
 			states[p.Spec.NodeName] = "running"
 		} else {
 			states[p.Spec.NodeName] = "not-running"
 		}
+		if image := meshnetImage(p.Spec.Containers); image != "" {
+			perImage[image]++
+		}
 	}
-	return states
+	images := make([]MeshnetImage, 0, len(perImage))
+	for image, n := range perImage {
+		images = append(images, MeshnetImage{Image: image, Nodes: n})
+	}
+	sort.Slice(images, func(i, j int) bool {
+		if images[i].Nodes != images[j].Nodes {
+			return images[i].Nodes > images[j].Nodes
+		}
+		return images[i].Image < images[j].Image
+	})
+	return states, images
 }
 
-// meshnetOnNode reports whether a ready meshnet pod is running on one node, so
-// the node detail panel can pinpoint which node a "degraded" cluster is missing
-// its dataplane on. Returns "running", "not-running", or "unknown" when the pod
-// list fails (e.g. RBAC).
-func meshnetOnNode(ctx context.Context, nodeName string) string {
+// meshnetWarnings names what does not fit between the daemon, the images on
+// the nodes and the Topology CRD. An unreadable CRD says nothing.
+func meshnetWarnings(m MeshnetStatus) []string {
+	var w []string
+	if len(m.Images) > 1 {
+		w = append(w, "The nodes run different Meshnet images, as in the middle of an upgrade.")
+	}
+	switch {
+	case m.CRD == helpers.MeshnetCRDMissing:
+		w = append(w, "The Topology CRD is not installed, so no link can be declared.")
+	case m.Flavour == helpers.MeshnetFork && m.CRD == helpers.MeshnetCRDStock:
+		w = append(w, helpers.MeshnetForkName+" runs with the stock Topology CRD, which drops its extra fields. Apply its CRD.")
+	case m.Flavour == helpers.MeshnetStock && m.CRD == helpers.MeshnetCRDFork:
+		w = append(w, "The stock Meshnet runs with the Topology CRD of "+helpers.MeshnetForkName+" and ignores its extra fields.")
+	}
+	return w
+}
+
+// nodeSchedulable says whether the scheduler would place a lab pod, which
+// tolerates nothing, on the node. A pod pinned with nodeName skips it.
+func nodeSchedulable(node *v1.Node) bool {
+	if node.Spec.Unschedulable {
+		return false
+	}
+	for _, t := range node.Spec.Taints {
+		if t.Effect == v1.TaintEffectNoSchedule || t.Effect == v1.TaintEffectNoExecute {
+			return false
+		}
+	}
+	return true
+}
+
+// MeshnetPodInfo is the Meshnet pod of one node, for the node panel.
+type MeshnetPodInfo struct {
+	Name     string `json:"name"`
+	Ready    bool   `json:"ready"`
+	Restarts int    `json:"restarts"`
+	Started  string `json:"started,omitempty"`
+	Image    string `json:"image"`
+	Flavour  string `json:"flavour"`
+	Version  string `json:"version,omitempty"`
+	Commit   string `json:"commit,omitempty"`
+	URL      string `json:"url,omitempty"`
+	// Outdated is set when the pod runs another image than its DaemonSet asks
+	// for, as a node does in the middle of an upgrade.
+	Outdated bool `json:"outdated,omitempty"`
+}
+
+func isMeshnetPod(p *v1.Pod) bool {
+	return strings.Contains(strings.ToLower(p.Name), "meshnet") ||
+		p.Labels["app"] == "meshnet" || p.Labels["name"] == "meshnet"
+}
+
+func podReady(p *v1.Pod) bool {
+	for _, cond := range p.Status.Conditions {
+		if cond.Type == v1.PodReady {
+			return cond.Status == v1.ConditionTrue
+		}
+	}
+	return false
+}
+
+// pickMeshnetPod is the Meshnet pod of a node, the one in the DaemonSet's
+// namespace when there are several that look like it. The node is checked here
+// too, a field selector is only a hint to the server.
+func pickMeshnetPod(pods []v1.Pod, nodeName, namespace string) *v1.Pod {
+	var first *v1.Pod
+	for i := range pods {
+		p := &pods[i]
+		if p.Spec.NodeName != nodeName || !isMeshnetPod(p) {
+			continue
+		}
+		if namespace == "" || p.Namespace == namespace {
+			return p
+		}
+		if first == nil {
+			first = p
+		}
+	}
+	return first
+}
+
+// meshnetPodInfo describes a pod against the image its DaemonSet asks for,
+// read from the spec, as the status image is the runtime's to rewrite.
+func meshnetPodInfo(p *v1.Pod, daemonSetImage string) *MeshnetPodInfo {
+	image := meshnetImage(p.Spec.Containers)
+	id := helpers.IdentifyMeshnet(image)
+	info := &MeshnetPodInfo{
+		Name:     p.Name,
+		Ready:    podReady(p),
+		Image:    image,
+		Flavour:  id.Flavour,
+		Version:  id.Version,
+		Commit:   id.Commit,
+		URL:      id.URL,
+		Outdated: daemonSetImage != "" && image != daemonSetImage,
+	}
+	for _, cs := range p.Status.ContainerStatuses {
+		info.Restarts += int(cs.RestartCount)
+	}
+	if p.Status.StartTime != nil {
+		info.Started = p.Status.StartTime.UTC().Format("2006-01-02T15:04:05Z")
+	}
+	return info
+}
+
+// meshnetOnNode reports whether a ready meshnet pod is running on one node and
+// what it is, so the node panel can pinpoint which node a "degraded" cluster is
+// missing its dataplane on. The state is "running", "not-running", or "unknown"
+// when the pod list fails (e.g. RBAC), and the pod is nil when the node has none.
+func meshnetOnNode(ctx context.Context, nodeName string, ds MeshnetStatus) (string, *MeshnetPodInfo) {
 	pods, err := kubeclient.Clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{
 		FieldSelector: "spec.nodeName=" + nodeName,
 	})
 	if err != nil {
-		return "unknown"
+		return "unknown", nil
 	}
-	for _, p := range pods.Items {
-		isMeshnet := strings.Contains(strings.ToLower(p.Name), "meshnet") ||
-			p.Labels["app"] == "meshnet" || p.Labels["name"] == "meshnet"
-		if !isMeshnet {
-			continue
-		}
-		for _, cond := range p.Status.Conditions {
-			if cond.Type == v1.PodReady {
-				if cond.Status == v1.ConditionTrue {
-					return "running"
-				}
-				return "not-running"
-			}
-		}
-		return "not-running"
+	p := pickMeshnetPod(pods.Items, nodeName, ds.Namespace)
+	if p == nil {
+		return "not-running", nil
 	}
-	return "not-running"
+	info := meshnetPodInfo(p, ds.Image)
+	if info.Ready {
+		return "running", info
+	}
+	return "not-running", info
 }
 
 func GetClusterStatus(c *gin.Context) {
@@ -223,7 +391,11 @@ func GetClusterStatus(c *gin.Context) {
 	meshnet := detectMeshnet(ctx)
 	var meshnetNodes map[string]string
 	if meshnet.State != "unknown" {
-		meshnetNodes = meshnetNodeStates(ctx, meshnet.Namespace)
+		meshnetNodes, meshnet.Images = meshnetNodeStates(ctx, meshnet.Namespace)
+	}
+	if meshnet.State == "ok" || meshnet.State == "degraded" {
+		meshnet.CRD = helpers.MeshnetCRD(ctx)
+		meshnet.Warnings = meshnetWarnings(meshnet)
 	}
 
 	nodeInfos := []NodeInfo{}
@@ -313,6 +485,7 @@ func GetClusterStatus(c *gin.Context) {
 			MemoryPercentage: memPercentage,
 			KubeletVersion:   kubeletVersion,
 			Meshnet:          nodeMeshnet,
+			Schedulable:      nodeSchedulable(&node),
 		})
 	}
 
@@ -397,9 +570,13 @@ type NodeDetailResponse struct {
 	MemoryBytesUsage int64   `json:"memory_bytes_usage"`
 	CPUPercentage    float64 `json:"cpu_percentage"`
 	MemoryPercentage float64 `json:"memory_percentage"`
+	// Schedulable is false for a node the scheduler keeps lab pods off.
+	Schedulable bool `json:"schedulable"`
 	// Meshnet reports whether a ready meshnet pod runs on this node:
 	// "running", "not-running" or "unknown".
 	Meshnet string `json:"meshnet"`
+	// MeshnetPod is that pod, when the node has one.
+	MeshnetPod *MeshnetPodInfo `json:"meshnet_pod,omitempty"`
 }
 
 func resourceQuantity(rl v1.ResourceList) NodeResourceQuantity {
@@ -508,6 +685,8 @@ func GetClusterNodeDetail(c *gin.Context) {
 		}
 	}
 
+	meshnetState, meshnetPod := meshnetOnNode(ctx, node.Name, detectMeshnet(ctx))
+
 	resp := NodeDetailResponse{
 		Name:              node.Name,
 		Roles:             roles,
@@ -536,7 +715,9 @@ func GetClusterNodeDetail(c *gin.Context) {
 		MemoryBytesUsage: memBytesUsage,
 		CPUPercentage:    cpuPct,
 		MemoryPercentage: memPct,
-		Meshnet:          meshnetOnNode(ctx, node.Name),
+		Schedulable:      nodeSchedulable(node),
+		Meshnet:          meshnetState,
+		MeshnetPod:       meshnetPod,
 	}
 
 	c.JSON(http.StatusOK, resp)

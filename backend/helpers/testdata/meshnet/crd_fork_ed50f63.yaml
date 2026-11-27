@@ -1,0 +1,214 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: topologies.networkop.co.uk
+spec:
+  group: networkop.co.uk
+  scope: Namespaced
+  names:
+    plural: topologies
+    singular: topology
+    kind: Topology
+    shortNames:
+    - topo
+  versions:
+  - name: v1beta1
+    schema:
+      openAPIV3Schema:
+        properties:
+          spec:
+            properties:
+              links:
+                items:
+                  description: 'A complete definition of a p2p link'
+                  required: ["uid", "peer_pod", "local_intf", "peer_intf"]
+                  properties:
+                    uid:
+                      description: 'Unique identified of a p2p link'
+                      type: integer
+                    peer_pod:
+                      description: 'Name of the peer pod'
+                      type: string
+                    local_intf:
+                      description: 'Local interface name'
+                      type: string
+                    peer_intf:
+                      description: 'Peer interface name'
+                      type: string
+                    peer_ip:
+                      description: '(Optional) Peer IP address'
+                      type: string
+                    local_ip:
+                      description: '(Optional) Local IP address'
+                      type: string
+                    mtu:
+                      description: '(Optional) MTU of the link; both ends get the larger of the two requests'
+                      type: integer
+                      minimum: 0
+                    addresses:
+                      description: '(Optional) Addresses of the local end beyond local_ip, of either family, in CIDR notation'
+                      items:
+                        type: string
+                      type: array
+                    mac:
+                      description: '(Optional) MAC address of the local end'
+                      type: string
+                      pattern: '^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$'
+                    txqueuelen:
+                      description: '(Optional) Transmit queue length of the local end, LINK_TXQUEUELEN when absent'
+                      type: integer
+                      minimum: 0
+                    offloads:
+                      description: '(Optional) The tx offloads of the local end: true switches them on, false off; when absent the end keeps the kernel''s, on for a veth'
+                      type: boolean
+                    unplugged:
+                      description: '(Optional) The cable pulled: both ends lose carrier and keep their configuration; either end declaring it unplugs the link'
+                      type: boolean
+                    shaping:
+                      description: '(Optional) Shaping of the traffic the local end sends, a netem or a tbf with tc units'
+                      type: object
+                      properties:
+                        qdisc:
+                          description: 'netem (the default) or tbf'
+                          type: string
+                          enum: ["netem", "tbf"]
+                        delay:
+                          description: 'netem: one-way delay, as 100ms'
+                          type: string
+                          pattern: '^[0-9]+(\.[0-9]+)?(us|usec|ms|msec|s|sec)$'
+                        jitter:
+                          description: 'netem: delay variation, needs a delay'
+                          type: string
+                          pattern: '^[0-9]+(\.[0-9]+)?(us|usec|ms|msec|s|sec)$'
+                        delay_correlation:
+                          description: 'netem: correlation of the jitter, needs a jitter'
+                          type: string
+                          pattern: '^[0-9]+(\.[0-9]+)?%?$'
+                        loss:
+                          description: 'netem: random loss, as 1%'
+                          type: string
+                          pattern: '^[0-9]+(\.[0-9]+)?%?$'
+                        loss_correlation:
+                          description: 'netem: correlation of the loss'
+                          type: string
+                          pattern: '^[0-9]+(\.[0-9]+)?%?$'
+                        duplicate:
+                          description: 'netem: duplicated packets'
+                          type: string
+                          pattern: '^[0-9]+(\.[0-9]+)?%?$'
+                        corrupt:
+                          description: 'netem: corrupted packets'
+                          type: string
+                          pattern: '^[0-9]+(\.[0-9]+)?%?$'
+                        reorder:
+                          description: 'netem: reordered packets, needs a delay'
+                          type: string
+                          pattern: '^[0-9]+(\.[0-9]+)?%?$'
+                        reorder_correlation:
+                          description: 'netem: correlation of the reordering'
+                          type: string
+                          pattern: '^[0-9]+(\.[0-9]+)?%?$'
+                        limit:
+                          description: 'netem: queue length in packets, 1000 when absent'
+                          type: integer
+                          minimum: 1
+                          maximum: 1000000
+                        rate:
+                          description: 'netem: link rate; tbf: its rate, required; as 10mbit'
+                          type: string
+                          pattern: '^[0-9]+(\.[0-9]+)?([kmgt]i?)?(bit|bps)$'
+                        burst:
+                          description: 'tbf: bucket size, 32kbit when absent'
+                          type: string
+                          pattern: '^[0-9]+(\.[0-9]+)?(b|[kmg]b?|[kmg]bit)?$'
+                        latency:
+                          description: 'tbf: the longest a packet may wait, 50ms when absent'
+                          type: string
+                          pattern: '^[0-9]+(\.[0-9]+)?(us|usec|ms|msec|s|sec)$'
+                  type: object
+                type: array
+            type: object
+          status:
+            properties:
+              skipped:
+                description: 'List of pods/interfaces that are skipped by local pod (deprecated, the daemon reconcile no longer reads it)'
+                items:
+                  properties:
+                    link_id:
+                      format: int64
+                      type: integer
+                    pod_name:
+                      description: 'peer pod name'
+                      type: string                  
+                  type: object
+                type: array
+              src_ip:
+                description: 'Source IP of the POD'
+                type: string
+              net_ns:
+                description: 'Network namespace of the POD'
+                type: string
+              container_id:
+                description: 'Sandbox ID of the POD'
+                type: string
+              plumbing_error:
+                description: 'The error of the last reconcile of the pod links, empty when they are wired'
+                type: string
+              links:
+                description: 'The state of each of the pod links as the daemon of its node last saw it'
+                items:
+                  properties:
+                    uid:
+                      type: integer
+                    local_intf:
+                      type: string
+                    peer_pod:
+                      type: string
+                    state:
+                      description: 'up, down (a port shut), off (the peer not running), unplugged or failed'
+                      type: string
+                    transport:
+                      description: 'veth (one node), vxlan (across nodes) or macvlan (an uplink); empty while the peer is off'
+                      type: string
+                    node:
+                      description: 'The node of this end'
+                      type: string
+                    ifindex:
+                      type: integer
+                    mac:
+                      type: string
+                    mtu:
+                      type: integer
+                    vni:
+                      type: integer
+                    error:
+                      description: 'Why the link could not be wired or shaped'
+                      type: string
+                  type: object
+                type: array
+            type: object
+        type: object
+    served: true
+    storage: true
+    additionalPrinterColumns:
+      - name: Node IP
+        type: string
+        jsonPath: .status.src_ip
+      - name: Links
+        type: string
+        jsonPath: .status.links[*].state
+      - name: Error
+        type: string
+        jsonPath: .status.plumbing_error
+        priority: 1
+      - name: Age
+        type: date
+        jsonPath: .metadata.creationTimestamp
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

@@ -11,6 +11,68 @@
   border-radius: var(--radius-pill);
 }
 
+.k8s-role-plane {
+  color: var(--text-muted);
+  background: var(--border-light);
+}
+
+.k8s-nolabs {
+  flex: none;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.k8s-cni {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  margin: 0 0 8px;
+  font-size: 12px;
+}
+
+.k8s-cni-label {
+  flex: none;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-subtle);
+}
+
+.k8s-flavour {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+a.k8s-flavour {
+  color: var(--primary);
+}
+
+a.k8s-flavour:hover,
+a.k8s-flavour:focus-visible {
+  color: var(--primary-hover);
+  text-decoration: underline;
+}
+
+.k8s-flavour-warn,
+a.k8s-flavour-warn {
+  color: var(--warning-text);
+}
+
+/* The stripe on a node's tile: the control plane quiet, the workers blue. */
+.k8s-stripe-plane {
+  box-shadow: inset 3px 0 0 var(--text-subtle);
+}
+
+.k8s-stripe-worker {
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+
 .k8s-pill {
   font-size: 11px;
   font-weight: 700;

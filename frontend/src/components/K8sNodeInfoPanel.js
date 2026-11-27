@@ -3,7 +3,7 @@ import { ReactComponent as WarningIcon } from '../assets/images/icons/warning.sv
 import { ReactComponent as CloseIcon } from '../assets/images/icons/close.svg';
 import { ReactComponent as ClusterIcon } from '../assets/images/icons/cluster.svg';
 import { API_BASE_URL } from '../config';
-import { Meter } from './K8sBits';
+import { Meter, MeshnetLink, NodeRole, NoLabs, meshnetName } from './K8sBits';
 import './K8sNodeInfoPanel.css';
 
 // Format byte counts into a compact human-readable string ("4.32 GiB").
@@ -130,11 +130,7 @@ const K8sNodeInfoPanel = ({ nodeName, onClose }) => {
             <div className="kni-eyebrow">Kubernetes node</div>
             <h2 className="kni-title">{nodeName}</h2>
             <div className="kni-chips">
-              {data?.roles?.map((r) => (
-                <span key={r} className="k8s-role">
-                  {r}
-                </span>
-              ))}
+              {data && <NodeRole node={data} />}
               {data && <span className={`k8s-pill k8s-pill-${statusPill}`}>{status}</span>}
               {mesh && (
                 <span className="kni-mesh" title={mesh.title}>
@@ -142,6 +138,7 @@ const K8sNodeInfoPanel = ({ nodeName, onClose }) => {
                   {mesh.label}
                 </span>
               )}
+              {data && <NoLabs node={data} />}
             </div>
           </div>
           <button className="kni-close" onClick={onClose} title="Close (Esc)">
@@ -188,6 +185,41 @@ const K8sNodeInfoPanel = ({ nodeName, onClose }) => {
                   </>
                 ) : (
                   <p className="kni-note">No metrics-server, so no usage figures.</p>
+                )}
+              </Section>
+
+              <Section title="Meshnet">
+                {data.meshnet_pod ? (
+                  <>
+                    <KV k="Pod" v={data.meshnet_pod.name} mono />
+                    <KV k="State" v={data.meshnet_pod.ready ? 'Ready' : 'Not ready'} />
+                    <KV
+                      k="Runs"
+                      v={
+                        <MeshnetLink
+                          text={meshnetName(data.meshnet_pod)}
+                          url={data.meshnet_pod.url}
+                          title={data.meshnet_pod.image}
+                          warn={data.meshnet_pod.outdated}
+                        />
+                      }
+                    />
+                    <KV k="Image" v={data.meshnet_pod.image} mono />
+                    <KV k="Restarts" v={String(data.meshnet_pod.restarts)} />
+                    <KV k="Started" v={data.meshnet_pod.started} mono />
+                    {data.meshnet_pod.outdated && (
+                      <p className="kni-note kni-note-warn">
+                        This pod runs another image than the DaemonSet asks for, as in the middle of
+                        an upgrade.
+                      </p>
+                    )}
+                  </>
+                ) : data.meshnet === 'unknown' ? (
+                  <p className="kni-note">Could not check Meshnet on this node.</p>
+                ) : (
+                  <p className="kni-note kni-note-warn">
+                    No Meshnet pod on this node. Links landing here will not be wired.
+                  </p>
                 )}
               </Section>
 

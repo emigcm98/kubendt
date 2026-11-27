@@ -103,14 +103,17 @@ func ModifyNetwork(c *gin.Context) {
 	// topology and deleting the namespace are exempt (full teardown, no
 	// rewiring). Only "missing" blocks; ?force=true overrides. A change to
 	// the layout alone touches no pod, so it passes.
+	var meshnetWarning *types.Warning
 	if (hasAdd || hasDelete || hasScale) && c.Query("force") != "true" {
-		if m := detectMeshnet(c.Request.Context()); m.State == "missing" {
+		m := detectMeshnet(c.Request.Context())
+		if m.State == "missing" {
 			c.JSON(http.StatusPreconditionFailed, gin.H{
 				"error":  "Meshnet CNI not detected in the cluster. Topology changes would leave pods unwired. Install Meshnet, clear the topology, or retry with force=true.",
 				"reason": "meshnet_missing",
 			})
 			return
 		}
+		meshnetWarning = meshnetSupportWarning(m)
 	}
 
 	// Driver-aware interface-name validation runs BEFORE we grab the operation
@@ -225,6 +228,9 @@ func ModifyNetwork(c *gin.Context) {
 	// The operation still succeeds; the frontend renders these in the success
 	// modal so the user knows something they declared was not applied.
 	warnings := append([]types.Warning{}, driverWarnings...)
+	if meshnetWarning != nil {
+		warnings = append(warnings, *meshnetWarning)
+	}
 
 	// Validate scale cross-section BEFORE touching anything, so user input
 	// errors (overlap with add/delete, unknown nodes, etc.) surface fast.
@@ -724,14 +730,17 @@ func DeployNetwork(c *gin.Context) {
 	// "unknown" (no permission to check) are allowed through. Callers who know
 	// better, or hit a false positive in detection, can override with
 	// ?force=true. This runs for API clients too, not just the UI.
+	var meshnetWarning *types.Warning
 	if c.Query("force") != "true" {
-		if m := detectMeshnet(c.Request.Context()); m.State == "missing" {
+		m := detectMeshnet(c.Request.Context())
+		if m.State == "missing" {
 			c.JSON(http.StatusPreconditionFailed, gin.H{
 				"error":  "Meshnet CNI not detected in the cluster. Topology links would not be wired. Install Meshnet, or retry with force=true to deploy anyway.",
 				"reason": "meshnet_missing",
 			})
 			return
 		}
+		meshnetWarning = meshnetSupportWarning(m)
 	}
 
 	lock, acquired, err := helpers.AcquireNamespaceOperationLock(namespace, "deploy-network")
@@ -944,6 +953,9 @@ func DeployNetwork(c *gin.Context) {
 
 	validMountsMap := make(map[string][]types.MountSpec)
 	warnings := append(make([]types.Warning, 0), driverWarnings...)
+	if meshnetWarning != nil {
+		warnings = append(warnings, *meshnetWarning)
+	}
 	for _, node := range request.Nodes {
 		for _, mount := range node.Mounts {
 			_, _, err := helpers.CreateMountResourceForFile(namespace, mount.File)

@@ -10,7 +10,21 @@ import { ReactComponent as ErrorIcon } from '../assets/images/icons/error.svg';
 import { ReactComponent as RefreshIcon } from '../assets/images/icons/refresh.svg';
 import { ReactComponent as ClusterIcon } from '../assets/images/icons/cluster.svg';
 import { ReactComponent as ChevronIcon } from '../assets/images/icons/chevron-right.svg';
-import { Meter, meshnetDot, vcpu, gib, fixed } from '../components/K8sBits';
+import {
+  Meter,
+  HealthPill,
+  MeshnetFlavour,
+  NodeRole,
+  NoLabs,
+  clusterHealth,
+  meshnetDot,
+  meshnetFlavour,
+  nodeKind,
+  nodeStripe,
+  vcpu,
+  gib,
+  fixed,
+} from '../components/K8sBits';
 import '../components/Dialog.css';
 import './ClusterPage.css';
 
@@ -178,44 +192,6 @@ const ClusterPage = () => {
     };
   })();
 
-  // Meshnet CNI health, shown as a pill next to the node count. The Topology
-  // CRD ships with meshnet, so the DaemonSet is the real signal: without it the
-  // topology deploys but links never get wired. "unknown" stays neutral so a
-  // kubeconfig that can't list DaemonSets doesn't look like a missing install.
-  const meshnetBadge = (() => {
-    const m = clusterStatus?.meshnet;
-    if (!m || !m.state) return null;
-    switch (m.state) {
-      case 'ok':
-        return {
-          cls: 'ok',
-          label: `Meshnet ${m.ready}/${m.desired}`,
-          title: 'Meshnet CNI is running on every node.',
-        };
-      case 'degraded':
-        return {
-          cls: 'degraded',
-          label: `Meshnet ${m.ready}/${m.desired}`,
-          title:
-            'Meshnet is installed but the dataplane is not ready on every node. New topology links may not be wired until it recovers.',
-        };
-      case 'missing':
-        return {
-          cls: 'missing',
-          label: 'Meshnet not found',
-          title:
-            'No meshnet DaemonSet found. Topologies will deploy but their links will not be wired. Install the Meshnet CNI in this cluster.',
-        };
-      default:
-        return {
-          cls: 'unknown',
-          label: 'Meshnet unknown',
-          title:
-            m.message || 'Could not determine meshnet status (no permission to list DaemonSets).',
-        };
-    }
-  })();
-
   // Per-node meshnet chip for the node cards. Null hides it (older backends).
   const nodeMeshnetChip = (state) => {
     switch (state) {
@@ -236,6 +212,14 @@ const ClusterPage = () => {
   // Render the "v" prefix only if the backend didn't already include one.
   const formatKubeletVersion = (v) =>
     !v ? '' : v.startsWith('v') || v.startsWith('V') ? v : `v${v}`;
+
+  // The control plane and the workers apart, with headings only when the
+  // cluster has both (a single-node cluster is one kind).
+  const nodes = clusterStatus?.nodes || [];
+  const groups = [
+    ['Control plane', nodes.filter((n) => nodeKind(n) === 'plane')],
+    ['Workers', nodes.filter((n) => nodeKind(n) === 'worker')],
+  ].filter(([, list]) => list.length > 0);
 
   if (auth.enabled && !auth.isAdmin) return <Navigate to="/" replace />;
 
@@ -261,21 +245,7 @@ const ClusterPage = () => {
         <section className="cl-card cl-nodes">
           <div className="cl-card-head">
             <h2 className="cl-card-title">Nodes</h2>
-            {clusterStatus?.nodes && (
-              <span
-                className={`k8s-pill k8s-pill-${clusterStatus.ready === clusterStatus.total ? 'ok' : 'warn'}`}
-              >
-                Ready {clusterStatus.ready}/{clusterStatus.total}
-              </span>
-            )}
-            {meshnetBadge && (
-              <span
-                className={`k8s-pill k8s-pill-${meshnetBadge.cls === 'ok' ? 'ok' : meshnetBadge.cls === 'unknown' ? 'warn' : 'bad'}`}
-                title={meshnetBadge.title}
-              >
-                {meshnetBadge.label}
-              </span>
-            )}
+            <HealthPill status={clusterStatus} />
             <span className="cl-space" />
             <button
               type="button"
@@ -287,6 +257,17 @@ const ClusterPage = () => {
               <RefreshIcon className="app-icon" />
             </button>
           </div>
+
+          <MeshnetFlavour meshnet={clusterStatus?.meshnet} />
+          {[
+            ...(clusterHealth(clusterStatus)?.problems || []),
+            ...(meshnetFlavour(clusterStatus?.meshnet)?.notes || []),
+          ].map((note) => (
+            <p key={note} className="cl-note cl-note-warn">
+              <WarningIcon className="app-icon" aria-hidden="true" />
+              {note}
+            </p>
+          ))}
 
           {initialClusterLoading ? (
             <div className="cl-empty">
@@ -327,68 +308,74 @@ const ClusterPage = () => {
                 </p>
               )}
               <div className="cl-scroll">
-                <div className="cl-grid">
-                  {clusterStatus.nodes.map((node) => {
-                    const mesh = nodeMeshnetChip(node.meshnet);
-                    const metrics = node.cpu_usage !== 'N/A' || node.memory_usage !== 'N/A';
-                    return (
-                      <button
-                        type="button"
-                        key={node.name}
-                        className="cl-node"
-                        onClick={() => setSelectedNodeName(node.name)}
-                        title={`${node.name}, ${node.status}`}
-                      >
-                        <span className="cl-node-top">
-                          <b>{node.name}</b>
-                          {node.roles.slice(0, 1).map((role) => (
-                            <span key={role} className="k8s-role">
-                              {role}
+                {groups.map(([title, list]) => (
+                  <React.Fragment key={title}>
+                    {groups.length > 1 && (
+                      <h3 className="cl-group">
+                        {title} <span>{list.length}</span>
+                      </h3>
+                    )}
+                    <div className="cl-grid">
+                      {list.map((node) => {
+                        const mesh = nodeMeshnetChip(node.meshnet);
+                        const metrics = node.cpu_usage !== 'N/A' || node.memory_usage !== 'N/A';
+                        return (
+                          <button
+                            type="button"
+                            key={node.name}
+                            className={`cl-node ${nodeStripe(node)}`}
+                            onClick={() => setSelectedNodeName(node.name)}
+                            title={`${node.name}, ${node.status}`}
+                          >
+                            <span className="cl-node-top">
+                              <b>{node.name}</b>
+                              <NodeRole node={node} />
+                              {node.status !== 'Ready' && (
+                                <span className="k8s-pill k8s-pill-bad">{node.status}</span>
+                              )}
+                              <span className="cl-space" />
+                              {mesh && (
+                                <span className="cl-node-mesh" title={mesh.title}>
+                                  <span className={`k8s-dot k8s-dot-${meshnetDot(node.meshnet)}`} />
+                                  Meshnet
+                                </span>
+                              )}
+                              <ChevronIcon className="app-icon cl-node-go" aria-hidden="true" />
                             </span>
-                          ))}
-                          {node.status !== 'Ready' && (
-                            <span className="k8s-pill k8s-pill-bad">{node.status}</span>
-                          )}
-                          <span className="cl-space" />
-                          {mesh && (
-                            <span className="cl-node-mesh" title={mesh.title}>
-                              <span className={`k8s-dot k8s-dot-${meshnetDot(node.meshnet)}`} />
-                              Meshnet
-                            </span>
-                          )}
-                          <ChevronIcon className="app-icon cl-node-go" aria-hidden="true" />
-                        </span>
-                        {metrics ? (
-                          <>
-                            <span className="cl-node-row">
-                              <span>CPU</span>
-                              <Meter value={node.cpu_percentage} />
-                              <span>
-                                {fixed(vcpu(node.cpu_usage), 2)} /{' '}
-                                {fixed(vcpu(node.cpu_capacity), 0)} vCPU
+                            {metrics ? (
+                              <>
+                                <span className="cl-node-row">
+                                  <span>CPU</span>
+                                  <Meter value={node.cpu_percentage} />
+                                  <span>
+                                    {fixed(vcpu(node.cpu_usage), 2)} /{' '}
+                                    {fixed(vcpu(node.cpu_capacity), 0)} vCPU
+                                  </span>
+                                </span>
+                                <span className="cl-node-row">
+                                  <span>RAM</span>
+                                  <Meter value={node.memory_percentage} kind="ram" />
+                                  <span>
+                                    {fixed(gib(node.memory_usage), 1)} /{' '}
+                                    {fixed(gib(node.memory_capacity), 1)} GiB
+                                  </span>
+                                </span>
+                              </>
+                            ) : (
+                              <span className="cl-node-row cl-node-plain">
+                                {node.cpu_capacity} CPU, {node.memory_capacity} RAM
                               </span>
+                            )}
+                            <span className="cl-node-foot">
+                              kubelet {formatKubeletVersion(node.kubelet_version)}
+                              <NoLabs node={node} />
                             </span>
-                            <span className="cl-node-row">
-                              <span>RAM</span>
-                              <Meter value={node.memory_percentage} kind="ram" />
-                              <span>
-                                {fixed(gib(node.memory_usage), 1)} /{' '}
-                                {fixed(gib(node.memory_capacity), 1)} GiB
-                              </span>
-                            </span>
-                          </>
-                        ) : (
-                          <span className="cl-node-row cl-node-plain">
-                            {node.cpu_capacity} CPU, {node.memory_capacity} RAM
-                          </span>
-                        )}
-                        <span className="cl-node-foot">
-                          kubelet {formatKubeletVersion(node.kubelet_version)}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </React.Fragment>
+                ))}
               </div>
             </>
           ) : kubeConfigured === false ? (
