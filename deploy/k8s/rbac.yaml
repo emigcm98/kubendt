@@ -56,10 +56,15 @@ rules:
   - apiGroups: [networkop.co.uk]
     resources: [topologies/status]
     verbs: [get, update, patch]
-  # Meshnet is looked for among the DaemonSets.
+  # Meshnet is looked for among the DaemonSets, and its Topology CRD read to
+  # tell the stock one from the fork's.
   - apiGroups: [apps]
     resources: [daemonsets, deployments]
     verbs: [get, list]
+  - apiGroups: [apiextensions.k8s.io]
+    resources: [customresourcedefinitions]
+    resourceNames: [topologies.networkop.co.uk]
+    verbs: [get]
   # CPU and memory on the cluster page and the pod panel, when metrics-server
   # is there.
   - apiGroups: [metrics.k8s.io]

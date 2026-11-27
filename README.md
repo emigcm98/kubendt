@@ -8,7 +8,7 @@
    <a href="https://doi.org/10.5281/zenodo.21276320"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.21276320.svg" alt="DOI" /></a>
 </p>
 
-> Last reviewed: 26 Nov 2026
+> Last reviewed: 27 Nov 2026
 
 **KubeNDT** is a platform for deploying and operating virtual network topologies on Kubernetes.
 
@@ -43,7 +43,7 @@ KubeNDT bundles a small set of third-party SVG icons in its frontend. See [ATTRI
 - **Real-time topology visualization** using React Flow with drag-and-drop node positioning
 - **Multi-instance nodes** via StatefulSets with configurable replicas (e.g., 3 routers running simultaneously)
 - **Virtual networking overlays** powered by Meshnet CNI for custom L2/L3 connectivity
-- **Meshnet health awareness** - the dashboard shows whether the Meshnet dataplane is running (per cluster and per node), and blocks a deploy when it is missing so topologies don't come up with unwired links
+- **Meshnet health awareness** - the dashboard shows whether the Meshnet dataplane is running (per cluster and per node) and which Meshnet it is, the stock one or KubeNDT Meshnet (our fork, `emigcm98/meshnet-cni`) with its version, and blocks a deploy when it is missing so topologies don't come up with unwired links
 - **Link realization** - the link panel shows whether Meshnet wired a link as a veth pair (both ends on one worker) or a VXLAN tunnel (across workers) and which worker each end runs on, also available through `GET /network/links/{namespace}` for scripts
 - **Several addresses per link end** - `localIp` and `peerIp` take one address or an array (dual stack, a second IPv4): the first is wired with the link, the rest are set by the platform after wiring and on every recreation, and the panels list every address of an interface
 - **Link MTU** - every link gets the same MTU once it is wired, 1450 by default and `KUBENDT_LINK_MTU` to change it. A link can declare its own `mtu` in the topology or through the `links` section of a configure request

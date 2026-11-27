@@ -8,8 +8,10 @@ This is usually Meshnet not running. Without its per-node dataplane the Topology
 
 KubeNDT surfaces this so you don't have to guess:
 
-- The cluster card of the Home and the cluster page, both for admins, show a **Meshnet** badge (green when the DaemonSet is ready on every node, amber when some nodes are missing it, red when no meshnet DaemonSet is found).
-- Each node card and the node detail panel show whether a meshnet pod is running on it, so an amber "2/3" badge tells you which node to look at.
+- The cluster card of the Home and the cluster page, both for admins, show one count of the nodes that work, those that are Ready and have their Meshnet pod. It is green when all do, amber when a node is not Ready, red when a node lacks its pod, and it reads `No Meshnet` when no meshnet DaemonSet is found, and the cluster page says which node and why.
+- Each node card shows whether a meshnet pod is running on it. Opening a node shows that pod (its state, restarts and image) and flags one that still runs the old image in the middle of an upgrade.
+- Under the title is the CNI that runs: `Meshnet (networkop)` for the stock one, `KubeNDT Meshnet` (the fork at `emigcm98/meshnet-cni`) with its release or the commit of a development build, or `Meshnet (not recognised)`. It links to its source, and a hover gives the image and, during an upgrade, how many nodes run each. The cluster page adds a line when the daemon and the Topology CRD are not of the same Meshnet, or when the version is one this KubeNDT does not work with.
+- The control plane and the workers are set apart, and a node where the scheduler places no lab pods, cordoned or tainted as a control plane usually is, says `no labs`. A topology node pinned to it with `nodeName` still runs there.
 - Any topology change (deploy, add, delete or scale) is blocked with a `412` when meshnet is missing, since it would leave pods unwired or stuck. Pass `?force=true` to proceed anyway. Clearing a topology and deleting the namespace are always allowed, so a full teardown never gets blocked.
 
 To check by hand:
@@ -65,6 +67,10 @@ The command behind the action needs a program the image does not ship and the to
 ## An action fails with "ospfd is not running"
 
 The capability behind the action needs a daemon the FRR image starts only when its line in `/etc/frr/daemons` says `yes`, and the node was started without it (`ospfd=no` is the file's default). FRR does not start daemons on the fly, so the backend checks the daemon's vty socket before the actions of that capability and fails them with this message instead of a vtysh error. It happens on a node that sets its own `commands` without enabling the daemon: when a node sets none, `FRRRouterDriver` enables every daemon behind its capabilities at startup. Enable it in those `commands` (`sed -i 's/^ospfd=no/ospfd=yes/' /etc/frr/daemons` before FRR starts) or drop them, and restart or redeploy the node.
+
+## A deploy warns `meshnet_unsupported`
+
+The cluster runs a Meshnet this KubeNDT was not made for: KubeNDT Meshnet older than 1.0.0, a newer major of it, or an image that is neither the stock Meshnet (`networkop/meshnet`) nor KubeNDT Meshnet (`emigcm98/meshnet`). The deploy goes on. The cluster page names what runs. A mirror keeps its name as long as the image keeps the repository's path.
 
 ## A deploy warns `image_untested`
 

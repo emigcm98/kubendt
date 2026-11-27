@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- The cluster views and `GET /cluster/status` name the Meshnet that runs, the stock one or KubeNDT Meshnet (`emigcm98/meshnet-cni`), and `GET /cluster/nodes/{name}` gains the node's `meshnet_pod`. In-cluster installs apply the manifests again for a new ClusterRole rule.
+- A deploy or a modify warns `meshnet_unsupported` when the Meshnet is not the stock one or KubeNDT Meshnet from 1.0.0 and below 2.0.0.
+- The cluster views count Ready and Meshnet as one and mark a node that takes no lab pods, `schedulable` in the API.
+
 ### Changed
 
 - Every experiment run names the Meshnet it measured, and the regression keeps the pods, logs, events and links of an example whose check fails.

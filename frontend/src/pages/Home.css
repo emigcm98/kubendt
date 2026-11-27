@@ -719,6 +719,12 @@
   white-space: nowrap;
 }
 
+.home-node > .k8s-nolabs {
+  display: block;
+  margin-top: 3px;
+  text-align: right;
+}
+
 .home-line {
   display: flex;
   justify-content: space-between;

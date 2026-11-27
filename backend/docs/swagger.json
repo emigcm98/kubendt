@@ -4236,6 +4236,11 @@
                         "worker"
                     ]
                 },
+                "schedulable": {
+                    "description": "False for a node the scheduler keeps lab pods off: cordoned or tainted,\nas a control plane usually is.",
+                    "type": "boolean",
+                    "example": true
+                },
                 "status": {
                     "type": "string",
                     "example": "Ready"
@@ -5548,12 +5553,97 @@
                 }
             }
         },
+        "types.MeshnetImageDoc": {
+            "type": "object",
+            "properties": {
+                "image": {
+                    "type": "string",
+                    "example": "ghcr.io/emigcm98/meshnet:v1.0.0"
+                },
+                "nodes": {
+                    "type": "integer",
+                    "example": 3
+                }
+            }
+        },
+        "types.MeshnetPodDoc": {
+            "type": "object",
+            "properties": {
+                "commit": {
+                    "type": "string",
+                    "example": "30ab7f0"
+                },
+                "flavour": {
+                    "description": "stock, fork or not recognised, from the pod's image.",
+                    "type": "string",
+                    "example": "fork"
+                },
+                "image": {
+                    "type": "string",
+                    "example": "ghcr.io/emigcm98/meshnet:v1.0.0"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "meshnet-x7k2p"
+                },
+                "outdated": {
+                    "description": "Set when the pod runs another image than its DaemonSet asks for.",
+                    "type": "boolean",
+                    "example": false
+                },
+                "ready": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "restarts": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "started": {
+                    "type": "string",
+                    "example": "2026-11-27T13:18:00Z"
+                },
+                "url": {
+                    "type": "string",
+                    "example": "https://github.com/emigcm98/meshnet-cni/tree/v1.0.0"
+                },
+                "version": {
+                    "type": "string",
+                    "example": "1.0.0"
+                }
+            }
+        },
         "types.MeshnetStatusDoc": {
             "type": "object",
             "properties": {
+                "commit": {
+                    "type": "string",
+                    "example": "30ab7f0"
+                },
+                "crd": {
+                    "description": "Whose Topology CRD is installed: fork, stock, missing or unreadable.",
+                    "type": "string",
+                    "example": "fork"
+                },
                 "desired": {
                     "type": "integer",
                     "example": 3
+                },
+                "flavour": {
+                    "description": "stock, fork (KubeNDT Meshnet) or not recognised, from the DaemonSet's image.",
+                    "type": "string",
+                    "example": "fork"
+                },
+                "image": {
+                    "type": "string",
+                    "example": "ghcr.io/emigcm98/meshnet:v1.0.0"
+                },
+                "images": {
+                    "description": "The images the Meshnet pods run, more than one during an upgrade.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.MeshnetImageDoc"
+                    }
                 },
                 "message": {
                     "type": "string"
@@ -5573,6 +5663,26 @@
                 "state": {
                     "type": "string",
                     "example": "ok"
+                },
+                "support": {
+                    "description": "supported, development, too-old, untested or unsupported.",
+                    "type": "string",
+                    "example": "supported"
+                },
+                "url": {
+                    "type": "string",
+                    "example": "https://github.com/emigcm98/meshnet-cni/tree/v1.0.0"
+                },
+                "version": {
+                    "description": "The fork's release, or the commit of one of its development builds.",
+                    "type": "string",
+                    "example": "1.0.0"
+                },
+                "warnings": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -6403,6 +6513,14 @@
                     "type": "string",
                     "example": "running"
                 },
+                "meshnet_pod": {
+                    "description": "The node's Meshnet pod, when it has one.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.MeshnetPodDoc"
+                        }
+                    ]
+                },
                 "name": {
                     "type": "string",
                     "example": "k8s-worker-1"
@@ -6431,6 +6549,11 @@
                     "example": [
                         "worker"
                     ]
+                },
+                "schedulable": {
+                    "description": "False for a node the scheduler keeps lab pods off.",
+                    "type": "boolean",
+                    "example": true
                 },
                 "status": {
                     "type": "string",

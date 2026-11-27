@@ -477,6 +477,12 @@ definitions:
         items:
           type: string
         type: array
+      schedulable:
+        description: |-
+          False for a node the scheduler keeps lab pods off: cordoned or tainted,
+          as a control plane usually is.
+        example: true
+        type: boolean
       status:
         example: Ready
         type: string
@@ -1444,11 +1450,75 @@ definitions:
         example: meshnet_missing
         type: string
     type: object
+  types.MeshnetImageDoc:
+    properties:
+      image:
+        example: ghcr.io/emigcm98/meshnet:v1.0.0
+        type: string
+      nodes:
+        example: 3
+        type: integer
+    type: object
+  types.MeshnetPodDoc:
+    properties:
+      commit:
+        example: 30ab7f0
+        type: string
+      flavour:
+        description: stock, fork or not recognised, from the pod's image.
+        example: fork
+        type: string
+      image:
+        example: ghcr.io/emigcm98/meshnet:v1.0.0
+        type: string
+      name:
+        example: meshnet-x7k2p
+        type: string
+      outdated:
+        description: Set when the pod runs another image than its DaemonSet asks for.
+        example: false
+        type: boolean
+      ready:
+        example: true
+        type: boolean
+      restarts:
+        example: 0
+        type: integer
+      started:
+        example: "2026-11-27T13:18:00Z"
+        type: string
+      url:
+        example: https://github.com/emigcm98/meshnet-cni/tree/v1.0.0
+        type: string
+      version:
+        example: 1.0.0
+        type: string
+    type: object
   types.MeshnetStatusDoc:
     properties:
+      commit:
+        example: 30ab7f0
+        type: string
+      crd:
+        description: 'Whose Topology CRD is installed: fork, stock, missing or unreadable.'
+        example: fork
+        type: string
       desired:
         example: 3
         type: integer
+      flavour:
+        description: stock, fork (KubeNDT Meshnet) or not recognised, from the DaemonSet's
+          image.
+        example: fork
+        type: string
+      image:
+        example: ghcr.io/emigcm98/meshnet:v1.0.0
+        type: string
+      images:
+        description: The images the Meshnet pods run, more than one during an upgrade.
+        items:
+          $ref: '#/definitions/types.MeshnetImageDoc'
+        type: array
       message:
         type: string
       name:
@@ -1463,6 +1533,21 @@ definitions:
       state:
         example: ok
         type: string
+      support:
+        description: supported, development, too-old, untested or unsupported.
+        example: supported
+        type: string
+      url:
+        example: https://github.com/emigcm98/meshnet-cni/tree/v1.0.0
+        type: string
+      version:
+        description: The fork's release, or the commit of one of its development builds.
+        example: 1.0.0
+        type: string
+      warnings:
+        items:
+          type: string
+        type: array
     type: object
   types.MessageResponse:
     properties:
@@ -2056,6 +2141,10 @@ definitions:
       meshnet:
         example: running
         type: string
+      meshnet_pod:
+        allOf:
+        - $ref: '#/definitions/types.MeshnetPodDoc'
+        description: The node's Meshnet pod, when it has one.
       name:
         example: k8s-worker-1
         type: string
@@ -2076,6 +2165,10 @@ definitions:
         items:
           type: string
         type: array
+      schedulable:
+        description: False for a node the scheduler keeps lab pods off.
+        example: true
+        type: boolean
       status:
         example: Ready
         type: string

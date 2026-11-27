@@ -1,7 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config';
-import { Meter, meshnetDot, vcpu, gib, fixed } from './K8sBits';
+import {
+  Meter,
+  HealthPill,
+  MeshnetFlavour,
+  NodeRole,
+  NoLabs,
+  meshnetDot,
+  nodeStripe,
+  vcpu,
+  gib,
+  fixed,
+} from './K8sBits';
 import { ReactComponent as ChevronIcon } from '../assets/images/icons/chevron-right.svg';
 
 const EXAMPLES_URL = 'https://github.com/emigcm98/kubendt/tree/main/deploy/examples';
@@ -30,31 +41,18 @@ export const usePolled = (path, every) => {
   return state;
 };
 
-const meshnetPill = (m) => {
-  if (!m || !m.state) return null;
-  if (m.state === 'ok') return { cls: 'ok', text: `Meshnet ${m.ready}/${m.desired}` };
-  if (m.state === 'degraded') return { cls: 'warn', text: `Meshnet ${m.ready}/${m.desired}` };
-  if (m.state === 'missing') return { cls: 'bad', text: 'No Meshnet' };
-  return null;
-};
-
 const ClusterCard = ({ onOpenNode }) => {
   const navigate = useNavigate();
   const { data, status } = usePolled('/cluster/status', 30000);
   const nodes = data?.nodes || [];
   const metrics = nodes.some((n) => n.cpu_usage && n.cpu_usage !== 'N/A');
-  const mesh = meshnetPill(data?.meshnet);
   return (
     <section className="home-card home-card-grow">
       <h3 className="home-card-title">
         Cluster
-        {data && (
-          <span className={`k8s-pill k8s-pill-${data.ready === data.total ? 'ok' : 'warn'}`}>
-            Ready {data.ready}/{data.total}
-          </span>
-        )}
-        {mesh && <span className={`k8s-pill k8s-pill-${mesh.cls}`}>{mesh.text}</span>}
+        <HealthPill status={data} />
       </h3>
+      <MeshnetFlavour meshnet={data?.meshnet} />
       {status === 503 && <p className="home-card-note">No kubeconfig loaded yet.</p>}
       {!data && status !== 503 && <p className="home-card-note">Reading the cluster…</p>}
       {data && (
@@ -79,17 +77,13 @@ const ClusterCard = ({ onOpenNode }) => {
               <button
                 type="button"
                 key={n.name}
-                className="home-node"
+                className={`home-node ${nodeStripe(n)}`}
                 onClick={() => onOpenNode(n.name)}
                 title={`${n.name}, ${n.status}`}
               >
                 <span className="home-node-top">
                   <b>{n.name}</b>
-                  {(n.roles || []).slice(0, 1).map((r) => (
-                    <span key={r} className="k8s-role">
-                      {r}
-                    </span>
-                  ))}
+                  <NodeRole node={n} />
                   {n.status !== 'Ready' && (
                     <span className="k8s-pill k8s-pill-bad">{n.status}</span>
                   )}
@@ -116,6 +110,7 @@ const ClusterCard = ({ onOpenNode }) => {
                     </span>
                   </>
                 )}
+                <NoLabs node={n} />
               </button>
             ))}
           </div>

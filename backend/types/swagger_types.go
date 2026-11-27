@@ -612,6 +612,9 @@ type ClusterNodeInfo struct {
 	MemoryPercentage float64  `json:"memory_percentage" example:"27.77"`
 	KubeletVersion   string   `json:"kubelet_version" example:"v1.31.0"`
 	Meshnet          string   `json:"meshnet" example:"running"`
+	// False for a node the scheduler keeps lab pods off: cordoned or tainted,
+	// as a control plane usually is.
+	Schedulable bool `json:"schedulable" example:"true"`
 }
 
 // MeshnetGateResponse is the 412 returned by deploy and modify (add path) when
@@ -629,6 +632,42 @@ type MeshnetStatusDoc struct {
 	Name      string `json:"name,omitempty" example:"meshnet"`
 	Namespace string `json:"namespace,omitempty" example:"meshnet"`
 	Message   string `json:"message,omitempty"`
+	// stock, fork (KubeNDT Meshnet) or not recognised, from the DaemonSet's image.
+	Flavour string `json:"flavour,omitempty" example:"fork"`
+	Image   string `json:"image,omitempty" example:"ghcr.io/emigcm98/meshnet:v1.0.0"`
+	// The fork's release, or the commit of one of its development builds.
+	Version string `json:"version,omitempty" example:"1.0.0"`
+	Commit  string `json:"commit,omitempty" example:"30ab7f0"`
+	// supported, development, too-old, untested or unsupported.
+	Support string `json:"support,omitempty" example:"supported"`
+	URL     string `json:"url,omitempty" example:"https://github.com/emigcm98/meshnet-cni/tree/v1.0.0"`
+	// Whose Topology CRD is installed: fork, stock, missing or unreadable.
+	CRD string `json:"crd,omitempty" example:"fork"`
+	// The images the Meshnet pods run, more than one during an upgrade.
+	Images   []MeshnetImageDoc `json:"images,omitempty"`
+	Warnings []string          `json:"warnings,omitempty"`
+}
+
+// MeshnetImageDoc is one image the Meshnet pods run and on how many nodes.
+type MeshnetImageDoc struct {
+	Image string `json:"image" example:"ghcr.io/emigcm98/meshnet:v1.0.0"`
+	Nodes int    `json:"nodes" example:"3"`
+}
+
+// MeshnetPodDoc is the Meshnet pod of a node.
+type MeshnetPodDoc struct {
+	Name     string `json:"name" example:"meshnet-x7k2p"`
+	Ready    bool   `json:"ready" example:"true"`
+	Restarts int    `json:"restarts" example:"0"`
+	Started  string `json:"started,omitempty" example:"2026-11-27T13:18:00Z"`
+	Image    string `json:"image" example:"ghcr.io/emigcm98/meshnet:v1.0.0"`
+	// stock, fork or not recognised, from the pod's image.
+	Flavour string `json:"flavour" example:"fork"`
+	Version string `json:"version,omitempty" example:"1.0.0"`
+	Commit  string `json:"commit,omitempty" example:"30ab7f0"`
+	URL     string `json:"url,omitempty" example:"https://github.com/emigcm98/meshnet-cni/tree/v1.0.0"`
+	// Set when the pod runs another image than its DaemonSet asks for.
+	Outdated bool `json:"outdated,omitempty" example:"false"`
 }
 
 // ClusterStatusResponse is returned by GET /cluster/status.
@@ -714,6 +753,10 @@ type NodeDetailResponse struct {
 	CPUPercentage     float64                 `json:"cpu_percentage" example:"5.28"`
 	MemoryPercentage  float64                 `json:"memory_percentage" example:"27.77"`
 	Meshnet           string                  `json:"meshnet" example:"running"`
+	// False for a node the scheduler keeps lab pods off.
+	Schedulable bool `json:"schedulable" example:"true"`
+	// The node's Meshnet pod, when it has one.
+	MeshnetPod *MeshnetPodDoc `json:"meshnet_pod,omitempty"`
 }
 
 // ─── System ──────────────────────────────────────────────────────────────────

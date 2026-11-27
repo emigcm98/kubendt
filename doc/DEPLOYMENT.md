@@ -133,7 +133,7 @@ Kubernetes 1.25 or newer, 1.30 recommended. What sets the floor, by API, with th
 | Pods, ConfigMaps, Secrets, Namespaces, Nodes, Events, Services `v1` | always | everything else |
 | metrics-server (`metrics.k8s.io`) | optional | the cluster page's CPU and memory; the page says when it is missing |
 
-The backend's credentials (the kubeconfig, or the ServiceAccount of `deploy/k8s/rbac.yaml`, which lists every verb) need those resources in the lab namespaces and in `kubendt-system`, Namespaces and Nodes cluster-wide. The backend is built with client-go 0.35, which Kubernetes supports against servers within one minor on either side and which works against the 1.32 and 1.37 clusters it is tried on. A worker with `/dev/kvm` is needed only for VM nodes (VyOS, EXOS).
+The backend's credentials (the kubeconfig, or the ServiceAccount of `deploy/k8s/rbac.yaml`, which lists every verb) need those resources in the lab namespaces and in `kubendt-system`, Namespaces and Nodes cluster-wide. Meshnet's Topology CRD is read by name to tell the stock Meshnet from KubeNDT Meshnet (the fork at `emigcm98/meshnet-cni`); without that right the cluster page still names the Meshnet from its image and only skips checking the CRD against it. The backend is built with client-go 0.35, which Kubernetes supports against servers within one minor on either side and which works against the 1.32 and 1.37 clusters it is tried on. A worker with `/dev/kvm` is needed only for VM nodes (VyOS, EXOS).
 
 ## Environment Variables Reference
 
