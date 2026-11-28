@@ -66,7 +66,7 @@ Upload the `files/` folder to the file manager first, deploy, then apply the con
 - BMv2 reads and writes its ports through packet sockets, so it forwards whole frames and cannot send one larger than the port's MTU. So every port reads through a veth pair of its own with the offloads off: a neighbour's TCP leaves partial checksums and frames of several segments, and the worker's NIC merges the segments arriving from another worker, and the pair has the kernel finish and split them before the switch sees them (`ip -d link` in the switch shows `eth2-tc` and `eth2-p4` next to each port). A switch forwards a few hundred Mbit/s and some fifty thousand packets per second, software numbers, with two to three cores busy.
 - `mcast.p4` adds `set_multicast_group(group)` to `ipv4_lpm`: it hands the packet to BMv2's replication engine, which copies it to every port of the group, each copy going through egress on its own with the group's replication id set. The ports of a group are not in the program: `add_multicast_group` sets them on the running switch (`mc_mgrp_create`, `mc_node_create` and `mc_node_associate` in the CLI), `remove_multicast_group` takes them away, **P4 multicast groups** shows them, and they survive a program swap, so `load_program` leaves them in the history. The egress drops a copy bound for the port it came in on, so a group may hold every port of the switch. The copies are the frame as the host built it, multicast MAC and TTL included.
 - `arp.p4` makes the switch resolve its hosts, as a layer 3 switch does. It answers the ARP requests for the gateway address it owns (`arp_responder`, the reply built from the request and sent back out of its port), writes the source MAC of every ARP or IPv4 frame into a register indexed by port (`learned_mac`), and `ipv4_forward` takes the next hop's MAC from that register, so the entries carry only the port, and puts the switch's own MAC as the source, as a router does, which is what the next switch learns on the link between them. A packet for a host port with nothing learned yet becomes the ARP request for its destination, from the gateway `port_gateway` names for that port, and the host's reply teaches the switch. Other frames are left out of the register on purpose: the pod's own kernel sends IPv6 neighbour discovery out of the ports, and the switch reads it as if it had come in.
-- The hosts' MACs are fixed by an action, not by Meshnet, which assigns a random one each time it creates an interface. A switch restart recreates the hosts' ends too, and the peer replay re-runs `set_mac` and `add_static_neighbor` on them, so the entries that name those MACs stay valid.
+- The hosts' MACs are fixed by an action, not by Meshnet, which assigns a random one each time it creates an interface. With the stock Meshnet a switch restart recreates the hosts' ends too, and the peer replay re-runs `set_mac` and `add_static_neighbor` on them, so the entries that name those MACs stay valid. KubeNDT Meshnet keeps the hosts' ends as they were.
 
 ## Step-By-Step (UI)
 
@@ -119,7 +119,7 @@ Create a namespace (e.g. `p4` or any name you prefer).
 
 ### 8. Restart a switch
 
-- Restart `s2` from its menu: its ports, program and entries come back from the history, and **P4 table entries** reads the same three. The hosts' ends `s2` faced were recreated too; `h2`'s MAC and neighbor were put back by the peer replay, so `ping 10.0.2.2` from `h1` passes again a few seconds after.
+- Restart `s2` from its menu: its ports, program and entries come back from the history, and **P4 table entries** reads the same three. The hosts' ends `s2` faced keep `h2`'s MAC and neighbor (with the stock Meshnet they are recreated and the peer replay puts them back), so `ping 10.0.2.2` from `h1` passes again a few seconds after.
 
 ### 9. ECMP on `s1`, live
 
@@ -175,4 +175,4 @@ podman run --rm -v "$PWD:/w" docker.io/p4lang/p4c:1.2.5.19 \
 - `ping 224.1.1.1` reports every packet lost: expected, the hosts do not answer echo requests to a multicast address; the counters of their `eth1` and the capture are the evidence. If they do not climb either, **P4 multicast groups** on the switches shows whether the groups are there with the ports of step 10.
 - A switch pod never becomes ready: the image could not be pulled (`ghcr.io/emigcm98/kubendt-p4`, public), or its CLI port is not answering; the pod's logs show `simple_switch` starting.
 
-> Last reviewed: 27 Nov 2026
+> Last reviewed: 28 Nov 2026

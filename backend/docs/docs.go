@@ -7452,12 +7452,22 @@ const docTemplate = `{
                 "link_mtu": {
                     "$ref": "#/definitions/types.LinkMTUDoc"
                 },
+                "meshnet_path": {
+                    "description": "How the links are kept: fork when the Meshnet daemon keeps the neighbours'\nends through the restart, stock when KubeNDT remakes and replays them.",
+                    "type": "string",
+                    "example": "fork"
+                },
                 "message": {
                     "type": "string",
                     "example": "Pod router1-0 restarted successfully"
                 },
                 "peer_replay": {
-                    "$ref": "#/definitions/types.PeerReplayStatsDoc"
+                    "description": "All zeros on the fork's path, where the neighbours keep their interfaces.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.PeerReplayStatsDoc"
+                        }
+                    ]
                 },
                 "replay": {
                     "$ref": "#/definitions/types.DriverReplayStatsDoc"

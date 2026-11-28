@@ -185,14 +185,18 @@ type LinkMTUDoc struct {
 
 // RestartPodResponseDoc is returned by PATCH /pods/restart/:namespace/:podName.
 type RestartPodResponseDoc struct {
-	Message            string                `json:"message" example:"Pod router1-0 restarted successfully"`
-	ReplayedOperations int                   `json:"replayed_operations" example:"2"`
-	Replay             DriverReplayStatsDoc  `json:"replay"`
-	PeerReplay         PeerReplayStatsDoc    `json:"peer_replay"`
-	LinkMTU            LinkMTUDoc            `json:"link_mtu"`
-	Warnings           []WarningDoc          `json:"warnings"`
-	TookTime           RestartTimingResponse `json:"took_time"`
-	Timeline           OperationTimeline     `json:"timeline"`
+	Message            string               `json:"message" example:"Pod router1-0 restarted successfully"`
+	ReplayedOperations int                  `json:"replayed_operations" example:"2"`
+	Replay             DriverReplayStatsDoc `json:"replay"`
+	// All zeros on the fork's path, where the neighbours keep their interfaces.
+	PeerReplay PeerReplayStatsDoc `json:"peer_replay"`
+	// How the links are kept: fork when the Meshnet daemon keeps the neighbours'
+	// ends through the restart, stock when KubeNDT remakes and replays them.
+	MeshnetPath string                `json:"meshnet_path" example:"fork"`
+	LinkMTU     LinkMTUDoc            `json:"link_mtu"`
+	Warnings    []WarningDoc          `json:"warnings"`
+	TookTime    RestartTimingResponse `json:"took_time"`
+	Timeline    OperationTimeline     `json:"timeline"`
 }
 
 // InterfaceDetail holds IP/MAC info for a single interface.

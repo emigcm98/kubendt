@@ -71,7 +71,7 @@ The `delete_*` and `old_pod_gone` fields only appear for pods that were recreate
 | `prepare` |  | yes | yes | Everything before the wait starts: topology updates, peer interface cleanup, delete calls |
 | `wait_ready` | yes | yes | yes | From the wait start until every affected pod is Ready |
 | `replay` |  | if pods restarted | yes | Operation history of the recreated pods replayed on them |
-| `peer_replay` |  | if pods restarted | yes | On the neighbours of the recreated pods, the persisted operations that touch the interfaces Meshnet recreated (bridge membership, routes, qdiscs) re-applied, and the TC redirect of guest-VM neighbours rewired. It is the neighbours' recovery cost and it grows with their history, not with the recreated pod's, which is why it is kept apart from `replay` |
+| `peer_replay` |  | if pods restarted | yes | On the neighbours of the recreated pods, the persisted operations that touch the interfaces Meshnet recreated (bridge membership, routes, qdiscs) re-applied, and the TC redirect of guest-VM neighbours rewired. It is the neighbours' recovery cost and it grows with their history, not with the recreated pod's, which is why it is kept apart from `replay`. Zero on a restart with KubeNDT Meshnet, which keeps the neighbours' interfaces |
 | `heal` | yes | yes |  | Interface validation and healing after Ready |
 | `mtu` | yes | yes | yes | The link pass after wiring: one MTU on every link end and the extra addresses a link declares, inside a VyOS guest too |
 | `total` | yes | yes | yes | Until the response is built |

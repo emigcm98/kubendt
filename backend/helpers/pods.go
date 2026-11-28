@@ -635,7 +635,11 @@ func CreateMountResourceForFile(namespace, fileName string) (name string, isSecr
 	return f.Name, f.Sensitive, nil
 }
 
-func RestartPod(namespace, podName string) error {
+// RestartPod deletes a pod of a StatefulSet, which recreates it. On the stock
+// Meshnet the neighbours' ends die with the pod, so they are prepared first.
+// keepPeers leaves them alone: KubeNDT Meshnet keeps a neighbour's end, with
+// what it carries, while the pod is gone.
+func RestartPod(namespace, podName string, keepPeers bool) error {
 	pod, err := kubeclient.Clientset.CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("pod '%s' not found in namespace '%s'", podName, namespace)
@@ -644,31 +648,9 @@ func RestartPod(namespace, podName string) error {
 	// Only accept restarting if it's under a StatefulSet
 	for _, owner := range pod.OwnerReferences {
 		if owner.Kind == "StatefulSet" {
-			// Refresh skip entries on peers so the next sandbox's CNI ADD
-			// knows which side is the creator for each link.
-			if prepErr := injectPeerSkipEntries(namespace, podName); prepErr != nil {
-				log.Printf("⚠️ RestartPod: could not inject peer skip entries for %s: %v (continuing)", podName, prepErr)
-			} else {
-				log.Printf("ℹ️ RestartPod: injected peer skip entries for %s", podName)
+			if !keepPeers {
+				preparePeersForRestart(namespace, podName)
 			}
-
-			// Pre-emptively delete the peer-side interfaces for every link
-			// of this pod. Empirically (verified with meshnet master), the
-			// peer end is NOT cleaned up by meshnet's cmdDel reliably, so
-			// the next CNI ADD on the new sandbox tries to inject a veth
-			// into the peer with the same name and dies with:
-			//   failed to rename link kokoNNN -> ethX: file exists
-			// That keeps the new pod stuck in ContainerCreating with
-			// kubelet retrying forever. Removing the peer end here
-			// guarantees a clean rename.
-			//
-			// The side effect, peer's pod-side ifindex changes when
-			// meshnet recreates the veth, is then corrected by the
-			// post-restart QEMU TC rewire pass in the modify handler
-			// (RewireQemuPeersAfterRestart), so QEMU peers don't end up
-			// with stale `mirred` redirect targets.
-			deletePeerVethsForPod(namespace, podName)
-
 			err := kubeclient.Clientset.CoreV1().Pods(namespace).Delete(context.TODO(), podName, metav1.DeleteOptions{})
 			if err != nil {
 				return fmt.Errorf("error deleting pod %s: %w", podName, err)
@@ -678,6 +660,35 @@ func RestartPod(namespace, podName string) error {
 	}
 
 	return fmt.Errorf("pod '%s' does not belong to a StatefulSet and cannot be restarted", podName)
+}
+
+// preparePeersForRestart is what the stock Meshnet needs on the neighbours
+// before a pod goes.
+func preparePeersForRestart(namespace, podName string) {
+	// Refresh skip entries on peers so the next sandbox's CNI ADD
+	// knows which side is the creator for each link.
+	if prepErr := injectPeerSkipEntries(namespace, podName); prepErr != nil {
+		log.Printf("⚠️ RestartPod: could not inject peer skip entries for %s: %v (continuing)", podName, prepErr)
+	} else {
+		log.Printf("ℹ️ RestartPod: injected peer skip entries for %s", podName)
+	}
+
+	// Pre-emptively delete the peer-side interfaces for every link
+	// of this pod. Empirically (verified with meshnet master), the
+	// peer end is NOT cleaned up by meshnet's cmdDel reliably, so
+	// the next CNI ADD on the new sandbox tries to inject a veth
+	// into the peer with the same name and dies with:
+	//   failed to rename link kokoNNN -> ethX: file exists
+	// That keeps the new pod stuck in ContainerCreating with
+	// kubelet retrying forever. Removing the peer end here
+	// guarantees a clean rename.
+	//
+	// The side effect, peer's pod-side ifindex changes when
+	// meshnet recreates the veth, is then corrected by the
+	// post-restart QEMU TC rewire pass in the modify handler
+	// (RewireQemuPeersAfterRestart), so QEMU peers don't end up
+	// with stale `mirred` redirect targets.
+	deletePeerVethsForPod(namespace, podName)
 }
 
 // GetTopologyInterfaceSetForPod returns the set of this pod's own interface

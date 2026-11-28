@@ -180,7 +180,9 @@ func HealMissingInterfaces(namespace string, nodes []types.NodeSpec, links []typ
 			for _, why := range restartWhy[pod] {
 				log.Printf("   • %s", why)
 			}
-			if err := RestartPod(namespace, pod); err != nil {
+			// A rescue: both ends are remade, on any Meshnet, and the neighbours
+			// get their operations again below.
+			if err := RestartPod(namespace, pod, false); err != nil {
 				log.Printf("❌ Heal: failed restarting pod=%s: %v", pod, err)
 			}
 		}
