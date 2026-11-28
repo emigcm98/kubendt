@@ -291,9 +291,13 @@ def ex3():
             ok, det, w = retry(contains(ex.ns, "alpine-host-0", "ip route", "default via 10.0.2.1"), 30); ex.check("alpine-host-0 keeps its default route after scale-down", ok, det, w)
             ok, det, w = retry(ping(ex.ns, "alpine-host-0", "10.0.1.11"), 60); ex.check("alpine-host-0 still reaches 10.0.1.11 after scale-down", ok, det, w)
         modify(ex, f"{d}/modify-phase5-delete.json", "phase5 delete node")
-        p = subprocess.run(["kubectl"] + (["--context", C.CONTEXT] if C.CONTEXT else []) + ["-n", ex.ns, "get", "pods", "-o", "name"], capture_output=True, text=True)
-        names = sorted(x.split("/")[1] for x in p.stdout.split())
-        ex.check("base topology has 6 pods again", len(names) == 6, names)
+        # The deleted node's pod may still be terminating when the modify answers, a VM for as long
+        # as its grace period, so the count is waited for.
+        def six_pods():
+            p = subprocess.run(["kubectl"] + (["--context", C.CONTEXT] if C.CONTEXT else []) + ["-n", ex.ns, "get", "pods", "-o", "name"], capture_output=True, text=True)
+            names = sorted(x.split("/")[1] for x in p.stdout.split())
+            return len(names) == 6, names
+        ok, det, w = retry(six_pods, 120, every=3); ex.check("base topology has 6 pods again", ok, det, w)
         if restart(ex, "frr-router-0"):
             ok, det, w = retry(contains(ex.ns, "frr-router-0", "ip a show eth1", "10.0.1.1/24"), 60); ex.check("frr eth1 IP replayed after API restart", ok, det, w)
             ok, det, w = retry(inspect_has(ex.ns, "frr-router-0", "ospf_neighbors", "state", "Full"), 180); ex.check("frr OSPF Full after API restart", ok, det, w)

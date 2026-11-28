@@ -20,6 +20,14 @@ const (
 	MeshnetNotRecognised = "not recognised"
 )
 
+// The two implementations of what keeps a lab's links, one per Meshnet: the
+// stock path is the passes KubeNDT always ran (restart a pod to wire a link,
+// heal pass, peer replay), the fork path lets the daemon do it live.
+const (
+	MeshnetPathStock = "stock"
+	MeshnetPathFork  = "fork"
+)
+
 // MeshnetForkName is what the fork is called in what a user reads.
 const MeshnetForkName = "KubeNDT Meshnet"
 
@@ -146,6 +154,22 @@ func forkSupport(major, minor, patch string) string {
 func MeshnetSupportRange() string {
 	lo := strconv.Itoa(meshnetForkMin[0]) + "." + strconv.Itoa(meshnetForkMin[1]) + "." + strconv.Itoa(meshnetForkMin[2])
 	return "the stock Meshnet, or " + MeshnetForkName + " from " + lo + " and below " + strconv.Itoa(meshnetForkMin[0]+1) + ".0.0"
+}
+
+// MeshnetPath picks the path from what the cluster shows. The fork's path
+// needs all of it at once: the fork's daemon on every node (one image, all
+// ready), at a version this KubeNDT works with or a development build, and the
+// fork's CRD installed, otherwise the daemon's work would be pruned or not
+// there to do. Anything else, including a reading that failed, is the stock
+// path, which works on both.
+func MeshnetPath(flavour, support, crd string, images int, allReady bool) string {
+	if flavour != MeshnetFork || crd != MeshnetCRDFork || images != 1 || !allReady {
+		return MeshnetPathStock
+	}
+	if support != MeshnetSupported && support != MeshnetDevelopment {
+		return MeshnetPathStock
+	}
+	return MeshnetPathFork
 }
 
 var crdGVR = schema.GroupVersionResource{Group: "apiextensions.k8s.io", Version: "v1", Resource: "customresourcedefinitions"}

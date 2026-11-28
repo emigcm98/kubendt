@@ -89,7 +89,14 @@ func ApplyAddToExistingTopology(namespace string, request types.DeployRequest, e
 		return nil, nil, nil, fmt.Errorf("VALIDATION:%s", err.Error())
 	}
 
-	if err := ValidateInterfaceConflicts(namespace, request.Links, allNodes); err != nil {
+	// A link a modify that stopped halfway declared at one end only is redone
+	// from scratch, so its stale end does not count as in use and goes before
+	// the link is written again.
+	stale, err := halfDeclaredEnds(namespace, request.Links, allNodes)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if err := validateInterfaceConflicts(namespace, request.Links, allNodes, staleInterfaces(stale)); err != nil {
 		return nil, nil, nil, fmt.Errorf("VALIDATION:%s", err.Error())
 	}
 
@@ -98,6 +105,9 @@ func ApplyAddToExistingTopology(namespace string, request types.DeployRequest, e
 		return nil, nil, nil, err
 	}
 	request.Links = preparedLinks
+	if err := dropLinkEnds(namespace, stale); err != nil {
+		return nil, nil, nil, err
+	}
 
 	// Pre-pass: any mount declaring sensitive=true upgrades the file flag in
 	// namespace_file_meta. JSON can only mark sensitive, never unmark (see
@@ -360,6 +370,12 @@ func GetExistingNodes(namespace string) ([]types.NodeSpec, error) {
 // The "external" side is not tracked as a conflict source: multiple pods
 // can legitimately attach to the same host iface (broadcast domain).
 func ValidateInterfaceConflicts(namespace string, links []types.LinkSpec, allNodes []types.NodeSpec) error {
+	return validateInterfaceConflicts(namespace, links, allNodes, nil)
+}
+
+// validateInterfaceConflicts is the same check not counting the interfaces in
+// ignore (pod, then interface), the stale ends of links about to be redone.
+func validateInterfaceConflicts(namespace string, links []types.LinkSpec, allNodes []types.NodeSpec, ignore map[string]map[string]bool) error {
 	podSet := make(map[string]struct{})
 	for _, link := range links {
 		if link.Node != "external" {
@@ -376,7 +392,13 @@ func ValidateInterfaceConflicts(namespace string, links []types.LinkSpec, allNod
 	if err != nil {
 		return fmt.Errorf("could not list topologies to check interface conflicts: %w", err)
 	}
-	return checkInterfaceConflicts(links, allNodes, claimedInterfaces(list.Items, podSet))
+	claimed := claimedInterfaces(list.Items, podSet)
+	for pod, intfs := range ignore {
+		for intf := range intfs {
+			delete(claimed[pod], intf)
+		}
+	}
+	return checkInterfaceConflicts(links, allNodes, claimed)
 }
 
 // claimedInterfaces maps each pod in podSet to the interfaces its Topology
@@ -541,42 +563,50 @@ func SplitIndexedPodName(name string) (string, int, bool) {
 }
 
 func ValidateDeleteLinksExist(namespace string, links []types.LinkSpec, allNodes []types.NodeSpec) error {
-	perPod := buildPerPodLinkEntries(links, allNodes)
+	list, err := kubeclient.DynamicClient.Resource(TopologyGVR).Namespace(namespace).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing topologies: %w", err)
+	}
+	declared := declaredLinkKeys(list.Items)
 
-	for podName, entries := range perPod {
-		obj, err := kubeclient.DynamicClient.Resource(TopologyGVR).Namespace(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				return fmt.Errorf("topology does not exist for pod '%s'", podName)
+	// A link counts as there when either end declares it: a modify that stopped
+	// halfway leaves one end only, and that is exactly what a second delete has
+	// to be able to finish.
+	for _, link := range links {
+		perPod := buildPerPodLinkEntries([]types.LinkSpec{link}, allNodes)
+		pods := make([]string, 0, len(perPod))
+		found := false
+		for pod, entries := range perPod {
+			pods = append(pods, pod)
+			for _, entry := range entries {
+				if _, ok := declared[pod][topologyLinkKeyForModify(entry)]; ok {
+					found = true
+				}
 			}
-			return fmt.Errorf("error fetching Topology %s: %w", podName, err)
 		}
-
-		existingLinks, found, err := unstructured.NestedSlice(obj.Object, "spec", "links")
-		if err != nil {
-			return fmt.Errorf("error reading links from Topology %s: %w", podName, err)
-		}
-		if !found {
-			existingLinks = []interface{}{}
-		}
-
-		existingKeys := make(map[string]struct{}, len(existingLinks))
-		for _, item := range existingLinks {
-			linkMap, ok := item.(map[string]interface{})
-			if !ok {
-				continue
-			}
-			existingKeys[topologyLinkKeyForModify(linkMap)] = struct{}{}
-		}
-
-		for _, entry := range entries {
-			if _, ok := existingKeys[topologyLinkKeyForModify(entry)]; !ok {
-				return fmt.Errorf("link to delete does not exist in pod '%s'", podName)
-			}
+		if len(pods) > 0 && !found {
+			sort.Strings(pods)
+			return fmt.Errorf("link to delete does not exist in pod '%s'", pods[0])
 		}
 	}
 
 	return nil
+}
+
+// declaredLinkKeys maps each Topology to the keys of the links it declares.
+func declaredLinkKeys(items []unstructured.Unstructured) map[string]map[string]struct{} {
+	out := make(map[string]map[string]struct{}, len(items))
+	for i := range items {
+		specLinks, _, _ := unstructured.NestedSlice(items[i].Object, "spec", "links")
+		keys := make(map[string]struct{}, len(specLinks))
+		for _, item := range specLinks {
+			if linkMap, ok := item.(map[string]interface{}); ok {
+				keys[topologyLinkKeyForModify(linkMap)] = struct{}{}
+			}
+		}
+		out[items[i].GetName()] = keys
+	}
+	return out
 }
 
 func RemoveSpecificLinksFromTopologies(namespace string, links []types.LinkSpec, allNodes []types.NodeSpec) ([]string, error) {
@@ -584,51 +614,47 @@ func RemoveSpecificLinksFromTopologies(namespace string, links []types.LinkSpec,
 	touched := make([]string, 0, len(perPod))
 
 	for podName, entries := range perPod {
-		obj, err := kubeclient.DynamicClient.Resource(TopologyGVR).Namespace(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
-		if err != nil {
-			return nil, fmt.Errorf("error fetching Topology %s: %w", podName, err)
-		}
-
-		existingLinks, found, err := unstructured.NestedSlice(obj.Object, "spec", "links")
-		if err != nil {
-			return nil, fmt.Errorf("error reading links from Topology %s: %w", podName, err)
-		}
-		if !found {
-			existingLinks = []interface{}{}
-		}
-
 		deleteKeys := make(map[string]struct{}, len(entries))
 		for _, entry := range entries {
 			deleteKeys[topologyLinkKeyForModify(entry)] = struct{}{}
 		}
 
-		newLinks := make([]interface{}, 0, len(existingLinks))
-		changed := false
-		for _, item := range existingLinks {
-			linkMap, ok := item.(map[string]interface{})
-			if !ok {
+		changed, err := updateTopology(namespace, podName, func(obj *unstructured.Unstructured) (bool, error) {
+			existingLinks, found, err := unstructured.NestedSlice(obj.Object, "spec", "links")
+			if err != nil {
+				return false, fmt.Errorf("error reading links from Topology %s: %w", podName, err)
+			}
+			if !found {
+				existingLinks = []interface{}{}
+			}
+			newLinks := make([]interface{}, 0, len(existingLinks))
+			removed := false
+			for _, item := range existingLinks {
+				linkMap, ok := item.(map[string]interface{})
+				if !ok {
+					newLinks = append(newLinks, item)
+					continue
+				}
+				if _, remove := deleteKeys[topologyLinkKeyForModify(linkMap)]; remove {
+					removed = true
+					continue
+				}
 				newLinks = append(newLinks, item)
-				continue
 			}
-			if _, remove := deleteKeys[topologyLinkKeyForModify(linkMap)]; remove {
-				changed = true
-				continue
+			if !removed {
+				return false, nil
 			}
-			newLinks = append(newLinks, item)
-		}
-
-		if !changed {
-			continue
-		}
-
-		if err := unstructured.SetNestedSlice(obj.Object, newLinks, "spec", "links"); err != nil {
-			return nil, fmt.Errorf("error updating links in %s: %w", podName, err)
-		}
-		if _, err := kubeclient.DynamicClient.Resource(TopologyGVR).Namespace(namespace).Update(context.TODO(), obj, metav1.UpdateOptions{}); err != nil {
+			if err := unstructured.SetNestedSlice(obj.Object, newLinks, "spec", "links"); err != nil {
+				return false, fmt.Errorf("error updating links in %s: %w", podName, err)
+			}
+			return true, nil
+		})
+		if err != nil {
 			return nil, fmt.Errorf("error updating Topology %s: %w", podName, err)
 		}
-
-		touched = append(touched, podName)
+		if changed {
+			touched = append(touched, podName)
+		}
 	}
 
 	return touched, nil
@@ -640,22 +666,15 @@ func RemoveLinksReferencingDeletedPods(namespace string, deletedPods map[string]
 		return nil, fmt.Errorf("error listing topologies: %w", err)
 	}
 
-	touched := make([]string, 0)
-
-	for _, item := range topologyList.Items {
-		podName := item.GetName()
-		if _, deleted := deletedPods[podName]; deleted {
-			continue
-		}
-
-		existingLinks, found, err := unstructured.NestedSlice(item.Object, "spec", "links")
+	// Drops the links to a deleted pod from a Topology, false when it has none.
+	drop := func(obj *unstructured.Unstructured) (bool, error) {
+		existingLinks, found, err := unstructured.NestedSlice(obj.Object, "spec", "links")
 		if err != nil {
-			return nil, fmt.Errorf("error reading links from Topology %s: %w", podName, err)
+			return false, fmt.Errorf("error reading links from Topology %s: %w", obj.GetName(), err)
 		}
 		if !found {
-			continue
+			return false, nil
 		}
-
 		newLinks := make([]interface{}, 0, len(existingLinks))
 		changed := false
 		for _, linkData := range existingLinks {
@@ -671,19 +690,35 @@ func RemoveLinksReferencingDeletedPods(namespace string, deletedPods map[string]
 			}
 			newLinks = append(newLinks, linkData)
 		}
-
 		if !changed {
+			return false, nil
+		}
+		if err := unstructured.SetNestedSlice(obj.Object, newLinks, "spec", "links"); err != nil {
+			return false, fmt.Errorf("error updating Topology %s links: %w", obj.GetName(), err)
+		}
+		return true, nil
+	}
+
+	touched := make([]string, 0)
+	for i := range topologyList.Items {
+		podName := topologyList.Items[i].GetName()
+		if _, deleted := deletedPods[podName]; deleted {
 			continue
 		}
-
-		if err := unstructured.SetNestedSlice(item.Object, newLinks, "spec", "links"); err != nil {
-			return nil, fmt.Errorf("error updating Topology %s links: %w", podName, err)
+		// The list tells which Topologies need the write, which then reads its
+		// own copy, as the one in the list may be old by now.
+		if need, err := drop(topologyList.Items[i].DeepCopy()); err != nil {
+			return nil, err
+		} else if !need {
+			continue
 		}
-		if _, err := kubeclient.DynamicClient.Resource(TopologyGVR).Namespace(namespace).Update(context.TODO(), &item, metav1.UpdateOptions{}); err != nil {
+		changed, err := updateTopology(namespace, podName, drop)
+		if err != nil {
 			return nil, fmt.Errorf("error updating Topology %s: %w", podName, err)
 		}
-
-		touched = append(touched, podName)
+		if changed {
+			touched = append(touched, podName)
+		}
 	}
 
 	return touched, nil
@@ -930,12 +965,52 @@ func upsertAppendLinksInTopologies(namespace string, links []types.LinkSpec, all
 			continue
 		}
 
-		obj, err := kubeclient.DynamicClient.Resource(TopologyGVR).Namespace(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
-		if err != nil {
-			if !apierrors.IsNotFound(err) {
-				return nil, fmt.Errorf("error fetching Topology %s: %w", podName, err)
+		changed, err := updateTopology(namespace, podName, func(obj *unstructured.Unstructured) (bool, error) {
+			existingLinks, found, err := unstructured.NestedSlice(obj.Object, "spec", "links")
+			if err != nil {
+				return false, fmt.Errorf("error reading existing links from %s: %w", podName, err)
+			}
+			if !found {
+				existingLinks = []interface{}{}
 			}
 
+			existingKeys := make(map[string]struct{}, len(existingLinks))
+			for _, item := range existingLinks {
+				linkMap, ok := item.(map[string]interface{})
+				if !ok {
+					continue
+				}
+				existingKeys[topologyLinkKey(linkMap)] = struct{}{}
+			}
+
+			added := false
+			for _, link := range addedLinks {
+				key := topologyLinkKey(link)
+				if _, exists := existingKeys[key]; exists {
+					continue
+				}
+				existingLinks = append(existingLinks, link)
+				existingKeys[key] = struct{}{}
+				added = true
+			}
+			if !added {
+				return false, nil
+			}
+
+			if err := unstructured.SetNestedSlice(obj.Object, existingLinks, "spec", "links"); err != nil {
+				return false, fmt.Errorf("error updating links in %s: %w", podName, err)
+			}
+			if peerLabel, ok := peerLabelByPod[podName]; ok && peerLabel != "" {
+				annotations := obj.GetAnnotations()
+				if annotations == nil {
+					annotations = map[string]string{}
+				}
+				annotations["kubendt/peerlabel"] = peerLabel
+				obj.SetAnnotations(annotations)
+			}
+			return true, nil
+		})
+		if apierrors.IsNotFound(err) {
 			annotations := map[string]string{}
 			if peerLabel, ok := peerLabelByPod[podName]; ok && peerLabel != "" {
 				annotations["kubendt/peerlabel"] = peerLabel
@@ -960,57 +1035,12 @@ func upsertAppendLinksInTopologies(namespace string, links []types.LinkSpec, all
 			touched = append(touched, podName)
 			continue
 		}
-
-		existingLinks, found, err := unstructured.NestedSlice(obj.Object, "spec", "links")
 		if err != nil {
-			return nil, fmt.Errorf("error reading existing links from %s: %w", podName, err)
-		}
-		if !found {
-			existingLinks = []interface{}{}
-		}
-
-		existingKeys := make(map[string]struct{}, len(existingLinks))
-		for _, item := range existingLinks {
-			linkMap, ok := item.(map[string]interface{})
-			if !ok {
-				continue
-			}
-			existingKeys[topologyLinkKey(linkMap)] = struct{}{}
-		}
-
-		changed := false
-		for _, link := range addedLinks {
-			key := topologyLinkKey(link)
-			if _, exists := existingKeys[key]; exists {
-				continue
-			}
-			existingLinks = append(existingLinks, link)
-			existingKeys[key] = struct{}{}
-			changed = true
-		}
-
-		if !changed {
-			continue
-		}
-
-		if err := unstructured.SetNestedSlice(obj.Object, existingLinks, "spec", "links"); err != nil {
-			return nil, fmt.Errorf("error updating links in %s: %w", podName, err)
-		}
-
-		if peerLabel, ok := peerLabelByPod[podName]; ok && peerLabel != "" {
-			annotations := obj.GetAnnotations()
-			if annotations == nil {
-				annotations = map[string]string{}
-			}
-			annotations["kubendt/peerlabel"] = peerLabel
-			obj.SetAnnotations(annotations)
-		}
-
-		if _, err := kubeclient.DynamicClient.Resource(TopologyGVR).Namespace(namespace).Update(context.TODO(), obj, metav1.UpdateOptions{}); err != nil {
 			return nil, fmt.Errorf("error updating Topology %s: %w", podName, err)
 		}
-
-		touched = append(touched, podName)
+		if changed {
+			touched = append(touched, podName)
+		}
 	}
 
 	return touched, nil

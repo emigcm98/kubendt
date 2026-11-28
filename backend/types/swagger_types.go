@@ -358,20 +358,23 @@ type ModifyTimingResponse struct {
 
 // ModifyNetworkResponse is returned by POST /network/modify-network/:ns.
 type ModifyNetworkResponse struct {
-	Message        string               `json:"message" example:"network-modify applied successfully"`
-	TookTime       ModifyTimingResponse `json:"took_time"`
-	Timeline       OperationTimeline    `json:"timeline"`
-	LinkMTU        LinkMTUDoc           `json:"link_mtu"`
-	DeletedNodes   []string             `json:"deleted_nodes"`
-	RestartedPods  []string             `json:"restarted_pods"`
-	ScaledUpPods   []string             `json:"scaled_up_pods"`
-	ScaledDownPods []string             `json:"scaled_down_pods"`
-	AddNodesCount  int                  `json:"add_nodes_count" example:"1"`
-	AddLinksCount  int                  `json:"add_links_count" example:"1"`
-	DelNodesCount  int                  `json:"del_nodes_count" example:"0"`
-	DelLinksCount  int                  `json:"del_links_count" example:"0"`
-	ScaleCount     int                  `json:"scale_count" example:"1"`
-	Warnings       []WarningDoc         `json:"warnings"`
+	Message  string               `json:"message" example:"network-modify applied successfully"`
+	TookTime ModifyTimingResponse `json:"took_time"`
+	Timeline OperationTimeline    `json:"timeline"`
+	LinkMTU  LinkMTUDoc           `json:"link_mtu"`
+	// How the links were kept: fork when the Meshnet daemon wired them live, stock
+	// when KubeNDT's own passes did.
+	MeshnetPath    string       `json:"meshnet_path" example:"fork"`
+	DeletedNodes   []string     `json:"deleted_nodes"`
+	RestartedPods  []string     `json:"restarted_pods"`
+	ScaledUpPods   []string     `json:"scaled_up_pods"`
+	ScaledDownPods []string     `json:"scaled_down_pods"`
+	AddNodesCount  int          `json:"add_nodes_count" example:"1"`
+	AddLinksCount  int          `json:"add_links_count" example:"1"`
+	DelNodesCount  int          `json:"del_nodes_count" example:"0"`
+	DelLinksCount  int          `json:"del_links_count" example:"0"`
+	ScaleCount     int          `json:"scale_count" example:"1"`
+	Warnings       []WarningDoc `json:"warnings"`
 }
 
 // ConfigureTimingResponse breaks down configure duration.
@@ -646,6 +649,9 @@ type MeshnetStatusDoc struct {
 	// The images the Meshnet pods run, more than one during an upgrade.
 	Images   []MeshnetImageDoc `json:"images,omitempty"`
 	Warnings []string          `json:"warnings,omitempty"`
+	// How KubeNDT keeps the links of a lab here: fork when the daemon does it
+	// live (the fork's daemon and CRD on every node), stock for its own passes.
+	Path string `json:"path,omitempty" example:"fork"`
 }
 
 // MeshnetImageDoc is one image the Meshnet pods run and on how many nodes.

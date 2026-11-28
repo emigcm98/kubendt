@@ -138,3 +138,29 @@ func TestMeshnetCRDRead(t *testing.T) {
 		t.Errorf("a forbidden read gave %q, it must not look like stock", got)
 	}
 }
+
+func TestMeshnetPath(t *testing.T) {
+	for name, tc := range map[string]struct {
+		flavour, support, crd string
+		images                int
+		ready                 bool
+		want                  string
+	}{
+		"the fork on its CRD":            {MeshnetFork, MeshnetSupported, MeshnetCRDFork, 1, true, MeshnetPathFork},
+		"a development build":            {MeshnetFork, MeshnetDevelopment, MeshnetCRDFork, 1, true, MeshnetPathFork},
+		"the stock one":                  {MeshnetStock, MeshnetSupported, MeshnetCRDStock, 1, true, MeshnetPathStock},
+		"the fork on the stock CRD":      {MeshnetFork, MeshnetSupported, MeshnetCRDStock, 1, true, MeshnetPathStock},
+		"stock on the fork's CRD":        {MeshnetStock, MeshnetSupported, MeshnetCRDFork, 1, true, MeshnetPathStock},
+		"an upgrade halfway":             {MeshnetFork, MeshnetSupported, MeshnetCRDFork, 2, true, MeshnetPathStock},
+		"a node without its pod":         {MeshnetFork, MeshnetSupported, MeshnetCRDFork, 1, false, MeshnetPathStock},
+		"no pod seen at all":             {MeshnetFork, MeshnetSupported, MeshnetCRDFork, 0, true, MeshnetPathStock},
+		"a CRD that could not be read":   {MeshnetFork, MeshnetSupported, MeshnetCRDUnreadable, 1, true, MeshnetPathStock},
+		"a version older than supported": {MeshnetFork, MeshnetTooOld, MeshnetCRDFork, 1, true, MeshnetPathStock},
+		"a newer major":                  {MeshnetFork, MeshnetUntested, MeshnetCRDFork, 1, true, MeshnetPathStock},
+		"an unknown daemon":              {MeshnetNotRecognised, MeshnetUnsupported, MeshnetCRDFork, 1, true, MeshnetPathStock},
+	} {
+		if got := MeshnetPath(tc.flavour, tc.support, tc.crd, tc.images, tc.ready); got != tc.want {
+			t.Errorf("%s: path %q, want %q", name, got, tc.want)
+		}
+	}
+}

@@ -68,6 +68,10 @@ The command behind the action needs a program the image does not ship and the to
 
 The capability behind the action needs a daemon the FRR image starts only when its line in `/etc/frr/daemons` says `yes`, and the node was started without it (`ospfd=no` is the file's default). FRR does not start daemons on the fly, so the backend checks the daemon's vty socket before the actions of that capability and fails them with this message instead of a vtysh error. It happens on a node that sets its own `commands` without enabling the daemon: when a node sets none, `FRRRouterDriver` enables every daemon behind its capabilities at startup. Enable it in those `commands` (`sed -i 's/^ospfd=no/ospfd=yes/' /etc/frr/daemons` before FRR starts) or drop them, and restart or redeploy the node.
 
+## A modify warns `meshnet_links_unsettled`
+
+On a cluster running KubeNDT Meshnet the daemon wires and removes links live, and the modify waits up to 20 seconds for the status of each touched Topology to show them. The warning names the pod and what the daemon says, a plumbing error or a link in `failed`, and for an added link the heal pass ran in its place. `kubectl get topology -n <namespace> <pod> -o yaml` shows the same under `status`. `KUBENDT_MESHNET_PATH=stock` on the backend goes back to recreating pods to wire links.
+
 ## A deploy warns `meshnet_unsupported`
 
 The cluster runs a Meshnet this KubeNDT was not made for: KubeNDT Meshnet older than 1.0.0, a newer major of it, or an image that is neither the stock Meshnet (`networkop/meshnet`) nor KubeNDT Meshnet (`emigcm98/meshnet`). The deploy goes on. The cluster page names what runs. A mirror keeps its name as long as the image keeps the repository's path.

@@ -104,17 +104,22 @@ func ModifyNetwork(c *gin.Context) {
 	// rewiring). Only "missing" blocks; ?force=true overrides. A change to
 	// the layout alone touches no pod, so it passes.
 	var meshnetWarning *types.Warning
-	if (hasAdd || hasDelete || hasScale) && c.Query("force") != "true" {
-		m := detectMeshnet(c.Request.Context())
-		if m.State == "missing" {
-			c.JSON(http.StatusPreconditionFailed, gin.H{
-				"error":  "Meshnet CNI not detected in the cluster. Topology changes would leave pods unwired. Install Meshnet, clear the topology, or retry with force=true.",
-				"reason": "meshnet_missing",
-			})
-			return
+	meshnetPath := helpers.MeshnetPathStock
+	if hasAdd || hasDelete || hasScale {
+		m, _ := fullMeshnetStatus(c.Request.Context())
+		meshnetPath = m.Path
+		if c.Query("force") != "true" {
+			if m.State == "missing" {
+				c.JSON(http.StatusPreconditionFailed, gin.H{
+					"error":  "Meshnet CNI not detected in the cluster. Topology changes would leave pods unwired. Install Meshnet, clear the topology, or retry with force=true.",
+					"reason": "meshnet_missing",
+				})
+				return
+			}
+			meshnetWarning = meshnetSupportWarning(m)
 		}
-		meshnetWarning = meshnetSupportWarning(m)
 	}
+	forkPath := meshnetPath == helpers.MeshnetPathFork
 
 	// Driver-aware interface-name validation runs BEFORE we grab the operation
 	// lock or sync namespace state. A request whose payload is malformed
@@ -212,6 +217,7 @@ func ModifyNetwork(c *gin.Context) {
 	// Track peer-restart pressure split by source phase: delete/scale-down need
 	// every touched peer restarted (CNI DEL/ADD does VXLAN cleanup), while
 	// add/scale-up only restart QEMU peers here (their NICs are fixed at launch).
+	// That is the stock path; on the fork's only the QEMU ones are restarted.
 	// A link between two pods that already exist is handled below, one
 	// endpoint per link, once the QEMU restarts are known.
 	peersToRestartAlways := make(map[string]struct{})
@@ -256,6 +262,20 @@ func ModifyNetwork(c *gin.Context) {
 		return
 	}
 	scaleDowns, scaleUps := helpers.SplitScalePlans(scalePlans)
+
+	// The links are read before the changes to tell afterwards which interfaces
+	// went, so the pods forget what they carried.
+	var linksBefore []types.LinkSpec
+	trackRemoved := false
+	// An add redoes a link a failed modify left at one end, which makes its
+	// interface again, so it reads them too.
+	if hasDelete || hasScale || (hasAdd && len(request.Add.Links) > 0) {
+		if links, err := helpers.BuildLinksFromTopologyCRDs(namespace); err != nil {
+			log.Printf("⚠️ Modify: could not read the links before the changes: %v", err)
+		} else {
+			linksBefore, trackRemoved = links, true
+		}
+	}
 
 	// Phase 1, Delete (CRD-only; restarts deferred to the unified phase).
 	if hasDelete {
@@ -381,6 +401,19 @@ func ModifyNetwork(c *gin.Context) {
 		}
 	}
 
+	// A pod forgets what it had on the interfaces that went. On the fork's path
+	// nothing recreates it, so a configure of the same port would be refused as
+	// already applied. On the stock path the replay after the restart would fail
+	// on a bridge that lists a port that is gone and drop the whole operation,
+	// the other ports with it.
+	if trackRemoved {
+		if linksAfter, err := helpers.BuildLinksFromTopologyCRDs(namespace); err != nil {
+			log.Printf("⚠️ Modify: could not read the links after the changes: %v", err)
+		} else {
+			helpers.ForgetRemovedInterfaces(namespace, helpers.RemovedLinkEnds(linksBefore, linksAfter), helpers.KeptSubnetsByPod(linksBefore, linksAfter))
+		}
+	}
+
 	// === Unified restart + wait + replay phase ===========================
 	//
 	// Every Apply* function above is CRD/sts-only now: it publishes the
@@ -414,8 +447,13 @@ func ModifyNetwork(c *gin.Context) {
 	//   - peersToRestartAlways → restart regardless of QEMU/non-QEMU.
 	//   - peersToRestartIfQemu → restart only if QEMU.
 	// "Always" wins on conflict.
+	// On the fork's path the daemon redraws a touched peer's links live, so
+	// only a guest VM, whose NICs are fixed when it starts, is recreated.
 	restartSet := make(map[string]struct{})
 	for p := range peersToRestartAlways {
+		if forkPath && !isQemu(p) {
+			continue
+		}
 		restartSet[p] = struct{}{}
 	}
 	for p := range peersToRestartIfQemu {
@@ -440,9 +478,15 @@ func ModifyNetwork(c *gin.Context) {
 	// sees it in restarted_pods and the timeline and the heal pass has nothing
 	// left to do but verify.
 	if hasAdd && len(request.Add.Links) > 0 {
-		for _, p := range helpers.EndpointsToRestartForNewLinks(request.Add.Links, finalNodes, newPodsToWait, restartSet) {
+		var endpoints []string
+		if forkPath {
+			endpoints = helpers.GuestEndpointsToRestartForNewLinks(request.Add.Links, finalNodes, newPodsToWait, restartSet, isQemu)
+		} else {
+			endpoints = helpers.EndpointsToRestartForNewLinks(request.Add.Links, finalNodes, newPodsToWait, restartSet)
+		}
+		for _, p := range endpoints {
 			restartSet[p] = struct{}{}
-			log.Printf("ℹ️ Modify: recreating %s so Meshnet wires its new link(s)", p)
+			log.Printf("ℹ️ Modify: recreating %s to give it its new link(s)", p)
 		}
 	}
 
@@ -582,16 +626,32 @@ func ModifyNetwork(c *gin.Context) {
 	// Post-modify heal pass over the new links. The endpoints that had to be
 	// recreated were restarted above, so this normally just confirms that
 	// every new interface is there and only repairs if Meshnet missed one.
+	//
+	// On the fork's path the daemon's own status is the check: the Topologies of
+	// every pod the modify touched must show their links settled. When one does
+	// not, the heal pass below runs as on the stock path and the response says so.
 	var healReads map[string]map[string]int
+	settled := true
+	if forkPath {
+		unsettled := helpers.AwaitForkLinks(namespace, helpers.ForkSettleSet(request.Add.Links, finalNodes,
+			[]map[string]struct{}{newPodsToWait, peersToRestartAlways, peersToRestartIfQemu},
+			[]map[string]struct{}{restartSet, podSet(scaledDownPods)}))
+		if len(unsettled) > 0 {
+			settled = false
+			warnings = append(warnings, types.Warning{Kind: "meshnet_links_unsettled", Detail: helpers.UnsettledDetail(unsettled, hasAdd && len(request.Add.Links) > 0)})
+		}
+	}
 	if hasAdd && len(request.Add.Links) > 0 {
 		currentNodes, nodesErr := helpers.GetExistingNodes(namespace)
 		if nodesErr != nil {
 			log.Printf("⚠️ Modify heal: could not get current nodes: %v", nodesErr)
 		} else {
-			log.Printf("🔁 Modify: verifying %d new link(s)...", len(request.Add.Links))
-			var healErr error
-			if healReads, healErr = helpers.HealMissingInterfaces(namespace, currentNodes, request.Add.Links, 2); healErr != nil {
-				log.Printf("⚠️ Modify heal: %v", healErr)
+			if !forkPath || !settled {
+				log.Printf("🔁 Modify: verifying %d new link(s)...", len(request.Add.Links))
+				var healErr error
+				if healReads, healErr = helpers.HealMissingInterfaces(namespace, currentNodes, request.Add.Links, 2); healErr != nil {
+					log.Printf("⚠️ Modify heal: %v", healErr)
+				}
 			}
 			if err := helpers.SaveLinkAttributes(namespace, request.Add.Links, currentNodes); err != nil {
 				log.Printf("⚠️ Could not save link attributes in namespace '%s': %v", namespace, err)
@@ -660,6 +720,7 @@ func ModifyNetwork(c *gin.Context) {
 			MTU:        helpers.MsPtr(mtuDur),
 		}),
 		"link_mtu":         mtuPass,
+		"meshnet_path":     meshnetPath,
 		"deleted_nodes":    deletedNodes,
 		"restarted_pods":   restartedPods,
 		"scaled_up_pods":   scaledUpPods,
@@ -671,6 +732,14 @@ func ModifyNetwork(c *gin.Context) {
 		"scale_count":      len(request.Scale),
 		"warnings":         warnings,
 	})
+}
+
+func podSet(pods []string) map[string]struct{} {
+	set := make(map[string]struct{}, len(pods))
+	for _, p := range pods {
+		set[p] = struct{}{}
+	}
+	return set
 }
 
 func DeployNetwork(c *gin.Context) {
