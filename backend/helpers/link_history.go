@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"fmt"
 	"log"
 	"net/netip"
 	"sort"
@@ -131,84 +132,137 @@ func routeLost(action types.ActionEntry, gone *RemovedEnds, remaining []netip.Pr
 	return in(gone.Subnets) && !in(remaining)
 }
 
+// Forgotten is one operation a pod lost with its links: dropped whole, or kept
+// without the interfaces in Cut.
+type Forgotten struct {
+	Action types.ActionEntry
+	Cut    []string
+}
+
+func (f Forgotten) String() string {
+	a := f.Action
+	name := a.Type
+	if a.Bridge != "" {
+		name += " " + a.Bridge
+	}
+	switch {
+	case len(f.Cut) > 0:
+		return strings.Join(f.Cut, ", ") + " in " + name
+	case a.Iface != "":
+		return name + " on " + a.Iface
+	case a.Gateway != "" && a.DstCIDR != "":
+		return name + " " + a.DstCIDR + " via " + a.Gateway
+	case a.Gateway != "":
+		return name + " via " + a.Gateway
+	}
+	return name
+}
+
+// forgottenShown caps how many operations a warning names.
+const forgottenShown = 4
+
+func forgottenDetail(list []Forgotten) string {
+	names := make([]string, 0, forgottenShown)
+	for _, f := range list {
+		if len(names) == forgottenShown {
+			break
+		}
+		names = append(names, f.String())
+	}
+	text := strings.Join(names, ", ")
+	if more := len(list) - len(names); more > 0 {
+		text += fmt.Sprintf(" and %d more", more)
+	}
+	return "Went with the removed link: " + text + ". Configure it again if still wanted."
+}
+
+// forgets says what a removal does to one operation: nothing, drop it, or cut
+// the interfaces that went from its list.
+func forgets(action types.ActionEntry, gone *RemovedEnds, remaining []netip.Prefix) (drop bool, cut []string) {
+	if (action.Iface != "" && gone.Ifaces[action.Iface]) || routeLost(action, gone, remaining) {
+		return true, nil
+	}
+	for _, i := range action.Ifaces {
+		if gone.Ifaces[i] {
+			cut = append(cut, i)
+		}
+	}
+	return len(cut) > 0 && len(cut) == len(action.Ifaces), cut
+}
+
 // ForgetRemoved takes what is gone out of the history: an operation on one of
 // the interfaces (iface) is dropped, a list of them (ifaces) is cut to what is
 // left and dropped when nothing is, and a route that went with them is dropped.
 // The rest keeps its place and its stamp. A pod that is recreated drops these
 // when it replays and they fail; one that keeps running, as on the fork's path,
 // has to be told, or the history would call applied what the kernel lost with
-// the interface and a configure would be refused as a duplicate. It returns how
-// many operations it changed.
-func (h *PodHistory) ForgetRemoved(gone *RemovedEnds, remaining []netip.Prefix) int {
-	changed := 0
-	rewrite := func(ops []PersistedDriverOperation) []PersistedDriverOperation {
+// the interface and a configure would be refused as a duplicate. It returns
+// what it took out, in the history's order.
+func (h *PodHistory) ForgetRemoved(gone *RemovedEnds, remaining []netip.Prefix) []Forgotten {
+	var forgotten []Forgotten
+	for _, op := range h.ops {
+		action := opAction(op)
+		drop, cut := forgets(action, gone, remaining)
+		if drop {
+			forgotten = append(forgotten, Forgotten{Action: action})
+		} else if len(cut) > 0 {
+			forgotten = append(forgotten, Forgotten{Action: action, Cut: cut})
+		}
+	}
+	if len(forgotten) == 0 {
+		return nil
+	}
+	h.change(func(ops []PersistedDriverOperation) []PersistedDriverOperation {
 		out := make([]PersistedDriverOperation, 0, len(ops))
 		for _, op := range ops {
 			action := opAction(op)
-			if (action.Iface != "" && gone.Ifaces[action.Iface]) || routeLost(action, gone, remaining) {
+			drop, cut := forgets(action, gone, remaining)
+			if drop {
 				continue
 			}
-			if len(action.Ifaces) > 0 {
-				left := make([]string, 0, len(action.Ifaces))
+			if len(cut) > 0 {
+				left := make([]string, 0, len(action.Ifaces)-len(cut))
 				for _, i := range action.Ifaces {
 					if !gone.Ifaces[i] {
 						left = append(left, i)
 					}
 				}
-				if len(left) == 0 {
-					continue
-				}
-				if len(left) != len(action.Ifaces) {
-					op.Action.Type = action.Type
-					op.Action.Ifaces = left
-				}
+				op.Action.Type = action.Type
+				op.Action.Ifaces = left
 			}
 			out = append(out, op)
 		}
 		return out
-	}
-	for _, op := range h.ops {
-		action := opAction(op)
-		hit := (action.Iface != "" && gone.Ifaces[action.Iface]) || routeLost(action, gone, remaining)
-		for _, i := range action.Ifaces {
-			hit = hit || gone.Ifaces[i]
-		}
-		if hit {
-			changed++
-		}
-	}
-	if changed > 0 {
-		h.change(rewrite)
-	}
-	return changed
+	})
+	return forgotten
 }
 
 // ForgetRemovedInterfaces applies ForgetRemoved to each pod that lost links,
-// with the subnets the pod keeps. A failure is logged: the link is gone either
-// way.
-func ForgetRemovedInterfaces(namespace string, removed map[string]*RemovedEnds, remaining map[string][]netip.Prefix) int {
+// with the subnets the pod keeps, and returns one warning per pod naming what
+// went. A failure is logged: the link is gone either way.
+func ForgetRemovedInterfaces(namespace string, removed map[string]*RemovedEnds, remaining map[string][]netip.Prefix) []types.Warning {
 	pods := make([]string, 0, len(removed))
 	for pod := range removed {
 		pods = append(pods, pod)
 	}
 	sort.Strings(pods)
-	total := 0
+	var warnings []types.Warning
 	for _, pod := range pods {
 		h, err := OpenPodHistory(namespace, pod)
 		if err != nil {
 			log.Printf("⚠️ Could not open the history of %s/%s to forget its removed interfaces: %v", namespace, pod, err)
 			continue
 		}
-		n := h.ForgetRemoved(removed[pod], remaining[pod])
-		if n == 0 {
+		forgotten := h.ForgetRemoved(removed[pod], remaining[pod])
+		if len(forgotten) == 0 {
 			continue
 		}
 		if err := h.Commit(); err != nil {
 			log.Printf("⚠️ Could not write the history of %s/%s after removing its interfaces: %v", namespace, pod, err)
 			continue
 		}
-		total += n
-		log.Printf("🧹 Forgot %d persisted operation(s) of %s/%s on what the removed links carried", n, namespace, pod)
+		warnings = append(warnings, types.Warning{Node: pod, Kind: "operations_forgotten", Detail: forgottenDetail(forgotten)})
+		log.Printf("🧹 Forgot %d persisted operation(s) of %s/%s on what the removed links carried", len(forgotten), namespace, pod)
 	}
-	return total
+	return warnings
 }

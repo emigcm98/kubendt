@@ -3,6 +3,7 @@ package helpers
 import (
 	"net/netip"
 	"reflect"
+	"strings"
 	"testing"
 
 	"kubendt/types"
@@ -58,8 +59,16 @@ func TestForgetRemoved(t *testing.T) {
 		op(5, "replace_ip", types.ActionEntry{Iface: "eth1", CIDR: "10.0.1.1/24"}),
 	}}
 	gone := &RemovedEnds{Ifaces: map[string]bool{"eth2": true}}
-	if n := h.ForgetRemoved(gone, nil); n != 3 {
-		t.Errorf("changed %d, want 3: the bridge list cut, the address and the lone bridge dropped", n)
+	forgotten := h.ForgetRemoved(gone, nil)
+	var said []string
+	for _, f := range forgotten {
+		said = append(said, f.String())
+	}
+	if want := []string{"eth2 in setup_bridge br0", "replace_ip on eth2", "setup_bridge br1"}; !reflect.DeepEqual(said, want) {
+		t.Errorf("forgot %v, want %v: the bridge list cut, the address and the lone bridge dropped", said, want)
+	}
+	if got, want := forgottenDetail(forgotten), "Went with the removed link: eth2 in setup_bridge br0, replace_ip on eth2, setup_bridge br1. Configure it again if still wanted."; got != want {
+		t.Errorf("detail %q, want %q", got, want)
 	}
 	var ids []int64
 	for _, o := range h.Operations() {
@@ -75,7 +84,7 @@ func TestForgetRemoved(t *testing.T) {
 		t.Error("a cut operation keeps its stamp")
 	}
 	// The route has no interface of its own and no subnet was lost: it stays.
-	if h.ForgetRemoved(gone, nil) != 0 {
+	if len(h.ForgetRemoved(gone, nil)) != 0 {
 		t.Error("nothing left to forget, yet something changed")
 	}
 }
@@ -97,8 +106,9 @@ func TestForgetRemovedRoutes(t *testing.T) {
 	// The host lost its only link: both default routes that sat on it go, the
 	// one on a subnet it never lost and the unreadable one stay.
 	h := ops()
-	if n := h.ForgetRemoved(gone, nil); n != 2 {
-		t.Errorf("changed %d, want the IPv4 and the IPv6 default route", n)
+	forgotten := h.ForgetRemoved(gone, nil)
+	if len(forgotten) != 2 || forgotten[0].String() != "set_default_route via 192.168.1.1" {
+		t.Errorf("forgot %v, want the IPv4 and the IPv6 default route", forgotten)
 	}
 	var ids []int64
 	for _, o := range h.Operations() {
@@ -110,7 +120,22 @@ func TestForgetRemovedRoutes(t *testing.T) {
 
 	// Still a link on the same subnet: the route may well be there through it.
 	h = ops()
-	if n := h.ForgetRemoved(gone, []netip.Prefix{netip.MustParsePrefix("192.168.1.0/24")}); n != 1 {
-		t.Errorf("changed %d, want only the IPv6 one, the IPv4 gateway is still reachable", n)
+	if n := len(h.ForgetRemoved(gone, []netip.Prefix{netip.MustParsePrefix("192.168.1.0/24")})); n != 1 {
+		t.Errorf("forgot %d, want only the IPv6 one, the IPv4 gateway is still reachable", n)
+	}
+}
+
+func TestForgottenDetailCaps(t *testing.T) {
+	var list []Forgotten
+	for _, i := range []string{"eth1", "eth2", "eth3", "eth4", "eth5", "eth6"} {
+		list = append(list, Forgotten{Action: types.ActionEntry{Type: "replace_ip", Iface: i}})
+	}
+	list = append(list, Forgotten{Action: types.ActionEntry{Type: "add_static_route", DstCIDR: "10.0.0.0/8", Gateway: "10.1.0.1"}})
+	got := forgottenDetail(list)
+	if !strings.Contains(got, "replace_ip on eth4 and 3 more.") || strings.Contains(got, "eth5") {
+		t.Errorf("detail not capped at %d: %q", forgottenShown, got)
+	}
+	if s := list[6].String(); s != "add_static_route 10.0.0.0/8 via 10.1.0.1" {
+		t.Errorf("a static route reads %q", s)
 	}
 }

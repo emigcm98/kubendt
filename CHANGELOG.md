@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - A deploy or a modify warns `meshnet_unsupported` when the Meshnet is not the stock one or KubeNDT Meshnet from 1.0.0 and below 2.0.0.
 - The cluster views count Ready and Meshnet as one and mark a node that takes no lab pods, `schedulable` in the API.
 - `GET /cluster/status` and a modify's response say how the links are kept (`meshnet.path`, `meshnet_path`), and a modify the daemon did not settle in time warns `meshnet_links_unsettled`.
+- A modify warns `operations_forgotten` naming what each pod had configured on a link it lost, and a delete from the graph shows the response's warnings.
 
 ### Changed
 
