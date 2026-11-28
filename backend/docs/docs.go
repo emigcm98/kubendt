@@ -5663,6 +5663,11 @@ const docTemplate = `{
                     "type": "string",
                     "example": "meshnet"
                 },
+                "path": {
+                    "description": "How KubeNDT keeps the links of a lab here: fork when the daemon does it\nlive (the fork's daemon and CRD on every node), stock for its own passes.",
+                    "type": "string",
+                    "example": "fork"
+                },
                 "ready": {
                     "type": "integer",
                     "example": 3
@@ -5729,6 +5734,11 @@ const docTemplate = `{
                 },
                 "link_mtu": {
                     "$ref": "#/definitions/types.LinkMTUDoc"
+                },
+                "meshnet_path": {
+                    "description": "How the links were kept: fork when the Meshnet daemon wired them live, stock\nwhen KubeNDT's own passes did.",
+                    "type": "string",
+                    "example": "fork"
                 },
                 "message": {
                     "type": "string",

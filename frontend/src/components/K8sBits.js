@@ -20,6 +20,12 @@ const SUPPORT_NOTES = {
   unsupported: 'Not a Meshnet this KubeNDT knows.',
 };
 
+// How KubeNDT keeps the links of a lab on this cluster, for the hover.
+const PATH_NOTES = {
+  fork: 'KubeNDT lets the daemon wire and remove links live.',
+  stock: 'KubeNDT keeps the links with its own passes, recreating a pod to wire one.',
+};
+
 // What a Meshnet is called: the fork is KubeNDT Meshnet, with its release or,
 // for a development build, its commit. The API's flavour stays "fork".
 export const meshnetName = (m) => {
@@ -41,7 +47,9 @@ export const meshnetFlavour = (m) => {
       ? images.map((i) => `${i.image} on ${i.nodes} node${i.nodes === 1 ? '' : 's'}`)
       : [m.image];
   const warnings = m.warnings || [];
-  const title = [...where, SUPPORT_NOTES[m.support], ...warnings].filter(Boolean).join('\n');
+  const title = [...where, SUPPORT_NOTES[m.support], PATH_NOTES[m.path], ...warnings]
+    .filter(Boolean)
+    .join('\n');
   // What is worth saying outside the hover: a version out of range and what
   // does not fit between the daemon, the nodes and the CRD.
   const off = ['too-old', 'untested', 'unsupported'].includes(m.support);

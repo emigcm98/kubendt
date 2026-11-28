@@ -1527,6 +1527,12 @@ definitions:
       namespace:
         example: meshnet
         type: string
+      path:
+        description: |-
+          How KubeNDT keeps the links of a lab here: fork when the daemon does it
+          live (the fork's daemon and CRD on every node), stock for its own passes.
+        example: fork
+        type: string
       ready:
         example: 3
         type: integer
@@ -1575,6 +1581,12 @@ definitions:
         type: array
       link_mtu:
         $ref: '#/definitions/types.LinkMTUDoc'
+      meshnet_path:
+        description: |-
+          How the links were kept: fork when the Meshnet daemon wired them live, stock
+          when KubeNDT's own passes did.
+        example: fork
+        type: string
       message:
         example: network-modify applied successfully
         type: string

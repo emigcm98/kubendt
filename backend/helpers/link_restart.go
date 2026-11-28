@@ -55,3 +55,36 @@ func EndpointsToRestartForNewLinks(links []types.LinkSpec, nodes []types.NodeSpe
 	sort.Strings(out)
 	return out
 }
+
+// GuestEndpointsToRestartForNewLinks is the same choice on the fork's path,
+// where the daemon wires a link between two running pods by itself: only a
+// pod that binds its interfaces at start, a guest VM with its fixed NIC list,
+// has to be recreated to get the new one. A link with a new pod on either side
+// leaves the existing end to the touched-peer rule, as on the stock path.
+func GuestEndpointsToRestartForNewLinks(links []types.LinkSpec, nodes []types.NodeSpec, newPods, restarting map[string]struct{}, isGuest func(pod string) bool) []string {
+	chosen := make(map[string]struct{})
+	for _, l := range links {
+		a := ResolvePodNameFromLink(l.Node, nodes)
+		b := ResolvePodNameFromLink(l.PeerNode, nodes)
+		if a == "" || b == "" {
+			continue
+		}
+		if _, isNew := newPods[a]; isNew {
+			continue
+		}
+		if _, isNew := newPods[b]; isNew {
+			continue
+		}
+		for _, pod := range []string{a, b} {
+			if _, r := restarting[pod]; pod != "external" && !r && isGuest(pod) {
+				chosen[pod] = struct{}{}
+			}
+		}
+	}
+	out := make([]string, 0, len(chosen))
+	for p := range chosen {
+		out = append(out, p)
+	}
+	sort.Strings(out)
+	return out
+}

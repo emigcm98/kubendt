@@ -566,10 +566,13 @@ User
   │         │
   │         ├─→ Restart phase (one for the whole modify):
   │         │    ├─→ QEMU peers that gained a link
-  │         │    ├─→ one endpoint of each link between two existing pods
-  │         │    │   (Meshnet wires a link only on a CNI ADD)
+  │         │    ├─→ stock Meshnet only: every touched peer, and one endpoint of
+  │         │    │   each link between two existing pods (it wires on a CNI ADD)
   │         │    ├─→ wait for new and restarted pods (timeline)
   │         │    └─→ ReplayDriverOperations on the restarted ones
+  │         │
+  │         ├─→ KubeNDT Meshnet only: the daemon wires and removes links live,
+  │         │    AwaitForkLinks reads each touched Topology's status.links
   │         │
   │         ├─→ SoftHeal:
   │         │    ├─→ NudgePodReconcile (annotation update)

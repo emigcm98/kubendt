@@ -33,6 +33,10 @@ describe('meshnetFlavour', () => {
     expect(f.warn).toBe(false);
     expect(f.title).toContain('ghcr.io/emigcm98/meshnet:v1.0.0');
     expect(f.title).toContain('Supported');
+    // The path is in the hover only when the backend says it.
+    expect(f.title).not.toContain('live');
+    expect(meshnetFlavour({ ...fork, path: 'fork' }).title).toContain('wire and remove links live');
+    expect(meshnetFlavour({ ...fork, path: 'stock' }).title).toContain('recreating a pod');
   });
 
   test('a development build, by its commit, with no alarm', () => {

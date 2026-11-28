@@ -11,15 +11,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - The cluster views and `GET /cluster/status` name the Meshnet that runs, the stock one or KubeNDT Meshnet (`emigcm98/meshnet-cni`), and `GET /cluster/nodes/{name}` gains the node's `meshnet_pod`. In-cluster installs apply the manifests again for a new ClusterRole rule.
 - A deploy or a modify warns `meshnet_unsupported` when the Meshnet is not the stock one or KubeNDT Meshnet from 1.0.0 and below 2.0.0.
 - The cluster views count Ready and Meshnet as one and mark a node that takes no lab pods, `schedulable` in the API.
+- `GET /cluster/status` and a modify's response say how the links are kept (`meshnet.path`, `meshnet_path`), and a modify the daemon did not settle in time warns `meshnet_links_unsettled`.
 
 ### Changed
 
 - Every experiment run names the Meshnet it measured, and the regression keeps the pods, logs, events and links of an example whose check fails.
 - A P4 switch reads every port through a veth pair of its own, not only those on VXLAN links, so it forwards TCP whatever offloads its neighbours keep.
+- A modify on a cluster running KubeNDT Meshnet leaves the pods running and the daemon wires and removes the links, only guest VMs are still recreated. `KUBENDT_MESHNET_PATH=stock` keeps the old passes.
 
 ### Fixed
 
 - The in-cluster backend may write a Topology's status, so a pod added next to a running one gets its links with the stock Meshnet.
+- Removing or adding links retries when the Meshnet daemon writes a Topology's status in between, instead of failing with "the object has been modified". A link a failed modify left at one end can be deleted or added again.
+- A configure of a bridge port, an address or a route that went with a link deleted and added back is applied again, not skipped as already done.
 
 ## [1.14.0] - 2026-11-26
 

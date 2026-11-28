@@ -44,3 +44,40 @@ func TestEndpointsToRestartForNewLinks(t *testing.T) {
 		}
 	}
 }
+
+func TestGuestEndpointsToRestartForNewLinks(t *testing.T) {
+	nodes := []types.NodeSpec{
+		{Name: "h", Type: "host", Replicas: 2},
+		{Name: "vm", Type: "router", Replicas: 2, Qemu: true},
+	}
+	isGuest := func(pod string) bool { return pod == "vm-0" || pod == "vm-1" }
+	link := func(a, b string) types.LinkSpec {
+		return types.LinkSpec{Node: a, LocalIntf: "eth1", PeerNode: b, PeerIntf: "eth1"}
+	}
+	none := map[string]struct{}{}
+
+	cases := []struct {
+		name       string
+		links      []types.LinkSpec
+		newPods    map[string]struct{}
+		restarting map[string]struct{}
+		want       []string
+	}{
+		{"two containers: nothing", []types.LinkSpec{link("h-0", "h-1")}, none, none, nil},
+		{"a container and a VM: the VM", []types.LinkSpec{link("h-0", "vm-0")}, none, none, []string{"vm-0"}},
+		{"two VMs: both, each needs its NIC", []types.LinkSpec{link("vm-0", "vm-1")}, none, none, []string{"vm-0", "vm-1"}},
+		{"a new pod on one side: left to the touched-peer rule", []types.LinkSpec{link("h-1", "vm-0")}, map[string]struct{}{"h-1": {}}, none, nil},
+		{"a VM already restarting", []types.LinkSpec{link("h-0", "vm-0")}, none, map[string]struct{}{"vm-0": {}}, nil},
+		{"an uplink on a VM", []types.LinkSpec{link("vm-1", "external")}, none, none, []string{"vm-1"}},
+		{"an uplink on a container", []types.LinkSpec{link("h-0", "external")}, none, none, nil},
+	}
+	for _, c := range cases {
+		got := GuestEndpointsToRestartForNewLinks(c.links, nodes, c.newPods, c.restarting, isGuest)
+		if len(got) == 0 {
+			got = nil
+		}
+		if !reflect.DeepEqual(got, c.want) {
+			t.Errorf("%s: got %v, want %v", c.name, got, c.want)
+		}
+	}
+}

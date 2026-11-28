@@ -7,6 +7,7 @@ import (
 	"kubendt/kubeclient"
 	"kubendt/types"
 	"net/http"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -68,6 +69,10 @@ type MeshnetStatus struct {
 	// more than one during an upgrade. Only in the cluster status.
 	Images   []MeshnetImage `json:"images,omitempty"`
 	Warnings []string       `json:"warnings,omitempty"`
+	// Path is how this KubeNDT keeps the links of a lab on this cluster, "fork"
+	// when the daemon does it live and "stock" for the passes it always ran.
+	// Only in the cluster status.
+	Path string `json:"path,omitempty"`
 }
 
 type MeshnetImage struct {
@@ -376,6 +381,29 @@ func meshnetOnNode(ctx context.Context, nodeName string, ds MeshnetStatus) (stri
 	return "not-running", info
 }
 
+// fullMeshnetStatus is detectMeshnet with what the cluster status adds: the
+// images the nodes run, the CRD, the mismatches and the path. The pods of the
+// DaemonSet's namespace and the CRD are two more small reads, so a caller that
+// only needs the gate keeps to detectMeshnet.
+func fullMeshnetStatus(ctx context.Context) (MeshnetStatus, map[string]string) {
+	m := detectMeshnet(ctx)
+	var nodes map[string]string
+	if m.State != "unknown" {
+		nodes, m.Images = meshnetNodeStates(ctx, m.Namespace)
+	}
+	if m.State == "ok" || m.State == "degraded" {
+		m.CRD = helpers.MeshnetCRD(ctx)
+		m.Warnings = meshnetWarnings(m)
+	}
+	m.Path = helpers.MeshnetPath(m.Flavour, m.Support, m.CRD, len(m.Images), m.State == "ok")
+	// KUBENDT_MESHNET_PATH=stock keeps the stock path on a cluster that could
+	// take the fork's, to compare the two or step back from a problem.
+	if os.Getenv("KUBENDT_MESHNET_PATH") == helpers.MeshnetPathStock {
+		m.Path = helpers.MeshnetPathStock
+	}
+	return m, nodes
+}
+
 func GetClusterStatus(c *gin.Context) {
 	ctx := c.Request.Context()
 	nodes, err := kubeclient.Clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
@@ -388,15 +416,7 @@ func GetClusterStatus(c *gin.Context) {
 	metricsMap := fetchNodeMetrics(ctx)
 
 	// Meshnet health, both the cluster-wide badge and the per-node state.
-	meshnet := detectMeshnet(ctx)
-	var meshnetNodes map[string]string
-	if meshnet.State != "unknown" {
-		meshnetNodes, meshnet.Images = meshnetNodeStates(ctx, meshnet.Namespace)
-	}
-	if meshnet.State == "ok" || meshnet.State == "degraded" {
-		meshnet.CRD = helpers.MeshnetCRD(ctx)
-		meshnet.Warnings = meshnetWarnings(meshnet)
-	}
+	meshnet, meshnetNodes := fullMeshnetStatus(ctx)
 
 	nodeInfos := []NodeInfo{}
 	readyCount := 0
