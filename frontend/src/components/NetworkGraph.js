@@ -3076,7 +3076,8 @@ const NetworkGraph = ({
       showOperationSuccessModal(
         successTitle,
         payload?.message || 'Delete applied successfully.',
-        payload?.took_time
+        payload?.took_time,
+        payload?.warnings
       );
     } catch (err) {
       showError('Delete error', err.message || 'Could not apply delete.');

@@ -410,7 +410,7 @@ func ModifyNetwork(c *gin.Context) {
 		if linksAfter, err := helpers.BuildLinksFromTopologyCRDs(namespace); err != nil {
 			log.Printf("⚠️ Modify: could not read the links after the changes: %v", err)
 		} else {
-			helpers.ForgetRemovedInterfaces(namespace, helpers.RemovedLinkEnds(linksBefore, linksAfter), helpers.KeptSubnetsByPod(linksBefore, linksAfter))
+			warnings = append(warnings, helpers.ForgetRemovedInterfaces(namespace, helpers.RemovedLinkEnds(linksBefore, linksAfter), helpers.KeptSubnetsByPod(linksBefore, linksAfter))...)
 		}
 	}
 
