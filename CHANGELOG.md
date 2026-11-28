@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Every experiment run names the Meshnet it measured, and the regression keeps the pods, logs, events and links of an example whose check fails.
 - A P4 switch reads every port through a veth pair of its own, not only those on VXLAN links, so it forwards TCP whatever offloads its neighbours keep.
 - A modify on a cluster running KubeNDT Meshnet leaves the pods running and the daemon wires and removes the links, only guest VMs are still recreated. `KUBENDT_MESHNET_PATH=stock` keeps the old passes.
+- A restart on a cluster running KubeNDT Meshnet leaves the neighbours' interfaces as they are, with nothing re-applied on them, and its response says `meshnet_path`.
 
 ### Fixed
 

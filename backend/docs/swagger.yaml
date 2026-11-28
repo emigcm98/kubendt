@@ -2844,11 +2844,20 @@ definitions:
     properties:
       link_mtu:
         $ref: '#/definitions/types.LinkMTUDoc'
+      meshnet_path:
+        description: |-
+          How the links are kept: fork when the Meshnet daemon keeps the neighbours'
+          ends through the restart, stock when KubeNDT remakes and replays them.
+        example: fork
+        type: string
       message:
         example: Pod router1-0 restarted successfully
         type: string
       peer_replay:
-        $ref: '#/definitions/types.PeerReplayStatsDoc'
+        allOf:
+        - $ref: '#/definitions/types.PeerReplayStatsDoc'
+        description: All zeros on the fork's path, where the neighbours keep their
+          interfaces.
       replay:
         $ref: '#/definitions/types.DriverReplayStatsDoc'
       replayed_operations:

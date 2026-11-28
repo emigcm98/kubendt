@@ -510,7 +510,7 @@ func ModifyNetwork(c *gin.Context) {
 	// the StatefulSet controller recreates it asynchronously).
 	deleteIssued := make(map[string]int64, len(restartedPods))
 	for _, pod := range restartedPods {
-		if err := helpers.RestartPod(namespace, pod); err != nil {
+		if err := helpers.RestartPod(namespace, pod, forkPath); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("could not restart pod %s: %v", pod, err)})
 			return
 		}
@@ -569,9 +569,12 @@ func ModifyNetwork(c *gin.Context) {
 			return
 		}
 		replayDur = helpers.MsPtr(time.Since(replayAt))
-		peerReplayAt := time.Now()
-		helpers.ReapplyPeerInterfaceState(namespace, restartedPods)
-		peerReplayDur = helpers.MsPtr(time.Since(peerReplayAt))
+		// On the fork's path the neighbours kept their ends and what they carry.
+		if !forkPath {
+			peerReplayAt := time.Now()
+			helpers.ReapplyPeerInterfaceState(namespace, restartedPods)
+			peerReplayDur = helpers.MsPtr(time.Since(peerReplayAt))
+		}
 	}
 
 	// Fast post-modify soft-heal: nudge Pod + Topology updates for impacted pods

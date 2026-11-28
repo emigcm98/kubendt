@@ -127,9 +127,14 @@ func RestartPod(c *gin.Context) {
 		}
 	}
 
+	// With KubeNDT Meshnet the neighbours keep their ends, and what they carry,
+	// while the pod is gone, so nothing is done to them before or after.
+	meshnet, _ := fullMeshnetStatus(c.Request.Context())
+	forkPath := meshnet.Path == helpers.MeshnetPathFork
+
 	startedAt := time.Now()
 
-	err = helpers.RestartPod(namespace, podName)
+	err = helpers.RestartPod(namespace, podName, forkPath)
 	if err != nil {
 		if strings.Contains(err.Error(), "no pertenece a un StatefulSet") {
 			log.Printf("⚠️ %v", err)
@@ -157,7 +162,9 @@ func RestartPod(c *gin.Context) {
 		// neighbours' ends were recreated with the pod whatever its state, so
 		// they get their wiring back now, or a QEMU peer's links stay dead.
 		log.Printf("⚠️ Pod '%s' restarted but not Ready in time, its configuration was not replayed: %v", podName, waitErr)
-		helpers.ReapplyPeerInterfaceState(namespace, []string{podName})
+		if !forkPath {
+			helpers.ReapplyPeerInterfaceState(namespace, []string{podName})
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("pod %s restarted but was not Ready in time, so its configuration was not replayed; restart it again once it is Ready: %v", podName, waitErr)})
 		return
 	}
@@ -189,10 +196,14 @@ func RestartPod(c *gin.Context) {
 		return
 	}
 	replayDur := time.Since(replayAt)
-	// The neighbours' interfaces facing this pod were recreated too. Timed apart
-	// from the pod's own replay: it is the neighbours' recovery cost.
+	// On the stock Meshnet the neighbours' interfaces facing this pod were
+	// recreated too. Timed apart from the pod's own replay: it is the
+	// neighbours' recovery cost.
 	peerReplayAt := time.Now()
-	peerStats := helpers.ReapplyPeerInterfaceState(namespace, []string{podName})
+	var peerStats helpers.PeerReplayStats
+	if !forkPath {
+		peerStats = helpers.ReapplyPeerInterfaceState(namespace, []string{podName})
+	}
 	peerReplayDur := time.Since(peerReplayAt)
 
 	nudgePodAndTopology("soft", podName)
@@ -203,6 +214,7 @@ func RestartPod(c *gin.Context) {
 		"replayed_operations": replayStats.Replayed,
 		"replay":              replayStats,
 		"peer_replay":         peerStats,
+		"meshnet_path":        meshnet.Path,
 		"link_mtu":            mtuPass,
 		"warnings":            mtuPass.Warnings,
 		"took_time": gin.H{
